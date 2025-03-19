@@ -51,6 +51,12 @@ public:
         return std::sqrt((a*a + b*b + c*c + d*d) / 2.0f);
     }
     
+    // Calculate the magnitude (distance from origin) in quadray space
+    // This is equivalent to length() for quadrays, but explicitly shows its purpose
+    float magnitude() const {
+        return length();
+    }
+    
     // Basic operations
     Quadray operator+(const Quadray& other) const {
         return Quadray(a + other.a, b + other.b, c + other.c, d + other.d).normalized();
@@ -65,6 +71,11 @@ public:
         // Subtract and find the length
         Quadray diff(q1.a - q2.a, q1.b - q2.b, q1.c - q2.c, q1.d - q2.d);
         return diff.length();
+    }
+    
+    // Distance to another quadray coordinate (instance method)
+    float distance(const Quadray& other) const {
+        return Quadray::distance(*this, other);
     }
 };
 

@@ -10,8 +10,11 @@ QuadCraft is an experimental voxel game that uses tetrahedral elements (instead 
 
 - **Tetrahedral Voxels**: Blocks are tetrahedra instead of cubes, allowing for more complex and natural shapes
 - **Quadray Coordinate System**: Based on tetrahedral geometry rather than cubic geometry
-- **Procedural Terrain**: Generated using noise functions adapted for tetrahedral space
+- **Procedural Terrain**: Generated using fractal noise functions adapted for tetrahedral space
 - **Interactive Building**: Place and remove tetrahedral blocks
+- **Enhanced Terrain Features**: Mountains, caves, ore veins, and water bodies
+- **Quadray Visualization**: Toggle overlay to visualize the four-dimensional quadray coordinate system
+- **Wireframe Mode**: Enable wireframe rendering to better understand tetrahedral shapes
 
 ## Technical Description
 
@@ -21,6 +24,7 @@ QuadCraft demonstrates several advanced technical concepts:
 2. **Tetrahedral Mesh Generation**: Using modified marching tetrahedrons algorithm
 3. **Chunk Management**: Tetrahedral chunks for efficient memory utilization
 4. **Ray Casting**: For block selection and placement
+5. **Fractal Terrain Generation**: Multi-octave noise for natural-looking landscapes
 
 ## Building and Running
 
@@ -46,47 +50,9 @@ sudo apt-get install build-essential cmake libglew-dev libglfw3-dev
 git clone https://github.com/yourusername/QuadCraft.git
 cd QuadCraft
 
-# Create build directory
-mkdir build
-cd build
-
-# Build using CMake
-cmake ..
-make
-
-# Run the game
-./bin/QuadCraft
-```
-
-#### Using the build script
-
-For convenience, you can use the provided build script:
-
-```bash
-# Make the script executable
+# Build and run using the script
 chmod +x build.sh
-
-# Build and run
 ./build.sh
-```
-
-#### Windows (with MSVC)
-
-```bash
-# Clone the repository
-git clone https://github.com/yourusername/QuadCraft.git
-cd QuadCraft
-
-# Create build directory
-mkdir build
-cd build
-
-# Build using CMake
-cmake ..
-cmake --build . --config Release
-
-# Run the game
-.\bin\Release\QuadCraft.exe
 ```
 
 ### Troubleshooting
@@ -101,17 +67,52 @@ If CMake can't find the required libraries, make sure they are properly installe
 
 ## Controls
 
-- **W, A, S, D**: Move
-- **Space**: Move up
-- **Left Shift**: Move down
-- **Mouse**: Look around
-- **Left Mouse Button**: Remove block
+### Movement Controls (Drone-like)
+- **Arrow Keys**: Fly in the corresponding direction (always active)
+- **Page Up/Down**: Move vertically up/down (always active)
+- **W, A, S, D**: Alternative movement keys (only when mouse is captured)
+- **Space**: Alternative up movement (only when mouse is captured)
+- **Left Shift**: Alternative down movement (only when mouse is captured)
+
+### Camera Controls
+- **Mouse**: Look around (only when mouse is captured)
+- **Mouse Wheel**: Zoom in/out
+
+### Block Interaction
+- **Left Mouse Button**: Remove block (or capture mouse if not captured)
 - **Right Mouse Button**: Place block
-- **Escape**: Exit
+
+### Interface Controls
+- **Tab**: Toggle mouse capture mode
+- **Escape**: Release mouse if captured, or exit game if mouse is free
+- **F1**: Toggle wireframe mode
+- **F2**: Toggle quadray coordinate overlay
+
+**Mouse Interaction**:
+- Click in the window to capture the mouse and enable full camera control
+- Press Escape or Tab to release the mouse and regain normal cursor control
+- When the mouse is free, you can still use arrow keys and Page Up/Down for drone-like movement
+
+**Flying Tips**:
+- Use arrow keys for precise drone-like movement
+- Combine with Page Up/Down for full 3D navigation
+- The camera will always point in the direction you're looking
 
 ## Architecture
 
 The project is structured as follows:
+
+```mermaid
+flowchart LR
+    Core["Core\n- Coordinate System\n- World Management\n- Chunk System\n- Block System"]
+    Rendering["Rendering\n- Mesh Generation\n- Shader System\n- Rendering Pipeline\n- Texture Management"]
+    Game["Game\n- Input Handling\n- Game Logic\n- User Interface\n- Game Loop"]
+    
+    Core <--> Rendering
+    Rendering <--> Game
+```
+
+Folder structure:
 
 ```
 QuadCraft/
@@ -137,13 +138,48 @@ QuadCraft/
 
 The quadray coordinate system uses four basis vectors extending from the center of a tetrahedron to its vertices. This provides a more natural way to represent tetrahedral geometry than traditional Cartesian coordinates.
 
+Conversion formulas between quadray and Cartesian coordinates:
+
+```cpp
+// Convert from Cartesian to quadray coordinates
+static Quadray fromCartesian(const Vector3& v) {
+    const float scale = 1.0f / ROOT2;
+    
+    float a = scale * (std::max(0.0f, v.x) + std::max(0.0f, v.y) + std::max(0.0f, v.z));
+    float b = scale * (std::max(0.0f, -v.x) + std::max(0.0f, -v.y) + std::max(0.0f, v.z));
+    float c = scale * (std::max(0.0f, -v.x) + std::max(0.0f, v.y) + std::max(0.0f, -v.z));
+    float d = scale * (std::max(0.0f, v.x) + std::max(0.0f, -v.y) + std::max(0.0f, -v.z));
+    
+    return Quadray(a, b, c, d).normalized();
+}
+
+// Convert from quadray to Cartesian coordinates
+Vector3 toCartesian() const {
+    const float scale = 1.0f / ROOT2;
+    float x = scale * (a - b - c + d);
+    float y = scale * (a - b + c - d);
+    float z = scale * (a + b - c - d);
+    return Vector3(x, y, z);
+}
+```
+
 ### Tetrahedral Voxels
 
-Unlike Minecraft's cubic voxels, QuadCraft uses tetrahedral voxels which allow for more accurate representation of arbitrary geometry, better approximation of curved surfaces, and more natural representation of certain crystalline patterns.
+Unlike Minecraft's cubic voxels, QuadCraft uses tetrahedral voxels which allow for more accurate representation of arbitrary geometry, better approximation of curved surfaces, and more natural representation of certain crystalline patterns. Each cube is divided into 5 tetrahedra for more precise terrain representation.
+
+### Quadray Coordinate Visualization
+
+The F2 key toggles a visualization overlay that displays the four basis vectors of the quadray coordinate system:
+- A axis (red): Direction of (1,0,0,0) in quadray coordinates
+- B axis (green): Direction of (0,1,0,0) in quadray coordinates
+- C axis (blue): Direction of (0,0,1,0) in quadray coordinates
+- D axis (yellow): Direction of (0,0,0,1) in quadray coordinates
+
+This helps in understanding the four-dimensional nature of the quadray coordinate system.
 
 ### Terrain Generation
 
-Terrain is generated using a modified noise function that works with tetrahedral geometry, creating landscapes with natural slopes and curves that would be difficult to achieve with cubic voxels.
+Terrain is generated using a multi-octave fractal noise function that works with tetrahedral geometry, creating landscapes with natural mountains, caves, and water features. The fractal nature provides detail at multiple scales, creating more realistic-looking terrain.
 
 ## License
 

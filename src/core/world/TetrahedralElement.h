@@ -41,13 +41,17 @@ public:
         // Size of each tetrahedron (can be adjusted)
         const float size = 0.5f;
         
-        // Define the four vertices relative to center
-        // These offsets create a regular tetrahedron
+        // Calculate vertices for a regular tetrahedron
+        // These constants create a perfect regular tetrahedron
+        const float sqrt2 = 1.414213562f; // √2
+        
         std::array<Vector3, 4> vertices;
-        vertices[0] = center + Vector3(size, size, size);
-        vertices[1] = center + Vector3(-size, -size, size);
-        vertices[2] = center + Vector3(-size, size, -size);
-        vertices[3] = center + Vector3(size, -size, -size);
+        // Vertex at the top
+        vertices[0] = center + Vector3(0, size, 0);
+        // Three vertices at the base forming an equilateral triangle
+        vertices[1] = center + Vector3(2.0f * size / 3.0f, -size / 3.0f, 0);
+        vertices[2] = center + Vector3(-size / 3.0f, -size / 3.0f, sqrt2 * size / 3.0f);
+        vertices[3] = center + Vector3(-size / 3.0f, -size / 3.0f, -sqrt2 * size / 3.0f);
         
         return vertices;
     }

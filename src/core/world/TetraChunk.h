@@ -47,21 +47,48 @@ struct QuadrayEqual {
 
 class TetraChunk {
 public:
+    // Constants for chunk properties
+    static const int CHUNK_SIZE = 16;
+    static const int CHUNK_GENERATION_RADIUS = 4;
+    static const int CHUNK_UNLOAD_DISTANCE = 8 * CHUNK_SIZE;
+
     // Chunk coordinates (in chunk space, not world space)
     int chunkX, chunkY, chunkZ;
     
-    // Chunk resolution (number of elements along each dimension)
-    static constexpr int CHUNK_SIZE = 16;
+    // Quadray position of the chunk
+    Quadray position;
     
-    // Flag indicating if this chunk has been generated
-    bool isGenerated;
-    
-    // Flag indicating if the mesh needs to be regenerated
-    bool isDirty;
+    // Flags for chunk state
+    bool isDirty;        // Whether the chunk needs mesh regeneration
+    bool isGenerated;    // Whether the chunk has been generated
+    bool isVisible;      // Whether the chunk is currently visible to the player
     
     // Constructor
-    TetraChunk(int x, int y, int z)
-        : chunkX(x), chunkY(y), chunkZ(z), isGenerated(false), isDirty(true) {}
+    TetraChunk(int x, int y, int z) : 
+        chunkX(x), 
+        chunkY(y), 
+        chunkZ(z),
+        position(x * CHUNK_SIZE, y * CHUNK_SIZE, z * CHUNK_SIZE, 0),
+        isDirty(true),
+        isGenerated(false),
+        isVisible(false) {
+    }
+    
+    /**
+     * Constructor for TetraChunk using Quadray position
+     * 
+     * @param pos The position of the chunk in quadray space
+     */
+    TetraChunk(const Quadray& pos) : 
+        position(pos),
+        isDirty(true),
+        isGenerated(false),
+        isVisible(false) {
+        // Calculate chunk coordinates from position
+        chunkX = static_cast<int>(pos.a / CHUNK_SIZE);
+        chunkY = static_cast<int>(pos.b / CHUNK_SIZE);
+        chunkZ = static_cast<int>(pos.c / CHUNK_SIZE);
+    }
     
     // Get a block at specified quadray coordinates
     Block::BlockID getBlock(const Quadray& quadPos) const {
@@ -131,6 +158,25 @@ public:
     
     // Update neighboring chunks when blocks near the boundary change
     void updateNeighborChunks(World& world);
+    
+    /**
+     * Marks the chunk as dirty, requiring a mesh update
+     */
+    void markDirty() {
+        isDirty = true;
+    }
+
+    /**
+     * Gets the center position of the chunk in cartesian space
+     * 
+     * @return The center position of the chunk
+     */
+    Vector3 getCenter() const {
+        // Calculate the center of the chunk by converting the quadray position
+        // plus half the chunk size to cartesian coordinates
+        Quadray center = position + Quadray(CHUNK_SIZE / 2, CHUNK_SIZE / 2, CHUNK_SIZE / 2, CHUNK_SIZE / 2);
+        return center.toCartesian();
+    }
     
 private:
     // Map of all non-air elements in this chunk

@@ -197,10 +197,6 @@ CMakeFiles/QuadCraft.dir/src/game/Game.cpp.o: \
  /usr/include/c++/11/bits/charconv.h \
  /usr/include/c++/11/bits/basic_string.tcc \
  /home/trim/Documents/GitHub/QuadCraft/src/game/../core/entity/Camera.h \
- /home/trim/Documents/GitHub/QuadCraft/src/game/../render/mesh/ChunkMesher.h \
- /home/trim/Documents/GitHub/QuadCraft/src/game/../render/mesh/Mesh.h \
- /home/trim/Documents/GitHub/QuadCraft/src/game/../render/shader/Shader.h \
- /home/trim/Documents/GitHub/QuadCraft/src/game/Input.h \
  /usr/include/c++/11/iostream /usr/include/c++/11/ostream \
  /usr/include/c++/11/ios /usr/include/c++/11/bits/ios_base.h \
  /usr/include/c++/11/bits/locale_classes.h \
@@ -218,4 +214,17 @@ CMakeFiles/QuadCraft.dir/src/game/Game.cpp.o: \
  /usr/include/c++/11/bits/locale_facets.tcc \
  /usr/include/c++/11/bits/basic_ios.tcc \
  /usr/include/c++/11/bits/ostream.tcc /usr/include/c++/11/istream \
- /usr/include/c++/11/bits/istream.tcc
+ /usr/include/c++/11/bits/istream.tcc \
+ /home/trim/Documents/GitHub/QuadCraft/src/game/../render/mesh/ChunkMesher.h \
+ /home/trim/Documents/GitHub/QuadCraft/src/game/../render/mesh/Mesh.h \
+ /home/trim/Documents/GitHub/QuadCraft/src/game/../render/shader/Shader.h \
+ /home/trim/Documents/GitHub/QuadCraft/src/game/Input.h \
+ /usr/include/c++/11/iomanip /usr/include/c++/11/locale \
+ /usr/include/c++/11/bits/locale_facets_nonio.h /usr/include/c++/11/ctime \
+ /usr/include/x86_64-linux-gnu/c++/11/bits/time_members.h \
+ /usr/include/x86_64-linux-gnu/c++/11/bits/messages_members.h \
+ /usr/include/libintl.h /usr/include/c++/11/bits/codecvt.h \
+ /usr/include/c++/11/bits/locale_facets_nonio.tcc \
+ /usr/include/c++/11/bits/locale_conv.h \
+ /usr/include/c++/11/bits/quoted_string.h /usr/include/c++/11/sstream \
+ /usr/include/c++/11/bits/sstream.tcc

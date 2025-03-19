@@ -22,14 +22,17 @@ struct Vertex {
 
 class Mesh {
 public:
-    Mesh() : vao(0), vbo(0), ebo(0), vertexCount(0), indexCount(0) {}
+    Mesh() : vao(0), vbo(0), ebo(0), vertexCount(0), indexCount(0), renderMode(0) {}
     ~Mesh();
     
     // Create a mesh from vertex and index data
     void create(const std::vector<Vertex>& vertices, const std::vector<unsigned int>& indices);
     
-    // Render the mesh
+    // Render the mesh using the automatically determined render mode
     void render() const;
+    
+    // Render the mesh with a specific mode (GL_TRIANGLES, GL_LINES, etc.)
+    void render(int mode) const;
     
     // Check if the mesh is initialized
     bool isInitialized() const { return vao != 0; }
@@ -47,6 +50,9 @@ private:
     // Counts
     unsigned int vertexCount;
     unsigned int indexCount;
+    
+    // Render mode (GL_TRIANGLES, GL_LINES, etc.)
+    int renderMode;
 };
 
 } // namespace QuadCraft 

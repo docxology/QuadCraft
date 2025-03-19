@@ -2,11 +2,19 @@
 
 #include <memory>
 #include <unordered_map>
+#include <algorithm>
+#include <limits>
 #include "Mesh.h"
 #include "../../core/world/TetraChunk.h"
 #include "../../core/world/World.h"
 
 namespace QuadCraft {
+
+// Helper function for clamping values between a min and max
+template <typename T>
+T clamp(T value, T min, T max) {
+    return std::max(min, std::min(max, value));
+}
 
 class ChunkMesher {
 public:
@@ -17,6 +25,9 @@ public:
     
     // Precomputed triangle tables and other lookup data
     void initializeLookupTables();
+    
+    // Create a simplified mesh when regular mesh creation fails
+    void createSimplifiedMesh(std::shared_ptr<Mesh>& mesh);
     
 private:
     // Reference to the world

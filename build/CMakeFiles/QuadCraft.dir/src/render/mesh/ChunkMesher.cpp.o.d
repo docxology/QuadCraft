@@ -122,11 +122,27 @@ CMakeFiles/QuadCraft.dir/src/render/mesh/ChunkMesher.cpp.o: \
  /usr/include/c++/11/bits/enable_special_members.h \
  /usr/include/c++/11/bits/node_handle.h \
  /usr/include/c++/11/bits/unordered_map.h \
- /usr/include/c++/11/bits/erase_if.h \
- /home/trim/Documents/GitHub/QuadCraft/src/render/mesh/Mesh.h \
+ /usr/include/c++/11/bits/erase_if.h /usr/include/c++/11/algorithm \
+ /usr/include/c++/11/bits/stl_algo.h /usr/include/c++/11/cstdlib \
+ /usr/include/stdlib.h /usr/include/x86_64-linux-gnu/bits/waitflags.h \
+ /usr/include/x86_64-linux-gnu/bits/waitstatus.h \
+ /usr/include/x86_64-linux-gnu/sys/types.h /usr/include/endian.h \
+ /usr/include/x86_64-linux-gnu/bits/byteswap.h \
+ /usr/include/x86_64-linux-gnu/bits/uintn-identity.h \
+ /usr/include/x86_64-linux-gnu/sys/select.h \
+ /usr/include/x86_64-linux-gnu/bits/select.h \
+ /usr/include/x86_64-linux-gnu/bits/types/sigset_t.h \
+ /usr/include/alloca.h /usr/include/x86_64-linux-gnu/bits/stdlib-float.h \
+ /usr/include/c++/11/bits/std_abs.h \
+ /usr/include/c++/11/bits/algorithmfwd.h \
+ /usr/include/c++/11/bits/stl_heap.h \
+ /usr/include/c++/11/bits/uniform_int_dist.h \
+ /usr/include/c++/11/pstl/glue_algorithm_defs.h \
+ /usr/include/c++/11/functional /usr/include/c++/11/bits/std_function.h \
  /usr/include/c++/11/vector /usr/include/c++/11/bits/stl_vector.h \
  /usr/include/c++/11/bits/stl_bvector.h \
- /usr/include/c++/11/bits/vector.tcc \
+ /usr/include/c++/11/bits/vector.tcc /usr/include/c++/11/limits \
+ /home/trim/Documents/GitHub/QuadCraft/src/render/mesh/Mesh.h \
  /home/trim/Documents/GitHub/QuadCraft/src/render/mesh/../../core/coordinate/Vector3.h \
  /usr/include/c++/11/cmath /usr/include/math.h \
  /usr/include/x86_64-linux-gnu/bits/math-vector.h \
@@ -138,18 +154,7 @@ CMakeFiles/QuadCraft.dir/src/render/mesh/ChunkMesher.cpp.o: \
  /usr/include/x86_64-linux-gnu/bits/mathcalls.h \
  /usr/include/x86_64-linux-gnu/bits/mathcalls-narrow.h \
  /usr/include/x86_64-linux-gnu/bits/iscanonical.h \
- /usr/include/c++/11/bits/std_abs.h /usr/include/stdlib.h \
- /usr/include/x86_64-linux-gnu/bits/waitflags.h \
- /usr/include/x86_64-linux-gnu/bits/waitstatus.h \
- /usr/include/x86_64-linux-gnu/sys/types.h /usr/include/endian.h \
- /usr/include/x86_64-linux-gnu/bits/byteswap.h \
- /usr/include/x86_64-linux-gnu/bits/uintn-identity.h \
- /usr/include/x86_64-linux-gnu/sys/select.h \
- /usr/include/x86_64-linux-gnu/bits/select.h \
- /usr/include/x86_64-linux-gnu/bits/types/sigset_t.h \
- /usr/include/alloca.h /usr/include/x86_64-linux-gnu/bits/stdlib-float.h \
- /usr/include/c++/11/bits/specfun.h /usr/include/c++/11/limits \
- /usr/include/c++/11/tr1/gamma.tcc \
+ /usr/include/c++/11/bits/specfun.h /usr/include/c++/11/tr1/gamma.tcc \
  /usr/include/c++/11/tr1/special_function_util.h \
  /usr/include/c++/11/tr1/bessel_function.tcc \
  /usr/include/c++/11/tr1/beta_function.tcc \
@@ -163,12 +168,6 @@ CMakeFiles/QuadCraft.dir/src/render/mesh/ChunkMesher.cpp.o: \
  /usr/include/c++/11/tr1/riemann_zeta.tcc \
  /home/trim/Documents/GitHub/QuadCraft/src/render/mesh/../../core/world/TetraChunk.h \
  /home/trim/Documents/GitHub/QuadCraft/src/render/mesh/../../core/world/../coordinate/Quadray.h \
- /usr/include/c++/11/algorithm /usr/include/c++/11/bits/stl_algo.h \
- /usr/include/c++/11/cstdlib /usr/include/c++/11/bits/algorithmfwd.h \
- /usr/include/c++/11/bits/stl_heap.h \
- /usr/include/c++/11/bits/uniform_int_dist.h \
- /usr/include/c++/11/pstl/glue_algorithm_defs.h \
- /usr/include/c++/11/functional /usr/include/c++/11/bits/std_function.h \
  /home/trim/Documents/GitHub/QuadCraft/src/render/mesh/../../core/world/TetrahedralElement.h \
  /home/trim/Documents/GitHub/QuadCraft/src/render/mesh/../../core/world/Block.h \
  /usr/include/c++/11/cstdint /usr/include/c++/11/string \
