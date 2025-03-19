@@ -40,7 +40,7 @@ You'll need the following libraries installed:
 
 ```bash
 # Install dependencies (Ubuntu/Debian)
-sudo apt-get install libglew-dev libglfw3-dev cmake g++
+sudo apt-get install build-essential cmake libglew-dev libglfw3-dev
 
 # Clone the repository
 git clone https://github.com/yourusername/QuadCraft.git
@@ -56,6 +56,18 @@ make
 
 # Run the game
 ./bin/QuadCraft
+```
+
+#### Using the build script
+
+For convenience, you can use the provided build script:
+
+```bash
+# Make the script executable
+chmod +x build.sh
+
+# Build and run
+./build.sh
 ```
 
 #### Windows (with MSVC)
@@ -76,6 +88,16 @@ cmake --build . --config Release
 # Run the game
 .\bin\Release\QuadCraft.exe
 ```
+
+### Troubleshooting
+
+#### GL/GLEW Errors
+
+If you encounter errors related to GL/GLEW headers, ensure that your includes in source files are in the correct order. GLEW headers should be included before other OpenGL-related headers.
+
+#### Missing Libraries
+
+If CMake can't find the required libraries, make sure they are properly installed. You might need to install development versions of the libraries.
 
 ## Controls
 
@@ -108,6 +130,20 @@ QuadCraft/
 ├── assets/                      # Game assets
 └── docs/                        # Documentation
 ```
+
+## Implementation Details
+
+### Quadray Coordinate System
+
+The quadray coordinate system uses four basis vectors extending from the center of a tetrahedron to its vertices. This provides a more natural way to represent tetrahedral geometry than traditional Cartesian coordinates.
+
+### Tetrahedral Voxels
+
+Unlike Minecraft's cubic voxels, QuadCraft uses tetrahedral voxels which allow for more accurate representation of arbitrary geometry, better approximation of curved surfaces, and more natural representation of certain crystalline patterns.
+
+### Terrain Generation
+
+Terrain is generated using a modified noise function that works with tetrahedral geometry, creating landscapes with natural slopes and curves that would be difficult to achieve with cubic voxels.
 
 ## License
 

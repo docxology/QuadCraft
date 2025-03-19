@@ -10,6 +10,7 @@ void ChunkMesher::initializeLookupTables() {
     blockColors[Block::GRASS_BLOCK] = Vector3(0.3f, 0.7f, 0.2f);
     blockColors[Block::WATER_BLOCK] = Vector3(0.0f, 0.3f, 0.8f);
     blockColors[Block::SAND_BLOCK] = Vector3(0.9f, 0.8f, 0.6f);
+    blockColors[Block::ORE_BLOCK] = Vector3(0.1f, 0.3f, 0.5f);
 }
 
 std::shared_ptr<Mesh> ChunkMesher::createMeshForChunk(const TetraChunk& chunk) {
@@ -98,9 +99,8 @@ Block::BlockID ChunkMesher::getBlockAt(const TetraChunk& chunk, const Quadray& p
     return world.getBlock(worldPos);
 }
 
-bool ChunkMesher::shouldRenderFace(const TetraChunk& chunk, const Quadray& blockPos, const Quadray& neighborPos) {
-    // Get the block types
-    Block::BlockID blockType = getBlockAt(chunk, blockPos);
+bool ChunkMesher::shouldRenderFace(const TetraChunk& chunk, const Quadray& /* blockPos */, const Quadray& neighborPos) {
+    // We only need to check the neighbor type, not the block type
     Block::BlockID neighborType = getBlockAt(chunk, neighborPos);
     
     // If the neighbor is air or transparent, render the face

@@ -2,6 +2,7 @@
 
 #include <random>
 #include <functional>
+#include <cmath>
 #include "TetraChunk.h"
 #include "World.h"
 
@@ -12,10 +13,15 @@ public:
     TerrainGenerator(unsigned int seed = 12345)
         : seed(seed), engine(seed), distribution(-1.0f, 1.0f) {
         // Initialize noise parameters
-        terrainNoiseScale = 0.05f;
+        terrainNoiseScale = 0.02f;
         terrainNoiseAmplitude = 32.0f;
         caveNoiseScale = 0.1f;
         caveThreshold = 0.7f;
+        
+        // Initialize octave parameters
+        octaves = 4;
+        persistence = 0.5f;
+        lacunarity = 2.0f;
     }
     
     // Generate terrain for a given chunk
@@ -36,7 +42,7 @@ public:
                     float worldY = (chunk.chunkY * TetraChunk::CHUNK_SIZE) + (localY * TetraChunk::CHUNK_SIZE);
                     float worldZ = (chunk.chunkZ * TetraChunk::CHUNK_SIZE) + (localZ * TetraChunk::CHUNK_SIZE);
                     
-                    // For each of the four tetrahedral elements in this cube
+                    // For each of the tetrahedral elements in this cube
                     generateTetraElements(chunk, Vector3(worldX, worldY, worldZ), 
                                          TetraChunk::CHUNK_SIZE / resolution);
                 }
@@ -101,35 +107,71 @@ private:
     
     // Determine the block type at a given position based on noise
     Block::BlockID determineBlockType(const Vector3& pos) {
-        // Basic height map
-        float baseHeight = terrainNoiseAmplitude * simplexNoise(
+        // Basic height map with multiple octaves for more natural terrain
+        float baseHeight = terrainNoiseAmplitude * fractalNoise(
             pos.x * terrainNoiseScale, 
             0.0f,
-            pos.z * terrainNoiseScale
+            pos.z * terrainNoiseScale,
+            octaves, persistence, lacunarity
         );
         
-        // Cave noise
-        float caveNoise = simplexNoise(
+        // Add some mountains
+        float mountainNoise = fractalNoise(
+            pos.x * terrainNoiseScale * 0.5f,
+            0.0f,
+            pos.z * terrainNoiseScale * 0.5f,
+            octaves, persistence, lacunarity
+        );
+        
+        // Boost mountain height exponentially
+        float mountainFactor = std::max(0.0f, mountainNoise - 0.3f) * 2.0f;
+        float mountainHeight = 20.0f * mountainFactor * mountainFactor;
+        
+        // Combine base terrain with mountains
+        float finalHeight = baseHeight + mountainHeight;
+        
+        // Cave noise (3D)
+        float caveNoise = fractalNoise(
             pos.x * caveNoiseScale,
             pos.y * caveNoiseScale,
-            pos.z * caveNoiseScale
+            pos.z * caveNoiseScale,
+            3, 0.5f, 2.0f
+        );
+        
+        // Ore veins noise
+        float oreNoise = fractalNoise(
+            pos.x * 0.2f,
+            pos.y * 0.2f,
+            pos.z * 0.2f,
+            2, 0.5f, 2.0f
         );
         
         // Determine block type based on height and noise
-        if (pos.y < baseHeight) {
+        if (pos.y < finalHeight) {
             // Underground
             if (caveNoise > caveThreshold) {
                 // Cave
                 return Block::AIR_BLOCK;
-            } else if (pos.y > baseHeight - 4) {
+            } else if (pos.y > finalHeight - 1) {
                 // Surface layer
-                return Block::GRASS_BLOCK;
-            } else if (pos.y > baseHeight - 8) {
+                if (finalHeight < 5) {
+                    // Sand at water level
+                    return Block::SAND_BLOCK;
+                } else {
+                    // Grass elsewhere
+                    return Block::GRASS_BLOCK;
+                }
+            } else if (pos.y > finalHeight - 4) {
                 // Sub-surface layer
                 return Block::DIRT_BLOCK;
             } else {
                 // Deep underground
-                return Block::STONE_BLOCK;
+                // Check for ores
+                if (oreNoise > 0.8f && pos.y < 20) {
+                    return Block::ORE_BLOCK;
+                } else {
+                    return Block::STONE_BLOCK;
+                }
             }
         } else if (pos.y < 5) {
             // Water level
@@ -142,11 +184,43 @@ private:
     
     // Simple Perlin noise implementation
     float simplexNoise(float x, float y, float z) {
-        // This is a placeholder for a proper noise function
+        // This is a simplified noise function
         // In a real implementation, you would use a library like FastNoise
-        float noise = std::sin(x * 0.1f) * std::cos(y * 0.1f) * std::sin(z * 0.1f);
-        noise = (noise + 1.0f) * 0.5f; // Normalize to 0-1
+        
+        // Combine multiple sine waves at different frequencies
+        float noise = 0.0f;
+        noise += std::sin(x * 1.0f + y * 0.5f) * 0.5f;
+        noise += std::sin(y * 0.75f + z * 0.25f) * 0.25f;
+        noise += std::sin(z * 0.8f + x * 0.3f) * 0.125f;
+        noise += std::sin((x + y + z) * 0.5f) * 0.125f;
+        
+        // Normalize to range -1 to 1
+        noise = noise / (0.5f + 0.25f + 0.125f + 0.125f);
+        
         return noise;
+    }
+    
+    // Fractal noise (multiple octaves)
+    float fractalNoise(float x, float y, float z, int octaves, float persistence, float lacunarity) {
+        float total = 0.0f;
+        float frequency = 1.0f;
+        float amplitude = 1.0f;
+        float maxValue = 0.0f;  // Used for normalizing result to 0.0 - 1.0
+        
+        for (int i = 0; i < octaves; i++) {
+            total += simplexNoise(x * frequency, y * frequency, z * frequency) * amplitude;
+            
+            maxValue += amplitude;
+            
+            amplitude *= persistence;
+            frequency *= lacunarity;
+        }
+        
+        // Normalize to 0.0 - 1.0
+        total = total / maxValue;
+        
+        // Convert to range 0.0 - 1.0
+        return (total + 1.0f) * 0.5f;
     }
     
     // Noise parameters
@@ -157,6 +231,11 @@ private:
     float terrainNoiseAmplitude;
     float caveNoiseScale;
     float caveThreshold;
+    
+    // Fractal noise parameters
+    int octaves;
+    float persistence;
+    float lacunarity;
 };
 
 } // namespace QuadCraft 

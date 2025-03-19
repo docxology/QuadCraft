@@ -43,6 +43,18 @@ public:
         return chunk;
     }
     
+    // Get a chunk at the specified coordinates (const version)
+    std::shared_ptr<TetraChunk> getChunk(int chunkX, int chunkY, int chunkZ) const {
+        auto coords = std::make_tuple(chunkX, chunkY, chunkZ);
+        auto it = chunks.find(coords);
+        
+        if (it != chunks.end()) {
+            return it->second;
+        }
+        
+        return nullptr; // Can't create a new chunk in const method
+    }
+    
     // Check if a chunk exists at the specified coordinates
     bool hasChunk(int chunkX, int chunkY, int chunkZ) const {
         return chunks.find(std::make_tuple(chunkX, chunkY, chunkZ)) != chunks.end();
@@ -57,13 +69,16 @@ public:
     }
     
     // Get the block at the specified world coordinates
-    Block::BlockID getBlock(const Quadray& worldPos) {
+    Block::BlockID getBlock(const Quadray& worldPos) const {
         // Convert to Cartesian for chunk lookup
         Vector3 cartesian = worldPos.toCartesian();
         auto [chunkX, chunkY, chunkZ] = worldToChunkCoords(cartesian);
         
-        // Get or create the chunk
+        // Get the chunk if it exists
         auto chunk = getChunk(chunkX, chunkY, chunkZ);
+        if (!chunk) {
+            return Block::AIR_BLOCK; // Return air for non-existent chunks
+        }
         
         // Convert world coordinates to local chunk coordinates
         Quadray localPos = chunk->worldToChunkSpace(worldPos);
@@ -130,7 +145,7 @@ public:
 
 private:
     // Map of all loaded chunks
-    std::unordered_map<std::tuple<int, int, int>, std::shared_ptr<TetraChunk>, ChunkCoordHash> chunks;
+    mutable std::unordered_map<std::tuple<int, int, int>, std::shared_ptr<TetraChunk>, ChunkCoordHash> chunks;
 };
 
 } // namespace QuadCraft 

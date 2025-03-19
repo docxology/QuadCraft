@@ -1,5 +1,5 @@
-#include "Mesh.h"
 #include <GL/glew.h>
+#include "Mesh.h"
 
 namespace QuadCraft {
 

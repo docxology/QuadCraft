@@ -3,6 +3,7 @@
 #include <unordered_map>
 #include <vector>
 #include <memory>
+#include <array>
 #include "../coordinate/Quadray.h"
 #include "TetrahedralElement.h"
 #include "Block.h"
@@ -122,8 +123,14 @@ public:
         return elements;
     }
     
-    // Generate the chunk's content (to be implemented by terrain generator)
+    // Generate the chunk's content
     void generate(World& world);
+    
+    // Get neighboring tetrahedral elements for a given element
+    std::array<Quadray, 4> getNeighbors(const Quadray& quadPos) const;
+    
+    // Update neighboring chunks when blocks near the boundary change
+    void updateNeighborChunks(World& world);
     
 private:
     // Map of all non-air elements in this chunk

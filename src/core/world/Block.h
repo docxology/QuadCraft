@@ -18,6 +18,7 @@ public:
     static constexpr BlockID GRASS_BLOCK = 3;
     static constexpr BlockID WATER_BLOCK = 4;
     static constexpr BlockID SAND_BLOCK = 5;
+    static constexpr BlockID ORE_BLOCK = 6;
     
     // Block properties
     BlockID id;
@@ -47,6 +48,7 @@ public:
         registerBlock(Block(Block::GRASS_BLOCK, false, true, "grass"));
         registerBlock(Block(Block::WATER_BLOCK, true, false, "water"));
         registerBlock(Block(Block::SAND_BLOCK, false, true, "sand"));
+        registerBlock(Block(Block::ORE_BLOCK, false, true, "ore"));
     }
     
     void registerBlock(const Block& block) {
