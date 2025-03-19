@@ -1,0 +1,3 @@
+/home/trim/Documents/GitHub/QuadCraft/build/CMakeFiles/QuadCraft.dir
+/home/trim/Documents/GitHub/QuadCraft/build/CMakeFiles/edit_cache.dir
+/home/trim/Documents/GitHub/QuadCraft/build/CMakeFiles/rebuild_cache.dir
