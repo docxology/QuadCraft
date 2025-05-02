@@ -1,0 +1,261 @@
+<!DOCTYPE html><html><head><script>
+/*gpt didnt solve it so coding manually..
+good. now use your python env to run a 3d cellular automata, with 1 bit per cell. start all
+bits as 0 except the center bit starts as 1. Each cycle, each cell checks 5 offsets
+(ignoring [0,0,0]): [0,0,2],[0,-1,1],[0,1,1],[-1,0,1],[1,0,1], other nearby cells,
+and OR's itself with those. If any are 1, it becomes 1. This should cover the 3d grid
+with exactly the corners of the faces of octahedrons+tetrahedrons. i want to know the
+fraction of the 3d grid thats 1s after it runs enuf cycles that its state does not
+change. if the offsets hang off, use 0 for past that. then graph all these points.
+make it a 21x21x21 grid so its the center cell (that starts as 1) plus/minus 10 in
+each direction. Also, so it goes in all directions, use full
+[[0,0,0],[0,0,2],[0,-1,1],[0,1,1],[-1,0,1],[1,0,1]] 6 points and loop over what if
+this current cell is each of those 6 (3d vectors), and check all of those, ORING it.
+*/
+
+const octahedronCorners = [[0,0,0],[0,0,2],[0,-1,1],[0,1,1],[-1,0,1],[1,0,1]];
+const canRecursePairs = [
+/*0*/ /*[0,0,0]*/ [ true,  false,  true,   true,   true,   true  ],
+/*1*/ /*[0,0,2]*/ [ false,  true,  true,   true,   true,   true  ],
+/*2*/ /*[0,-1,1]*/[ true,   true,  true,   false,  true,   true  ],
+/*3*/ /*[0,1,1]*/ [ true,   true,  false,  true,   true,   true  ],
+/*4*/ /*[-1,0,1]*/[ true,   true,  true,   true,   true,   false ],
+/*5*/ /*[1,0,1]*/ [ true,   true,  true,   true,   false,  true  ]
+];
+/*
+const canRecursePairs = [
+	[true, true, false, false, false, false],
+	[true, true, false, false, false, false],
+	[false, false, true, true, true, true],
+	[false, false, true, true, true, true],
+	[false, false, true, true, true, true],
+	[false, false, true, true, true, true],
+];
+/*const canRecursePairs = [
+	[true, true, false, false, false, false],
+	[true, true, false, false, false, false],
+	[false, false, true, true, true, true],
+	[false, false, true, true, true, true],
+	[false, false, true, true, true, true],
+	[false, false, true, true, true, true],
+];*/
+
+let side = 21;
+let mid = side>>1;
+let xyzToPtr = ([x,y,z])=>(x*side*side+y*side+z);
+let grid = new Uint8Array(side**3);
+let center = [mid,mid,mid];
+grid[xyzToPtr(center)] = 1;
+//gridAt is same as grid[xyzToPtr([x,y,z]) except if is outside the grid it returns 0.
+let gridAt = ([x,y,z])=>(
+	(0<=x && x<side && 0<=y && y<side && 0<=z && z<side) ? grid[xyzToPtr([x,y,z])] : 0);
+	
+let gridCycle = (grid,directions)=>{
+	for(let x=0; x<side; x++) for(let y=0; y<side; y++) for(let z=0; z<side; z++){
+		let nextState = gridAt([x,y,z]); //prev state
+		for(let direction of directions){
+			nextState |= gridAt(Add(direction,[x,y,z]));
+		}
+		grid[xyzToPtr([x,y,z])] = nextState;
+	}
+};
+
+let Add = (vecA,vecB)=>[vecA[0]+vecB[0], vecA[1]+vecB[1], vecA[2]+vecB[2]];
+let Sub = (vecA,vecB)=>[vecA[0]-vecB[0], vecA[1]-vecB[1], vecA[2]-vecB[2]];
+
+let Eq = (vecA,vecB)=>(vecA[0]===vecB[0] && vecA[1]===vecB[1] && vecA[2]===vecB[2]);
+let listContainsVec = (list,vec)=>{
+	for(let vecInList of list) if(Eq(vec,vecInList)) return true;
+	return false;
+};
+let addToListUnique = (list,vec)=>{
+	if(!listContainsVec(list,vec)) list.push(vec);
+	return list;
+};
+
+/*
+let directions = [];
+for(let i=0; i<6; i++){
+	for(let j=0; j<6; j++){
+		let cornerSelf = octahedronCorners[i];
+		let cornerTo = octahedronCorners[j];
+		let direction = Sub(cornerTo,cornerSelf);
+		addToListUnique(directions,direction);
+	}
+}
+console.log('directions.length='+directions.length+' directions=\n'+JSON.stringify(directions));
+//directions.length=19 directions=
+//[[0,0,0],[0,0,2],[0,-1,1],[0,1,1],[-1,0,1],[1,0,1],[0,0,-2],[0,-1,-1],[0,1,-1],[-1,0,-1],[1,0,-1],[0,2,0],[-1,1,0],[1,1,0],[0,-2,0],[-1,-1,0],[1,-1,0],[2,0,0],[-2,0,0]]
+//wrong! too many.
+
+/*
+explain it in terms of which points on " octahedronCorners = [[0,0,0],[0,0,2],[0,-1,1],[0,1,1],[-1,0,1],[1,0,1]]" i can recurse octahedronCorners onto and which I cant. I dont want any abs or max in it. just give a list of 6 booleans parallel to octahedronCorners that says which of those i can recurse the [0,0,0] from.
+
+ChatGPT said:
+
+Thought for 24 seconds
+Below is the six-element Boolean mask, ordered exactly as in
+
+js
+Copy
+Edit
+octahedronCorners = [
+	[ 0, 0, 0],   // 0
+	[ 0, 0, 2],   // 1
+	[ 0,-1, 1],   // 2
+	[ 0, 1, 1],   // 3
+	[-1, 0, 1],   // 4
+	[ 1, 0, 1]    // 5
+];
+js
+Copy
+Edit
+//            0      1      2      3      4      5
+const canRecurse = [false, false, true,  true,  true, true];
+*/
+
+/*
+const canRecurse = [false, false, true,  true,  true, true];
+
+let directions = [];
+for(let i=0; i<6; i++){
+	if(canRecurse[i]){
+		for(let j=0; j<6; j++){
+			let cornerSelf = octahedronCorners[i];
+			let cornerTo = octahedronCorners[j];
+			let direction = Sub(cornerTo,cornerSelf);
+			addToListUnique(directions,direction);
+		}
+	}
+}
+console.log('directions.length='+directions.length+' directions=\n'+JSON.stringify(directions));
+//directions.length=17 directions=
+//[[0,1,-1],[0,1,1],[0,0,0],[0,2,0],[-1,1,0],[1,1,0],[0,-1,-1],[0,-1,1],[0,-2,0],[-1,-1,0],[1,-1,0],[1,0,-1],[1,0,1],[2,0,0],[-1,0,-1],[-1,0,1],[-2,0,0]]
+*/
+
+let directions = [];
+for(let i=0; i<6; i++){
+	for(let j=0; j<6; j++){
+		if(canRecursePairs[i][j]){
+			let cornerSelf = octahedronCorners[i];
+			let cornerTo = octahedronCorners[j];
+			let direction = Sub(cornerTo,cornerSelf);
+			addToListUnique(directions,direction);
+		}
+	}
+}
+console.log('directions.length='+directions.length+' directions=\n'+JSON.stringify(directions));
+//directions.length=13 directions=
+//[[0,0,0],[0,-1,1],[0,1,1],[-1,0,1],[1,0,1],[0,-1,-1],[0,1,-1],[-1,0,-1],[1,0,-1],[-1,1,0],[1,1,0],[-1,-1,0],[1,-1,0]]
+
+/*Yes — that output is exactly what you want.
+
+What the 13 vectors represent
+
+vector	meaning
+[0,0,0]	“stay in place” – useful if you want a cell always to keep its current state when it ORs with neighbours.
+the other 12	every permutation of
+(±1, ±1, 0)   (and cyclic shifts)—the 12 face-edge directions of an octahedron (and tetrahedron) in the FCC lattice.
+Those 12 directions are the only ones that:
+
+differ by ±1 in exactly two coordinates and 0 in the third;
+
+therefore have Euclidean length √2 (one face diagonal of a unit cube);
+
+connect every FCC corner to its 12 nearest FCC neighbours.
+
+So the list
+
+text
+Copy
+Edit
+[0,-1,1]  [0,1,1]  [-1,0,1]  [1,0,1]
+[0,-1,-1] [0,1,-1] [-1,0,-1] [1,0,-1]
+[-1,1,0]  [1,1,0]  [-1,-1,0] [1,-1,0]
+is exactly right. If you drop [0,0,0] you’re left with the canonical 12 edge vectors.
+
+Next steps
+Use this directions array for your per-cell OR rule.
+
+No extra long or duplicate directions will be added.
+
+The automaton will fill out the FCC lattice of octahedron/tetrahedron corners as intended.
+
+Looks good to proceed!
+
+
+
+
+
+
+You said:
+so my 3d cellular automata will compute exactly the octahedronFace corners by doing those 12 in all combos?
+
+
+ChatGPT said:
+✅ Yes, exactly.
+Your 3D cellular automaton, using those 12 directions (plus optionally [0,0,0] to "stay on"), will correctly propagate only along the corners of the faces of the octahedrons and tetrahedrons in the tessellation.
+
+Why this works
+Each FCC lattice point (corner) has 12 immediate face-diagonal neighbors:
+
+Moving along vectors where two coordinates change by ±1 and the third stays 0.
+
+Those directions perfectly match how octahedrons and tetrahedrons are glued together face-to-face.
+
+Thus:
+
+Every cell OR's itself with its 12 FCC face-neighbors.
+
+Growth happens only along valid FCC paths (corners of octahedral and tetrahedral faces).
+
+No invalid cube edges, no invalid body diagonals, no overspread.
+
+⚡ Your automaton will:
+
+Step	Result
+Start with a single active point at center	(mid, mid, mid) is 1
+Each cycle	spread to face-adjacent FCC corners
+After enough cycles	fills out the full FCC lattice shell-by-shell
+You will cover exactly the FCC lattice!
+(No extra points. No missing points.)
+
+If you want, I can also show you how to predict the filled fraction of the cube volume (should be very close to 50% as FCC lattice fills half the cubic grid points).
+Would you like that? 🚀
+*/
+
+for(let c=0; c<side*3; c++){ //extra cycles just to make sure. todo less
+	gridCycle(grid, directions);
+}
+
+let sum = 0;
+for(let i=0; i<grid.length; i++) sum += grid[i];
+let fractionFilled = sum/grid.length;
+console.log('fractionFilled='+fractionFilled);
+/*wrong, it should be somewhere around 1/2.. this is not setting anything in grid at all, just leaving the middle one as 1 and the rest 0s.
+directions.length=13 directions=
+[[0,0,0],[0,-1,1],[0,1,1],[-1,0,1],[1,0,1],[0,-1,-1],[0,1,-1],[-1,0,-1],[1,0,-1],[-1,1,0],[1,1,0],[-1,-1,0],[1,-1,0]] octAutomata_001.html:147:9
+fractionFilled=0.00010797969981643452
+
+was buggy. fixed gridCycle.
+*/
+
+/*directions.length=13 directions=
+[[0,0,0],[0,-1,1],[0,1,1],[-1,0,1],[1,0,1],[0,-1,-1],[0,1,-1],[-1,0,-1],[1,0,-1],[-1,1,0],[1,1,0],[-1,-1,0],[1,-1,0]] octAutomata_001.html:147:9
+fractionFilled=0.5000539898499082
+*/
+
+let directGridAt = ([x,y,z])=>(1-((x+y+z)&1));
+
+let correctPoints = 0;
+for(let x=3; x<side-3; x++) for(let y=3; y<side-3; y++) for(let z=3; z<side-3; z++){
+	let computedSlow = gridAt([x,y,z]);
+	let computedFast = directGridAt([x,y,z]);
+	if(computedSlow != computedFast){
+		throw new Error('computedSlow='+computedSlow+' computedFast='+computedFast+' at xyz='+JSON.stringify([x,y,z]));
+	}else correctPoints++;
+};
+console.log('test pass, correctPoints='+correctPoints+' in comparing gridAt vs directGridAt');
+
+
+</script></head><body>octAutomata. Derives the coordinate system. See browser console.</body></html>

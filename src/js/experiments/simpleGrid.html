@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>Voxel Shapes with Triangles</title>
+	<style>
+		body { margin: 0; overflow: hidden; background: #111; }
+		canvas { display: block; width: 100vw; height: 100vh; cursor: grab; }
+	</style>
+</head>
+<body>
+<canvas id="canvas"></canvas>
+<script>
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+
+const side = 20;
+const grid = new Int32Array(side ** 3);
+const BIT_SOLID = 1 << 0;
+const BIT_OCT = 1 << 1;
+const BIT_TET_X = 1 << 2;
+const BIT_TET_Y = 1 << 3;
+//start 8 bits here, 1 for each triangle in the tetrahedron whose [0,0,0] coordinate is here.
+const BIT_TRIS = 1<<4;
+
+//for x, y, and z in range 0..(side-1), and index in range 0..((side**3)-1).
+//grid[xyzToIndex(x,y,z)]
+const xyzToIndex = (x, y, z) => x * side * side + y * side + z;
+//indexToX(xyzToIndex(x,y,z))==x
+const indexToX = index=>((index/(side*side))|0);
+const indexToY = index=>(((index % (side * side)) / side)|0);
+const indexToZ = index=>(index%side);
+const indexToXYZ = index=>[indexToX(index),indexToY(index),indexToZ(index)];
+
+//TODO rename this. it just means its one of half of the squares in the 3d checkerboard,
+//assuming x, y, and z are integers.
+const isFCC = (x, y, z) => (x + y + z) & 1;
+
+const octCorners = [[0,0,0],[0,0,2],[0,-1,1],[0,1,1],[-1,0,1],[1,0,1]];
+
+//each face is 3 indexs in octCorners (0..5). Each is an equilateral triangle.
+//Every tetrahedron face is some octahedron's face.
+const octahedronFaces = [
+	[0, 2, 4],
+	[0, 4, 3],
+	[0, 3, 5],
+	[0, 5, 2],
+	[1, 2, 5],
+	[1, 5, 3],
+	[1, 3, 4],
+	[1, 4, 2]
+];
+
+const allShapes = [];
+for (let x = 2; x < side - 2; x++) {
+	for (let y = 2; y < side - 2; y++) {
+		for (let z = 2; z < side - 2; z++) {
+			if (!isFCC(x, y, z)) continue;
+			const key = xyzToIndex(x, y, z);
+			if (Math.random() < 1.0) {
+				grid[key] |= BIT_SOLID | BIT_OCT;
+				allShapes.push([x, y, z, 'oct']);
+			}
+		}
+	}
+}
+
+// mouse/drag/zoom/rotate setup
+let offsetX = canvas.width / 2;
+let offsetY = canvas.height / 2;
+let drag = false, rotateDrag = false, lastX = 0, lastY = 0;
+let zoom = 1.0;
+let angleX = 0, angleY = 0;
+let cubeSize = 700;
+
+let Add = (vecA,vecB)=>[vecA[0]+vecB[0], vecA[1]+vecB[1], vecA[2]+vecB[2]];
+let Sub = (vecA,vecB)=>[vecA[0]-vecB[0], vecA[1]-vecB[1], vecA[2]-vecB[2]];
+
+canvas.addEventListener("mousedown", e => {
+	if (e.button === 2) drag = true;
+	else if (e.button === 0) rotateDrag = true;
+	lastX = e.clientX;
+	lastY = e.clientY;
+	canvas.style.cursor = 'grabbing';
+});
+canvas.addEventListener("mouseup", () => {
+	drag = rotateDrag = false;
+	canvas.style.cursor = 'grab';
+});
+canvas.addEventListener("contextmenu", e => e.preventDefault());
+canvas.addEventListener("mousemove", e => {
+	if (drag) {
+		offsetX += e.clientX - lastX;
+		offsetY += e.clientY - lastY;
+	} else if (rotateDrag) {
+		angleY += (e.clientX - lastX) * 0.01;
+		angleX += (e.clientY - lastY) * 0.01;
+	}
+	lastX = e.clientX;
+	lastY = e.clientY;
+});
+canvas.addEventListener("wheel", e => {
+	e.preventDefault();
+	zoom *= e.deltaY < 0 ? 1.1 : 0.9;
+});
+
+function rotate([x, y, z]) {
+	let dx = x - side/2, dz = z - side/2;
+	let tx = dx * Math.cos(angleY) - dz * Math.sin(angleY);
+	let tz = dx * Math.sin(angleY) + dz * Math.cos(angleY);
+	dx = tx; dz = tz;
+	let dy = y - side/2;
+	tx = dy * Math.cos(angleX) - tz * Math.sin(angleX);
+	tz = dy * Math.sin(angleX) + tz * Math.cos(angleX);
+	dy = tx;
+	return [dx + side/2, dy + side/2, tz + side/2];
+}
+
+function project([x, y, z]) {
+	const scale = cubeSize / (z + side);
+	return [offsetX + (x - side/2) * scale * zoom, offsetY - (y - side/2) * scale * zoom];
+}
+
+function drawTriangle(p1, p2, p3, color) {
+	const a = project(rotate(p1));
+	const b = project(rotate(p2));
+	const c = project(rotate(p3));
+	ctx.beginPath();
+	ctx.moveTo(...a);
+	ctx.lineTo(...b);
+	ctx.lineTo(...c);
+	ctx.closePath();
+	ctx.fillStyle = color;
+	ctx.fill();
+	ctx.strokeStyle = '#000';
+	ctx.stroke();
+}
+
+var randInt = max=>(randFlo(max)|0);
+
+var randFlo = max=>(Math.random()*max);
+
+var randXYZ = ()=>[randFlo(side),randFlo(side),randFlo(side)];
+
+var randColor = ()=>{
+	let s = ''+randInt(2**24).toString(16)
+	while(s.length < 6) s = '0'+s;
+	return '#'+s;
+};
+
+//call toggleOctahedronAt(index) multiple times
+//(and todo toggleTetrahedronXAtAnd toggleTetrahedronYAt)
+//then triangles = makeTrianglesList(grid);
+var makeTrianglesList = grid=>{
+	let mask = BIT_TRIS*255; //8 triangles, 8 bits.
+	let tris = [];
+	for(let i=0; i<grid.length; i++){
+		if(grid[i]&mask){ //has at least 1 tri
+			let xyz = indexToXYZ(i);
+			for(let t=0; t<8; t++){
+				if(grid[i]&(BIT_TRIS<<t)){ //has that tri
+					let faceIndexs = octahedronFaces[t];
+					tris.push([
+						Add(xyz,octCorners[faceIndexs[0]]),
+						Add(xyz,octCorners[faceIndexs[1]]),
+						Add(xyz,octCorners[faceIndexs[2]]),
+						randColor()
+					]);
+				}
+			}
+		}
+	}
+	return tris;
+};
+
+var indexNearXYZ = ([x,y,z])=>{
+	x = Math.max(0, Math.min(x,side-1));
+	y = Math.max(0, Math.min(y,side-1));
+	z = Math.max(0, Math.min(z,side-1));
+	x |= 0;
+	y |= 0;
+	z |= 0;
+	if(!isFCC(x,y,z)){ //FIXME could be more accurate
+		x++;
+		if(x == side) x -= 2; //other direction
+	}
+	return xyzToIndex(x,y,z);
+};
+
+var gridChanged = false;
+
+var toggleOctahedronAt = index=>{
+	gridChanged = true;
+	grid[index] ^= (BIT_OCT | (BIT_TRIS*255)); //1 octahedron bit and 8 face bits
+};
+
+var toggleRandomTetrahedron = ()=>{
+	toggleOctahedronAt(indexNearXYZ(randXYZ()));
+};
+
+var updateIfGridChanged = ()=>{
+	if(gridChanged){
+		triangles = makeTrianglesList(grid);
+		gridChanged = false;
+	}
+};
+
+// Global triangle list
+var triangles = [
+	[[10,10,10], [11,10,10], [10,11,10], '#ff0'],
+	[[12,12,12], [12,13,12], [13,12,12], '#0ff'],
+	[[5,5,5], [5,6,5], [5,5,6], '#f0f']
+];
+
+function draw(){
+
+	//if(Math.random()<.05){
+	//	toggleRandomTetrahedron();
+	//}
+
+	updateIfGridChanged();
+	ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+	// Draw triangles
+	for (const [a, b, c, color] of triangles) {
+		drawTriangle(a, b, c, color);
+	}
+
+	// Draw shape centers
+	for (const [x, y, z, type] of allShapes) {
+		const [px, py] = project(rotate([x, y, z]));
+		ctx.fillStyle = type === 'oct' ? '#f88' : '#888';
+		ctx.beginPath();
+		ctx.arc(px, py, 2, 0, 2 * Math.PI);
+		ctx.fill();
+	}
+	requestAnimationFrame(draw);
+}
+draw();
+for(let i=0; i<99; i++){
+	toggleRandomTetrahedron();
+}
+</script>
+</body>
+</html>
