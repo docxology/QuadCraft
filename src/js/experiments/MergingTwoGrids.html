@@ -10,13 +10,28 @@
 </head>
 <body>
 <div style="position:absolute;left=0px;top=0px;color:white">
-Push 4 arrow keys to move in 4 quadray directions. They change colors randomly.
-This does not align to the existing grid yet, which is constant color dots.
-drag with left mouse button to rotate, drag with right mouse button to move,
+Put 1 hand on asdw and one hand on the arrow keys. These move the 4 quadray directions and their reverse. a/d w/s left/right up/down. See Directions var in javascript.
+Still working on aligning the grids and shapes.
+Drag with left mouse button to rotate, drag with right mouse button to move,
 use mouse wheel to zoom.
 </div>
 <canvas id="canvas"></canvas>
 <script>
+
+const ROOT2 = Math.SQRT2;
+const S3 = Math.sqrt(9 / 8);
+
+var randInt = max=>(randFlo(max)|0);
+
+var randFlo = max=>(Math.random()*max);
+
+var randXYZ = ()=>[randFlo(side),randFlo(side),randFlo(side)];
+
+var randColor = ()=>{
+	let s = ''+randInt(2**24).toString(16)
+	while(s.length < 6) s = '0'+s;
+	return '#'+s;
+};
 
 class Quadray {
 	constructor(a = 0, b = 0, c = 0, d = 0) {
@@ -24,10 +39,8 @@ class Quadray {
 		this.b = b;
 		this.c = c;
 		this.d = d;
+		this.color = randColor(); //for UI only, not part of quadray math
 	}
-
-	static ROOT2 = Math.SQRT2;
-	static S3 = Math.sqrt(9 / 8);
 
 	normalized() {
 		const minVal = Math.min(this.a, this.b, this.c, this.d);
@@ -40,7 +53,7 @@ class Quadray {
 	}
 
 	toCartesian() {
-		const scale = 1 / Quadray.ROOT2;
+		const scale = 1 / ROOT2;
 		const x = scale * (this.a - this.b - this.c + this.d);
 		const y = scale * (this.a - this.b + this.c - this.d);
 		const z = scale * (this.a + this.b - this.c - this.d);
@@ -48,7 +61,7 @@ class Quadray {
 	}
 
 	static fromCartesian([x, y, z]) {
-		const scale = 1 / Quadray.ROOT2;
+		const scale = 1 / ROOT2;
 
 		const a = scale * (Math.max(0, x) + Math.max(0, y) + Math.max(0, z));
 		const b = scale * (Math.max(0, -x) + Math.max(0, -y) + Math.max(0, z));
@@ -110,6 +123,10 @@ class Quadray {
 	toString(){
 		return 'Q('+this.a+','+this.b+','+this.c+','+this.d+')';
 	}
+	
+	toDetailString(){
+		return this+' (xyz '+JSON.stringify(this.toCartesian())+')';
+	}
 }
 
 var Q = (a,b,c,d)=>(new Quadray(a,b,c,d));
@@ -118,12 +135,34 @@ var Q = (a,b,c,d)=>(new Quadray(a,b,c,d));
 var QDots = {}
 
 //map of keyboard button name to Quadray for moving selq (the selected Quadray)
-var Directions = {
+/*var Directions = {
 	ArrowUp: Q(1,0,0,0),
 	ArrowRight: Q(0,1,0,0),
 	ArrowDown: Q(0,0,1,0),
 	ArrowLeft: Q(0,0,0,1),
+};*/
+var CoreDirections = [
+	Q(ROOT2, 0, 0, 0),
+	Q(0, ROOT2, 0, 0),
+	Q(0, 0, ROOT2, 0),
+	Q(0, 0, 0, ROOT2),
+];
+var Directions = { //left hand on asdw, right hand on arrow keys.
+	ArrowUp: CoreDirections[0],
+	ArrowDown: CoreDirections[0].mul(-1),
+	ArrowLeft: CoreDirections[1],
+	ArrowRight: CoreDirections[1].mul(-1),
+	w: CoreDirections[2],
+	s: CoreDirections[2].mul(-1),
+	a: CoreDirections[3],
+	d: CoreDirections[3].mul(-1),
 };
+/*var Directions = {
+	ArrowUp:   Q(1,0,1,0),
+	ArrowRight:Q(1,0,0,1),
+	ArrowDown: Q(0,1,0,1),
+	ArrowLeft: Q(0,1,1,0),
+};*/
 
 //Quadray param, adds or removes it from QDots
 var ToggleDot = q=>{
@@ -153,9 +192,6 @@ let addToListUnique = (list,vec)=>{
 	if(!listContainsVec(list,vec)) list.push(vec);
 	return list;
 };
-
-//selected Quadray
-var selq = Q(0,0,0,0);
 
 
 const canvas = document.getElementById("canvas");
@@ -289,24 +325,12 @@ document.addEventListener("keydown", e => {
 	let key = e.key;
 	if(Directions[key]){
 		//RemDot(selq);
-		selq = selq.add(Directions[key]);
+		nextSelq = selq.add(Directions[key]);
+		console.log('selq='+selq.toDetailString()+' nextSelq='+nextSelq.toDetailString());
+		selq = nextSelq;
 		AddDot(selq);
 	}else{
-		if (e.key === "a") {
-			console.log("Pressed A");
-		} else if (e.key === "d") {
-			console.log("Pressed D");
-		} else if (e.key === "w") {
-			console.log("Pressed W");
-		} else if (e.key === "s") {
-			console.log("Pressed S");
-		} else if (e.key === " ") {
-			console.log("Pressed SPACE");
-		} else if (e.key === "Escape") {
-			console.log("Pressed ESC");
-		} else {
-			console.log("Pressed key:", e.key);
-		}
+		console.log('Directions['+key+']='+Directions[key]);
 	}
 });
 
@@ -393,18 +417,6 @@ function drawTriangle(p1, p2, p3, color) {
 	ctx.stroke();
 }
 
-var randInt = max=>(randFlo(max)|0);
-
-var randFlo = max=>(Math.random()*max);
-
-var randXYZ = ()=>[randFlo(side),randFlo(side),randFlo(side)];
-
-var randColor = ()=>{
-	let s = ''+randInt(2**24).toString(16)
-	while(s.length < 6) s = '0'+s;
-	return '#'+s;
-};
-
 //call toggleOctahedronAt(index) multiple times
 //(and todo toggleTetrahedronXAtAnd toggleTetrahedronYAt)
 //then triangles = makeTrianglesList(grid);
@@ -458,6 +470,12 @@ var indexNearXYZ = ([x,y,z])=>{
 	return xyzToIndex(x,y,z);
 };
 
+//selected Quadray
+//var selq = Q(0,0,0,0);
+var selq = Quadray.fromCartesian(
+	indexToXYZ(indexNearXYZ([side/2,side/2,side/2]))); //start on one of the 3d grid points
+console.log('selq='+selq.toDetailString());
+
 var gridChanged = false;
 
 var toggleOctahedronAt = index=>{
@@ -479,7 +497,7 @@ var updateIfGridChanged = ()=>{
 		sortTrianglesList();
 		gridChanged = false;
 	}
-	sortTrianglesList(); //FIXME dont do this every time. im using it to test "view" var which is drawing a gray dot.
+	//sortTrianglesList(); //FIXME dont do this every time. im using it to test "view" var which is drawing a gray dot.
 };
 
 // Global triangle list
@@ -502,6 +520,9 @@ function draw(){
 	//if(Math.random()<.05){
 	//	toggleRandomTetrahedron();
 	//}
+	
+	selq.color = randColor(); //make it flash
+	selq.color = randColor(); //make it flash
 
 	updateIfGridChanged();
 	ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -523,7 +544,8 @@ function draw(){
 		paintXYZColor(xyzt, xyzt[3]=='oct' ? '#f88' : '#888');
 	}
 	for (const q of Object.values(QDots)){
-		paintXYZColor(q.toCartesian(), randColor());
+		//paintXYZColor(q.toCartesian(), randColor());
+		paintXYZColor(q.toCartesian(), q.color);
 	}
 	requestAnimationFrame(draw);
 }
