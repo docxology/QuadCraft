@@ -10,9 +10,12 @@
 </head>
 <body>
 <div style="position:absolute;left=0px;top=0px;color:white">
+Something looks wrong here in the set of gray (quadray) vs red (3d) dots. The red dots should be getting displayed over by the grays. Some are, and some arent. Space and f toggle the display of the 2 kinds of dots, other than the selected dot selq. If varyPointSizeByDistanceToCamera is true, paintXYZColor chooses radius of dots by an arbitrary sine wave of distance to camera, instead of farther away dots being smaller, cuz many similar size dots near eachother are hard to see. This could be improved in WebGL but for now is just drawing circles on a canvas by paintXYZColor.
 The gray dots are QGridDots and are made of quadrays made by all paths on Directions var outward from selq.
 Put 1 hand on asdw and one hand on the arrow keys. These move the 4 quadray directions and their reverse. a/d w/s left/right up/down. Drag with left mouse button to rotate, drag with right mouse button to move, use mouse wheel to zoom.. See Directions var in javascript. 
 The 2 grids are not aligned in [x,y,z] coordinates but are affine transformed to eachother using ScaleGrid which scales by ROOT2 and offesets by side/2. This is used only in display, not in indexNearXYZ. Its ready to start building octahedrons and tetrahedrons using Quadray objects without depending on the 3d grid except for display. Triangle corners will (TODO) be stored as Quadrays. CoreDirections are Q(1,0,0,0) Q(0,1,0,0) Q(0,0,1,0) Q(0,0,0,1) quadrays. TODO store triangles sparsely with string key made by its 3 quadray corners, instead of the 3d int array. Theres a flashing dot that moves when you push the 8 buttons for 4 quadray directions or opposite direction. Its the 3d quadray cursor. Its stored in selq var. The octahedron triangles now randomly change color when you rotate, which was to fix a display bug. It wont do that in later versions after we switch to full quadray.
+<br><br>
+The 4 quadray directions and their 4 opposites, are selecting both parities of the checkerboard grid, but all corners of octahedrons and tetrahedrons are on only 1 parity. Do you want 8 buttons for those 4 directions or 12 buttons for 6 directions that can only move along the edge lines of those octahedrons+tetrahedrons?
 </div>
 <canvas id="canvas"></canvas>
 <script>
@@ -31,6 +34,20 @@ var displayCameraCenterAsDot = false; //normal
 
 var numRandomOctahedrons = 99;
 //var numRandomOctahedrons = 3;
+
+//var qgridBootDepth = 10;
+//var qgridBootDepth = 5;
+var qgridBootDepth = 3;
+//var qgridBootDepth = 2;
+//var qgridBootDepth = 1;
+//var qgridBootDepth = 0;
+
+//var varyPointSizeByDistanceToCamera = true;
+var varyPointSizeByDistanceToCamera = false;
+
+var displayCheckerboardDots = true; //toggled by a button press (space?)
+
+var displayQgridDots = true; //toggled by a button press (f?)
 
 var randColor = ()=>{
 	let s = ''+randInt(2**24).toString(16)
@@ -136,10 +153,11 @@ class Quadray {
 	
 	//Returns an equal Quadray by a b c d, the first equal one in dedupQuadraysMap or creates it there.
 	dedup(){
-		let map = dedupQuadraysMap[this.a] || (dedupQuadraysMap[this.a] = {});
-		map = dedupQuadraysMap[this.b] || (dedupQuadraysMap[this.b] = {});
-		map = dedupQuadraysMap[this.c] || (dedupQuadraysMap[this.c] = {});
-		return map[this.d] || (dedupQuadraysMap[this.d] = this);
+		let map = dedupQuadraysMap;
+		map = map[this.a] || (map[this.a] = {});
+		map = map[this.b] || (map[this.b] = {});
+		map = map[this.c] || (map[this.c] = {});
+		return map[this.d] || (map[this.d] = this);
 	}
 }
 
@@ -443,6 +461,10 @@ document.addEventListener("keydown", e => {
 		console.log('selq='+selq.toDetailString()+' nextSelq='+nextSelq.toDetailString());
 		selq = nextSelq;
 		AddDot(selq);
+	}else if(key==' '){ //space
+		displayCheckerboardDots = !displayCheckerboardDots;
+	}else if(key=='f'){
+		displayQgridDots = !displayQgridDots;
 	}else{
 		console.log('Directions['+key+']='+Directions[key]);
 	}
@@ -523,7 +545,7 @@ console.log('inverseRotate tests pass');
 //var getCameraXYZ = ()=>inverseRotate([0, 0, -cubeSize / zoom]);
 //var getCameraXYZ = () => inverseRotate([side / 2, side / 2, side / 2 - cubeSize / zoom]);
 //var getCameraXYZ = ()=>rotate([0,0,30]);
-var getCameraXYZ = () => inverseRotate([side / 2, side / 2, side / 2 - cubeSize / zoom]);
+var getCameraXYZ = () =>(lastCam = inverseRotate([side / 2, side / 2, side / 2 - cubeSize / zoom]));
 //var getCameraXYZ = ()=>inverseRotate([0, 0, -cubeSize / zoom]);
 
 function project([x, y, z]) {
@@ -581,6 +603,10 @@ var makeTrianglesList = grid=>{
 	return tris;
 };
 
+//updated in getCameraXYZ. Used for displaying 3d points as
+//tiny circles of varying radius so you can see how far away they are.
+var lastCam = [0,0,0];
+
 var sortTrianglesList = ()=>{
 	//let ` = [0,0,30];
 	//let view = [0,0,10*(Math.random()*2-1)];
@@ -619,7 +645,7 @@ var selq = Quadray.fromCartesian(
 console.log('selq='+selq.toDetailString());
 
 AddQgridDot(selq);
-for(let depth=1; depth<=10; depth++){
+for(let depth=1; depth<=qgridBootDepth; depth++){
 	expandQgridDotsOneDeeper();
 }
 
@@ -656,15 +682,26 @@ var triangles = [
 	[[5,5,5], [5,6,5], [5,5,6], '#f0f']
 ];
 
+var Sigmoid = x=>(1/(1+Math.exp(-x)));
+
 var paintXYZColor = (xyz, color)=>{
 	const [px, py] = project(rotate(xyz));
 	ctx.fillStyle = color;
 	ctx.beginPath();
-	ctx.arc(px, py, 2, 0, 2 * Math.PI);
+	let radius = 2;
+	if(varyPointSizeByDistanceToCamera){
+		let distanceToCam = Dist(xyz,lastCam);
+		//radius = 1+100/(1+.0001*distanceToCam**2); //FIXME
+		//radius = 1+5*Sigmoid(-distanceToCam*.003+3);
+		//radius = 1+10/(1+.001*distanceToCam**1.5);
+		radius = 1+3*(.5+.5*Math.sin(distanceToCam*20));
+	}
+	ctx.arc(px, py, radius, 0, 2 * Math.PI);
 	ctx.fill();
 };
 
 function draw(){
+	getCameraXYZ(); //to update lastCam
 
 	//if(Math.random()<.05){
 	//	toggleRandomTetrahedron();
@@ -689,12 +726,12 @@ function draw(){
 		ctx.arc(px, py, 2, 0, 2 * Math.PI);
 		ctx.fill();
 	}*/
-	for(const xyzt of checkerboard3dDots){
+	if(displayCheckerboardDots) for(const xyzt of checkerboard3dDots){
 		//paintXYZColor(xyzt, xyzt[3]=='oct' ? '#f88' : '#888');
 		//paintXYZColor(Scale3d(xyzt), xyzt[3]=='oct' ? '#f88' : '#888');
 		paintXYZColor(ScaleGrid(xyzt), xyzt[3]=='oct' ? '#f88' : '#888');
 	}
-	for(const q of Object.values(QGridDots)){
+	if(displayQgridDots) for(const q of Object.values(QGridDots)){
 		paintXYZColor(q.toCartesian(), 'gray');
 	}
 	for(const q of Object.values(QDots)){
