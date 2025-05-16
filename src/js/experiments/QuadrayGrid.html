@@ -10,8 +10,9 @@
 </head>
 <body>
 <div style="position:absolute;left=0px;top=0px;color:white">
-Something looks wrong here in the set of gray (quadray) vs red (3d) dots. The red dots should be getting displayed over by the grays. Some are, and some arent. Space and f toggle the display of the 2 kinds of dots, other than the selected dot selq. If varyPointSizeByDistanceToCamera is true, paintXYZColor chooses radius of dots by an arbitrary sine wave of distance to camera, instead of farther away dots being smaller, cuz many similar size dots near eachother are hard to see. This could be improved in WebGL but for now is just drawing circles on a canvas by paintXYZColor.
-The gray dots are QGridDots and are made of quadrays made by all paths on Directions var outward from selq.
+UPDATE: theres 6 core directions, not 4, cuz of the 3d checkerboard only 1 parity is used, but its made of quadrays. Its the buttons asdfgh and the 6 buttons above them to go 2 opposite directions per core direction. See selq js var which is a quadray, and is a flashing dot moving around in 3d.
+Something looks wrong here in the set of blue (quadray) vs red (3d) dots. The red dots should be getting displayed over by the blues. Some are, and some arent. Space and f (UPDATE: Shift) toggle the display of the 2 kinds of dots, other than the selected dot selq. If varyPointSizeByDistanceToCamera is true, paintXYZColor chooses radius of dots by an arbitrary sine wave of distance to camera, instead of farther away dots being smaller, cuz many similar size dots near eachother are hard to see. This could be improved in WebGL but for now is just drawing circles on a canvas by paintXYZColor.
+The blue dots are QGridDots and are made of quadrays made by all paths on Directions var outward from selq.
 Put 1 hand on asdw and one hand on the arrow keys. These move the 4 quadray directions and their reverse. a/d w/s left/right up/down. Drag with left mouse button to rotate, drag with right mouse button to move, use mouse wheel to zoom.. See Directions var in javascript. 
 The 2 grids are not aligned in [x,y,z] coordinates but are affine transformed to eachother using ScaleGrid which scales by ROOT2 and offesets by side/2. This is used only in display, not in indexNearXYZ. Its ready to start building octahedrons and tetrahedrons using Quadray objects without depending on the 3d grid except for display. Triangle corners will (TODO) be stored as Quadrays. CoreDirections are Q(1,0,0,0) Q(0,1,0,0) Q(0,0,1,0) Q(0,0,0,1) quadrays. TODO store triangles sparsely with string key made by its 3 quadray corners, instead of the 3d int array. Theres a flashing dot that moves when you push the 8 buttons for 4 quadray directions or opposite direction. Its the 3d quadray cursor. Its stored in selq var. The octahedron triangles now randomly change color when you rotate, which was to fix a display bug. It wont do that in later versions after we switch to full quadray.
 <br><br>
@@ -225,18 +226,18 @@ var QDots = {}
 //map of keyboard button name to Quadray for moving selq (the selected Quadray)
 //will need to scale the 3d checkerboard/parity grid by 1/ROOT2 or is it ROOT2,
 //cuz changing these from ROOT2 to 1.
-var CoreDirections = [
+/*var CoreDirections = [
 	Q(1, 0, 0, 0),
 	Q(0, 1, 0, 0),
 	Q(0, 0, 1, 0),
 	Q(0, 0, 0, 1),
 ];
-/*var CoreDirections = [
-	Q(ROOT2, 0, 0, 0),
-	Q(0, ROOT2, 0, 0),
-	Q(0, 0, ROOT2, 0),
-	Q(0, 0, 0, ROOT2),
-];*/
+//var CoreDirections = [
+//	Q(ROOT2, 0, 0, 0),
+//	Q(0, ROOT2, 0, 0),
+//	Q(0, 0, ROOT2, 0),
+//	Q(0, 0, 0, ROOT2),
+//];
 var Directions = { //left hand on asdw, right hand on arrow keys.
 	ArrowUp: CoreDirections[0],
 	ArrowDown: CoreDirections[0].mul(-1),
@@ -246,6 +247,41 @@ var Directions = { //left hand on asdw, right hand on arrow keys.
 	s: CoreDirections[2].mul(-1),
 	a: CoreDirections[3],
 	d: CoreDirections[3].mul(-1),
+};*/
+/*var CoreDirections = [
+	Q(1, 0, -1, 0),  // from [1, 0, 1]
+	Q(1, -1, 0, 0),  // from [1, 1, 0]
+	Q(0, 0, 1, -1),  // from [-1, 1, 0]
+	Q(0, 1, 0, -1),  // from [-1, 0, 1]
+	Q(0, 1, -1, 0),  // from [0, -1, 1]
+	Q(1, 0, 0, -1),  // from [0, 1, 1]
+];*/
+var CoreDirections = [
+	Q(0,  1, -1,  0),  // from [0, -1, 1]
+	Q(1,  0,  0, -1),  // from [0,  1, 1]
+	Q(0,  1,  0, -1),  // from [-1, 0, 1]
+	Q(1,  0, -1,  0),  // from [1, 0, 1]
+	Q(-1, 0,  0,  1),  // from [0, -1, -1]
+	Q(0, -1, 1,  0),   // from [0, 1, -1]
+];
+var Directions = { //hand on 4 of asdfgh, and the 6 keys above them
+	a: CoreDirections[0],
+	q: CoreDirections[0].mul(-1),
+	
+	s: CoreDirections[1],
+	w: CoreDirections[1].mul(-1),
+	
+	d: CoreDirections[2],
+	e: CoreDirections[2].mul(-1),
+	
+	f: CoreDirections[3],
+	r: CoreDirections[3].mul(-1),
+	
+	g: CoreDirections[4],
+	t: CoreDirections[4].mul(-1),
+	
+	h: CoreDirections[5],
+	y: CoreDirections[5].mul(-1),
 };
 
 //Quadray param, adds or removes it from QDots
@@ -402,16 +438,16 @@ let cubeSize = 700;
 //Display the 3d grid differently than its actual coordinates to deal with the ROOT2 scaling
 //of quadrays being changed to 1 (1,0,0,0) instead of (ROOT2,0,0,0) etc,
 //and that the origin is side/2 instead of 0 which it rotates around.
-/*let ScaleGrid = v=>[
+let ScaleGrid = v=>[
 	side/2+(v[0]-side/2)*ROOT2,
 	side/2+(v[1]-side/2)*ROOT2,
 	side/2+(v[2]-side/2)*ROOT2,
-];*/
-let ScaleGrid	= v=>[
+];
+/*let ScaleGrid	= v=>[
 	side/2+(v[0]-side/2)/ROOT2,
 	side/2+(v[1]-side/2)/ROOT2,
 	side/2+(v[2]-side/2)/ROOT2,
-];
+];*/
 //let ScaleGrid = v => VecMulScalar(v, ROOT2);
 
 
@@ -463,7 +499,8 @@ document.addEventListener("keydown", e => {
 		AddDot(selq);
 	}else if(key==' '){ //space
 		displayCheckerboardDots = !displayCheckerboardDots;
-	}else if(key=='f'){
+	//}else if(key=='f'){
+	}else if(key=='Shift'){
 		displayQgridDots = !displayQgridDots;
 	}else{
 		console.log('Directions['+key+']='+Directions[key]);
@@ -640,6 +677,7 @@ var indexNearXYZ = xyz=>{
 //var selq = Q(0,0,0,0);
 var selq = Quadray.fromCartesian(
 	indexToXYZ(indexNearXYZ([side/2,side/2,side/2]))); //start on one of the 3d grid points
+//var selq = Quadray.fromCartesian(indexToXYZ(indexNearXYZ([0,0,0]))); //start on one of the 3d grid points
 //var selq = Quadray.fromCartesian(
 //	indexToXYZ(indexNearXYZ([side/2,side/2,side/2]))); //start on one of the 3d grid points
 console.log('selq='+selq.toDetailString());
@@ -672,7 +710,7 @@ var updateIfGridChanged = ()=>{
 		gridChanged = false;
 		viewChanged = false;
 	}
-	//sortTrianglesList(); //FIXME dont do this every time. im using it to test "view" var which is drawing a gray dot.
+	//sortTrianglesList(); //FIXME dont do this every time. im using it to test "view" var which is drawing a blue dot.
 };
 
 // Global triangle list
@@ -732,7 +770,7 @@ function draw(){
 		paintXYZColor(ScaleGrid(xyzt), xyzt[3]=='oct' ? '#f88' : '#888');
 	}
 	if(displayQgridDots) for(const q of Object.values(QGridDots)){
-		paintXYZColor(q.toCartesian(), 'gray');
+		paintXYZColor(q.toCartesian(), 'blue');
 	}
 	for(const q of Object.values(QDots)){
 		//paintXYZColor(q.toCartesian(), randColor());
