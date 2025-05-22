@@ -10,8 +10,8 @@
 </head>
 <body>
 <div style="position:absolute;left=0px;top=0px;color:white">
-UPDATE: theres 6 core directions, not 4, cuz of the 3d checkerboard only 1 parity is used, but its made of quadrays. Its the buttons asdfgh and the 6 buttons above them to go 2 opposite directions per core direction. See selq js var which is a quadray, and is a flashing dot moving around in 3d.
-Something looks wrong here in the set of blue (quadray) vs red (3d) dots. The red dots should be getting displayed over by the blues. Some are, and some arent. Space and f (UPDATE: Shift) toggle the display of the 2 kinds of dots, other than the selected dot selq. If varyPointSizeByDistanceToCamera is true, paintXYZColor chooses radius of dots by an arbitrary sine wave of distance to camera, instead of farther away dots being smaller, cuz many similar size dots near eachother are hard to see. This could be improved in WebGL but for now is just drawing circles on a canvas by paintXYZColor.
+UPDATE 2025-5-22: move the selq cursor with the 12 buttons, and push space to add/remove some triangles meant to be an octahedron but actually are not positioned right. The grid is positioned right but need to generate these differently using combos of the 6 CoreDirections. UPDATE: theres 6 core directions, not 4, cuz of the 3d checkerboard only 1 parity is used, but its made of quadrays. Its the buttons asdfgh and the 6 buttons above them to go 2 opposite directions per core direction. See selq js var which is a quadray, and is a flashing dot moving around in 3d.
+Something looks wrong here in the set of blue (quadray) vs red (3d) dots. The red dots should be getting displayed over by the blues. Some are, and some arent. Shift and Enter toggle the display of the 2 kinds of dots, other than the selected dot selq. If varyPointSizeByDistanceToCamera is true, paintXYZColor chooses radius of dots by an arbitrary sine wave of distance to camera, instead of farther away dots being smaller, cuz many similar size dots near eachother are hard to see. This could be improved in WebGL but for now is just drawing circles on a canvas by paintXYZColor.
 The blue dots are QGridDots and are made of quadrays made by all paths on Directions var outward from selq.
 Put 1 hand on asdw and one hand on the arrow keys. These move the 4 quadray directions and their reverse. a/d w/s left/right up/down. Drag with left mouse button to rotate, drag with right mouse button to move, use mouse wheel to zoom.. See Directions var in javascript. 
 The 2 grids are not aligned in [x,y,z] coordinates but are affine transformed to eachother using ScaleGrid which scales by ROOT2 and offesets by side/2. This is used only in display, not in indexNearXYZ. Its ready to start building octahedrons and tetrahedrons using Quadray objects without depending on the 3d grid except for display. Triangle corners will (TODO) be stored as Quadrays. CoreDirections are Q(1,0,0,0) Q(0,1,0,0) Q(0,0,1,0) Q(0,0,0,1) quadrays. TODO store triangles sparsely with string key made by its 3 quadray corners, instead of the 3d int array. Theres a flashing dot that moves when you push the 8 buttons for 4 quadray directions or opposite direction. Its the 3d quadray cursor. Its stored in selq var. The octahedron triangles now randomly change color when you rotate, which was to fix a display bug. It wont do that in later versions after we switch to full quadray.
@@ -186,6 +186,35 @@ class Tri{
 	}
 }
 
+//given a quadray, returns a [] list of 6 quadrays similar to
+//"const octCorners = [[0,0,0],[0,0,2],[0,-1,1],[0,1,1],[-1,0,1],[1,0,1]];"
+//but as quadrays instead of xyz.
+/*var oct6CornersAtQuadray = q=>[
+	q,
+	q.add(CoreDirections[0]).add(CoreDirections[2]), //opposite of q
+	q.add(CoreDirections[0]),
+	q.add(CoreDirections[1]),
+	q.add(CoreDirections[2]),
+	q.add(CoreDirections[3]),
+	//Theres 6 CoreDirections, that always stay on the checkerboard/oneOfTwoParities grid.
+];*/
+var oct6CornersAtQuadray = q => [
+	q,                                         // 0: base
+	q.add(CoreDirections[0]).add(CoreDirections[1]), // 1: opposite (tip)
+	q.add(CoreDirections[0]),                 // 2: side
+	q.add(CoreDirections[5]),                 // 3: side
+	q.add(CoreDirections[1]),                 // 4: side
+	q.add(CoreDirections[4]),                 // 5: side
+];
+
+//returns a [] list of 8 Tri's which are each made of 3 quadray's, forming an octahedron
+//one of whose corners is the given quadray.
+var octTrisAtQuadray = q=>{
+	let corners = oct6CornersAtQuadray(q); //6
+	return octahedronFaces.map(
+		threeInts=>T(corners[threeInts[0]],corners[threeInts[1]],corners[threeInts[2]]));
+};
+
 var gameTris = {};
 
 //A Tri made of 3 Quadrays, deduped.
@@ -207,6 +236,15 @@ var ToggleGameTri = tri=>{
 	}else{
 		AddGameTri(tri);
 	}
+};
+
+var toggleOctAtQuadray = q=>{
+	console.log('toggleOctAtQuadray q='+q);
+	let tris = octTrisAtQuadray(q);
+	for(let tri of tris){
+		ToggleGameTri(tri);
+	}
+	gridChanged = true;
 };
 
 var T = (e,f,g)=>(new Tri(e,f,g).dedup());
@@ -497,11 +535,12 @@ document.addEventListener("keydown", e => {
 		console.log('selq='+selq.toDetailString()+' nextSelq='+nextSelq.toDetailString());
 		selq = nextSelq;
 		AddDot(selq);
-	}else if(key==' '){ //space
+	}else if(key=='Enter'){
 		displayCheckerboardDots = !displayCheckerboardDots;
-	//}else if(key=='f'){
 	}else if(key=='Shift'){
 		displayQgridDots = !displayQgridDots;
+	}else if(key==' '){ //space
+		toggleOctAtQuadray(selq); //when push this button, add or remove an octahedron in quadray coords
 	}else{
 		console.log('Directions['+key+']='+Directions[key]);
 	}
@@ -751,10 +790,21 @@ function draw(){
 	updateIfGridChanged();
 	ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-	// Draw triangles
+	// Draw triangles from the 3d coordinates
 	for(const [a, b, c, color] of triangles) {
 		drawTriangle(a, b, c, color);
 	}
+	
+	// Draw quadray-based triangles
+	for(const tri of Object.values(gameTris)) {
+		drawTriangle(
+			tri.e.toCartesian(),
+			tri.f.toCartesian(),
+			tri.g.toCartesian(),
+			tri.color
+		);
+	}
+
 
 	// Draw shape centers
 	/*for (const [x, y, z, type] of checkerboard3dDots) {
