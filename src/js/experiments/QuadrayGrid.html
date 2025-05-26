@@ -10,6 +10,7 @@
 </head>
 <body>
 <div style="position:absolute;left=0px;top=0px;color:white">
+UPDATE 2025-5-26-3pET: The 6 buttons asdfgh and the 6 buttons above them qwerty, go forward/backward in 6 CoreDirections that go from grid point to grid point, in quadray grid. Push space to toggle octahedron there, in quadray grid. TODO toggle 2 tetrahedrons from that same point with 2 other buttons.
 UPDATE 2025-5-26-216pET push space to display 6 quadray corners but no triangles, of the octahedron at selq, as in oct6CornersAtQuadray, and push shift and enter to toggle the 2 kinds of grid dots other than those so you can see only those 6. About to put triangles on that.
 UPDATE 2025-5-22: move the selq cursor with the 12 buttons, and push space to add/remove some triangles meant to be an octahedron but actually are not positioned right. The grid is positioned right but need to generate these differently using combos of the 6 CoreDirections. UPDATE: theres 6 core directions, not 4, cuz of the 3d checkerboard only 1 parity is used, but its made of quadrays. Its the buttons asdfgh and the 6 buttons above them to go 2 opposite directions per core direction. See selq js var which is a quadray, and is a flashing dot moving around in 3d.
 Something looks wrong here in the set of blue (quadray) vs red (3d) dots. The red dots should be getting displayed over by the blues. Some are, and some arent. Shift and Enter toggle the display of the 2 kinds of dots, other than the selected dot selq. If varyPointSizeByDistanceToCamera is true, paintXYZColor chooses radius of dots by an arbitrary sine wave of distance to camera, instead of farther away dots being smaller, cuz many similar size dots near eachother are hard to see. This could be improved in WebGL but for now is just drawing circles on a canvas by paintXYZColor.
@@ -741,7 +742,24 @@ var makeTrianglesList = grid=>{
 //tiny circles of varying radius so you can see how far away they are.
 var lastCam = [0,0,0];
 
-var sortTrianglesList = ()=>{
+var sortQuadrayTrianglesList = ()=>{ //the quadray kind of triangles, not the 3d kind
+	let view = getCameraXYZ();
+	/*let scorer = tri=>{
+		//FIXME this is 3d code, but only have quadrays: return -Dist(view,Ave3(tri[0],tri[1],tri[2]));
+	}*/
+	let scorer = tri => {
+		let a = UnscaleGrid(tri.e.toCartesian());
+		let b = UnscaleGrid(tri.f.toCartesian());
+		let c = UnscaleGrid(tri.g.toCartesian());
+		return -Dist(view, Ave3(a, b, c));
+	};
+	let gameTrisList = Object.values(gameTris);
+	gameTrisList.sort((a,b)=>Math.sign(scorer(a)-scorer(b)));
+	gameTris = {};
+	for(let tri of gameTrisList) AddGameTri(tri); //into gameTris. js {} gives keys in order they were first added, keeping sort
+};
+
+var sortTrianglesList = ()=>{ //the 3d kind of triangle, not the quadray kind
 	//let ` = [0,0,30];
 	//let view = [0,0,10*(Math.random()*2-1)];
 	//let view = [side/2 - Math.sin(angleY) * Math.cos(angleX) * cubeSize / zoom, side/2 + Math.sin(angleX) * cubeSize /zoom, side/2 + Math.cos(angleY) * Math.cos(angleX) * cubeSize / zoom];
@@ -804,6 +822,7 @@ var updateIfGridChanged = ()=>{
 	if(gridChanged || viewChanged){
 		triangles = makeTrianglesList(grid);
 		sortTrianglesList();
+		sortQuadrayTrianglesList();
 		gridChanged = false;
 		viewChanged = false;
 	}
