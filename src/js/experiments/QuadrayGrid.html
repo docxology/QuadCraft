@@ -10,6 +10,7 @@
 </head>
 <body>
 <div style="position:absolute;left=0px;top=0px;color:white">
+UPDATE 2025-5-26-216pET push space to display 6 quadray corners but no triangles, of the octahedron at selq, as in oct6CornersAtQuadray, and push shift and enter to toggle the 2 kinds of grid dots other than those so you can see only those 6. About to put triangles on that.
 UPDATE 2025-5-22: move the selq cursor with the 12 buttons, and push space to add/remove some triangles meant to be an octahedron but actually are not positioned right. The grid is positioned right but need to generate these differently using combos of the 6 CoreDirections. UPDATE: theres 6 core directions, not 4, cuz of the 3d checkerboard only 1 parity is used, but its made of quadrays. Its the buttons asdfgh and the 6 buttons above them to go 2 opposite directions per core direction. See selq js var which is a quadray, and is a flashing dot moving around in 3d.
 Something looks wrong here in the set of blue (quadray) vs red (3d) dots. The red dots should be getting displayed over by the blues. Some are, and some arent. Shift and Enter toggle the display of the 2 kinds of dots, other than the selected dot selq. If varyPointSizeByDistanceToCamera is true, paintXYZColor chooses radius of dots by an arbitrary sine wave of distance to camera, instead of farther away dots being smaller, cuz many similar size dots near eachother are hard to see. This could be improved in WebGL but for now is just drawing circles on a canvas by paintXYZColor.
 The blue dots are QGridDots and are made of quadrays made by all paths on Directions var outward from selq.
@@ -198,21 +199,56 @@ class Tri{
 	q.add(CoreDirections[3]),
 	//Theres 6 CoreDirections, that always stay on the checkerboard/oneOfTwoParities grid.
 ];*/
-var oct6CornersAtQuadray = q => [
+/*var oct6CornersAtQuadray = q => [
 	q,                                         // 0: base
 	q.add(CoreDirections[0]).add(CoreDirections[1]), // 1: opposite (tip)
 	q.add(CoreDirections[0]),                 // 2: side
 	q.add(CoreDirections[5]),                 // 3: side
 	q.add(CoreDirections[1]),                 // 4: side
 	q.add(CoreDirections[4]),                 // 5: side
-];
+];*/
+/*var oct6CornersAtQuadray = q => [
+	q, //base
+	q.add(CoreDirections[0]).add(CoreDirections[2]), //opposite base
+	q.add(CoreDirections[0]),
+	q.add(CoreDirections[1]),
+	q.add(CoreDirections[2]),
+	q.add(CoreDirections[3]),
+];*/
+/*var oct6CornersAtQuadray = q => {
+	let A = CoreDirections[0].mul(-1);
+	let B = CoreDirections[4].mul(-1);
+	return [
+		q,
+		q.add(A).add(B),
+		q.add(CoreDirections[0]),
+		q.add(CoreDirections[1]),
+		q.add(CoreDirections[3]),
+		q.add(CoreDirections[4]),
+	];
+};*/
+var oct6CornersAtQuadray = q => {
+	let A = CoreDirections[0].mul(-1);
+	let B = CoreDirections[4].mul(-1);
+	return [
+		q,
+		q.add(A).add(B),
+		q.add(CoreDirections[1]),
+		q.add(CoreDirections[5]),
+		q.add(CoreDirections[5]).add(CoreDirections[3]),
+		q.add(CoreDirections[3].mul(-1)).add(CoreDirections[1]),
+	];
+};
+
 
 //returns a [] list of 8 Tri's which are each made of 3 quadray's, forming an octahedron
 //one of whose corners is the given quadray.
 var octTrisAtQuadray = q=>{
 	let corners = oct6CornersAtQuadray(q); //6
-	return octahedronFaces.map(
+	let ret = octahedronFaces.map(
 		threeInts=>T(corners[threeInts[0]],corners[threeInts[1]],corners[threeInts[2]]));
+	while(ret.length>4) ret.pop(); //FIXME remove this
+	return ret;
 };
 
 var gameTris = {};
@@ -240,10 +276,19 @@ var ToggleGameTri = tri=>{
 
 var toggleOctAtQuadray = q=>{
 	console.log('toggleOctAtQuadray q='+q);
-	let tris = octTrisAtQuadray(q);
+	let sixCorners = oct6CornersAtQuadray(q);
+	for(let c of sixCorners) ToggleDot(c);
+	/*ToggleDot(sixCorners[0]); //base
+	ToggleDot(sixCorners[1]); //opposite of base, 2 edges away. the other 4 are the 4 corners between those 2.
+	ToggleDot(sixCorners[2]);
+	ToggleDot(sixCorners[3]);
+	ToggleDot(sixCorners[4]);
+	ToggleDot(sixCorners[5]);
+	*/
+	/*let tris = octTrisAtQuadray(q);
 	for(let tri of tris){
 		ToggleGameTri(tri);
-	}
+	}*/
 	gridChanged = true;
 };
 
