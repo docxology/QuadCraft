@@ -247,11 +247,11 @@ var octTrisAtQuadray = q=>{
 	let corners = oct6CornersAtQuadray(q); //6
 	let ret = octahedronFaces.map(
 		threeInts=>T(corners[threeInts[0]],corners[threeInts[1]],corners[threeInts[2]]));
-	while(ret.length>4) ret.pop(); //FIXME remove this
+	//while(ret.length>4) ret.pop(); //FIXME remove this
 	return ret;
 };
 
-var gameTris = {};
+var gameTris = {}; //3 quadrays each, not the [x,y,z] kind.
 
 //A Tri made of 3 Quadrays, deduped.
 var AddGameTri = tri=>{
@@ -285,10 +285,10 @@ var toggleOctAtQuadray = q=>{
 	ToggleDot(sixCorners[4]);
 	ToggleDot(sixCorners[5]);
 	*/
-	/*let tris = octTrisAtQuadray(q);
+	let tris = octTrisAtQuadray(q);
 	for(let tri of tris){
 		ToggleGameTri(tri);
-	}*/
+	}
 	gridChanged = true;
 };
 
@@ -518,6 +518,8 @@ let cubeSize = 700;
 //let Scale3d = vec=>VecMulScalar(vec,ROOT2);
 //let UnScale3d = vec=>VecMulScalar(vec,1/ROOT2);
 
+let Dist = (vecA,vecB)=>Math.hypot(vecA[0]-vecB[0], vecA[1]-vecB[1], vecA[2]-vecB[2]);
+
 //Display the 3d grid differently than its actual coordinates to deal with the ROOT2 scaling
 //of quadrays being changed to 1 (1,0,0,0) instead of (ROOT2,0,0,0) etc,
 //and that the origin is side/2 instead of 0 which it rotates around.
@@ -526,6 +528,19 @@ let ScaleGrid = v=>[
 	side/2+(v[1]-side/2)*ROOT2,
 	side/2+(v[2]-side/2)*ROOT2,
 ];
+//const UnscaleGrid = ([x,y,z])=>[x / ROOT2, y / ROOT2, z / ROOT2];
+const UnscaleGrid = ([x, y, z]) => [
+	(x - side/2) / ROOT2 + side/2,
+	(y - side/2) / ROOT2 + side/2,
+	(z - side/2) / ROOT2 + side/2
+];
+let testPoint55 = [2,79,15];
+let scaled_testPoint55 = ScaleGrid(testPoint55);
+let rebuilt_testPoint55 = UnscaleGrid(scaled_testPoint55);
+let dist_testPoint55 = Dist(testPoint55,rebuilt_testPoint55);
+if(dist_testPoint55>.000001) throw new Error('ScaleGrid/UnscaleGrid test fail, testPoint55='+JSON.stringify(testPoint55)+
+	' rebuilt_testPoint55='+JSON.stringify(rebuilt_testPoint55));
+console.log('ScaleGrid/UnscaleGrid test pass');
 /*let ScaleGrid	= v=>[
 	side/2+(v[0]-side/2)/ROOT2,
 	side/2+(v[1]-side/2)/ROOT2,
@@ -539,8 +554,6 @@ let Ave3 = (vecA,vecB,vecC)=>[
 	(vecA[1]+vecB[1]+vecC[1])/3,
 	(vecA[2]+vecB[2]+vecC[2])/3
 ];
-
-let Dist = (vecA,vecB)=>Math.hypot(vecA[0]-vecB[0], vecA[1]-vecB[1], vecA[2]-vecB[2]);
 
 canvas.addEventListener("mousedown", e => {
 	if (e.button === 2) drag = true;
@@ -842,10 +855,17 @@ function draw(){
 	
 	// Draw quadray-based triangles
 	for(const tri of Object.values(gameTris)) {
-		drawTriangle(
+		/*drawTriangle(
 			tri.e.toCartesian(),
 			tri.f.toCartesian(),
 			tri.g.toCartesian(),
+			tri.color
+		);*/
+		drawTriangle(
+			//UnscaleGrid cuz theres 2 coordinate systems that ive aligned here by scaling one by ROOT2. [x,y,z] vs quadray.
+			UnscaleGrid(tri.e.toCartesian()),
+			UnscaleGrid(tri.f.toCartesian()),
+			UnscaleGrid(tri.g.toCartesian()),
 			tri.color
 		);
 	}
