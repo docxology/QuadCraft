@@ -193,43 +193,6 @@ class Tri{
 //given a quadray, returns a [] list of 6 quadrays similar to
 //"const octCorners = [[0,0,0],[0,0,2],[0,-1,1],[0,1,1],[-1,0,1],[1,0,1]];"
 //but as quadrays instead of xyz.
-/*var oct6CornersAtQuadray = q=>[
-	q,
-	q.add(CoreDirections[0]).add(CoreDirections[2]), //opposite of q
-	q.add(CoreDirections[0]),
-	q.add(CoreDirections[1]),
-	q.add(CoreDirections[2]),
-	q.add(CoreDirections[3]),
-	//Theres 6 CoreDirections, that always stay on the checkerboard/oneOfTwoParities grid.
-];*/
-/*var oct6CornersAtQuadray = q => [
-	q,                                         // 0: base
-	q.add(CoreDirections[0]).add(CoreDirections[1]), // 1: opposite (tip)
-	q.add(CoreDirections[0]),                 // 2: side
-	q.add(CoreDirections[5]),                 // 3: side
-	q.add(CoreDirections[1]),                 // 4: side
-	q.add(CoreDirections[4]),                 // 5: side
-];*/
-/*var oct6CornersAtQuadray = q => [
-	q, //base
-	q.add(CoreDirections[0]).add(CoreDirections[2]), //opposite base
-	q.add(CoreDirections[0]),
-	q.add(CoreDirections[1]),
-	q.add(CoreDirections[2]),
-	q.add(CoreDirections[3]),
-];*/
-/*var oct6CornersAtQuadray = q => {
-	let A = CoreDirections[0].mul(-1);
-	let B = CoreDirections[4].mul(-1);
-	return [
-		q,
-		q.add(A).add(B),
-		q.add(CoreDirections[0]),
-		q.add(CoreDirections[1]),
-		q.add(CoreDirections[3]),
-		q.add(CoreDirections[4]),
-	];
-};*/
 var oct6CornersAtQuadray = q => {
 	let A = CoreDirections[0].mul(-1);
 	let B = CoreDirections[4].mul(-1);
@@ -312,36 +275,6 @@ var QDots = {}
 //map of keyboard button name to Quadray for moving selq (the selected Quadray)
 //will need to scale the 3d checkerboard/parity grid by 1/ROOT2 or is it ROOT2,
 //cuz changing these from ROOT2 to 1.
-/*var CoreDirections = [
-	Q(1, 0, 0, 0),
-	Q(0, 1, 0, 0),
-	Q(0, 0, 1, 0),
-	Q(0, 0, 0, 1),
-];
-//var CoreDirections = [
-//	Q(ROOT2, 0, 0, 0),
-//	Q(0, ROOT2, 0, 0),
-//	Q(0, 0, ROOT2, 0),
-//	Q(0, 0, 0, ROOT2),
-//];
-var Directions = { //left hand on asdw, right hand on arrow keys.
-	ArrowUp: CoreDirections[0],
-	ArrowDown: CoreDirections[0].mul(-1),
-	ArrowLeft: CoreDirections[1],
-	ArrowRight: CoreDirections[1].mul(-1),
-	w: CoreDirections[2],
-	s: CoreDirections[2].mul(-1),
-	a: CoreDirections[3],
-	d: CoreDirections[3].mul(-1),
-};*/
-/*var CoreDirections = [
-	Q(1, 0, -1, 0),  // from [1, 0, 1]
-	Q(1, -1, 0, 0),  // from [1, 1, 0]
-	Q(0, 0, 1, -1),  // from [-1, 1, 0]
-	Q(0, 1, 0, -1),  // from [-1, 0, 1]
-	Q(0, 1, -1, 0),  // from [0, -1, 1]
-	Q(1, 0, 0, -1),  // from [0, 1, 1]
-];*/
 var CoreDirections = [
 	Q(0,  1, -1,  0),  // from [0, -1, 1]
 	Q(1,  0,  0, -1),  // from [0,  1, 1]
@@ -407,46 +340,15 @@ var RemDot = q=>{
 
 var HasDot = q=>!!QDots[q];
 
-/*let Eq = (vecA,vecB)=>(vecA[0]===vecB[0] && vecA[1]===vecB[1] && vecA[2]===vecB[2]);
-let listContainsVec = (list,vec)=>{
-	for(let vecInList of list) if(Eq(vec,vecInList)) return true;
-	return false;
-};
-let addToListUnique = (list,vec)=>{
-	if(!listContainsVec(list,vec)) list.push(vec);
-	return list;
-};*/
-
-
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
 
-//const side = 20;
+//of earlier 3d coordinate system before there were quadrays, that camera still works in (rotate/inverseRotate).
+//If its rotating around the wrong point, you might need to adjust this, but would only happen if you build far and wide.
 const side = 10;
-const grid = new Int32Array(side ** 3);
-const BIT_SOLID = 1 << 0;
-const BIT_OCT = 1 << 1;
-const BIT_TET_X = 1 << 2;
-const BIT_TET_Y = 1 << 3;
-//start 8 bits here, 1 for each triangle in the tetrahedron whose [0,0,0] coordinate is here.
-const BIT_TRIS = 1<<4;
-
-//for x, y, and z in range 0..(side-1), and index in range 0..((side**3)-1).
-//grid[xyzToIndex(x,y,z)]
-const xyzToIndex = (x, y, z) => x * side * side + y * side + z;
-//indexToX(xyzToIndex(x,y,z))==x
-const indexToX = index=>((index/(side*side))|0);
-const indexToY = index=>(((index % (side * side)) / side)|0);
-const indexToZ = index=>(index%side);
-const indexToXYZ = index=>[indexToX(index),indexToY(index),indexToZ(index)];
-
-//TODO rename this. it just means its one of half of the squares in the 3d checkerboard,
-//assuming x, y, and z are integers.
-const isFCC = (x, y, z) => (x + y + z) & 1;
-
 
 const octCorners = [[0,0,0],[0,0,2],[0,-1,1],[0,1,1],[-1,0,1],[1,0,1]];
 
@@ -477,40 +379,6 @@ const octahedronFaces = [
 	[1, 4, 2]
 ];
 
-
-/*//untested by GPT, likely translated to js from Quadray.h
-// Cartesian integer (x,y,z) to Quadray integer (a,b,c,d)
-const cartesianToQuadray = ([x, y, z]) => {
-    let a = Math.max(0, x + y + z);
-    let b = Math.max(0, -x - y + z);
-    let c = Math.max(0, -x + y - z);
-    let d = Math.max(0, x - y - z);
-    const minVal = Math.min(a, b, c, d);
-    return [a - minVal, b - minVal, c - minVal, d - minVal];
-};
-
-//untested by GPT, likely translated to js from Quadray.h
-// Quadray integer (a,b,c,d) to Cartesian integer (x,y,z)
-const quadrayToCartesian = ([a, b, c, d]) => [
-    a - b - c + d,
-    a - b + c - d,
-    a + b - c - d
-];
-
-const checkerboard3dDots = [];
-for (let x = 2; x < side - 2; x++) {
-	for (let y = 2; y < side - 2; y++) {
-		for (let z = 2; z < side - 2; z++) {
-			if (!isFCC(x, y, z)) continue;
-			const key = xyzToIndex(x, y, z);
-			if (Math.random() < 1.0) {
-				grid[key] |= BIT_SOLID | BIT_OCT;
-				checkerboard3dDots.push([x, y, z, 'oct']);
-			}
-		}
-	}
-}*/
-
 // mouse/drag/zoom/rotate setup
 let offsetX = canvas.width / 2;
 let offsetY = canvas.height / 2;
@@ -523,6 +391,7 @@ let cubeSize = 700;
 //let UnScale3d = vec=>VecMulScalar(vec,1/ROOT2);
 
 let Dist = (vecA,vecB)=>Math.hypot(vecA[0]-vecB[0], vecA[1]-vecB[1], vecA[2]-vecB[2]);
+
 
 //Display the 3d grid differently than its actual coordinates to deal with the ROOT2 scaling
 //of quadrays being changed to 1 (1,0,0,0) instead of (ROOT2,0,0,0) etc,
@@ -545,12 +414,8 @@ let dist_testPoint55 = Dist(testPoint55,rebuilt_testPoint55);
 if(dist_testPoint55>.000001) throw new Error('ScaleGrid/UnscaleGrid test fail, testPoint55='+JSON.stringify(testPoint55)+
 	' rebuilt_testPoint55='+JSON.stringify(rebuilt_testPoint55));
 console.log('ScaleGrid/UnscaleGrid test pass');
-/*let ScaleGrid	= v=>[
-	side/2+(v[0]-side/2)/ROOT2,
-	side/2+(v[1]-side/2)/ROOT2,
-	side/2+(v[2]-side/2)/ROOT2,
-];*/
 //let ScaleGrid = v => VecMulScalar(v, ROOT2);
+
 
 
 let Ave3 = (vecA,vecB,vecC)=>[
@@ -611,7 +476,7 @@ document.addEventListener("keydown", e => {
 	SimKeyPress(e.key);
 });
 
-function rotate([x, y, z]) {
+function rotate([x, y, z]){ //3d not quadray
 	let dx = x - side/2, dz = z - side/2;
 	let tx = dx * Math.cos(angleY) - dz * Math.sin(angleY);
 	let tz = dx * Math.sin(angleY) + dz * Math.cos(angleY);
@@ -622,20 +487,9 @@ function rotate([x, y, z]) {
 	dy = tx;
 	return [dx + side/2, dy + side/2, tz + side/2];
 }
-/*function rotate([x, y, z]) {
-	let dx = x, dz = z;
-	let tx = dx * Math.cos(angleY) - dz * Math.sin(angleY);
-	let tz = dx * Math.sin(angleY) + dz * Math.cos(angleY);
-	dx = tx; dz = tz;
-	let dy = y;
-	tx = dy * Math.cos(angleX) - tz * Math.sin(angleX);
-	tz = dy * Math.sin(angleX) + tz * Math.cos(angleX);
-	dy = tx;
-	return [dx, dy, tz];
-}*/
 
 
-function inverseRotate([x, y, z]) {
+function inverseRotate([x, y, z]){ //3d not quadray
 	// Move to origin
 	let dx = x - side/2;
 	let dy = y - side/2;
@@ -657,20 +511,6 @@ function inverseRotate([x, y, z]) {
 	// Translate back from origin
 	return [dx + side/2, dy + side/2, tz + side/2];
 }
-/*function inverseRotate([x, y, z]) {
-	let dx = x, dy = y, dz = z;
-
-	let ty = dy * Math.cos(-angleX) - dz * Math.sin(-angleX);
-	let tz = dy * Math.sin(-angleX) + dz * Math.cos(-angleX);
-	dy = ty;
-	dz = tz;
-
-	let tx = dx * Math.cos(-angleY) - dz * Math.sin(-angleY);
-	tz = dx * Math.sin(-angleY) + dz * Math.cos(-angleY);
-	dx = tx;
-
-	return [dx, dy, tz];
-}*/
 
 for(let x=-10; x<10; x++) for(let y=-10; y<10; y++) for(let z=-10; z<10; z++){
 	let orig = [x,y,z];
@@ -682,24 +522,12 @@ for(let x=-10; x<10; x++) for(let y=-10; y<10; y++) for(let z=-10; z<10; z++){
 }
 console.log('inverseRotate tests pass');
 
-//var getCameraXYZ = ()=>rotate([side/2, side/2, side/2 + cubeSize / zoom]);
-//var getCameraXYZ = ()=>inverseRotate([0, 0, -cubeSize / zoom]);
-//var getCameraXYZ = () => inverseRotate([side / 2, side / 2, side / 2 - cubeSize / zoom]);
-//var getCameraXYZ = ()=>rotate([0,0,30]);
 var getCameraXYZ = () =>(lastCam = inverseRotate([side / 2, side / 2, side / 2 - cubeSize / zoom]));
-//var getCameraXYZ = ()=>inverseRotate([0, 0, -cubeSize / zoom]);
 
 function project([x, y, z]) {
 	const scale = cubeSize / (z + side);
 	return [offsetX + (x - side/2) * scale * zoom, offsetY - (y - side/2) * scale * zoom];
 }
-/*function project([x, y, z]) {
-	const scale = cubeSize / (z + 5); // 5 to avoid div by 0; tweak if needed
-	return [
-		offsetX + x * scale * zoom,
-		offsetY - y * scale * zoom
-	];
-}*/
 
 function drawTriangle(p1, p2, p3, color){
 	p1 = ScaleGrid(p1);
@@ -719,32 +547,7 @@ function drawTriangle(p1, p2, p3, color){
 	ctx.stroke();
 }
 
-/*
-//call toggleOctahedronAt(index) multiple times
-//(and todo toggleTetrahedronXAtAnd toggleTetrahedronYAt)
-//then triangles = makeTrianglesList(grid);
-var makeTrianglesList = grid=>{
-	let mask = BIT_TRIS*255; //8 triangles, 8 bits.
-	let tris = [];
-	for(let i=0; i<grid.length; i++){
-		if(grid[i]&mask){ //has at least 1 tri
-			let xyz = indexToXYZ(i);
-			for(let t=0; t<8; t++){
-				if(grid[i]&(BIT_TRIS<<t)){ //has that tri
-					let faceIndexs = octahedronFaces[t];
-					tris.push([
-						Add(xyz,octCorners[faceIndexs[0]]),
-						Add(xyz,octCorners[faceIndexs[1]]),
-						Add(xyz,octCorners[faceIndexs[2]]),
-						randColor()
-					]);
-				}
-			}
-		}
-	}
-	return tris;
-};*/
-
+//3d not quadray.
 //updated in getCameraXYZ. Used for displaying 3d points as
 //tiny circles of varying radius so you can see how far away they are.
 var lastCam = [0,0,0];
@@ -766,43 +569,13 @@ var sortQuadrayTrianglesList = ()=>{ //the quadray kind of triangles, not the 3d
 	for(let tri of gameTrisList) AddGameTri(tri); //into gameTris. js {} gives keys in order they were first added, keeping sort
 };
 
-/*var sortTrianglesList = ()=>{ //the 3d kind of triangle, not the quadray kind
-	//let ` = [0,0,30];
-	//let view = [0,0,10*(Math.random()*2-1)];
-	//let view = [side/2 - Math.sin(angleY) * Math.cos(angleX) * cubeSize / zoom, side/2 + Math.sin(angleX) * cubeSize /zoom, side/2 + Math.cos(angleY) * Math.cos(angleX) * cubeSize / zoom];
-	//let view = rotate([side/2, side/2, side/2 + cubeSize / zoom]);
-	let view = getCameraXYZ();
-	//view = VecMulScalar(view,1);
-	
-	if(displayCameraCenterAsDot) checkerboard3dDots.push(view);
-	//let scorer = tri=>Math.max(Dist(view,tri[0]),Dist(view,tri[2]),Dist(view,tri[2]));
-	let scorer = tri=>-Dist(view,Ave3(tri[0],tri[1],tri[2]));
-	triangles.sort((a,b)=>Math.sign(scorer(a)-scorer(b)));
-};*/
-
-var indexNearXYZ = xyz=>{
-	let [x,y,z] = xyz; //TODO Scale3d or UnScale3d
-	x = Math.max(0, Math.min(x,side-1));
-	y = Math.max(0, Math.min(y,side-1));
-	z = Math.max(0, Math.min(z,side-1));
-	x |= 0;
-	y |= 0;
-	z |= 0;
-	if(!isFCC(x,y,z)){ //FIXME could be more accurate
-		x++;
-		if(x == side) x -= 2; //other direction
-	}
-	return xyzToIndex(x,y,z);
-};
-
 //selected Quadray
 //var selq = Q(0,0,0,0);
-var selq = Quadray.fromCartesian(
-	indexToXYZ(indexNearXYZ([side/2,side/2,side/2]))); //start on one of the 3d grid points
-//var selq = Quadray.fromCartesian(indexToXYZ(indexNearXYZ([0,0,0]))); //start on one of the 3d grid points
 //var selq = Quadray.fromCartesian(
 //	indexToXYZ(indexNearXYZ([side/2,side/2,side/2]))); //start on one of the 3d grid points
-console.log('selq='+selq.toDetailString());
+var selq = Q(ROOT2*5,0,0,0) //selq starts as Q(7.0710678118654755,0,0,0); //was: var selq = Q(7.071067811865474,0,0,0)
+console.log('selq starts as '+selq); //selq starts as Q(7.071067811865474,0,0,0) 2025-6-5-715aET
+console.log('selq='+selq.toDetailString()); //selq=Q(7.071067811865474,0,0,0) (xyz [4.999999999999998,4.999999999999998,4.999999999999998])
 
 AddQgridDot(selq);
 for(let depth=1; depth<=qgridBootDepth; depth++){
@@ -817,16 +590,6 @@ var toggleOctahedronAt = index=>{
 	grid[index] ^= (BIT_OCT | (BIT_TRIS*255)); //1 octahedron bit and 8 face bits
 };
 
-/*var toggleRandomOctahedron = ()=>{
-	//toggleOctahedronAt(indexNearXYZ(randXYZ()));
-	//let fractionNear000 = 1; //whole grid
-	//let fractionNear000 = .3;
-	let fractionNear000 = .4;
-	toggleOctahedronAt(indexNearXYZ(VecMulScalar(randXYZ(),fractionNear000)));
-	
-	//TODO toggleOctAtQuadray
-};*/
-
 var updateIfGridChanged = ()=>{
 	if(gridChanged || viewChanged){
 		// triangles = makeTrianglesList(grid);
@@ -837,14 +600,6 @@ var updateIfGridChanged = ()=>{
 	}
 	//sortTrianglesList(); //FIXME dont do this every time. im using it to test "view" var which is drawing a blue dot.
 };
-
-/*
-// Global triangle list
-var triangles = [
-	[[10,10,10], [11,10,10], [10,11,10], '#ff0'],
-	[[12,12,12], [12,13,12], [13,12,12], '#0ff'],
-	[[5,5,5], [5,6,5], [5,5,6], '#f0f']
-];*/
 
 var Sigmoid = x=>(1/(1+Math.exp(-x)));
 
@@ -865,31 +620,17 @@ var paintXYZColor = (xyz, color)=>{
 };
 
 function draw(){
-	getCameraXYZ(); //to update lastCam
+	getCameraXYZ(); //to update lastCam. xyz not quadray.
 
-	//if(Math.random()<.05){
-	//	toggleRandomOctahedron();
-	//}
-	
-	selq.color = randColor(); //make it flash
+	//selq and triangle corners and octahedron corners and tetrahedron corners are all quadrays,
+	//converted to xyz at last moment for display.
 	selq.color = randColor(); //make it flash
 
 	updateIfGridChanged();
 	ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-	/*// Draw triangles from the 3d coordinates
-	for(const [a, b, c, color] of triangles) {
-		drawTriangle(a, b, c, color);
-	}*/
 	
 	// Draw quadray-based triangles
 	for(const tri of Object.values(gameTris)) {
-		/*drawTriangle(
-			tri.e.toCartesian(),
-			tri.f.toCartesian(),
-			tri.g.toCartesian(),
-			tri.color
-		);*/
 		drawTriangle(
 			//UnscaleGrid cuz theres 2 coordinate systems that ive aligned here by scaling one by ROOT2. [x,y,z] vs quadray.
 			UnscaleGrid(tri.e.toCartesian()),
@@ -899,20 +640,6 @@ function draw(){
 		);
 	}
 
-
-	// Draw shape centers
-	/*for (const [x, y, z, type] of checkerboard3dDots) {
-		const [px, py] = project(rotate([x, y, z]));
-		ctx.fillStyle = type === 'oct' ? '#f88' : '#888';
-		ctx.beginPath();
-		ctx.arc(px, py, 2, 0, 2 * Math.PI);
-		ctx.fill();
-	}*/
-	/*if(displayCheckerboardDots) for(const xyzt of checkerboard3dDots){
-		//paintXYZColor(xyzt, xyzt[3]=='oct' ? '#f88' : '#888');
-		//paintXYZColor(Scale3d(xyzt), xyzt[3]=='oct' ? '#f88' : '#888');
-		paintXYZColor(ScaleGrid(xyzt), xyzt[3]=='oct' ? '#f88' : '#888');
-	}*/
 	if(displayQgridDots) for(const q of Object.values(QGridDots)){
 		paintXYZColor(q.toCartesian(), 'blue');
 	}
@@ -938,6 +665,9 @@ window.onload = ()=>{
 	SimKeyPresses('a a a a d d d d q q q q e e');
 };
 
+//made by Ben F Rayfield for Active Inference Institute at
+//https://github.com/docxology/QuadCraft/blob/main/src/js/experiments/QuadrayGrid2.html
+//"License This project is licensed under the MIT License - see the LICENSE file for details."
 </script>
 </body>
 </html>
