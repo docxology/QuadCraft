@@ -16,6 +16,11 @@ QuadCraft is an experimental voxel game that uses tetrahedral elements (instead 
 - **Quadray Visualization**: Toggle overlay to visualize the four-dimensional quadray coordinate system
 - **Wireframe Mode**: Enable wireframe rendering to better understand tetrahedral shapes
 
+### Pic
+
+<img src=https://raw.githubusercontent.com/docxology/QuadCraft/refs/heads/main/src/js/experiments/QuadrayGrid_2025-5-26-307pET.png><br>
+Those experiments are in js/experiments/QuadrayGrid2.html
+
 ## Technical Description
 
 QuadCraft demonstrates several advanced technical concepts:
