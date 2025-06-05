@@ -1,14 +1,5 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-	<meta charset="UTF-8">
-	<title>Voxel Shapes with Triangles</title>
-	<style>
-		body { margin: 0; overflow: hidden; background: #111; }
-		canvas { display: block; width: 100vw; height: 100vh; cursor: grab; }
-	</style>
-</head>
-<body>
+<!DOCTYPE html><head><meta charset="UTF-8"><title>Voxel Shapes with Triangles</title></head>
+<body style="margin: 0; overflow: hidden; background: #111;">
 <div style="position:absolute;left=0px;top=0px;color:white">
 TODO rewrite comments 2025-6-5+ cuz removing most of the xyz systems leaving quadray stuff and the camera stays 3d but no more 3d triangle coordinates until the last graphics step. they're stored as quadray corners of triangles.
 QuadrayGrid2.html will be same as QuadrayGrid.html (which has 2 coordinate systems, xyz and quadray) except only the quadray. Now that its aligned, we dont need alot of the 3d stuff anymore.
@@ -22,7 +13,7 @@ The 2 grids are not aligned in [x,y,z] coordinates but are affine transformed to
 <br><br>
 The 4 quadray directions and their 4 opposites, are selecting both parities of the checkerboard grid, but all corners of octahedrons and tetrahedrons are on only 1 parity. Do you want 8 buttons for those 4 directions or 12 buttons for 6 directions that can only move along the edge lines of those octahedrons+tetrahedrons?
 </div>
-<canvas id="canvas"></canvas>
+<canvas id="canvas" style="display: block; width: 100vw; height: 100vh; cursor: grab"></canvas>
 <script>
 
 const ROOT2 = Math.SQRT2;
@@ -50,9 +41,9 @@ var qgridBootDepth = 3;
 //var varyPointSizeByDistanceToCamera = true;
 var varyPointSizeByDistanceToCamera = false;
 
-var displayCheckerboardDots = true; //toggled by a button press (space?)
+//var displayCheckerboardDots = true; //toggled by a button press (space?)
 
-var displayQgridDots = true; //toggled by a button press (f?)
+var displayQgridDots = true; //toggled by a button press (Shift)
 
 var randColor = ()=>{
 	let s = ''+randInt(2**24).toString(16)
@@ -99,16 +90,16 @@ class Quadray {
 		return new Quadray(a, b, c, d).normalized();
 	}
 
-	length() {
+	length(){
 		const sumSq = this.a ** 2 + this.b ** 2 + this.c ** 2 + this.d ** 2;
 		return Math.sqrt(sumSq / 2);
 	}
 
-	magnitude() {
+	magnitude(){
 		return this.length();
 	}
 
-	Add(other) {
+	Add(other){ //Capital does not normalize
 		return new Quadray(
 			this.a + other.a,
 			this.b + other.b,
@@ -117,11 +108,11 @@ class Quadray {
 		);
 	}
 	
-	add(other){
+	add(other){ //lowercase normalizes
 		return this.Add(other).normalized();
 	}
 
-	Mul(scalar) {
+	Mul(scalar) { //Capital does not normalize
 		return new Quadray(
 			this.a * scalar,
 			this.b * scalar,
@@ -130,10 +121,19 @@ class Quadray {
 		);
 	}
 	
-	mul(other){
+	mul(other){ //lowercase normalizes
 		return this.Mul(other).normalized();
 	}
+	
+	Neg(){ //lowecase normalizes. Capital does not. If was normalized, will still be.
+		return this.Mul(-1);
+	}
+	
+	neg(){ //may be confusing if it was not normalized before jit will be now.
+		return this.Neg().normalized();
+	}
 
+	//4d distance, even though a 3d surface with sharp corners in 4d is projected into a 3d smooth space
 	static distance(q1, q2){
 		const diff = new Quadray(
 			q1.a - q2.a,
@@ -194,15 +194,15 @@ class Tri{
 //"const octCorners = [[0,0,0],[0,0,2],[0,-1,1],[0,1,1],[-1,0,1],[1,0,1]];"
 //but as quadrays instead of xyz.
 var oct6CornersAtQuadray = q => {
-	let A = CoreDirections[0].mul(-1);
-	let B = CoreDirections[4].mul(-1);
+	let A = CoreDirections[0].Neg();
+	let B = CoreDirections[4].Neg();
 	return [
 		q,
 		q.add(A).add(B),
 		q.add(CoreDirections[1]),
 		q.add(CoreDirections[5]),
 		q.add(CoreDirections[5]).add(CoreDirections[3]),
-		q.add(CoreDirections[3].mul(-1)).add(CoreDirections[1]),
+		q.add(CoreDirections[3].Neg()).add(CoreDirections[1]),
 	];
 };
 
@@ -267,10 +267,21 @@ var dedupQuadraysMap = {};
 
 var Q = (a,b,c,d)=>(new Quadray(a,b,c,d).dedup());
 
+//QGridDots and QDots are both quadray 3d points.
+//QDots are made by button presses, a path you move along, showing your 3d cursor.
+//QGridDots are generated outward from selq which is the quadray cursor.
 var QGridDots = {};
 
 //Quadray.toString() to Quadray, to display
-var QDots = {}
+var QDots = {};
+
+//selected Quadray
+//var selq = Q(0,0,0,0);
+//var selq = Quadray.fromCartesian(
+//	indexToXYZ(indexNearXYZ([side/2,side/2,side/2]))); //start on one of the 3d grid points
+var selq = Q(ROOT2*5,0,0,0) //selq starts as Q(7.0710678118654755,0,0,0); //was: var selq = Q(7.071067811865474,0,0,0)
+console.log('selq starts as '+selq); //selq starts as Q(7.071067811865474,0,0,0) 2025-6-5-715aET
+console.log('selq='+selq.toDetailString()); //selq=Q(7.071067811865474,0,0,0) (xyz [4.999999999999998,4.999999999999998,4.999999999999998])
 
 //map of keyboard button name to Quadray for moving selq (the selected Quadray)
 //will need to scale the 3d checkerboard/parity grid by 1/ROOT2 or is it ROOT2,
@@ -283,7 +294,20 @@ var CoreDirections = [
 	Q(-1, 0,  0,  1),  // from [0, -1, -1]
 	Q(0, -1, 1,  0),   // from [0, 1, -1]
 ];
-var Directions = { //hand on 4 of asdfgh, and the 6 keys above them
+var CoreDirectionsNormed = CoreDirections.map(x=>x.normalized());
+for(let i=0; i<CoreDirections.length; i++){
+	if(CoreDirections[i] !== CoreDirectionsNormed[i]){
+		console.log('CoreDirections['+i+'] ('+CoreDirections[i]+') !== CoreDirectionsNormed['+i+'] ('+CoreDirectionsNormed[i]+')');
+	}
+}
+//CoreDirections are NOT normalized. FIXME?
+//JSON.stringify(CoreDirections.map(x=>({raw:x,norm:x.normalized()})))
+//[{"raw":{"a":0,"b":1,"c":-1,"d":0,"color":"#766a38"},"norm":{"a":1,"b":2,"c":0,"d":1,"color":"#15bdf8"}},{"raw":{"a":1,"b":0,"c":0,"d":-1,"color":"#1b9bb1"},"norm":{"a":2,"b":1,"c":1,"d":0,"color":"#bdd5d4"}},{"raw":{"a":0,"b":1,"c":0,"d":-1,"color":"#4baec0"},"norm":{"a":1,"b":2,"c":1,"d":0,"color":"#a4df1e"}},{"raw":{"a":1,"b":0,"c":-1,"d":0,"color":"#365d4a"},"norm":{"a":2,"b":1,"c":0,"d":1,"color":"#9b4185"}},{"raw":{"a":-1,"b":0,"c":0,"d":1,"color":"#5daa6c"},"norm":{"a":0,"b":1,"c":1,"d":2,"color":"#324aac"}},{"raw":{"a":0,"b":-1,"c":1,"d":0,"color":"#f704cd"},"norm":{"a":1,"b":0,"c":2,"d":1,"color":"#81b0a6"}}]
+
+//Put your left hand on 4 of asdfgh, and the 6 keys above them.
+//Slide your left hand between asdf sdfg dfgh, so you control 4 of the 6 directions at any one time.
+//Push space to turn on/off the octahedron whose bottom corner is at the flashing selq (quadray) cursor.
+var Directions = {
 	a: CoreDirections[0],
 	q: CoreDirections[0].mul(-1),
 	
@@ -414,8 +438,6 @@ let dist_testPoint55 = Dist(testPoint55,rebuilt_testPoint55);
 if(dist_testPoint55>.000001) throw new Error('ScaleGrid/UnscaleGrid test fail, testPoint55='+JSON.stringify(testPoint55)+
 	' rebuilt_testPoint55='+JSON.stringify(rebuilt_testPoint55));
 console.log('ScaleGrid/UnscaleGrid test pass');
-//let ScaleGrid = v => VecMulScalar(v, ROOT2);
-
 
 
 let Ave3 = (vecA,vecB,vecC)=>[
@@ -461,8 +483,8 @@ var SimKeyPress = key=>{
 		console.log('selq='+selq.toDetailString()+' nextSelq='+nextSelq.toDetailString());
 		selq = nextSelq;
 		AddDot(selq);
-	}else if(key=='Enter'){
-		displayCheckerboardDots = !displayCheckerboardDots;
+	//}else if(key=='Enter'){
+	//	displayCheckerboardDots = !displayCheckerboardDots;
 	}else if(key=='Shift'){
 		displayQgridDots = !displayQgridDots;
 	}else if(key==' '){ //space
@@ -529,6 +551,10 @@ function project([x, y, z]) {
 	return [offsetX + (x - side/2) * scale * zoom, offsetY - (y - side/2) * scale * zoom];
 }
 
+//p1, p3, and p3 are each a [x,y,z]. Color is like '#aabbc9' or 'blue'.
+//Draw any 3d triangle you want anywhere, and it will be viewable by affine transformed camera
+//controlled by mouse left button rotates and right button moves and wheel zooms.
+//Octahedrons and (TODO) tetrahedrons are made this way.
 function drawTriangle(p1, p2, p3, color){
 	p1 = ScaleGrid(p1);
 	p2 = ScaleGrid(p2);
@@ -569,14 +595,6 @@ var sortQuadrayTrianglesList = ()=>{ //the quadray kind of triangles, not the 3d
 	for(let tri of gameTrisList) AddGameTri(tri); //into gameTris. js {} gives keys in order they were first added, keeping sort
 };
 
-//selected Quadray
-//var selq = Q(0,0,0,0);
-//var selq = Quadray.fromCartesian(
-//	indexToXYZ(indexNearXYZ([side/2,side/2,side/2]))); //start on one of the 3d grid points
-var selq = Q(ROOT2*5,0,0,0) //selq starts as Q(7.0710678118654755,0,0,0); //was: var selq = Q(7.071067811865474,0,0,0)
-console.log('selq starts as '+selq); //selq starts as Q(7.071067811865474,0,0,0) 2025-6-5-715aET
-console.log('selq='+selq.toDetailString()); //selq=Q(7.071067811865474,0,0,0) (xyz [4.999999999999998,4.999999999999998,4.999999999999998])
-
 AddQgridDot(selq);
 for(let depth=1; depth<=qgridBootDepth; depth++){
 	expandQgridDotsOneDeeper();
@@ -585,34 +603,26 @@ for(let depth=1; depth<=qgridBootDepth; depth++){
 var gridChanged = false;
 var viewChanged = false;
 
-var toggleOctahedronAt = index=>{
+/*var toggleOctahedronAt = index=>{
 	gridChanged = true;
 	grid[index] ^= (BIT_OCT | (BIT_TRIS*255)); //1 octahedron bit and 8 face bits
-};
+};*/
 
 var updateIfGridChanged = ()=>{
 	if(gridChanged || viewChanged){
-		// triangles = makeTrianglesList(grid);
-		//sortTrianglesList();
 		sortQuadrayTrianglesList();
 		gridChanged = false;
 		viewChanged = false;
 	}
-	//sortTrianglesList(); //FIXME dont do this every time. im using it to test "view" var which is drawing a blue dot.
 };
 
-var Sigmoid = x=>(1/(1+Math.exp(-x)));
-
-var paintXYZColor = (xyz, color)=>{
+var paintXYZColor = (xyz, color)=>{ //draw a 3d dot of chosen [x,y,z] and color
 	const [px, py] = project(rotate(xyz));
 	ctx.fillStyle = color;
 	ctx.beginPath();
 	let radius = 2;
 	if(varyPointSizeByDistanceToCamera){
 		let distanceToCam = Dist(xyz,lastCam);
-		//radius = 1+100/(1+.0001*distanceToCam**2); //FIXME
-		//radius = 1+5*Sigmoid(-distanceToCam*.003+3);
-		//radius = 1+10/(1+.001*distanceToCam**1.5);
 		radius = 1+3*(.5+.5*Math.sin(distanceToCam*20));
 	}
 	ctx.arc(px, py, radius, 0, 2 * Math.PI);
@@ -633,6 +643,7 @@ function draw(){
 	for(const tri of Object.values(gameTris)) {
 		drawTriangle(
 			//UnscaleGrid cuz theres 2 coordinate systems that ive aligned here by scaling one by ROOT2. [x,y,z] vs quadray.
+			//The 2 coordinate systems were aligned in QuadGrid.html but the 3d one mostly removed (except camera) in QuadGrid2.html.
 			UnscaleGrid(tri.e.toCartesian()),
 			UnscaleGrid(tri.f.toCartesian()),
 			UnscaleGrid(tri.g.toCartesian()),
@@ -644,15 +655,11 @@ function draw(){
 		paintXYZColor(q.toCartesian(), 'blue');
 	}
 	for(const q of Object.values(QDots)){
-		//paintXYZColor(q.toCartesian(), randColor());
 		paintXYZColor(q.toCartesian(), q.color);
 	}
 	requestAnimationFrame(draw);
 }
 draw();
-/*for(let i=0; i<numRandomOctahedrons; i++){
-	toggleRandomOctahedron();
-}*/
 
 var SimKeyPresses = str=>{
 	console.log('SimKeyPresses str='+str);
@@ -668,6 +675,4 @@ window.onload = ()=>{
 //made by Ben F Rayfield for Active Inference Institute at
 //https://github.com/docxology/QuadCraft/blob/main/src/js/experiments/QuadrayGrid2.html
 //"License This project is licensed under the MIT License - see the LICENSE file for details."
-</script>
-</body>
-</html>
+</script></body></html>
