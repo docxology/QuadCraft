@@ -1,8 +1,9 @@
-<!DOCTYPE html><head><meta charset="UTF-8"><title>Voxel Shapes with Triangles</title></head>
+<!DOCTYPE html><head><meta charset="UTF-8"><title>Voxel Shapes with TriZngles</title></head>
 <body style="margin: 0; overflow: hidden; background: #111;">
 <center style="color:white">
-	Push buttons on keyboard or here to move the flashing colored dot (the selected Quadray in js var selq)<br>
+	Push buttons on keyboard or here to move the flashing colored dot (the selected Quadray in js var selq).
 	and to put 1 octahedron and/or 2 tetrahedrons at each dot, which can fill 3d space.
+	With either of the 2 sets of CoreDirections (qwerty or asdfgh) you can reach every grid point and no non-grid points, but there is some duplication if you include all 12. On browser console you can type Q(1,2,3,4) or any 4 numbers. If you set selq to that, also set viewChanged = true; so it updates on screen.
 	<table id=uiControls><tr><td>
 		<input type=button onclick="SimKeyPress('q');" value="q">
 		<input type=button onclick="SimKeyPress('w');" value="w">
@@ -23,9 +24,10 @@
 		6 forward directions
 	</td></tr></table>
 	<input type=button onclick="SimKeyPress('Shift');" value="Shift (toggle grid dots)">
-	<input type=button onclick="SimKeyPress(' ');" value="' ' space (toggle selected octahedron)">
-	<input type=button onclick="SimKeyPress('z');" value="'z' (tog tetrahedron Z)" disabled>
-	<input type=button onclick="SimKeyPress('x');" value="'x' space (tog tetrahedron X)" disabled><br>
+	<input type=button onclick="SimKeyPress('z');" value="'z' (tog tetrahedron Z)">
+	<input type=button onclick="SimKeyPress('x');" value="'x' (tog octahedron)"><br>
+	<input type=button onclick="SimKeyPress('c');" value="'c' (tog tetrahedron X)"><br>
+	<input type=button onclick="SimKeyPress(' ');" value="' ' space (all 3)">
 	
 	<nobr>offsetX=<input type=number step=10 id=numOffsetX oninput="copyUiControlsToWorldState();" style="width: 60px;"></input></nobr>
 	<nobr>offsetY=<input type=number step=10 id=numOffsetY oninput="copyUiControlsToWorldState();" style="width: 60px;"></input></nobr>
@@ -39,15 +41,15 @@
 <div style="color:white">
 FIXME buttons q and h do same thing. a and y do same thing. 2 coreDirections that are opposites.
 This text is not appearing anymore now that I put it below the canvas.
-TODO rewrite comments 2025-6-5+ cuz removing most of the xyz systems leaving quadray stuff and the camera stays 3d but no more 3d triangle coordinates until the last graphics step. they're stored as quadray corners of triangles.
+TODO rewrite comments 2025-6-5+ cuz removing most of the xyz systems leaving quadray stuff and the camera stays 3d but no more 3d TriZngle coordinates until the last graphics step. they're stored as quadray corners of TriZngles.
 QuadrayGrid2.html will be same as QuadrayGrid.html (which has 2 coordinate systems, xyz and quadray) except only the quadray. Now that its aligned, we dont need alot of the 3d stuff anymore.
 UPDATE 2025-5-26-3pET: The 6 buttons asdfgh and the 6 buttons above them qwerty, go forward/backward in 6 CoreDirections that go from grid point to grid point, in quadray grid. Push space to toggle octahedron there, in quadray grid. TODO toggle 2 tetrahedrons from that same point with 2 other buttons.
-UPDATE 2025-5-26-216pET push space to display 6 quadray corners but no triangles, of the octahedron at selq, as in oct6CornersAtQuadray, and push shift and enter to toggle the 2 kinds of grid dots other than those so you can see only those 6. About to put triangles on that.
-UPDATE 2025-5-22: move the selq cursor with the 12 buttons, and push space to add/remove some triangles meant to be an octahedron but actually are not positioned right. The grid is positioned right but need to generate these differently using combos of the 6 CoreDirections. UPDATE: theres 6 core directions, not 4, cuz of the 3d checkerboard only 1 parity is used, but its made of quadrays. Its the buttons asdfgh and the 6 buttons above them to go 2 opposite directions per core direction. See selq js var which is a quadray, and is a flashing dot moving around in 3d.
+UPDATE 2025-5-26-216pET push space to display 6 quadray corners but no TriZngles, of the octahedron at selq, as in oct6CornersAtQuadray, and push shift and enter to toggle the 2 kinds of grid dots other than those so you can see only those 6. About to put TriZngles on that.
+UPDATE 2025-5-22: move the selq cursor with the 12 buttons, and push space to add/remove some TriZngles meant to be an octahedron but actually are not positioned right. The grid is positioned right but need to generate these differently using combos of the 6 CoreDirections. UPDATE: theres 6 core directions, not 4, cuz of the 3d checkerboard only 1 parity is used, but its made of quadrays. Its the buttons asdfgh and the 6 buttons above them to go 2 opposite directions per core direction. See selq js var which is a quadray, and is a flashing dot moving around in 3d.
 Something looks wrong here in the set of blue (quadray) vs red (3d) dots. The red dots should be getting displayed over by the blues. Some are, and some arent. Shift and Enter toggle the display of the 2 kinds of dots, other than the selected dot selq. If varyPointSizeByDistanceToCamera is true, paintXYZColor chooses radius of dots by an arbitrary sine wave of distance to camera, instead of farther away dots being smaller, cuz many similar size dots near eachother are hard to see. This could be improved in WebGL but for now is just drawing circles on a canvas by paintXYZColor.
 The blue dots are QGridDots and are made of quadrays made by all paths on Directions var outward from selq.
 Put 1 hand on asdw and one hand on the arrow keys. These move the 4 quadray directions and their reverse. a/d w/s left/right up/down. Drag with left mouse button to rotate, drag with right mouse button to move, use mouse wheel to zoom.. See Directions var in javascript. 
-The 2 grids are not aligned in [x,y,z] coordinates but are affine transformed to eachother using ScaleGrid which scales by ROOT2 and offesets by side/2. This is used only in display, not in indexNearXYZ. Its ready to start building octahedrons and tetrahedrons using Quadray objects without depending on the 3d grid except for display. Triangle corners will (TODO) be stored as Quadrays. CoreDirections are Q(1,0,0,0) Q(0,1,0,0) Q(0,0,1,0) Q(0,0,0,1) quadrays. TODO store triangles sparsely with string key made by its 3 quadray corners, instead of the 3d int array. Theres a flashing dot that moves when you push the 8 buttons for 4 quadray directions or opposite direction. Its the 3d quadray cursor. Its stored in selq var. The octahedron triangles now randomly change color when you rotate, which was to fix a display bug. It wont do that in later versions after we switch to full quadray.
+The 2 grids are not aligned in [x,y,z] coordinates but are affine transformed to eachother using ScaleGrid which scales by ROOT2 and offesets by side/2. This is used only in display, not in indexNearXYZ. Its ready to start building octahedrons and tetrahedrons using Quadray objects without depending on the 3d grid except for display. TriZngle corners will (TODO) be stored as Quadrays. CoreDirections are Q(1,0,0,0) Q(0,1,0,0) Q(0,0,1,0) Q(0,0,0,1) quadrays. TODO store TriZngles sparsely with string key made by its 3 quadray corners, instead of the 3d int array. Theres a flashing dot that moves when you push the 8 buttons for 4 quadray directions or opposite direction. Its the 3d quadray cursor. Its stored in selq var. The octahedron TriZngles now randomly change color when you rotate, which was to fix a display bug. It wont do that in later versions after we switch to full quadray.
 <br><br>
 The 4 quadray directions and their 4 opposites, are selecting both parities of the checkerboard grid, but all corners of octahedrons and tetrahedrons are on only 1 parity. Do you want 8 buttons for those 4 directions or 12 buttons for 6 directions that can only move along the edge lines of those octahedrons+tetrahedrons?
 </div>
@@ -203,8 +205,8 @@ class Quadray {
 	}
 }
 
-//triangle made of 3 quadray points as its primaryKey, and a color as mutable data.
-//If made by T(...) you can compare them using triA===triB or ==.
+//TriZngle made of 3 quadray points as its primaryKey, and a color as mutable data.
+//If made by T(...) you can compare them using TriZ===triB or ==.
 class Tri{
 	constructor(e, f, g){
 		this.e = e;
@@ -221,6 +223,11 @@ class Tri{
 		return this.primaryKey();
 	}
 	
+	//toggle if this tri is displayed or not
+	tog(){
+		ToggleGameTri(this);
+	}
+	
 	dedup(){
 		let primaryKey = this.primaryKey();
 		return dedupTriMap[primaryKey] || (dedupTriMap[primaryKey] = this);
@@ -230,7 +237,7 @@ class Tri{
 //given a quadray, returns a [] list of 6 quadrays similar to
 //"const octCorners = [[0,0,0],[0,0,2],[0,-1,1],[0,1,1],[-1,0,1],[1,0,1]];"
 //but as quadrays instead of xyz.
-var oct6CornersAtQuadray = q => {
+var oct6CornersAtQuadray = q=>{
 	let A = CoreDirections[0].Neg();
 	let B = CoreDirections[4].Neg();
 	return [
@@ -242,6 +249,31 @@ var oct6CornersAtQuadray = q => {
 		q.add(CoreDirections[3].Neg()).add(CoreDirections[1]),
 	];
 };
+
+var TriZ4CornersAtQuadray = ray=>([
+	ray, //the main corner shared between octahedron and 2 tetrahedrons
+	ray.add(Directions.e),
+	ray.add(Directions.q), //the secondary corner shared between octahedron and 2 tetrahedrons
+	ray.add(Directions.q).add(Directions.f),
+]);
+
+var TriX4CornersAtQuadray = ray=>([
+	ray, //the main corner shared between octahedron and 2 tetrahedrons
+	ray.add(Directions.r),
+	ray.add(Directions.q), //the secondary corner shared between octahedron and 2 tetrahedrons
+	ray.add(Directions.q).add(Directions.d),
+]);
+
+var tetZTrisAtQuadray = ray=>tetTrisAtFourCorners(TriZ4CornersAtQuadray(ray));
+
+var tetXTrisAtQuadray = ray=>tetTrisAtFourCorners(TriX4CornersAtQuadray(ray));
+
+var tetTrisAtFourCorners = corners=>([
+	T(corners[1], corners[2], corners[3]),
+	T(corners[0], corners[2], corners[3]),
+	T(corners[0], corners[1], corners[3]),
+	T(corners[0], corners[1], corners[2]),
+]);
 
 
 //returns a [] list of 8 Tri's which are each made of 3 quadray's, forming an octahedron
@@ -275,6 +307,7 @@ var ToggleGameTri = tri=>{
 	}else{
 		AddGameTri(tri);
 	}
+	gridChanged = true;
 };
 
 var toggleOctAtQuadray = q=>{
@@ -297,11 +330,22 @@ var toggleOctAtQuadray = q=>{
 
 //Each quadray on the grid, which is like a 3d checkerboard with 1 of the parities missing,
 //is the primaryKey of 1 octahedron and 2 tetrahedrons.
-var toggleTriAQuadray = q=>{
-	console.log('toggleTriAQuadray q='+q);
-	let corners = triA4CornersAtQuadray(q);
+var toggleTetZAtQuadray = q=>{
+	console.log('toggleTetZAtQuadray q='+q);
+	let corners = TriZ4CornersAtQuadray(q);
 	for(let c of corners) ToggleDot(c);
-	let tris = triA4TrisAtQuadray(q);
+	let tris = tetZTrisAtQuadray(q);
+	for(let tri of tris){
+		ToggleGameTri(tri);
+	}
+	gridChanged = true;
+};
+
+var toggleTetCAtQuadray = q=>{
+	console.log('toggleTetCAtQuadray q='+q);
+	let corners = TriX4CornersAtQuadray(q);
+	for(let c of corners) ToggleDot(c);
+	let tris = tetXTrisAtQuadray(q);
 	for(let tri of tris){
 		ToggleGameTri(tri);
 	}
@@ -459,7 +503,7 @@ for(let corner3d of octCorners){
 console.log('octCorners = '+JSON.stringify(octCorners));
 console.log('qOctCorners = '+qOctCorners.join(' '));
 
-//each face is 3 indexs in octCorners (0..5). Each is an equilateral triangle.
+//each face is 3 indexs in octCorners (0..5). Each is an equilateral TriZngle.
 //Every tetrahedron face is some octahedron's face.
 const octahedronFaces = [
 	[0, 2, 4],
@@ -547,10 +591,18 @@ var SimKeyPress = key=>{
 		AddDot(selq);
 	//}else if(key=='Enter'){
 	//	displayCheckerboardDots = !displayCheckerboardDots;
+	}else if(key=='z'){
+		toggleTetZAtQuadray(selq);
+	}else if(key=='x'){
+		toggleOctAtQuadray(selq); //when push this button, add or remove an octahedron in quadray coords
+	}else if(key=='c'){
+		toggleTetCAtQuadray(selq);
+	}else if(key==' '){ //all 3
+		toggleTetZAtQuadray(selq);
+		toggleOctAtQuadray(selq);
+		toggleTetCAtQuadray(selq);
 	}else if(key=='Shift'){
 		displayQgridDots = !displayQgridDots;
-	}else if(key==' '){ //space
-		toggleOctAtQuadray(selq); //when push this button, add or remove an octahedron in quadray coords
 	}else{
 		console.log('Directions['+key+']='+Directions[key]);
 	}
@@ -615,10 +667,10 @@ function project([x, y, z]) {
 }
 
 //p1, p3, and p3 are each a [x,y,z]. Color is like '#aabbc9' or 'blue'.
-//Draw any 3d triangle you want anywhere, and it will be viewable by affine transformed camera
+//Draw any 3d TriZngle you want anywhere, and it will be viewable by affine transformed camera
 //controlled by mouse left button rotates and right button moves and wheel zooms.
 //Octahedrons and (TODO) tetrahedrons are made this way.
-function drawTriangle(p1, p2, p3, color){
+function drawTriZngle(p1, p2, p3, color){
 	p1 = ScaleGrid(p1);
 	p2 = ScaleGrid(p2);
 	p3 = ScaleGrid(p3);
@@ -641,7 +693,7 @@ function drawTriangle(p1, p2, p3, color){
 //tiny circles of varying radius so you can see how far away they are.
 var lastCam = [0,0,0];
 
-var sortQuadrayTrianglesList = ()=>{ //the quadray kind of triangles, not the 3d kind
+var sortQuadrayTriZnglesList = ()=>{ //the quadray kind of TriZngles, not the 3d kind
 	let view = getCameraXYZ();
 	/*let scorer = tri=>{
 		//FIXME this is 3d code, but only have quadrays: return -Dist(view,Ave3(tri[0],tri[1],tri[2]));
@@ -673,7 +725,7 @@ var viewChanged = false;
 
 var updateIfGridChanged = ()=>{
 	if(gridChanged || viewChanged){
-		sortQuadrayTrianglesList();
+		sortQuadrayTriZnglesList();
 		copyWorldStateToUiControls();
 		gridChanged = false;
 		viewChanged = false;
@@ -696,16 +748,16 @@ var paintXYZColor = (xyz, color)=>{ //draw a 3d dot of chosen [x,y,z] and color
 function draw(){
 	getCameraXYZ(); //to update lastCam. xyz not quadray.
 
-	//selq and triangle corners and octahedron corners and tetrahedron corners are all quadrays,
+	//selq and TriZngle corners and octahedron corners and tetrahedron corners are all quadrays,
 	//converted to xyz at last moment for display.
 	selq.color = randColor(); //make it flash
 
 	updateIfGridChanged();
 	ctx.clearRect(0, 0, canvas.width, canvas.height);
 	
-	// Draw quadray-based triangles
+	// Draw quadray-based TriZngles
 	for(const tri of Object.values(gameTris)) {
-		drawTriangle(
+		drawTriZngle(
 			//UnscaleGrid cuz theres 2 coordinate systems that ive aligned here by scaling one by ROOT2. [x,y,z] vs quadray.
 			//The 2 coordinate systems were aligned in QuadGrid.html but the 3d one mostly removed (except camera) in QuadGrid2.html.
 			UnscaleGrid(tri.e.toCartesian()),
