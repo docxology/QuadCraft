@@ -1,6 +1,44 @@
 <!DOCTYPE html><head><meta charset="UTF-8"><title>Voxel Shapes with Triangles</title></head>
 <body style="margin: 0; overflow: hidden; background: #111;">
-<div style="position:absolute;left=0px;top=0px;color:white">
+<center style="color:white">
+	Push buttons on keyboard or here to move the flashing colored dot (the selected Quadray in js var selq)<br>
+	and to put 1 octahedron and/or 2 tetrahedrons at each dot, which can fill 3d space.
+	<table id=uiControls><tr><td>
+		<input type=button onclick="SimKeyPress('q');" value="q">
+		<input type=button onclick="SimKeyPress('w');" value="w">
+		<input type=button onclick="SimKeyPress('e');" value="e">
+		<input type=button onclick="SimKeyPress('r');" value="r">
+		<input type=button onclick="SimKeyPress('t');" value="t">
+		<input type=button onclick="SimKeyPress('y');" value="y">
+	</td><td>
+		6 backward directions
+	</td></tr><tr><td>
+		<input type=button onclick="SimKeyPress('a');" value="a">
+		<input type=button onclick="SimKeyPress('s');" value="s">
+		<input type=button onclick="SimKeyPress('d');" value="d">
+		<input type=button onclick="SimKeyPress('f');" value="f">
+		<input type=button onclick="SimKeyPress('g');" value="g">
+		<input type=button onclick="SimKeyPress('h');" value="h">
+	</td><td>
+		6 forward directions
+	</td></tr></table>
+	<input type=button onclick="SimKeyPress('Shift');" value="Shift (toggle grid dots)">
+	<input type=button onclick="SimKeyPress(' ');" value="' ' space (toggle selected octahedron)">
+	<input type=button onclick="SimKeyPress('z');" value="'z' (tog tetrahedron Z)" disabled>
+	<input type=button onclick="SimKeyPress('x');" value="'x' space (tog tetrahedron X)" disabled><br>
+	
+	<nobr>offsetX=<input type=number step=10 id=numOffsetX oninput="copyUiControlsToWorldState();" style="width: 60px;"></input></nobr>
+	<nobr>offsetY=<input type=number step=10 id=numOffsetY oninput="copyUiControlsToWorldState();" style="width: 60px;"></input></nobr>
+	<nobr>zoom=<input type=number step=.04 id=numZoom oninput="copyUiControlsToWorldState();" style="width: 60px;"></input></nobr>
+	<nobr>angleX=<input type=number step=.05 id=numAngleX oninput="copyUiControlsToWorldState();" style="width: 60px;"></input></nobr>
+	<nobr>angleY=<input type=number step=.05 id=numAngleY oninput="copyUiControlsToWorldState();" style="width: 60px;"></input></nobr>
+	
+	<label id=labelUnderUiControls>...</label>
+	<canvas id="canvas" style="display: block; width: 100vw; height: 100vh; cursor: grab"></canvas>
+</center>
+<div style="color:white">
+FIXME buttons q and h do same thing. a and y do same thing. 2 coreDirections that are opposites.
+This text is not appearing anymore now that I put it below the canvas.
 TODO rewrite comments 2025-6-5+ cuz removing most of the xyz systems leaving quadray stuff and the camera stays 3d but no more 3d triangle coordinates until the last graphics step. they're stored as quadray corners of triangles.
 QuadrayGrid2.html will be same as QuadrayGrid.html (which has 2 coordinate systems, xyz and quadray) except only the quadray. Now that its aligned, we dont need alot of the 3d stuff anymore.
 UPDATE 2025-5-26-3pET: The 6 buttons asdfgh and the 6 buttons above them qwerty, go forward/backward in 6 CoreDirections that go from grid point to grid point, in quadray grid. Push space to toggle octahedron there, in quadray grid. TODO toggle 2 tetrahedrons from that same point with 2 other buttons.
@@ -13,7 +51,6 @@ The 2 grids are not aligned in [x,y,z] coordinates but are affine transformed to
 <br><br>
 The 4 quadray directions and their 4 opposites, are selecting both parities of the checkerboard grid, but all corners of octahedrons and tetrahedrons are on only 1 parity. Do you want 8 buttons for those 4 directions or 12 buttons for 6 directions that can only move along the edge lines of those octahedrons+tetrahedrons?
 </div>
-<canvas id="canvas" style="display: block; width: 100vw; height: 100vh; cursor: grab"></canvas>
 <script>
 
 const ROOT2 = Math.SQRT2;
@@ -258,6 +295,19 @@ var toggleOctAtQuadray = q=>{
 	gridChanged = true;
 };
 
+//Each quadray on the grid, which is like a 3d checkerboard with 1 of the parities missing,
+//is the primaryKey of 1 octahedron and 2 tetrahedrons.
+var toggleTriAQuadray = q=>{
+	console.log('toggleTriAQuadray q='+q);
+	let corners = triA4CornersAtQuadray(q);
+	for(let c of corners) ToggleDot(c);
+	let tris = triA4TrisAtQuadray(q);
+	for(let tri of tris){
+		ToggleGameTri(tri);
+	}
+	gridChanged = true;
+};
+
 var T = (e,f,g)=>(new Tri(e,f,g).dedup());
 
 dedupTriMap = {};
@@ -275,11 +325,35 @@ var QGridDots = {};
 //Quadray.toString() to Quadray, to display
 var QDots = {};
 
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+
+// mouse/drag/zoom/rotate setup
+let offsetX = canvas.width / 2;
+let offsetY = canvas.height / 2;
+let drag = false, rotateDrag = false, lastX = 0, lastY = 0;
+let zoom = 1.0;
+let angleX = 0, angleY = 0;
+let cubeSize = 700;
+
 //selected Quadray
 //var selq = Q(0,0,0,0);
 //var selq = Quadray.fromCartesian(
 //	indexToXYZ(indexNearXYZ([side/2,side/2,side/2]))); //start on one of the 3d grid points
-var selq = Q(ROOT2*5,0,0,0) //selq starts as Q(7.0710678118654755,0,0,0); //was: var selq = Q(7.071067811865474,0,0,0)
+//var selq = Q(ROOT2*5,0,0,0) //selq starts as Q(7.0710678118654755,0,0,0); //was: var selq = Q(7.071067811865474,0,0,0)
+//var selq = Q(7,0,0,0); //We dont need the 3d coordinate system anymore, so use integer 7 instead of 7.071067811865474 as of 2025-6-12.
+
+var selq = Q(0,0,0,0); //We dont need the 3d coordinate system anymore, so use integer 7 instead of 7.071067811865474 as of 2025-6-12.
+//arbitrary view I found looks good when start at Q(0,0,0,0)
+offsetX = 731;
+offsetY = 141;
+zoom = 0.38742048900000015;
+angleX = 0.10999999999999997;
+angleY = 1.0100000000000038;
+
+
 console.log('selq starts as '+selq); //selq starts as Q(7.071067811865474,0,0,0) 2025-6-5-715aET
 console.log('selq='+selq.toDetailString()); //selq=Q(7.071067811865474,0,0,0) (xyz [4.999999999999998,4.999999999999998,4.999999999999998])
 
@@ -364,11 +438,6 @@ var RemDot = q=>{
 
 var HasDot = q=>!!QDots[q];
 
-const canvas = document.getElementById("canvas");
-const ctx = canvas.getContext("2d");
-canvas.width = window.innerWidth;
-canvas.height = window.innerHeight;
-
 
 //of earlier 3d coordinate system before there were quadrays, that camera still works in (rotate/inverseRotate).
 //If its rotating around the wrong point, you might need to adjust this, but would only happen if you build far and wide.
@@ -402,14 +471,6 @@ const octahedronFaces = [
 	[1, 3, 4],
 	[1, 4, 2]
 ];
-
-// mouse/drag/zoom/rotate setup
-let offsetX = canvas.width / 2;
-let offsetY = canvas.height / 2;
-let drag = false, rotateDrag = false, lastX = 0, lastY = 0;
-let zoom = 1.0;
-let angleX = 0, angleY = 0;
-let cubeSize = 700;
 
 //let Scale3d = vec=>VecMulScalar(vec,ROOT2);
 //let UnScale3d = vec=>VecMulScalar(vec,1/ROOT2);
@@ -474,6 +535,7 @@ canvas.addEventListener("mousemove", e => {
 canvas.addEventListener("wheel", e => {
 	e.preventDefault();
 	zoom *= e.deltaY < 0 ? 1.1 : 0.9;
+	viewChanged = true;
 });
 
 var SimKeyPress = key=>{
@@ -492,6 +554,7 @@ var SimKeyPress = key=>{
 	}else{
 		console.log('Directions['+key+']='+Directions[key]);
 	}
+	copyWorldStateToUiControls(); //in case selq changed
 };
 
 document.addEventListener("keydown", e => {
@@ -611,6 +674,7 @@ var viewChanged = false;
 var updateIfGridChanged = ()=>{
 	if(gridChanged || viewChanged){
 		sortQuadrayTrianglesList();
+		copyWorldStateToUiControls();
 		gridChanged = false;
 		viewChanged = false;
 	}
@@ -668,8 +732,29 @@ var SimKeyPresses = str=>{
 	}
 };
 
+var dom = id=>document.getElementById(id);
+
+var copyWorldStateToUiControls = ()=>{
+	dom('numOffsetX').value = offsetX;
+	dom('numOffsetY').value = offsetY;
+	dom('numZoom').value = zoom;
+	dom('numAngleX').value = angleX;
+	dom('numAngleY').value = angleY;
+	dom('labelUnderUiControls').innerHTML = 'selq='+selq;
+};
+
+var copyUiControlsToWorldState = ()=>{
+	offsetX = dom('numOffsetX').valueAsNumber;
+	offsetY = dom('numOffsetY').valueAsNumber;
+	zoom = dom('numZoom').valueAsNumber;
+	angleX = dom('numAngleX').valueAsNumber;
+	angleY = dom('numAngleY').valueAsNumber;
+	viewChanged = true;
+};
+
 window.onload = ()=>{
-	SimKeyPresses('a a a a d d d d q q q q e e');
+	copyWorldStateToUiControls();
+	SimKeyPresses('a a a a d d d d q q q q e eee');
 };
 
 //made by Ben F Rayfield for Active Inference Institute at
