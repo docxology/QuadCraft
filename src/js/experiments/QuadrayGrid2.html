@@ -1,9 +1,52 @@
 <!DOCTYPE html><head><meta charset="UTF-8"><title>Voxel Shapes with TriZngles</title></head>
 <body style="margin: 0; overflow: hidden; background: #111;">
 <center style="color:white">
+	<br>
 	Push buttons on keyboard or here to move the flashing colored dot (the selected Quadray in js var selq).
 	and to put 1 octahedron and/or 2 tetrahedrons at each dot, which can fill 3d space.
-	With either of the 2 sets of CoreDirections (qwerty or asdfgh) you can reach every grid point and no non-grid points, but there is some duplication if you include all 12. On browser console you can type Q(1,2,3,4) or any 4 numbers. If you set selq to that, also set viewChanged = true; so it updates on screen.
+	With either of the 2 sets of CoreDirections (qwerty or asdfgh) you can reach every grid point and no non-grid points, but there is some duplication if you include all 12. On browser console you can type Q(1,2,3,4) or any 4 numbers. If you set selq to that, also set viewChanged = true; so it updates on screen. Save and load works in localStorage cookies or files, depending which button. It includes the octahedrons and tetrahedrons and 3d viewing position and angle. The quicksave/quickload is stored locally and gets erased if you clear your browser cache, so save important stuff to files. Its the same json data either way.
+	<br>
+	<div id=saveLoadDiv>
+		<input type=button value="Delete QuickSaves" onclick="deleteCookies();" title="delete cookies, including those saved by Quicksave (cookie) 1 to 9.">
+		<input type=button value="QuickSave (cookie) 1" onclick="quicksave('1');">
+		<input type=button value="2" onclick="quicksave('2');">
+		<input type=button value="3" onclick="quicksave('3');">
+		<input type=button value="4" onclick="quicksave('4');">
+		<input type=button value="5" onclick="quicksave('5');">
+		<input type=button value="6" onclick="quicksave('6');">
+		<input type=button value="7" onclick="quicksave('7');">
+		<input type=button value="8" onclick="quicksave('8');">
+		<input type=button value="9" onclick="quicksave('9');">
+		<input type=button value="Save (file) " onclick="console.log('save file clicked'); let filename = prompt('Filename?','quadcraft_quadgrid2_'+time()+'.json'); if(filename) saveFile(filename, 'application/json', StateJson());">
+		<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+		<input type=button value="QuickLoad (cookie) 1" onclick="quickload('1');">
+		<input type=button value="2" onclick="quickload('2');">
+		<input type=button value="3" onclick="quickload('3');">
+		<input type=button value="4" onclick="quickload('4');">
+		<input type=button value="5" onclick="quickload('5');">
+		<input type=button value="6" onclick="quickload('6');">
+		<input type=button value="7" onclick="quickload('7');">
+		<input type=button value="8" onclick="quickload('8');">
+		<input type=button value="9" onclick="quickload('9');">
+		<input id=openFileInput type=file value="Open (file)" onclick="console.log('open file clicked. FIXME the events should be hooked in thru window.onload search for openFileInput.');" style="position: absolute; left: -9999px">
+		<input type=button id=openFileInputB for="openFileInput" onclick="document.getElementById('openFileInput').click();" value="Open (file)"></input>
+		
+	</div>
+	<input type=button onclick="SimKeyPress('Shift');" value="Shift (toggle grid dots)">
+	<input type=button onclick="SimKeyPresses('a a a a d d d d q q q q e eee');" value="example octahedrons and tetrahedrons"><br>
+	<input type=button onclick="SimKeyPress('z');" value="'z' (tog tetrahedron Z)">
+	<input type=button onclick="SimKeyPress('x');" value="'x' (tog octahedron)">
+	<input type=button onclick="SimKeyPress('c');" value="'c' (tog tetrahedron X)">
+	<input type=button onclick="SimKeyPress(' ');" value="' ' space (all 3)">
+	<br>
+	<nobr>offsetX=<input type=number step=10 id=numOffsetX oninput="copyUiControlsToWorldState();" style="width: 60px;"></input></nobr>
+	<nobr>offsetY=<input type=number step=10 id=numOffsetY oninput="copyUiControlsToWorldState();" style="width: 60px;"></input></nobr>
+	<nobr>zoom=<input type=number step=.04 id=numZoom oninput="copyUiControlsToWorldState();" style="width: 60px;"></input></nobr>
+	<nobr>angleX=<input type=number step=.05 id=numAngleX oninput="copyUiControlsToWorldState();" style="width: 60px;"></input></nobr>
+	<nobr>angleY=<input type=number step=.05 id=numAngleY oninput="copyUiControlsToWorldState();" style="width: 60px;"></input></nobr>
+	<label id=labelUnderUiControls>...</label>
 	<table id=uiControls><tr><td>
 		<input type=button onclick="SimKeyPress('q');" value="q">
 		<input type=button onclick="SimKeyPress('w');" value="w">
@@ -23,19 +66,6 @@
 	</td><td>
 		6 forward directions
 	</td></tr></table>
-	<input type=button onclick="SimKeyPress('Shift');" value="Shift (toggle grid dots)">
-	<input type=button onclick="SimKeyPress('z');" value="'z' (tog tetrahedron Z)">
-	<input type=button onclick="SimKeyPress('x');" value="'x' (tog octahedron)"><br>
-	<input type=button onclick="SimKeyPress('c');" value="'c' (tog tetrahedron X)"><br>
-	<input type=button onclick="SimKeyPress(' ');" value="' ' space (all 3)">
-	
-	<nobr>offsetX=<input type=number step=10 id=numOffsetX oninput="copyUiControlsToWorldState();" style="width: 60px;"></input></nobr>
-	<nobr>offsetY=<input type=number step=10 id=numOffsetY oninput="copyUiControlsToWorldState();" style="width: 60px;"></input></nobr>
-	<nobr>zoom=<input type=number step=.04 id=numZoom oninput="copyUiControlsToWorldState();" style="width: 60px;"></input></nobr>
-	<nobr>angleX=<input type=number step=.05 id=numAngleX oninput="copyUiControlsToWorldState();" style="width: 60px;"></input></nobr>
-	<nobr>angleY=<input type=number step=.05 id=numAngleY oninput="copyUiControlsToWorldState();" style="width: 60px;"></input></nobr>
-	
-	<label id=labelUnderUiControls>...</label>
 	<canvas id="canvas" style="display: block; width: 100vw; height: 100vh; cursor: grab"></canvas>
 </center>
 <div style="color:white">
@@ -786,6 +816,96 @@ var SimKeyPresses = str=>{
 
 var dom = id=>document.getElementById(id);
 
+var quicksave = function(name){
+	console.log('quicksave '+name);
+	localStorage.setItem('quadcraft.quicksave.'+name, StateJson());
+};
+
+var quickload = function(name){
+	console.log('quickload '+name);
+	let json = localStorage.getItem('quadcraft.quicksave.'+name);
+	if(json){
+		LoadJson(json);
+	}
+};
+
+var deleteCookies = ()=>{
+	for (let i = 0; i < localStorage.length; i++) {
+		let key = localStorage.key(i);
+		if (key.startsWith('quadcraft.quicksave.')){
+			localStorage.removeItem(key);
+			console.log('Deleted localStorage cookie: '+key);
+			i--; // Adjust index since keys shift after removal
+		}
+	}
+};
+
+var saveFile = (fileName, contentType, text)=>{
+	var blob = new Blob([text], {type: contentType});
+	var elem = window.document.createElement('a');
+	elem.href = window.URL.createObjectURL(blob);
+	elem.download = fileName;
+	document.body.appendChild(elem);
+	elem.click();
+	document.body.removeChild(elem);
+};
+
+//load state as json
+var LoadJson = json=>LoadMap(JSON.parse(json));
+
+//get state as json
+var StateJson = ()=>JSON.stringify(StateMap());
+
+var ClearShapes = ()=>{
+	for(let k in gameTris){
+		delete gameTris[k];
+	}
+	for(let k in QDots){
+		delete QDots[k];
+	}
+	gridChanged=true;
+};
+
+var StateMap = ()=>({
+	type: 'quadcraft_quadraygrid2_state',
+	selq: [selq.a, selq.b, selq.c, selq.d],
+	camera: {
+		offsetX,
+		offsetY,
+		zoom,
+		angleX,
+		angleY
+	},
+	gameTris: Object.values(gameTris).map(tri => ({
+		e: [tri.e.a, tri.e.b, tri.e.c, tri.e.d],
+		f: [tri.f.a, tri.f.b, tri.f.c, tri.f.d],
+		g: [tri.g.a, tri.g.b, tri.g.c, tri.g.d],
+		color: tri.color
+	}))
+});
+
+var LoadMap = map=>{
+	if(map.type !== 'quadcraft_quadraygrid2_state') return;
+
+	selq = Q(...map.selq);
+	({offsetX, offsetY, zoom, angleX, angleY} = map.camera);
+
+	gameTris = {};
+	for(let tri of map.gameTris){
+		let e = Q(...tri.e);
+		let f = Q(...tri.f);
+		let g = Q(...tri.g);
+		let t = T(e, f, g);
+		t.color = tri.color;
+		AddGameTri(t);
+	}
+
+	copyWorldStateToUiControls();
+	gridChanged = true;
+};
+
+
+
 var copyWorldStateToUiControls = ()=>{
 	dom('numOffsetX').value = offsetX;
 	dom('numOffsetY').value = offsetY;
@@ -804,9 +924,12 @@ var copyUiControlsToWorldState = ()=>{
 	viewChanged = true;
 };
 
+const timeOffset_ = performance.timing.navigationStart;
+//UTC seconds with fraction. More precise than Date.now()*.001. Chrome seems to have 4 digits after decimal point, and brave and firefox 3 digits.
+const time = ()=>((timeOffset_+performance.now())*.001);
+
 window.onload = ()=>{
 	copyWorldStateToUiControls();
-	SimKeyPresses('a a a a d d d d q q q q e eee');
 };
 
 //made by Ben F Rayfield for Active Inference Institute at
