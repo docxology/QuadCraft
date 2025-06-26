@@ -30,8 +30,7 @@
 		<input type=button value="7" onclick="quickload('7');">
 		<input type=button value="8" onclick="quickload('8');">
 		<input type=button value="9" onclick="quickload('9');">
-		<input id=openFileInput type=file value="Open (file)" onclick="console.log('open file clicked. FIXME the events should be hooked in thru window.onload search for openFileInput.');" style="position: absolute; left: -9999px">
-		<input type=button id=openFileInputB for="openFileInput" onclick="document.getElementById('openFileInput').click();" value="Open (file)"></input>
+		<input id=openFileInput type=file value="Open (file)" onchange="openFileInputClicked(event);">
 		
 	</div>
 	<input type=button onclick="SimKeyPress('Shift');" value="Shift (toggle grid dots)">
@@ -85,6 +84,10 @@ The 4 quadray directions and their 4 opposites, are selecting both parities of t
 </div>
 <script>
 
+var Err = str=>{
+	throw new Error(str);
+};
+
 const ROOT2 = Math.SQRT2;
 const S3 = Math.sqrt(9 / 8);
 
@@ -128,6 +131,10 @@ class Quadray {
 		this.c = c;
 		this.d = d;
 		this.color = randColor(); //for UI only, not part of quadray math
+	}
+	
+	abcd(){
+		return [this.a, this.b, this.c, this.d];
 	}
 
 	normalized() {
@@ -340,6 +347,31 @@ var ToggleGameTri = tri=>{
 	gridChanged = true;
 };
 
+//This contains all octahedrons and tetrahedrons as 1 quadray and 1 group name each.
+//grid.oct is a SEt if q is a quadray whose bottom corner is q. Theres 6 corners of it.
+//Similarly grid.tetZ and grid.tetC are the 2 tetrahedrons sharing that same q. For many q.
+var grid = {
+	oct: new Set(),
+	tetZ: new Set(),
+	tetC: new Set(),
+};
+
+var gridToMap = grid=>{
+	let map = {};
+	for(let key in grid){
+		map[key] = [];
+		for(let q of grid[key].keys()){
+			map[key].push(q.abcd());
+		}
+	}
+	return map;
+};
+
+var toggleQuadrayInSet = (set,q)=>{
+	if(set[q]) set.remove(q);
+	else set.add(q);
+};
+
 var toggleOctAtQuadray = q=>{
 	console.log('toggleOctAtQuadray q='+q);
 	let sixCorners = oct6CornersAtQuadray(q);
@@ -355,6 +387,7 @@ var toggleOctAtQuadray = q=>{
 	for(let tri of tris){
 		ToggleGameTri(tri);
 	}
+	toggleQuadrayInSet(grid.oct, q);
 	gridChanged = true;
 };
 
@@ -368,6 +401,7 @@ var toggleTetZAtQuadray = q=>{
 	for(let tri of tris){
 		ToggleGameTri(tri);
 	}
+	toggleQuadrayInSet(grid.tetZ, q);
 	gridChanged = true;
 };
 
@@ -379,6 +413,7 @@ var toggleTetCAtQuadray = q=>{
 	for(let tri of tris){
 		ToggleGameTri(tri);
 	}
+	toggleQuadrayInSet(grid.tetC, q);
 	gridChanged = true;
 };
 
@@ -570,7 +605,7 @@ let testPoint55 = [2,79,15];
 let scaled_testPoint55 = ScaleGrid(testPoint55);
 let rebuilt_testPoint55 = UnscaleGrid(scaled_testPoint55);
 let dist_testPoint55 = Dist(testPoint55,rebuilt_testPoint55);
-if(dist_testPoint55>.000001) throw new Error('ScaleGrid/UnscaleGrid test fail, testPoint55='+JSON.stringify(testPoint55)+
+if(dist_testPoint55>.000001) Err('ScaleGrid/UnscaleGrid test fail, testPoint55='+JSON.stringify(testPoint55)+
 	' rebuilt_testPoint55='+JSON.stringify(rebuilt_testPoint55));
 console.log('ScaleGrid/UnscaleGrid test pass');
 
@@ -684,7 +719,7 @@ for(let x=-10; x<10; x++) for(let y=-10; y<10; y++) for(let z=-10; z<10; z++){
 	let rotated = rotate([x,y,z]);
 	let rebuiltOrig = inverseRotate(rotated);
 	let dist = Dist(orig,rebuiltOrig);
-	if(dist > .001) throw new Error('inverseRotate is broken, orig='+JSON.stringify(orig)+
+	if(dist > .001) Err('inverseRotate is broken, orig='+JSON.stringify(orig)+
 		' rotated='+JSON.stringify(rotated)+' rebuiltOrig='+JSON.stringify(rebuiltOrig)+' dist='+dist);
 }
 console.log('inverseRotate tests pass');
@@ -818,12 +853,15 @@ var dom = id=>document.getElementById(id);
 
 var quicksave = function(name){
 	console.log('quicksave '+name);
-	localStorage.setItem('quadcraft.quicksave.'+name, StateJson());
+	let json = StateJson();
+	console.log(json);
+	localStorage.setItem('quadcraft.quicksave.'+name, json);
 };
 
 var quickload = function(name){
 	console.log('quickload '+name);
 	let json = localStorage.getItem('quadcraft.quicksave.'+name);
+	console.log(json);
 	if(json){
 		LoadJson(json);
 	}
@@ -863,6 +901,9 @@ var ClearShapes = ()=>{
 	for(let k in QDots){
 		delete QDots[k];
 	}
+	for(key in grid){
+		grid[key].clear(); //Set of quadray
+	}
 	gridChanged=true;
 };
 
@@ -876,21 +917,38 @@ var StateMap = ()=>({
 		angleX,
 		angleY
 	},
-	gameTris: Object.values(gameTris).map(tri => ({
+	grid: gridToMap(grid),
+	/*gameTris: Object.values(gameTris).map(tri => ({
 		e: [tri.e.a, tri.e.b, tri.e.c, tri.e.d],
 		f: [tri.f.a, tri.f.b, tri.f.c, tri.f.d],
 		g: [tri.g.a, tri.g.b, tri.g.c, tri.g.d],
 		color: tri.color
-	}))
+	}))*/
 });
 
 var LoadMap = map=>{
 	if(map.type !== 'quadcraft_quadraygrid2_state') return;
+	
+	ClearShapes();
 
 	selq = Q(...map.selq);
 	({offsetX, offsetY, zoom, angleX, angleY} = map.camera);
 
-	gameTris = {};
+	if(!map.grid) Err('No map.grid');
+	//Example: "grid":{"oct":[[1,2,0,1],[2,4,0,2],[3,6,0,3],[4,8,0,4],[4,9,0,3],[4,10,0,2],[4,11,0,1],[4,12,0,0],[4,11,1,0],[4,10,2,0],[4,9,3,0],[4,8,4,0],[3,6,3,0]],"tetZ":[[1,2,0,1],[2,4,0,2],[3,6,0,3],[4,8,0,4],[4,9,0,3],[4,10,0,2],[4,11,0,1],[4,12,0,0],[4,11,1,0],[4,10,2,0],[4,9,3,0],[4,8,4,0],[3,6,3,0]],"tetC":[[1,2,0,1],[2,4,0,2],[3,6,0,3],[4,8,0,4],[4,9,0,3],[4,10,0,2],[4,11,0,1],[4,12,0,0],[4,11,1,0],[4,10,2,0],[4,9,3,0],[4,8,4,0],[3,6,3,0]]
+	for(let abcd of map.grid.oct){
+		let quadray = Q(...abcd);
+		toggleOctAtQuadray(quadray);
+	}
+	for(let abcd of map.grid.tetZ){
+		let quadray = Q(...abcd);
+		toggleTetZAtQuadray(quadray);
+	}
+	for(let abcd of map.grid.tetC){
+		let quadray = Q(...abcd);
+		toggleTetCAtQuadray(quadray);
+	}
+	/*gameTris = {};
 	for(let tri of map.gameTris){
 		let e = Q(...tri.e);
 		let f = Q(...tri.f);
@@ -898,10 +956,22 @@ var LoadMap = map=>{
 		let t = T(e, f, g);
 		t.color = tri.color;
 		AddGameTri(t);
-	}
+	}*/
 
 	copyWorldStateToUiControls();
 	gridChanged = true;
+};
+
+var openFileInputClicked = event=>{
+	console.log('openFileInputClicked, event='+event);
+	const file = event.target.files[0];
+	if (!file) return;
+	const reader = new FileReader();
+	reader.onload = e => {
+		const json = e.target.result;
+		LoadJson(json); // same as quickload
+	};
+	reader.readAsText(file);
 };
 
 
