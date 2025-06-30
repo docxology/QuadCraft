@@ -6,82 +6,78 @@
 	and to put 1 octahedron and/or 2 tetrahedrons at each dot, which can fill 3d space.
 	With either of the 2 sets of CoreDirections (qwerty or asdfgh) you can reach every grid point and no non-grid points, but there is some duplication if you include all 12. On browser console you can type Q(1,2,3,4) or any 4 numbers. If you set selq to that, also set viewChanged = true; so it updates on screen. Save and load works in localStorage cookies or files, depending which button. It includes the octahedrons and tetrahedrons and 3d viewing position and angle. The quicksave/quickload is stored locally and gets erased if you clear your browser cache, so save important stuff to files. Its the same json data either way.
 	<br>
-	<div id=saveLoadDiv>
-		<input type=button value="Delete QuickSaves" onclick="deleteCookies();" title="delete cookies, including those saved by Quicksave (cookie) 1 to 9.">
-		<input type=button value="QuickSave (cookie) 1" onclick="quicksave('1');">
-		<input type=button value="2" onclick="quicksave('2');">
-		<input type=button value="3" onclick="quicksave('3');">
-		<input type=button value="4" onclick="quicksave('4');">
-		<input type=button value="5" onclick="quicksave('5');">
-		<input type=button value="6" onclick="quicksave('6');">
-		<input type=button value="7" onclick="quicksave('7');">
-		<input type=button value="8" onclick="quicksave('8');">
-		<input type=button value="9" onclick="quicksave('9');">
-		<input type=button value="Save (file) " onclick="console.log('save file clicked'); let filename = prompt('Filename?','quadcraft_quadgrid2_'+time()+'.json'); if(filename) saveFile(filename, 'application/json', StateJson());">
+	
+	<table border=2><tr><td>
+<textarea id=textBoxToEval rows=10 cols=40>
+fillGridByFunc(selq, 5, q=>{
+	return Math.random()<.3;
+});
+</textarea><br>
+		<input type=button onclick="let jsCode = dom('textBoxToEval').value; console.log('evalling: '+jsCode); let ret = eval(jsCode); console.log('Returned: '+ret);" value="eval text box (see errors on browser console)"></input>
+	</td><td>
+		<div id=saveLoadDiv>
+			<input type=button value="Delete QuickSaves" onclick="deleteCookies();" title="delete cookies, including those saved by Quicksave (cookie) 1 to 9.">
+			<input type=button value="QuickSave (cookie) 1" onclick="quicksave('1');">
+			<input type=button value="2" onclick="quicksave('2');">
+			<input type=button value="3" onclick="quicksave('3');">
+			<input type=button value="4" onclick="quicksave('4');">
+			<input type=button value="5" onclick="quicksave('5');">
+			<input type=button value="6" onclick="quicksave('6');">
+			<input type=button value="7" onclick="quicksave('7');">
+			<input type=button value="8" onclick="quicksave('8');">
+			<input type=button value="9" onclick="quicksave('9');">
+			<input type=button value="Save (file) " onclick="console.log('save file clicked'); let filename = prompt('Filename?','quadcraft_quadgrid2_'+time()+'.json'); if(filename) saveFile(filename, 'application/json', StateJson());">
+			<br>
+			&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+			&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+			<input type=button value="QuickLoad (cookie) 1" onclick="quickload('1');">
+			<input type=button value="2" onclick="quickload('2');">
+			<input type=button value="3" onclick="quickload('3');">
+			<input type=button value="4" onclick="quickload('4');">
+			<input type=button value="5" onclick="quickload('5');">
+			<input type=button value="6" onclick="quickload('6');">
+			<input type=button value="7" onclick="quickload('7');">
+			<input type=button value="8" onclick="quickload('8');">
+			<input type=button value="9" onclick="quickload('9');">
+			<input id=openFileInput type=file value="Open (file)" onchange="openFileInputClicked(event);">
+			
+		</div>
+		<input type=button onclick="SimKeyPress('Shift');" value="Shift (toggle grid dots)">
+		<input type=button onclick="SimKeyPresses('a a a a d d d d q q q q e eee');" value="example octahedrons and tetrahedrons"><br>
+		<input type=button onclick="SimKeyPress('z');" value="'z' (tog tetrahedron Z)">
+		<input type=button onclick="SimKeyPress('x');" value="'x' (tog octahedron)">
+		<input type=button onclick="SimKeyPress('c');" value="'c' (tog tetrahedron X)">
+		<input type=button onclick="SimKeyPress(' ');" value="' ' space (all 3)">
 		<br>
-		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-		<input type=button value="QuickLoad (cookie) 1" onclick="quickload('1');">
-		<input type=button value="2" onclick="quickload('2');">
-		<input type=button value="3" onclick="quickload('3');">
-		<input type=button value="4" onclick="quickload('4');">
-		<input type=button value="5" onclick="quickload('5');">
-		<input type=button value="6" onclick="quickload('6');">
-		<input type=button value="7" onclick="quickload('7');">
-		<input type=button value="8" onclick="quickload('8');">
-		<input type=button value="9" onclick="quickload('9');">
-		<input id=openFileInput type=file value="Open (file)" onchange="openFileInputClicked(event);">
-		
-	</div>
-	<input type=button onclick="SimKeyPress('Shift');" value="Shift (toggle grid dots)">
-	<input type=button onclick="SimKeyPresses('a a a a d d d d q q q q e eee');" value="example octahedrons and tetrahedrons"><br>
-	<input type=button onclick="SimKeyPress('z');" value="'z' (tog tetrahedron Z)">
-	<input type=button onclick="SimKeyPress('x');" value="'x' (tog octahedron)">
-	<input type=button onclick="SimKeyPress('c');" value="'c' (tog tetrahedron X)">
-	<input type=button onclick="SimKeyPress(' ');" value="' ' space (all 3)">
-	<br>
-	<nobr>offsetX=<input type=number step=10 id=numOffsetX oninput="copyUiControlsToWorldState();" style="width: 60px;"></input></nobr>
-	<nobr>offsetY=<input type=number step=10 id=numOffsetY oninput="copyUiControlsToWorldState();" style="width: 60px;"></input></nobr>
-	<nobr>zoom=<input type=number step=.04 id=numZoom oninput="copyUiControlsToWorldState();" style="width: 60px;"></input></nobr>
-	<nobr>angleX=<input type=number step=.05 id=numAngleX oninput="copyUiControlsToWorldState();" style="width: 60px;"></input></nobr>
-	<nobr>angleY=<input type=number step=.05 id=numAngleY oninput="copyUiControlsToWorldState();" style="width: 60px;"></input></nobr>
-	<label id=labelUnderUiControls>...</label>
-	<table id=uiControls><tr><td>
-		<input type=button onclick="SimKeyPress('q');" value="q">
-		<input type=button onclick="SimKeyPress('w');" value="w">
-		<input type=button onclick="SimKeyPress('e');" value="e">
-		<input type=button onclick="SimKeyPress('r');" value="r">
-		<input type=button onclick="SimKeyPress('t');" value="t">
-		<input type=button onclick="SimKeyPress('y');" value="y">
-	</td><td>
-		6 backward directions
-	</td></tr><tr><td>
-		<input type=button onclick="SimKeyPress('a');" value="a">
-		<input type=button onclick="SimKeyPress('s');" value="s">
-		<input type=button onclick="SimKeyPress('d');" value="d">
-		<input type=button onclick="SimKeyPress('f');" value="f">
-		<input type=button onclick="SimKeyPress('g');" value="g">
-		<input type=button onclick="SimKeyPress('h');" value="h">
-	</td><td>
-		6 forward directions
+		<nobr>offsetX=<input type=number step=10 id=numOffsetX oninput="copyUiControlsToWorldState();" style="width: 60px;"></input></nobr>
+		<nobr>offsetY=<input type=number step=10 id=numOffsetY oninput="copyUiControlsToWorldState();" style="width: 60px;"></input></nobr>
+		<nobr>zoom=<input type=number step=.04 id=numZoom oninput="copyUiControlsToWorldState();" style="width: 60px;"></input></nobr>
+		<nobr>angleX=<input type=number step=.05 id=numAngleX oninput="copyUiControlsToWorldState();" style="width: 60px;"></input></nobr>
+		<nobr>angleY=<input type=number step=.05 id=numAngleY oninput="copyUiControlsToWorldState();" style="width: 60px;"></input></nobr>
+		<label id=labelUnderUiControls>...</label>
+		<table id=uiControls><tr><td>
+			<input type=button onclick="SimKeyPress('q');" value="q">
+			<input type=button onclick="SimKeyPress('w');" value="w">
+			<input type=button onclick="SimKeyPress('e');" value="e">
+			<input type=button onclick="SimKeyPress('r');" value="r">
+			<input type=button onclick="SimKeyPress('t');" value="t">
+			<input type=button onclick="SimKeyPress('y');" value="y">
+		</td><td>
+			6 backward directions
+		</td></tr><tr><td>
+			<input type=button onclick="SimKeyPress('a');" value="a">
+			<input type=button onclick="SimKeyPress('s');" value="s">
+			<input type=button onclick="SimKeyPress('d');" value="d">
+			<input type=button onclick="SimKeyPress('f');" value="f">
+			<input type=button onclick="SimKeyPress('g');" value="g">
+			<input type=button onclick="SimKeyPress('h');" value="h">
+		</td><td>
+			6 forward directions
+		</td></tr></table>
 	</td></tr></table>
+	
 	<canvas id="canvas" style="display: block; width: 100vw; height: 100vh; cursor: grab"></canvas>
 </center>
-<div style="color:white">
-FIXME buttons q and h do same thing. a and y do same thing. 2 coreDirections that are opposites.
-This text is not appearing anymore now that I put it below the canvas.
-TODO rewrite comments 2025-6-5+ cuz removing most of the xyz systems leaving quadray stuff and the camera stays 3d but no more 3d TriZngle coordinates until the last graphics step. they're stored as quadray corners of TriZngles.
-QuadrayGrid2.html will be same as QuadrayGrid.html (which has 2 coordinate systems, xyz and quadray) except only the quadray. Now that its aligned, we dont need alot of the 3d stuff anymore.
-UPDATE 2025-5-26-3pET: The 6 buttons asdfgh and the 6 buttons above them qwerty, go forward/backward in 6 CoreDirections that go from grid point to grid point, in quadray grid. Push space to toggle octahedron there, in quadray grid. TODO toggle 2 tetrahedrons from that same point with 2 other buttons.
-UPDATE 2025-5-26-216pET push space to display 6 quadray corners but no TriZngles, of the octahedron at selq, as in oct6CornersAtQuadray, and push shift and enter to toggle the 2 kinds of grid dots other than those so you can see only those 6. About to put TriZngles on that.
-UPDATE 2025-5-22: move the selq cursor with the 12 buttons, and push space to add/remove some TriZngles meant to be an octahedron but actually are not positioned right. The grid is positioned right but need to generate these differently using combos of the 6 CoreDirections. UPDATE: theres 6 core directions, not 4, cuz of the 3d checkerboard only 1 parity is used, but its made of quadrays. Its the buttons asdfgh and the 6 buttons above them to go 2 opposite directions per core direction. See selq js var which is a quadray, and is a flashing dot moving around in 3d.
-Something looks wrong here in the set of blue (quadray) vs red (3d) dots. The red dots should be getting displayed over by the blues. Some are, and some arent. Shift and Enter toggle the display of the 2 kinds of dots, other than the selected dot selq. If varyPointSizeByDistanceToCamera is true, paintXYZColor chooses radius of dots by an arbitrary sine wave of distance to camera, instead of farther away dots being smaller, cuz many similar size dots near eachother are hard to see. This could be improved in WebGL but for now is just drawing circles on a canvas by paintXYZColor.
-The blue dots are QGridDots and are made of quadrays made by all paths on Directions var outward from selq.
-Put 1 hand on asdw and one hand on the arrow keys. These move the 4 quadray directions and their reverse. a/d w/s left/right up/down. Drag with left mouse button to rotate, drag with right mouse button to move, use mouse wheel to zoom.. See Directions var in javascript. 
-The 2 grids are not aligned in [x,y,z] coordinates but are affine transformed to eachother using ScaleGrid which scales by ROOT2 and offesets by side/2. This is used only in display, not in indexNearXYZ. Its ready to start building octahedrons and tetrahedrons using Quadray objects without depending on the 3d grid except for display. TriZngle corners will (TODO) be stored as Quadrays. CoreDirections are Q(1,0,0,0) Q(0,1,0,0) Q(0,0,1,0) Q(0,0,0,1) quadrays. TODO store TriZngles sparsely with string key made by its 3 quadray corners, instead of the 3d int array. Theres a flashing dot that moves when you push the 8 buttons for 4 quadray directions or opposite direction. Its the 3d quadray cursor. Its stored in selq var. The octahedron TriZngles now randomly change color when you rotate, which was to fix a display bug. It wont do that in later versions after we switch to full quadray.
-<br><br>
-The 4 quadray directions and their 4 opposites, are selecting both parities of the checkerboard grid, but all corners of octahedrons and tetrahedrons are on only 1 parity. Do you want 8 buttons for those 4 directions or 12 buttons for 6 directions that can only move along the edge lines of those octahedrons+tetrahedrons?
-</div>
 <script>
 
 var Err = str=>{
@@ -537,6 +533,27 @@ var expandQgridDotsOneDeeper = ()=>{
 	}
 };
 
+//returns list of quadrays around center, aligned on grid, hops number of CoreDirections hops outward, without duplicates.
+//If hops is 0, it just returns center. if 3 then 3 key presses of distance away. any integer.
+var gridDotsNear = (center, hops)=>{
+	let set = new Set(); //of quadrays
+	set.add(center);
+	let directions = Object.values(CoreDirections);
+	for(let h=1; h<=hops; h++){
+		let setList = [...(set.keys())]; //copy of the Set
+		for(let q of setList){
+			for(let qDirection of directions){
+				let q2 = q.add(qDirection); //may already be in Set or not
+				set.add(q2);
+			}
+			if(set.size > 1000000){
+				Err('Too big, set.size='+set.size);
+			}
+		}
+	}
+	return [...set]; //list of quadrays
+};
+
 var AddDot = q=>{
 	QDots[q] = q
 };
@@ -646,6 +663,23 @@ canvas.addEventListener("wheel", e => {
 	zoom *= e.deltaY < 0 ? 1.1 : 0.9;
 	viewChanged = true;
 });
+
+//centerQ can be selq or any quadray on the grid. hops is how far outward from it in key presses.
+//func(quadray) => true or false, should that part of the volume be filled or not.
+var fillGridByFunc = (centerQ, hops, func)=>{
+	let gridQuadrays = gridDotsNear(centerQ, hops);
+	let countYes = 0;
+	let countNo = 0;
+	for(let q of gridQuadrays){
+		if(func(q)){ //func says its solid, so put octahedron or tetrahedron here (todo offset into center of those shapes, not corner)
+			toggleOctAtQuadray(q); //TODO add instead of toggle?
+			countYes++;
+		}else{
+			countNo++;
+		}
+	}
+	return 'fillGridByFunc matched '+countYes+' of '+(countYes+countNo)+' quadrays.';
+};
 
 var SimKeyPress = key=>{
 	if(Directions[key]){
@@ -917,6 +951,7 @@ var StateMap = ()=>({
 		angleX,
 		angleY
 	},
+	textBoxToEval: dom('textBoxToEval').value,
 	grid: gridToMap(grid),
 	/*gameTris: Object.values(gameTris).map(tri => ({
 		e: [tri.e.a, tri.e.b, tri.e.c, tri.e.d],
@@ -957,6 +992,10 @@ var LoadMap = map=>{
 		t.color = tri.color;
 		AddGameTri(t);
 	}*/
+	
+	if(map.textBoxToEval !== undefined){
+		dom('textBoxToEval').value = map.textBoxToEval;
+	}
 
 	copyWorldStateToUiControls();
 	gridChanged = true;
