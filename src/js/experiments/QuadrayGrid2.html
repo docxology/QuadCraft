@@ -10,8 +10,16 @@
 	<table border=2><tr><td>
 <textarea id=textBoxToEval rows=10 cols=40>
 fillGridByFunc(selq, 5, q=>{
-	return Math.random()<.3;
+	return q.toCartesian()[0]==0
 });
+/*fillGridByFunc(selq, 8, q=>{
+	return q.toCartesian()[0]<0
+});*/
+/*AddColoredDots(gridDotsNear(selq,5),'green');
+*/
+/*fillGridByFunc(selq, 5, q=>{
+	return Math.random()<.3;
+});*/
 </textarea><br>
 		<input type=button onclick="let jsCode = dom('textBoxToEval').value; console.log('evalling: '+jsCode); let ret = eval(jsCode); console.log('Returned: '+ret);" value="eval text box (see errors on browser console)"></input>
 	</td><td>
@@ -120,7 +128,7 @@ var randColor = ()=>{
 };
 
 //If made by Q(...) you can compare them using quadrayA===quadrayB or ==.
-class Quadray {
+class Quadray{
 	constructor(a = 0, b = 0, c = 0, d = 0){
 		this.a = a;
 		this.b = b;
@@ -140,7 +148,7 @@ class Quadray {
 			this.b - minVal,
 			this.c - minVal,
 			this.d - minVal
-		);
+		).dedup();
 	}
 
 	toCartesian() {
@@ -177,7 +185,7 @@ class Quadray {
 			this.b + other.b,
 			this.c + other.c,
 			this.d + other.d
-		);
+		).dedup();
 	}
 	
 	add(other){ //lowercase normalizes
@@ -190,7 +198,7 @@ class Quadray {
 			this.b * scalar,
 			this.c * scalar,
 			this.d * scalar
-		);
+		).dedup();
 	}
 	
 	mul(other){ //lowercase normalizes
@@ -220,6 +228,10 @@ class Quadray {
 		return Quadray.distance(this, other);
 	}
 	
+	dist3d(other){
+		return distance3d(this.toCartesian(),other.toCartesian());
+	}
+	
 	toString(){
 		return 'Q('+this.a+','+this.b+','+this.c+','+this.d+')';
 	}
@@ -237,6 +249,8 @@ class Quadray {
 		return map[this.d] || (map[this.d] = this);
 	}
 }
+
+var distance3d = (xyz1, xyz2)=>Math.hypot(xyz1[0]-xyz2[0], xyz1[1]-xyz2[1], xyz1[2]-xyz2[2]);
 
 //TriZngle made of 3 quadray points as its primaryKey, and a color as mutable data.
 //If made by T(...) you can compare them using TriZ===triB or ==.
@@ -458,6 +472,11 @@ zoom = 0.38742048900000015;
 angleX = 0.10999999999999997;
 angleY = 1.0100000000000038;
 
+var quadrayAve = quadrays=>{
+	let sum = Q(0,0,0,0);
+	for(let q of quadrays) sum = sum.add(q);
+	return sum.mul(1/quadrays.length);
+};
 
 console.log('selq starts as '+selq); //selq starts as Q(7.071067811865474,0,0,0) 2025-6-5-715aET
 console.log('selq='+selq.toDetailString()); //selq=Q(7.071067811865474,0,0,0) (xyz [4.999999999999998,4.999999999999998,4.999999999999998])
@@ -511,6 +530,14 @@ var ToggleDot = q=>{
 	if(HasDot(q)){
 		RemDot(q);
 	}else{
+		AddDot(q);
+	}
+};
+
+var AddColoredDots = (quadrays,color)=>{
+	for(let q of quadrays){
+		q.color = color;
+		RemDot(q); //in case it had a different color
 		AddDot(q);
 	}
 };
@@ -633,19 +660,19 @@ let Ave3 = (vecA,vecB,vecC)=>[
 	(vecA[2]+vecB[2]+vecC[2])/3
 ];
 
-canvas.addEventListener("mousedown", e => {
+canvas.addEventListener("mousedown", function(e){
 	if (e.button === 2) drag = true;
 	else if (e.button === 0) rotateDrag = true;
 	lastX = e.clientX;
 	lastY = e.clientY;
 	canvas.style.cursor = 'grabbing';
 });
-canvas.addEventListener("mouseup", () => {
+canvas.addEventListener("mouseup", function(e){
 	drag = rotateDrag = false;
 	canvas.style.cursor = 'grab';
 });
-canvas.addEventListener("contextmenu", e => e.preventDefault());
-canvas.addEventListener("mousemove", e => {
+canvas.addEventListener("contextmenu", function(e){ e.preventDefault()} );
+canvas.addEventListener("mousemove", function(e){
 	if (drag) {
 		offsetX += e.clientX - lastX;
 		offsetY += e.clientY - lastY;
@@ -658,7 +685,7 @@ canvas.addEventListener("mousemove", e => {
 	lastX = e.clientX;
 	lastY = e.clientY;
 });
-canvas.addEventListener("wheel", e => {
+canvas.addEventListener("wheel", function(e){
 	e.preventDefault();
 	zoom *= e.deltaY < 0 ? 1.1 : 0.9;
 	viewChanged = true;
@@ -668,17 +695,39 @@ canvas.addEventListener("wheel", e => {
 //func(quadray) => true or false, should that part of the volume be filled or not.
 var fillGridByFunc = (centerQ, hops, func)=>{
 	let gridQuadrays = gridDotsNear(centerQ, hops);
-	let countYes = 0;
-	let countNo = 0;
+	let countOctYes = 0;
+	let countOctNo = 0;
+	let countTetZYes = 0;
+	let countTetZNo = 0;
+	let countTetCYes = 0;
+	let countTetCNo = 0;
 	for(let q of gridQuadrays){
-		if(func(q)){ //func says its solid, so put octahedron or tetrahedron here (todo offset into center of those shapes, not corner)
+		if(func(q.add(toOctCenter))){
+			toggleOctAtQuadray(q); //TODO add instead of toggle?
+			countOctYes++;
+		}else{
+			countOctNo++;
+		}
+		if(func(q.add(toTetZCenter))){
+			toggleTetZAtQuadray(q); //TODO add instead of toggle?
+			countTetZYes++;
+		}else{
+			countTetZNo++;
+		}
+		if(func(q.add(toTetCCenter))){
+			toggleTetCAtQuadray(q); //TODO add instead of toggle?
+			countTetCYes++;
+		}else{
+			countTetCNo++;
+		}
+		/*if(func(q)){ //func says its solid, so put octahedron or tetrahedron here (todo offset into center of those shapes, not corner)
 			toggleOctAtQuadray(q); //TODO add instead of toggle?
 			countYes++;
 		}else{
 			countNo++;
-		}
+		}*/
 	}
-	return 'fillGridByFunc matched '+countYes+' of '+(countYes+countNo)+' quadrays.';
+	return 'fillGridByFunc matched '+countOctYes+'/'+countTetZYes+'/'+countTetCYes+' of '+(countOctYes+countOctNo)+'/'+(countTetZYes+countTetZNo)+'/'+(countTetCYes+countTetCNo)+' octahedrons/tetrahedronZs/tetrahedronCs';
 };
 
 var SimKeyPress = key=>{
@@ -708,7 +757,10 @@ var SimKeyPress = key=>{
 	copyWorldStateToUiControls(); //in case selq changed
 };
 
-document.addEventListener("keydown", e => {
+document.addEventListener("keydown", function(e){
+	if(e.target == dom('textBoxToEval')){
+		return; //ignore game controls when in textarea. WARNING: if you add other things that take key presses, do this too,
+	}
 	SimKeyPress(e.key);
 });
 
@@ -791,6 +843,11 @@ function drawTriZngle(p1, p2, p3, color){
 //updated in getCameraXYZ. Used for displaying 3d points as
 //tiny circles of varying radius so you can see how far away they are.
 var lastCam = [0,0,0];
+
+//Add this to the main corner quadray of the octahedron to get the octahedron's center
+const toOctCenter = quadrayAve(oct6CornersAtQuadray(Q(0,0,0,0)));
+const toTetZCenter = quadrayAve(TriZ4CornersAtQuadray(Q(0,0,0,0))); //for the z tetrahedron
+const toTetCCenter = quadrayAve(TriX4CornersAtQuadray(Q(0,0,0,0))); //for the c tetrahedron
 
 var sortQuadrayTriZnglesList = ()=>{ //the quadray kind of TriZngles, not the 3d kind
 	let view = getCameraXYZ();
