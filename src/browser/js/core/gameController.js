@@ -62,6 +62,23 @@ class GameController {
                 QGridDots: !current.QGridDots
             });
         });
+
+        // Arrow key camera movement
+        this.keyHandlers.set('ArrowUp', () => {
+            this.panCamera('up');
+        });
+
+        this.keyHandlers.set('ArrowDown', () => {
+            this.panCamera('down');
+        });
+
+        this.keyHandlers.set('ArrowLeft', () => {
+            this.panCamera('left');
+        });
+
+        this.keyHandlers.set('ArrowRight', () => {
+            this.panCamera('right');
+        });
     }
 
     /**
@@ -136,6 +153,33 @@ class GameController {
         for (let key of keys) {
             this.simKeyPress(key);
         }
+    }
+
+    /**
+     * Pan the camera in a given direction
+     * @param {string} direction - Direction to pan: 'up', 'down', 'left', 'right'
+     */
+    panCamera(direction) {
+        const speed = constants.GAME_CONFIG.CAMERA_PAN_SPEED;
+        const camera = gameState.getCamera();
+        
+        switch (direction) {
+            case 'up':
+                camera.offsetY += speed;
+                break;
+            case 'down':
+                camera.offsetY -= speed;
+                break;
+            case 'left':
+                camera.offsetX += speed;
+                break;
+            case 'right':
+                camera.offsetX -= speed;
+                break;
+        }
+        
+        gameState.updateCamera(camera);
+        this.updateUI();
     }
 
     /**

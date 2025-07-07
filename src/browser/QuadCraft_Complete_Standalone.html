@@ -276,6 +276,17 @@
             <!-- Camera Controls -->
             <div class="control-section">
                 <h3>Camera Controls</h3>
+                <div class="direction-grid">
+                    <div class="direction-row">
+                        <button onclick="gameController.panCamera('up')" class="control-btn">↑</button>
+                        <span class="direction-label">Arrow keys: Pan camera</span>
+                    </div>
+                    <div class="direction-row">
+                        <button onclick="gameController.panCamera('left')" class="control-btn">←</button>
+                        <button onclick="gameController.panCamera('down')" class="control-btn">↓</button>
+                        <button onclick="gameController.panCamera('right')" class="control-btn">→</button>
+                    </div>
+                </div>
                 <div class="camera-controls">
                     <label>offsetX: <input type="number" step="10" id="numOffsetX" class="camera-input" oninput="updateCameraFromUI()"></label>
                     <label>offsetY: <input type="number" step="10" id="numOffsetY" class="camera-input" oninput="updateCameraFromUI()"></label>
@@ -371,6 +382,7 @@
             QGRID_BOOT_DEPTH: 3,
             DISPLAY_QGRID_DOTS: true,
             VARY_POINT_SIZE_BY_DISTANCE: false,
+            CAMERA_PAN_SPEED: 20,
             DEFAULT_CAMERA: {
                 offsetX: 731,
                 offsetY: 141,
@@ -986,8 +998,36 @@
                     gameState.toggleTetrahedronCAt(gameState.selq);
                 } else if (key === 'Shift') {
                     gameState.displaySettings.QGridDots = !gameState.displaySettings.QGridDots;
+                } else if (key === 'ArrowUp') {
+                    this.panCamera('up');
+                } else if (key === 'ArrowDown') {
+                    this.panCamera('down');
+                } else if (key === 'ArrowLeft') {
+                    this.panCamera('left');
+                } else if (key === 'ArrowRight') {
+                    this.panCamera('right');
                 }
                 updateSelqDisplay();
+            }
+
+            panCamera(direction) {
+                const speed = GAME_CONFIG.CAMERA_PAN_SPEED;
+                switch (direction) {
+                    case 'up':
+                        gameState.camera.offsetY += speed;
+                        break;
+                    case 'down':
+                        gameState.camera.offsetY -= speed;
+                        break;
+                    case 'left':
+                        gameState.camera.offsetX += speed;
+                        break;
+                    case 'right':
+                        gameState.camera.offsetX -= speed;
+                        break;
+                }
+                gameState.viewChanged = true;
+                updateCameraToUI();
             }
 
             simKeyPresses(str) {
@@ -1552,7 +1592,7 @@
             gameLoop();
             
             console.log('QuadCraft initialized successfully!');
-            console.log('Use WASD/QWERTY keys to navigate, X/Z/C for shapes, mouse to rotate/pan/zoom');
+            console.log('Use WASD/QWERTY keys to navigate, X/Z/C for shapes, arrow keys for camera, mouse to rotate/pan/zoom');
         }
 
         // Start the game when page loads

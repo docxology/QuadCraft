@@ -19,6 +19,9 @@ const GAME_CONFIG = {
     VARY_POINT_SIZE_BY_DISTANCE: false,
     DISPLAY_QGRID_DOTS: true,
     
+    // Camera Movement
+    CAMERA_PAN_SPEED: 20,
+    
     // Random Generation
     NUM_RANDOM_OCTAHEDRONS: 99,
     

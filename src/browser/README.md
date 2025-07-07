@@ -9,20 +9,26 @@ Open `QuadCraft_Complete_Standalone.html` directly in any modern browser - no se
 
 ### Modular Version (For Development)
 1. Start a local HTTP server: `python3 -m http.server 8080`
-2. Open `http://localhost:8080/src/browser/index.html`
+2. Open `http://localhost:8080/src/browser/` and navigate to the modular files
+3. Note: Modular version requires creating an HTML file that imports the JS modules
 
 ## Game Controls
 
 ### Navigation
 - **QWERTY keys** (q,w,e,r,t,y): Move backward in 6 directions
 - **ASDFGH keys** (a,s,d,f,g,h): Move forward in 6 directions
+
+### Camera Controls
+- **Arrow Keys**: Pan camera (Left/Right/Up/Down)
 - **Mouse**: Left-drag to rotate, right-drag to pan, scroll to zoom
+- **UI Sliders**: Manual camera position adjustment
 
 ### Shape Placement
 - **X**: Place/remove octahedron at current position
 - **Z**: Place/remove tetrahedron Z at current position
 - **C**: Place/remove tetrahedron C at current position
 - **Space**: Place/remove all 3 shapes at current position
+- **Shift**: Toggle grid dots visibility
 
 ### Save/Load
 - **QuickSave 1-5**: Save to browser localStorage (slots 1-5)
@@ -33,19 +39,10 @@ Open `QuadCraft_Complete_Standalone.html` directly in any modern browser - no se
 ## Files Structure
 
 ### HTML Files
-- **`QuadCraft_Complete_Standalone.html`** - Complete self-contained game (1300+ lines)
+- **`QuadCraft_Complete_Standalone.html`** - Complete self-contained game (1500+ lines)
   - All functionality embedded in single file
   - Works offline, no external dependencies
   - Recommended for distribution and play
-
-- **`index.html`** - Modular version using separate JS files
-  - Clean HTML structure with external modules
-  - Better for development and maintenance
-  - Requires HTTP server due to module imports
-
-- **`QuadrayGrid.html`** - Original monolithic version
-  - Legacy reference implementation
-  - Raw, unpolished but functional
 
 ### JavaScript Modules (`js/`)
 
@@ -64,7 +61,7 @@ Open `QuadCraft_Complete_Standalone.html` directly in any modern browser - no se
   
 - **`camera.js`** - Camera system
   - 3D transformations and view management
-  - Mouse interaction handling
+  - Mouse and keyboard interaction handling
   
 - **`saveLoadController.js`** - Save/load functionality
   - localStorage management (quicksaves)
@@ -100,7 +97,8 @@ Open `QuadCraft_Complete_Standalone.html` directly in any modern browser - no se
 - **`constants.js`** - Configuration and constants
   - Mathematical constants (ROOT2, S3)
   - Game configuration settings
-  - Utility functions
+  - Utility functions, logging config, error messages
+  - Camera movement settings
 
 ### Styles (`styles/`)
 - **`main.css`** - Complete styling for modular version
