@@ -1,0 +1,352 @@
+/* Main Layout */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: #1a1a1a;
+    color: #ffffff;
+    overflow: hidden;
+}
+
+#app {
+    display: flex;
+    height: 100vh;
+    width: 100vw;
+}
+
+/* Panels */
+.panel {
+    background: #2a2a2a;
+    border: 1px solid #444;
+    border-radius: 8px;
+    padding: 15px;
+    margin: 10px;
+    overflow-y: auto;
+    max-height: calc(100vh - 20px);
+    min-width: 300px;
+}
+
+#game-panel {
+    flex: 0 0 350px;
+}
+
+#analysis-panel {
+    flex: 0 0 400px;
+}
+
+/* Game Canvas */
+.game-canvas {
+    flex: 1;
+    background: #111;
+    cursor: grab;
+    border-radius: 8px;
+    margin: 10px;
+}
+
+.game-canvas:active {
+    cursor: grabbing;
+}
+
+/* Control Sections */
+.control-section {
+    margin-bottom: 20px;
+    padding: 10px;
+    background: #333;
+    border-radius: 6px;
+}
+
+.control-section h3 {
+    margin-bottom: 10px;
+    color: #4CAF50;
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+/* Direction Grid */
+.direction-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.direction-row {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.direction-label {
+    font-size: 12px;
+    color: #888;
+    margin-left: 10px;
+}
+
+/* Buttons */
+.control-btn {
+    background: #4CAF50;
+    color: white;
+    border: none;
+    padding: 8px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    transition: background 0.2s;
+}
+
+.control-btn:hover {
+    background: #45a049;
+}
+
+.control-btn:active {
+    background: #3d8b40;
+}
+
+/* Shape Controls */
+.shape-controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+}
+
+/* Camera Controls */
+.camera-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.camera-controls label {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 12px;
+}
+
+.camera-input {
+    width: 80px;
+    padding: 4px;
+    border: 1px solid #555;
+    border-radius: 3px;
+    background: #222;
+    color: white;
+    font-size: 12px;
+}
+
+/* Save/Load Controls */
+.save-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.quicksave-buttons,
+.quickload-buttons {
+    display: flex;
+    gap: 5px;
+    flex-wrap: wrap;
+}
+
+.file-input {
+    background: #333;
+    color: white;
+    border: 1px solid #555;
+    border-radius: 4px;
+    padding: 5px;
+    font-size: 12px;
+}
+
+/* Code Execution */
+#textBoxToEval {
+    width: 100%;
+    background: #222;
+    color: #00ff00;
+    border: 1px solid #555;
+    border-radius: 4px;
+    padding: 8px;
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    resize: vertical;
+}
+
+/* Analysis Panel Styles */
+.analysis-section {
+    margin-bottom: 20px;
+    padding: 10px;
+    background: #333;
+    border-radius: 6px;
+}
+
+.analysis-section h3 {
+    margin-bottom: 10px;
+    color: #2196F3;
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+/* Logging Controls */
+.logging-controls {
+    display: flex;
+    gap: 5px;
+    margin-bottom: 10px;
+}
+
+.log-display {
+    background: #111;
+    border: 1px solid #555;
+    border-radius: 4px;
+    padding: 10px;
+    height: 150px;
+    overflow-y: auto;
+    font-family: 'Courier New', monospace;
+    font-size: 11px;
+    color: #00ff00;
+}
+
+/* Analysis Controls */
+.analysis-controls {
+    display: flex;
+    gap: 5px;
+    margin-bottom: 10px;
+}
+
+.analysis-display {
+    background: #111;
+    border: 1px solid #555;
+    border-radius: 4px;
+    padding: 10px;
+    height: 120px;
+    overflow-y: auto;
+    font-family: 'Courier New', monospace;
+    font-size: 11px;
+    color: #ffffff;
+}
+
+/* Visualization */
+.viz-controls {
+    display: flex;
+    gap: 5px;
+    margin-bottom: 10px;
+}
+
+.viz-canvas {
+    background: #111;
+    border: 1px solid #555;
+    border-radius: 4px;
+    width: 100%;
+    height: 200px;
+}
+
+/* Selq Display */
+.selq-info {
+    background: #444;
+    padding: 8px;
+    border-radius: 4px;
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    color: #ffff00;
+    text-align: center;
+    margin-top: 10px;
+}
+
+/* Scrollbar Styling */
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: #333;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #555;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #666;
+}
+
+/* Responsive Design */
+@media (max-width: 1200px) {
+    #app {
+        flex-direction: column;
+    }
+    
+    .panel {
+        max-height: none;
+        min-width: auto;
+    }
+    
+    #game-panel,
+    #analysis-panel {
+        flex: none;
+    }
+    
+    .game-canvas {
+        height: 400px;
+    }
+}
+
+/* Animation for logging */
+@keyframes logEntry {
+    from {
+        opacity: 0;
+        transform: translateX(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.log-entry {
+    animation: logEntry 0.3s ease-out;
+    margin-bottom: 2px;
+    padding: 2px 0;
+    border-bottom: 1px solid #333;
+}
+
+/* Status indicators */
+.status-active {
+    background: #4CAF50 !important;
+}
+
+.status-inactive {
+    background: #f44336 !important;
+}
+
+/* Tooltips */
+.tooltip {
+    position: relative;
+    display: inline-block;
+}
+
+.tooltip .tooltiptext {
+    visibility: hidden;
+    width: 200px;
+    background-color: #555;
+    color: #fff;
+    text-align: center;
+    border-radius: 6px;
+    padding: 5px;
+    position: absolute;
+    z-index: 1;
+    bottom: 125%;
+    left: 50%;
+    margin-left: -100px;
+    opacity: 0;
+    transition: opacity 0.3s;
+    font-size: 11px;
+}
+
+.tooltip:hover .tooltiptext {
+    visibility: visible;
+    opacity: 1;
+} 

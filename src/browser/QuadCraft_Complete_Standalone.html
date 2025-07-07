@@ -1,0 +1,1562 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QuadCraft - Complete Standalone Quadray Voxel Game</title>
+    <style>
+        /* Complete CSS Styles for QuadCraft */
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: #111;
+            color: #fff;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        #app {
+            display: flex;
+            flex-direction: row;
+            height: 100vh;
+            width: 100vw;
+        }
+
+        .panel {
+            background: #222;
+            padding: 16px;
+            min-width: 300px;
+            max-width: 350px;
+            overflow-y: auto;
+            border-right: 2px solid #333;
+            box-sizing: border-box;
+        }
+
+        .panel h2 {
+            margin: 0 0 16px 0;
+            color: #4CAF50;
+            border-bottom: 2px solid #4CAF50;
+            padding-bottom: 8px;
+        }
+
+        .panel h3 {
+            margin: 16px 0 8px 0;
+            color: #81C784;
+            font-size: 14px;
+        }
+
+        .control-section {
+            margin-bottom: 20px;
+            padding: 8px;
+            background: #2a2a2a;
+            border-radius: 4px;
+        }
+
+        .direction-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .direction-row {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .direction-label {
+            margin-left: 8px;
+            font-size: 12px;
+            color: #aaa;
+        }
+
+        .control-btn {
+            background: #333;
+            border: 1px solid #555;
+            color: #fff;
+            padding: 6px 12px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: background-color 0.2s;
+        }
+
+        .control-btn:hover {
+            background: #444;
+        }
+
+        .control-btn:active {
+            background: #555;
+        }
+
+        .shape-controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+        }
+
+        .camera-controls {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .camera-controls label {
+            display: flex;
+            align-items: center;
+            font-size: 12px;
+        }
+
+        .camera-input {
+            width: 60px;
+            margin-left: 8px;
+            background: #333;
+            border: 1px solid #555;
+            color: #fff;
+            padding: 2px 4px;
+            border-radius: 2px;
+        }
+
+        .selq-info {
+            background: #111;
+            color: #0f0;
+            padding: 4px;
+            font-family: monospace;
+            font-size: 11px;
+            border-radius: 2px;
+            margin-top: 8px;
+        }
+
+        .save-controls {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .quicksave-buttons, .quickload-buttons {
+            display: flex;
+            gap: 2px;
+        }
+
+        .file-input {
+            background: #333;
+            border: 1px solid #555;
+            color: #fff;
+            padding: 4px;
+            border-radius: 2px;
+            font-size: 12px;
+        }
+
+        .log-display, .analysis-display {
+            background: #111;
+            color: #0f0;
+            min-height: 60px;
+            max-height: 120px;
+            margin: 4px 0;
+            padding: 4px;
+            font-size: 10px;
+            font-family: monospace;
+            overflow-y: auto;
+            border: 1px solid #333;
+            border-radius: 2px;
+        }
+
+        .viz-canvas {
+            width: 100%;
+            height: 150px;
+            background: #222;
+            border: 1px solid #333;
+            border-radius: 2px;
+        }
+
+        .game-canvas {
+            flex: 1;
+            width: 100%;
+            height: 100vh;
+            display: block;
+            background: #111;
+            cursor: grab;
+        }
+
+        .game-canvas:active {
+            cursor: grabbing;
+        }
+
+        textarea {
+            background: #333;
+            border: 1px solid #555;
+            color: #fff;
+            padding: 4px;
+            border-radius: 2px;
+            font-family: monospace;
+            font-size: 11px;
+            width: 100%;
+            box-sizing: border-box;
+            resize: vertical;
+        }
+
+        .analysis-section {
+            margin-bottom: 16px;
+        }
+
+        .analysis-controls, .viz-controls, .logging-controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            margin-bottom: 8px;
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 1200px) {
+            .panel {
+                min-width: 250px;
+                max-width: 280px;
+            }
+        }
+
+        @media (max-width: 900px) {
+            #app {
+                flex-direction: column;
+            }
+            .panel {
+                min-width: auto;
+                max-width: none;
+                max-height: 40vh;
+                border-right: none;
+                border-bottom: 2px solid #333;
+            }
+            .game-canvas {
+                height: 60vh;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <!-- Game UI Panel -->
+        <div id="game-panel" class="panel">
+            <h2>QuadCraft Game Controls</h2>
+            
+            <!-- Navigation Controls -->
+            <div class="control-section">
+                <h3>Navigation</h3>
+                <div class="direction-grid">
+                    <div class="direction-row">
+                        <button onclick="gameController.simKeyPress('q')" class="control-btn">q</button>
+                        <button onclick="gameController.simKeyPress('w')" class="control-btn">w</button>
+                        <button onclick="gameController.simKeyPress('e')" class="control-btn">e</button>
+                        <button onclick="gameController.simKeyPress('r')" class="control-btn">r</button>
+                        <button onclick="gameController.simKeyPress('t')" class="control-btn">t</button>
+                        <button onclick="gameController.simKeyPress('y')" class="control-btn">y</button>
+                        <span class="direction-label">6 backward directions</span>
+                    </div>
+                    <div class="direction-row">
+                        <button onclick="gameController.simKeyPress('a')" class="control-btn">a</button>
+                        <button onclick="gameController.simKeyPress('s')" class="control-btn">s</button>
+                        <button onclick="gameController.simKeyPress('d')" class="control-btn">d</button>
+                        <button onclick="gameController.simKeyPress('f')" class="control-btn">f</button>
+                        <button onclick="gameController.simKeyPress('g')" class="control-btn">g</button>
+                        <button onclick="gameController.simKeyPress('h')" class="control-btn">h</button>
+                        <span class="direction-label">6 forward directions</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Shape Controls -->
+            <div class="control-section">
+                <h3>Shape Controls</h3>
+                <div class="shape-controls">
+                    <button onclick="gameController.simKeyPress('z')" class="control-btn">z (tetrahedron Z)</button>
+                    <button onclick="gameController.simKeyPress('x')" class="control-btn">x (octahedron)</button>
+                    <button onclick="gameController.simKeyPress('c')" class="control-btn">c (tetrahedron X)</button>
+                    <button onclick="gameController.simKeyPress(' ')" class="control-btn">space (all 3)</button>
+                    <button onclick="gameController.simKeyPress('Shift')" class="control-btn">Shift (toggle grid)</button>
+                </div>
+            </div>
+
+            <!-- Camera Controls -->
+            <div class="control-section">
+                <h3>Camera Controls</h3>
+                <div class="camera-controls">
+                    <label>offsetX: <input type="number" step="10" id="numOffsetX" class="camera-input" oninput="updateCameraFromUI()"></label>
+                    <label>offsetY: <input type="number" step="10" id="numOffsetY" class="camera-input" oninput="updateCameraFromUI()"></label>
+                    <label>zoom: <input type="number" step="0.04" id="numZoom" class="camera-input" oninput="updateCameraFromUI()"></label>
+                    <label>angleX: <input type="number" step="0.05" id="numAngleX" class="camera-input" oninput="updateCameraFromUI()"></label>
+                    <label>angleY: <input type="number" step="0.05" id="numAngleY" class="camera-input" oninput="updateCameraFromUI()"></label>
+                </div>
+                <div id="selq-display" class="selq-info">selq: Q(0,0,0,0)</div>
+            </div>
+
+            <!-- Save/Load Controls -->
+            <div class="control-section">
+                <h3>Save/Load</h3>
+                <div class="save-controls">
+                    <button onclick="deleteQuickSaves()" class="control-btn">Delete QuickSaves</button>
+                    <div class="quicksave-buttons">
+                        <button onclick="quicksave('1')" class="control-btn">QS 1</button>
+                        <button onclick="quicksave('2')" class="control-btn">QS 2</button>
+                        <button onclick="quicksave('3')" class="control-btn">QS 3</button>
+                        <button onclick="quicksave('4')" class="control-btn">QS 4</button>
+                        <button onclick="quicksave('5')" class="control-btn">QS 5</button>
+                    </div>
+                    <div class="quickload-buttons">
+                        <button onclick="quickload('1')" class="control-btn">QL 1</button>
+                        <button onclick="quickload('2')" class="control-btn">QL 2</button>
+                        <button onclick="quickload('3')" class="control-btn">QL 3</button>
+                        <button onclick="quickload('4')" class="control-btn">QL 4</button>
+                        <button onclick="quickload('5')" class="control-btn">QL 5</button>
+                    </div>
+                    <button onclick="saveFile()" class="control-btn">Save File</button>
+                    <input id="openFileInput" type="file" onchange="openFile(event)" class="file-input">
+                </div>
+            </div>
+
+            <!-- Code Execution -->
+            <div class="control-section">
+                <h3>Code Execution</h3>
+                <textarea id="textBoxToEval" rows="6" placeholder="fillGridByFunc(selq, 5, q=>{&#10;    return q.toCartesian()[0]==0&#10;});"></textarea>
+                <button onclick="evalCode()" class="control-btn">Execute Code</button>
+            </div>
+        </div>
+
+        <!-- Analysis Panel -->
+        <div id="analysis-panel" class="panel">
+            <h2>Quadray Analysis</h2>
+            
+            <!-- Real-time Logging -->
+            <div class="analysis-section">
+                <h3>Live Coordinate Logging</h3>
+                <div class="logging-controls">
+                    <button onclick="toggleLogging()" id="toggleLoggingBtn" class="control-btn">Start Logging</button>
+                    <button onclick="clearLog()" class="control-btn">Clear Log</button>
+                    <button onclick="exportLog()" class="control-btn">Export Log</button>
+                </div>
+                <div id="logDisplay" class="log-display">Logging stopped. Click 'Start Logging' to begin.</div>
+            </div>
+
+            <!-- Coordinate Analysis -->
+            <div class="analysis-section">
+                <h3>Coordinate Analysis</h3>
+                <div class="analysis-controls">
+                    <button onclick="showCoordinateStats()" class="control-btn">Show Stats</button>
+                    <button onclick="plotTrajectory()" class="control-btn">Plot Trajectory</button>
+                    <button onclick="analyzeShapeDistribution()" class="control-btn">Shape Analysis</button>
+                </div>
+                <div id="analysisDisplay" class="analysis-display">No analysis data. Use buttons above to generate analysis.</div>
+            </div>
+
+            <!-- Visualization Tools -->
+            <div class="analysis-section">
+                <h3>Visualization</h3>
+                <div class="viz-controls">
+                    <button onclick="toggleHeatmap()" class="control-btn">Toggle Heatmap</button>
+                    <button onclick="showCoordinateGrid()" class="control-btn">Show Grid</button>
+                    <button onclick="exportVisualization()" class="control-btn">Export Viz</button>
+                </div>
+                <canvas id="vizCanvas" class="viz-canvas"></canvas>
+            </div>
+        </div>
+
+        <!-- Main Game Canvas -->
+        <canvas id="gameCanvas" class="game-canvas"></canvas>
+    </div>
+
+    <script>
+        // ===== CONSTANTS AND CONFIGURATION =====
+        const ROOT2 = Math.SQRT2;
+        const S3 = Math.sqrt(9 / 8);
+        
+        const GAME_CONFIG = {
+            SIDE: 10,
+            CUBE_SIZE: 700,
+            QGRID_BOOT_DEPTH: 3,
+            DISPLAY_QGRID_DOTS: true,
+            VARY_POINT_SIZE_BY_DISTANCE: false,
+            DEFAULT_CAMERA: {
+                offsetX: 731,
+                offsetY: 141,
+                zoom: 0.38742048900000015,
+                angleX: 0.10999999999999997,
+                angleY: 1.0100000000000038
+            }
+        };
+
+        const OCT_CORNERS = [
+            [0, 0, 0], [0, 0, 2], [0, -1, 1], 
+            [0, 1, 1], [-1, 0, 1], [1, 0, 1]
+        ];
+
+        const OCTAHEDRON_FACES = [
+            [0, 2, 4], [0, 4, 3], [0, 3, 5], [0, 5, 2],
+            [1, 2, 5], [1, 5, 3], [1, 3, 4], [1, 4, 2]
+        ];
+
+        const CORE_DIRECTIONS_DATA = [
+            { a: 0, b: 1, c: -1, d: 0 },   // from [0, -1, 1]
+            { a: 1, b: 0, c: 0, d: -1 },   // from [0, 1, 1]
+            { a: 0, b: 1, c: 0, d: -1 },   // from [-1, 0, 1]
+            { a: 1, b: 0, c: -1, d: 0 },   // from [1, 0, 1]
+            { a: -1, b: 0, c: 0, d: 1 },   // from [0, -1, -1]
+            { a: 0, b: -1, c: 1, d: 0 }    // from [0, 1, -1]
+        ];
+
+        // Utility functions
+        const UTILS = {
+            randColor: () => {
+                const s = (Math.random() * (2 ** 24) | 0).toString(16);
+                return '#' + s.padStart(6, '0');
+            },
+            distance3D: (xyz1, xyz2) => {
+                return Math.hypot(xyz1[0] - xyz2[0], xyz1[1] - xyz2[1], xyz1[2] - xyz2[2]);
+            },
+            average3D: (vecA, vecB, vecC) => {
+                return [
+                    (vecA[0] + vecB[0] + vecC[0]) / 3,
+                    (vecA[1] + vecB[1] + vecC[1]) / 3,
+                    (vecA[2] + vecB[2] + vecC[2]) / 3
+                ];
+            },
+            vecMulScalar: (vec, scalar) => {
+                return [vec[0] * scalar, vec[1] * scalar, vec[2] * scalar];
+            }
+        };
+
+        // ===== GLOBAL VARIABLES =====
+        let dedupQuadraysMap = {};
+        let dedupTriMap = {};
+        let gameState;
+        let gameController;
+        let renderer;
+        let camera;
+        let isLogging = false;
+        let logData = [];
+        let logInterval;
+
+        // ===== QUADRAY CLASS =====
+        class Quadray {
+            constructor(a = 0, b = 0, c = 0, d = 0) {
+                this.a = a;
+                this.b = b;
+                this.c = c;
+                this.d = d;
+                this.color = UTILS.randColor();
+            }
+
+            abcd() {
+                return [this.a, this.b, this.c, this.d];
+            }
+
+            normalized() {
+                const minVal = Math.min(this.a, this.b, this.c, this.d);
+                return new Quadray(
+                    this.a - minVal,
+                    this.b - minVal,
+                    this.c - minVal,
+                    this.d - minVal
+                ).dedup();
+            }
+
+            toCartesian() {
+                const scale = 1 / ROOT2;
+                const x = scale * (this.a - this.b - this.c + this.d);
+                const y = scale * (this.a - this.b + this.c - this.d);
+                const z = scale * (this.a + this.b - this.c - this.d);
+                return [x, y, z];
+            }
+
+            static fromCartesian([x, y, z]) {
+                const scale = 1 / ROOT2;
+                const a = scale * (Math.max(0, x) + Math.max(0, y) + Math.max(0, z));
+                const b = scale * (Math.max(0, -x) + Math.max(0, -y) + Math.max(0, z));
+                const c = scale * (Math.max(0, -x) + Math.max(0, y) + Math.max(0, -z));
+                const d = scale * (Math.max(0, x) + Math.max(0, -y) + Math.max(0, -z));
+                return new Quadray(a, b, c, d).normalized();
+            }
+
+            length() {
+                const sumSq = this.a ** 2 + this.b ** 2 + this.c ** 2 + this.d ** 2;
+                return Math.sqrt(sumSq / 2);
+            }
+
+            Add(other) {
+                return new Quadray(
+                    this.a + other.a,
+                    this.b + other.b,
+                    this.c + other.c,
+                    this.d + other.d
+                ).dedup();
+            }
+
+            add(other) {
+                return this.Add(other).normalized();
+            }
+
+            Mul(scalar) {
+                return new Quadray(
+                    this.a * scalar,
+                    this.b * scalar,
+                    this.c * scalar,
+                    this.d * scalar
+                ).dedup();
+            }
+
+            mul(scalar) {
+                return this.Mul(scalar).normalized();
+            }
+
+            toString() {
+                return `Q(${this.a},${this.b},${this.c},${this.d})`;
+            }
+
+            dedup() {
+                let map = dedupQuadraysMap;
+                map = map[this.a] || (map[this.a] = {});
+                map = map[this.b] || (map[this.b] = {});
+                map = map[this.c] || (map[this.c] = {});
+                return map[this.d] || (map[this.d] = this);
+            }
+        }
+
+        // ===== TRI CLASS =====
+        class Tri {
+            constructor(e, f, g) {
+                this.e = e;
+                this.f = f;
+                this.g = g;
+                this.color = UTILS.randColor();
+            }
+
+            primaryKey() {
+                return `T(${this.e},${this.f},${this.g})`;
+            }
+
+            toString() {
+                return this.primaryKey();
+            }
+
+            dedup() {
+                const primaryKey = this.primaryKey();
+                return dedupTriMap[primaryKey] || (dedupTriMap[primaryKey] = this);
+            }
+        }
+
+        // Helper functions
+        function Q(a, b, c, d) {
+            return new Quadray(a, b, c, d).dedup();
+        }
+
+        function T(e, f, g) {
+            return new Tri(e, f, g).dedup();
+        }
+
+        // ===== DIRECTIONS =====
+        const CoreDirections = CORE_DIRECTIONS_DATA.map(d => Q(d.a, d.b, d.c, d.d));
+        
+        const Directions = {
+            a: CoreDirections[0],
+            q: CoreDirections[0].Mul(-1),
+            s: CoreDirections[1],
+            w: CoreDirections[1].Mul(-1),
+            d: CoreDirections[2],
+            e: CoreDirections[2].Mul(-1),
+            f: CoreDirections[3],
+            r: CoreDirections[3].Mul(-1),
+            g: CoreDirections[4],
+            t: CoreDirections[4].Mul(-1),
+            h: CoreDirections[5],
+            y: CoreDirections[5].Mul(-1)
+        };
+
+        // ===== GEOMETRY FUNCTIONS =====
+        function getOctahedronCorners(q) {
+            let A = CoreDirections[0].Mul(-1);
+            let B = CoreDirections[4].Mul(-1);
+            return [
+                q,
+                q.add(A).add(B),
+                q.add(CoreDirections[1]),
+                q.add(CoreDirections[5]),
+                q.add(CoreDirections[5]).add(CoreDirections[3]),
+                q.add(CoreDirections[3].Mul(-1)).add(CoreDirections[1])
+            ];
+        }
+
+        function getOctahedronTriangles(q) {
+            const corners = getOctahedronCorners(q);
+            return OCTAHEDRON_FACES.map(face => 
+                T(corners[face[0]], corners[face[1]], corners[face[2]])
+            );
+        }
+
+        function getTetrahedronZCorners(ray) {
+            return [
+                ray,
+                ray.add(Directions.e),
+                ray.add(Directions.q),
+                ray.add(Directions.q).add(Directions.f)
+            ];
+        }
+
+        function getTetrahedronZTriangles(ray) {
+            const corners = getTetrahedronZCorners(ray);
+            return [
+                T(corners[1], corners[2], corners[3]),
+                T(corners[0], corners[2], corners[3]),
+                T(corners[0], corners[1], corners[3]),
+                T(corners[0], corners[1], corners[2])
+            ];
+        }
+
+        function getTetrahedronCCorners(ray) {
+            return [
+                ray,
+                ray.add(Directions.r),
+                ray.add(Directions.q),
+                ray.add(Directions.q).add(Directions.d)
+            ];
+        }
+
+        function getTetrahedronCTriangles(ray) {
+            const corners = getTetrahedronCCorners(ray);
+            return [
+                T(corners[1], corners[2], corners[3]),
+                T(corners[0], corners[2], corners[3]),
+                T(corners[0], corners[1], corners[3]),
+                T(corners[0], corners[1], corners[2])
+            ];
+        }
+
+        // ===== GAME STATE CLASS =====
+        class GameState {
+            constructor() {
+                this.reset();
+            }
+
+            reset() {
+                this.selq = Q(0, 0, 0, 0);
+                this.QGridDots = {};
+                this.QDots = {};
+                this.gameTris = {};
+                this.grid = {
+                    oct: new Set(),
+                    tetZ: new Set(),
+                    tetC: new Set()
+                };
+                this.camera = { ...GAME_CONFIG.DEFAULT_CAMERA };
+                this.displaySettings = {
+                    QGridDots: GAME_CONFIG.DISPLAY_QGRID_DOTS
+                };
+                this.gridChanged = false;
+                this.viewChanged = false;
+                this.initializeGrid();
+            }
+
+            initializeGrid() {
+                this.addQGridDot(this.selq);
+                for (let depth = 1; depth <= GAME_CONFIG.QGRID_BOOT_DEPTH; depth++) {
+                    this.expandQGridDotsOneDeeper();
+                }
+            }
+
+            addQGridDot(quadray) {
+                quadray = quadray.dedup();
+                this.QGridDots[quadray.toString()] = quadray;
+            }
+
+            expandQGridDotsOneDeeper() {
+                const directions = Object.values(Directions);
+                const currentDots = Object.values(this.QGridDots);
+                for (let q of currentDots) {
+                    for (let direction of directions) {
+                        this.addQGridDot(q.add(direction));
+                    }
+                }
+            }
+
+            toggleDot(quadray) {
+                const key = quadray.toString();
+                if (this.QDots[key]) {
+                    delete this.QDots[key];
+                } else {
+                    this.QDots[key] = quadray;
+                }
+            }
+
+            toggleGameTri(tri) {
+                const key = tri.primaryKey();
+                if (this.gameTris[key]) {
+                    delete this.gameTris[key];
+                } else {
+                    this.gameTris[key] = tri;
+                }
+                this.gridChanged = true;
+            }
+
+            toggleOctahedronAt(quadray) {
+                const corners = getOctahedronCorners(quadray);
+                corners.forEach(corner => this.toggleDot(corner));
+                
+                const triangles = getOctahedronTriangles(quadray);
+                triangles.forEach(tri => this.toggleGameTri(tri));
+                
+                if (this.grid.oct.has(quadray)) {
+                    this.grid.oct.delete(quadray);
+                } else {
+                    this.grid.oct.add(quadray);
+                }
+                this.gridChanged = true;
+            }
+
+            toggleTetrahedronZAt(quadray) {
+                const corners = getTetrahedronZCorners(quadray);
+                corners.forEach(corner => this.toggleDot(corner));
+                
+                const triangles = getTetrahedronZTriangles(quadray);
+                triangles.forEach(tri => this.toggleGameTri(tri));
+                
+                if (this.grid.tetZ.has(quadray)) {
+                    this.grid.tetZ.delete(quadray);
+                } else {
+                    this.grid.tetZ.add(quadray);
+                }
+                this.gridChanged = true;
+            }
+
+            toggleTetrahedronCAt(quadray) {
+                const corners = getTetrahedronCCorners(quadray);
+                corners.forEach(corner => this.toggleDot(corner));
+                
+                const triangles = getTetrahedronCTriangles(quadray);
+                triangles.forEach(tri => this.toggleGameTri(tri));
+                
+                if (this.grid.tetC.has(quadray)) {
+                    this.grid.tetC.delete(quadray);
+                } else {
+                    this.grid.tetC.add(quadray);
+                }
+                this.gridChanged = true;
+            }
+
+            moveSelectedQuadray(direction) {
+                if (Directions[direction]) {
+                    this.selq = this.selq.add(Directions[direction]);
+                    this.QDots[this.selq.toString()] = this.selq;
+                }
+                updateSelqDisplay();
+            }
+        }
+
+        // ===== RENDERER CLASS =====
+        class Renderer {
+            constructor(canvas) {
+                this.canvas = canvas;
+                this.ctx = canvas.getContext('2d');
+                this.setupCanvas();
+                this.lastCam = [0, 0, 0];
+            }
+
+            setupCanvas() {
+                this.canvas.width = window.innerWidth;
+                this.canvas.height = window.innerHeight;
+            }
+
+            getCameraXYZ() {
+                const side = GAME_CONFIG.SIDE;
+                const cubeSize = GAME_CONFIG.CUBE_SIZE;
+                return this.lastCam = this.inverseRotate([side / 2, side / 2, side / 2 - cubeSize / gameState.camera.zoom]);
+            }
+
+            rotate([x, y, z]) {
+                const side = GAME_CONFIG.SIDE;
+                const { angleX, angleY } = gameState.camera;
+                
+                let dx = x - side/2, dz = z - side/2;
+                let tx = dx * Math.cos(angleY) - dz * Math.sin(angleY);
+                let tz = dx * Math.sin(angleY) + dz * Math.cos(angleY);
+                dx = tx; dz = tz;
+                let dy = y - side/2;
+                tx = dy * Math.cos(angleX) - tz * Math.sin(angleX);
+                tz = dy * Math.sin(angleX) + tz * Math.cos(angleX);
+                dy = tx;
+                return [dx + side/2, dy + side/2, tz + side/2];
+            }
+
+            inverseRotate([x, y, z]) {
+                const side = GAME_CONFIG.SIDE;
+                const { angleX, angleY } = gameState.camera;
+                
+                let dx = x - side/2;
+                let dy = y - side/2;
+                let dz = z - side/2;
+
+                let ty = dy * Math.cos(-angleX) - dz * Math.sin(-angleX);
+                let tz = dy * Math.sin(-angleX) + dz * Math.cos(-angleX);
+                dy = ty; dz = tz;
+
+                let tx = dx * Math.cos(-angleY) - dz * Math.sin(-angleY);
+                tz = dx * Math.sin(-angleY) + dz * Math.cos(-angleY);
+                dx = tx;
+
+                return [dx + side/2, dy + side/2, tz + side/2];
+            }
+
+            project([x, y, z]) {
+                const side = GAME_CONFIG.SIDE;
+                const cubeSize = GAME_CONFIG.CUBE_SIZE;
+                const { offsetX, offsetY, zoom } = gameState.camera;
+                
+                const scale = cubeSize / (z + side);
+                return [offsetX + (x - side/2) * scale * zoom, offsetY - (y - side/2) * scale * zoom];
+            }
+
+            scaleGrid(v) {
+                const side = GAME_CONFIG.SIDE;
+                return [
+                    side/2 + (v[0] - side/2) * ROOT2,
+                    side/2 + (v[1] - side/2) * ROOT2,
+                    side/2 + (v[2] - side/2) * ROOT2
+                ];
+            }
+
+            unscaleGrid([x, y, z]) {
+                const side = GAME_CONFIG.SIDE;
+                return [
+                    (x - side/2) / ROOT2 + side/2,
+                    (y - side/2) / ROOT2 + side/2,
+                    (z - side/2) / ROOT2 + side/2
+                ];
+            }
+
+            drawTriangle(p1, p2, p3, color) {
+                p1 = this.scaleGrid(p1);
+                p2 = this.scaleGrid(p2);
+                p3 = this.scaleGrid(p3);
+                
+                const a = this.project(this.rotate(p1));
+                const b = this.project(this.rotate(p2));
+                const c = this.project(this.rotate(p3));
+                
+                this.ctx.beginPath();
+                this.ctx.moveTo(...a);
+                this.ctx.lineTo(...b);
+                this.ctx.lineTo(...c);
+                this.ctx.closePath();
+                this.ctx.fillStyle = color;
+                this.ctx.fill();
+                this.ctx.strokeStyle = '#000';
+                this.ctx.stroke();
+            }
+
+            paintXYZDot(xyz, color) {
+                const [px, py] = this.project(this.rotate(xyz));
+                this.ctx.fillStyle = color;
+                this.ctx.beginPath();
+                let radius = 2;
+                this.ctx.arc(px, py, radius, 0, 2 * Math.PI);
+                this.ctx.fill();
+            }
+
+            sortTriangles() {
+                const view = this.getCameraXYZ();
+                const scorer = tri => {
+                    const a = this.unscaleGrid(tri.e.toCartesian());
+                    const b = this.unscaleGrid(tri.f.toCartesian());
+                    const c = this.unscaleGrid(tri.g.toCartesian());
+                    return -UTILS.distance3D(view, UTILS.average3D(a, b, c));
+                };
+                
+                const gameTrisList = Object.values(gameState.gameTris);
+                gameTrisList.sort((a, b) => Math.sign(scorer(a) - scorer(b)));
+                
+                gameState.gameTris = {};
+                for (let tri of gameTrisList) {
+                    gameState.gameTris[tri.primaryKey()] = tri;
+                }
+            }
+
+            render() {
+                this.getCameraXYZ();
+                
+                if (gameState.gridChanged || gameState.viewChanged) {
+                    this.sortTriangles();
+                    updateCameraToUI();
+                    gameState.gridChanged = false;
+                    gameState.viewChanged = false;
+                }
+
+                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+
+                // Draw triangles
+                for (const tri of Object.values(gameState.gameTris)) {
+                    this.drawTriangle(
+                        this.unscaleGrid(tri.e.toCartesian()),
+                        this.unscaleGrid(tri.f.toCartesian()),
+                        this.unscaleGrid(tri.g.toCartesian()),
+                        tri.color
+                    );
+                }
+
+                // Draw grid dots
+                if (gameState.displaySettings.QGridDots) {
+                    for (const q of Object.values(gameState.QGridDots)) {
+                        this.paintXYZDot(q.toCartesian(), 'blue');
+                    }
+                }
+
+                // Draw player path dots
+                for (const q of Object.values(gameState.QDots)) {
+                    this.paintXYZDot(q.toCartesian(), q.color);
+                }
+
+                // Highlight selected quadray
+                gameState.selq.color = UTILS.randColor(); // Make it flash
+                this.paintXYZDot(gameState.selq.toCartesian(), gameState.selq.color);
+            }
+        }
+
+        // ===== GAME CONTROLLER =====
+        class GameController {
+            constructor() {
+                this.setupEventListeners();
+            }
+
+            setupEventListeners() {
+                // Mouse controls
+                this.setupMouseControls();
+                
+                // Keyboard controls
+                document.addEventListener('keydown', (e) => {
+                    if (e.target === document.getElementById('textBoxToEval')) {
+                        return; // Ignore game controls when in textarea
+                    }
+                    this.simKeyPress(e.key);
+                });
+            }
+
+            setupMouseControls() {
+                let drag = false, rotateDrag = false, lastX = 0, lastY = 0;
+                
+                renderer.canvas.addEventListener('mousedown', (e) => {
+                    if (e.button === 2) drag = true;
+                    else if (e.button === 0) rotateDrag = true;
+                    lastX = e.clientX;
+                    lastY = e.clientY;
+                    renderer.canvas.style.cursor = 'grabbing';
+                });
+
+                renderer.canvas.addEventListener('mouseup', () => {
+                    drag = rotateDrag = false;
+                    renderer.canvas.style.cursor = 'grab';
+                });
+
+                renderer.canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+
+                renderer.canvas.addEventListener('mousemove', (e) => {
+                    if (drag) {
+                        gameState.camera.offsetX += e.clientX - lastX;
+                        gameState.camera.offsetY += e.clientY - lastY;
+                        gameState.viewChanged = true;
+                    } else if (rotateDrag) {
+                        gameState.camera.angleY += (e.clientX - lastX) * 0.01;
+                        gameState.camera.angleX += (e.clientY - lastY) * 0.01;
+                        gameState.viewChanged = true;
+                    }
+                    lastX = e.clientX;
+                    lastY = e.clientY;
+                });
+
+                renderer.canvas.addEventListener('wheel', (e) => {
+                    e.preventDefault();
+                    gameState.camera.zoom *= e.deltaY < 0 ? 1.1 : 0.9;
+                    gameState.viewChanged = true;
+                });
+            }
+
+            simKeyPress(key) {
+                if (Directions[key]) {
+                    gameState.moveSelectedQuadray(key);
+                } else if (key === 'z') {
+                    gameState.toggleTetrahedronZAt(gameState.selq);
+                } else if (key === 'x') {
+                    gameState.toggleOctahedronAt(gameState.selq);
+                } else if (key === 'c') {
+                    gameState.toggleTetrahedronCAt(gameState.selq);
+                } else if (key === ' ') {
+                    gameState.toggleTetrahedronZAt(gameState.selq);
+                    gameState.toggleOctahedronAt(gameState.selq);
+                    gameState.toggleTetrahedronCAt(gameState.selq);
+                } else if (key === 'Shift') {
+                    gameState.displaySettings.QGridDots = !gameState.displaySettings.QGridDots;
+                }
+                updateSelqDisplay();
+            }
+
+            simKeyPresses(str) {
+                for (let ch of str) {
+                    this.simKeyPress(ch);
+                }
+            }
+        }
+
+        // ===== UTILITY FUNCTIONS =====
+        function updateSelqDisplay() {
+            document.getElementById('selq-display').innerHTML = `selq: ${gameState.selq}`;
+        }
+
+        function updateCameraToUI() {
+            document.getElementById('numOffsetX').value = gameState.camera.offsetX;
+            document.getElementById('numOffsetY').value = gameState.camera.offsetY;
+            document.getElementById('numZoom').value = gameState.camera.zoom;
+            document.getElementById('numAngleX').value = gameState.camera.angleX;
+            document.getElementById('numAngleY').value = gameState.camera.angleY;
+        }
+
+        function updateCameraFromUI() {
+            gameState.camera.offsetX = parseFloat(document.getElementById('numOffsetX').value) || 0;
+            gameState.camera.offsetY = parseFloat(document.getElementById('numOffsetY').value) || 0;
+            gameState.camera.zoom = parseFloat(document.getElementById('numZoom').value) || 1;
+            gameState.camera.angleX = parseFloat(document.getElementById('numAngleX').value) || 0;
+            gameState.camera.angleY = parseFloat(document.getElementById('numAngleY').value) || 0;
+            gameState.viewChanged = true;
+        }
+
+        // ===== SAVE/LOAD FUNCTIONS =====
+        function quicksave(name) {
+            console.log('quicksave ' + name);
+            const json = JSON.stringify(getGameStateData());
+            localStorage.setItem('quadcraft.quicksave.' + name, json);
+        }
+
+        function quickload(name) {
+            console.log('quickload ' + name);
+            const json = localStorage.getItem('quadcraft.quicksave.' + name);
+            if (json) {
+                loadGameStateData(JSON.parse(json));
+            }
+        }
+
+        function deleteQuickSaves() {
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key && key.startsWith('quadcraft.quicksave.')) {
+                    localStorage.removeItem(key);
+                    console.log('Deleted localStorage cookie: ' + key);
+                    i--;
+                }
+            }
+        }
+
+        function saveFile() {
+            const filename = prompt('Filename?', 'quadcraft_quadgrid_' + Date.now() + '.json');
+            if (filename) {
+                const data = JSON.stringify(getGameStateData(), null, 2);
+                const blob = new Blob([data], { type: 'application/json' });
+                const elem = document.createElement('a');
+                elem.href = URL.createObjectURL(blob);
+                elem.download = filename;
+                document.body.appendChild(elem);
+                elem.click();
+                document.body.removeChild(elem);
+            }
+        }
+
+        function openFile(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = e => {
+                const json = e.target.result;
+                loadGameStateData(JSON.parse(json));
+            };
+            reader.readAsText(file);
+        }
+
+        function getGameStateData() {
+            return {
+                type: 'quadcraft_quadraygrid_state',
+                selq: gameState.selq.abcd(),
+                camera: { ...gameState.camera },
+                textBoxToEval: document.getElementById('textBoxToEval').value,
+                grid: {
+                    oct: Array.from(gameState.grid.oct).map(q => q.abcd()),
+                    tetZ: Array.from(gameState.grid.tetZ).map(q => q.abcd()),
+                    tetC: Array.from(gameState.grid.tetC).map(q => q.abcd())
+                }
+            };
+        }
+
+        function loadGameStateData(data) {
+            if (data.type !== 'quadcraft_quadraygrid_state') return;
+            
+            // Clear current state
+            gameState.gameTris = {};
+            gameState.QDots = {};
+            gameState.grid.oct.clear();
+            gameState.grid.tetZ.clear();
+            gameState.grid.tetC.clear();
+
+            // Load selq
+            gameState.selq = Q(...data.selq);
+            
+            // Load camera
+            Object.assign(gameState.camera, data.camera);
+            
+            // Load grid
+            if (data.grid) {
+                for (let abcd of data.grid.oct) {
+                    gameState.toggleOctahedronAt(Q(...abcd));
+                }
+                for (let abcd of data.grid.tetZ) {
+                    gameState.toggleTetrahedronZAt(Q(...abcd));
+                }
+                for (let abcd of data.grid.tetC) {
+                    gameState.toggleTetrahedronCAt(Q(...abcd));
+                }
+            }
+            
+            // Load text
+            if (data.textBoxToEval !== undefined) {
+                document.getElementById('textBoxToEval').value = data.textBoxToEval;
+            }
+
+            updateCameraToUI();
+            updateSelqDisplay();
+            gameState.gridChanged = true;
+        }
+
+        // ===== CODE EXECUTION =====
+        function evalCode() {
+            const jsCode = document.getElementById('textBoxToEval').value;
+            console.log('evalling: ' + jsCode);
+            try {
+                const ret = eval(jsCode);
+                console.log('Returned: ' + ret);
+            } catch (error) {
+                console.error('Error executing code:', error);
+            }
+        }
+
+        function fillGridByFunc(centerQ, hops, func) {
+            const gridQuadrays = gridDotsNear(centerQ, hops);
+            let countOctYes = 0, countOctNo = 0;
+            let countTetZYes = 0, countTetZNo = 0;
+            let countTetCYes = 0, countTetCNo = 0;
+
+            for (let q of gridQuadrays) {
+                if (func(q)) {
+                    gameState.toggleOctahedronAt(q);
+                    countOctYes++;
+                } else {
+                    countOctNo++;
+                }
+            }
+            
+            return `fillGridByFunc matched ${countOctYes}/${countTetZYes}/${countTetCYes} of ${countOctYes + countOctNo}/${countTetZYes + countTetZNo}/${countTetCYes + countTetCNo} octahedrons/tetrahedronZs/tetrahedronCs`;
+        }
+
+        function gridDotsNear(center, hops) {
+            const set = new Set();
+            set.add(center);
+            const directions = Object.values(CoreDirections);
+            
+            for (let h = 1; h <= hops; h++) {
+                const setList = [...set];
+                for (let q of setList) {
+                    for (let direction of directions) {
+                        const q2 = q.add(direction);
+                        set.add(q2);
+                    }
+                    if (set.size > 100000) {
+                        throw new Error('Grid too large, size=' + set.size);
+                    }
+                }
+            }
+            return [...set];
+        }
+
+        // ===== LOGGING AND ANALYSIS =====
+        function toggleLogging() {
+            isLogging = !isLogging;
+            const btn = document.getElementById('toggleLoggingBtn');
+            const display = document.getElementById('logDisplay');
+            
+            if (isLogging) {
+                btn.textContent = 'Stop Logging';
+                display.innerHTML = 'Logging started...<br>';
+                logInterval = setInterval(() => {
+                    const timestamp = new Date().toISOString().slice(11, -1);
+                    const entry = `${timestamp}: ${gameState.selq} -> ${JSON.stringify(gameState.selq.toCartesian())}`;
+                    logData.push(entry);
+                    display.innerHTML += entry + '<br>';
+                    display.scrollTop = display.scrollHeight;
+                    
+                    if (logData.length > 1000) {
+                        logData.shift();
+                        const lines = display.innerHTML.split('<br>');
+                        lines.shift();
+                        display.innerHTML = lines.join('<br>');
+                    }
+                }, 100);
+            } else {
+                btn.textContent = 'Start Logging';
+                clearInterval(logInterval);
+                display.innerHTML += 'Logging stopped.<br>';
+            }
+        }
+
+        function clearLog() {
+            logData = [];
+            document.getElementById('logDisplay').innerHTML = 'Log cleared.<br>';
+        }
+
+        function exportLog() {
+            const data = logData.join('\n');
+            const blob = new Blob([data], { type: 'text/plain' });
+            const elem = document.createElement('a');
+            elem.href = URL.createObjectURL(blob);
+            elem.download = 'quadcraft_log_' + Date.now() + '.txt';
+            document.body.appendChild(elem);
+            elem.click();
+            document.body.removeChild(elem);
+        }
+
+        // ===== ANALYSIS FUNCTIONS =====
+        function showCoordinateStats() {
+            const display = document.getElementById('analysisDisplay');
+            const pathDots = Object.values(gameState.QDots);
+            const gridDots = Object.values(gameState.QGridDots);
+            
+            const stats = {
+                selectedQuadray: {
+                    quadray: gameState.selq.toString(),
+                    cartesian: gameState.selq.toCartesian().map(n => parseFloat(n.toFixed(6)))
+                },
+                counts: {
+                    gridDots: gridDots.length,
+                    pathDots: pathDots.length,
+                    triangles: Object.keys(gameState.gameTris).length,
+                    octahedrons: gameState.grid.oct.size,
+                    tetrahedronsZ: gameState.grid.tetZ.size,
+                    tetrahedronsC: gameState.grid.tetC.size
+                },
+                camera: {
+                    offsetX: gameState.camera.offsetX,
+                    offsetY: gameState.camera.offsetY,
+                    zoom: gameState.camera.zoom,
+                    angleX: gameState.camera.angleX,
+                    angleY: gameState.camera.angleY
+                }
+            };
+            
+            // Calculate coordinate ranges if we have path dots
+            if (pathDots.length > 0) {
+                const coords = pathDots.map(q => q.toCartesian());
+                stats.coordinateRanges = {
+                    x: { min: Math.min(...coords.map(c => c[0])), max: Math.max(...coords.map(c => c[0])) },
+                    y: { min: Math.min(...coords.map(c => c[1])), max: Math.max(...coords.map(c => c[1])) },
+                    z: { min: Math.min(...coords.map(c => c[2])), max: Math.max(...coords.map(c => c[2])) }
+                };
+            }
+            
+            display.innerHTML = `<h4>Coordinate Statistics</h4><pre>${JSON.stringify(stats, null, 2)}</pre>`;
+        }
+
+        function plotTrajectory() {
+            const display = document.getElementById('analysisDisplay');
+            const pathDots = Object.values(gameState.QDots);
+            
+            if (pathDots.length === 0) {
+                display.innerHTML = '<h4>Player Trajectory</h4><p>No trajectory data available. Move around to generate path data.</p>';
+                return;
+            }
+            
+            const trajectory = {
+                totalPoints: pathDots.length,
+                points: pathDots.slice(-20).map((q, index) => ({
+                    index: pathDots.length - 20 + index,
+                    quadray: q.toString(),
+                    cartesian: q.toCartesian().map(n => parseFloat(n.toFixed(6)))
+                }))
+            };
+            
+            // Calculate trajectory metrics if we have multiple points
+            if (pathDots.length > 1) {
+                let totalDistance = 0;
+                for (let i = 1; i < pathDots.length; i++) {
+                    totalDistance += pathDots[i].distance(pathDots[i - 1]);
+                }
+                trajectory.totalDistance = parseFloat(totalDistance.toFixed(6));
+                trajectory.averageStepSize = parseFloat((totalDistance / (pathDots.length - 1)).toFixed(6));
+            }
+            
+            display.innerHTML = `<h4>Player Trajectory</h4><pre>${JSON.stringify(trajectory, null, 2)}</pre>`;
+        }
+
+        function analyzeShapeDistribution() {
+            const display = document.getElementById('analysisDisplay');
+            const octahedrons = Array.from(gameState.grid.oct);
+            const tetrahedronsZ = Array.from(gameState.grid.tetZ);
+            const tetrahedronsC = Array.from(gameState.grid.tetC);
+            
+            const distribution = {
+                octahedrons: {
+                    count: octahedrons.length,
+                    coordinates: octahedrons.slice(0, 10).map(q => ({
+                        quadray: q.toString(),
+                        cartesian: q.toCartesian().map(n => parseFloat(n.toFixed(6)))
+                    }))
+                },
+                tetrahedronsZ: {
+                    count: tetrahedronsZ.length,
+                    coordinates: tetrahedronsZ.slice(0, 10).map(q => ({
+                        quadray: q.toString(),
+                        cartesian: q.toCartesian().map(n => parseFloat(n.toFixed(6)))
+                    }))
+                },
+                tetrahedronsC: {
+                    count: tetrahedronsC.length,
+                    coordinates: tetrahedronsC.slice(0, 10).map(q => ({
+                        quadray: q.toString(),
+                        cartesian: q.toCartesian().map(n => parseFloat(n.toFixed(6)))
+                    }))
+                },
+                totalShapes: octahedrons.length + tetrahedronsZ.length + tetrahedronsC.length
+            };
+            
+            // Calculate spatial distribution
+            const allShapes = [...octahedrons, ...tetrahedronsZ, ...tetrahedronsC];
+            if (allShapes.length > 0) {
+                const coords = allShapes.map(q => q.toCartesian());
+                distribution.spatialBounds = {
+                    x: { min: Math.min(...coords.map(c => c[0])), max: Math.max(...coords.map(c => c[0])) },
+                    y: { min: Math.min(...coords.map(c => c[1])), max: Math.max(...coords.map(c => c[1])) },
+                    z: { min: Math.min(...coords.map(c => c[2])), max: Math.max(...coords.map(c => c[2])) }
+                };
+            }
+            
+            display.innerHTML = `<h4>Shape Distribution</h4><pre>${JSON.stringify(distribution, null, 2)}</pre>`;
+        }
+
+        // ===== VISUALIZATION FUNCTIONS =====
+        let vizCanvas, vizCtx, heatmapEnabled = false, gridEnabled = false;
+        
+        function initVisualization() {
+            vizCanvas = document.getElementById('vizCanvas');
+            if (vizCanvas) {
+                vizCtx = vizCanvas.getContext('2d');
+                vizCanvas.width = vizCanvas.clientWidth;
+                vizCanvas.height = vizCanvas.clientHeight;
+            }
+        }
+
+        function toggleHeatmap() {
+            if (!vizCanvas || !vizCtx) {
+                initVisualization();
+                if (!vizCanvas) return;
+            }
+            
+            heatmapEnabled = !heatmapEnabled;
+            gridEnabled = false; // Only one visualization at a time
+            
+            if (heatmapEnabled) {
+                drawHeatmap();
+            } else {
+                clearVisualization();
+            }
+        }
+
+        function showCoordinateGrid() {
+            if (!vizCanvas || !vizCtx) {
+                initVisualization();
+                if (!vizCanvas) return;
+            }
+            
+            gridEnabled = !gridEnabled;
+            heatmapEnabled = false; // Only one visualization at a time
+            
+            if (gridEnabled) {
+                drawCoordinateGrid();
+            } else {
+                clearVisualization();
+            }
+        }
+
+        function drawHeatmap() {
+            if (!vizCtx) return;
+            
+            clearVisualization();
+            
+            const octahedrons = Array.from(gameState.grid.oct);
+            const tetrahedronsZ = Array.from(gameState.grid.tetZ);
+            const tetrahedronsC = Array.from(gameState.grid.tetC);
+            
+            // Create density map
+            const densityMap = new Map();
+            
+            // Count shapes at each coordinate
+            const allShapes = [...octahedrons, ...tetrahedronsZ, ...tetrahedronsC];
+            for (const quadray of allShapes) {
+                const cartesian = quadray.toCartesian();
+                const key = `${Math.round(cartesian[0])},${Math.round(cartesian[1])}`;
+                densityMap.set(key, (densityMap.get(key) || 0) + 1);
+            }
+            
+            if (densityMap.size === 0) {
+                vizCtx.fillStyle = '#ffffff';
+                vizCtx.font = '14px Arial';
+                vizCtx.fillText('No shapes to visualize', 10, 30);
+                return;
+            }
+            
+            // Find max density for normalization
+            const maxDensity = Math.max(...densityMap.values());
+            
+            // Draw heatmap
+            for (const [key, density] of densityMap) {
+                const [x, y] = key.split(',').map(Number);
+                const normalizedDensity = density / maxDensity;
+                
+                // Convert to screen coordinates
+                const screenX = (x + 10) * 10 + vizCanvas.width / 2;
+                const screenY = (y + 10) * 10 + vizCanvas.height / 2;
+                
+                // Color based on density
+                const color = `rgba(255, 0, 0, ${normalizedDensity * 0.8})`;
+                
+                vizCtx.fillStyle = color;
+                vizCtx.fillRect(screenX - 5, screenY - 5, 10, 10);
+            }
+            
+            // Add legend
+            vizCtx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+            vizCtx.fillRect(10, 10, 180, 60);
+            vizCtx.fillStyle = 'white';
+            vizCtx.font = '12px Arial';
+            vizCtx.fillText('Shape Density Heatmap', 15, 25);
+            vizCtx.fillText(`Max density: ${maxDensity}`, 15, 40);
+            vizCtx.fillText(`Total shapes: ${allShapes.length}`, 15, 55);
+        }
+
+        function drawCoordinateGrid() {
+            if (!vizCtx) return;
+            
+            clearVisualization();
+            
+            const gridDots = Object.values(gameState.QGridDots);
+            const pathDots = Object.values(gameState.QDots);
+            
+            const centerX = vizCanvas.width / 2;
+            const centerY = vizCanvas.height / 2;
+            const scale = 8;
+            
+            // Draw grid dots
+            vizCtx.fillStyle = '#0066cc';
+            for (const quadray of gridDots.slice(0, 200)) { // Limit for performance
+                const cartesian = quadray.toCartesian();
+                const screenX = centerX + cartesian[0] * scale;
+                const screenY = centerY + cartesian[1] * scale;
+                
+                if (screenX >= 0 && screenX < vizCanvas.width && screenY >= 0 && screenY < vizCanvas.height) {
+                    vizCtx.beginPath();
+                    vizCtx.arc(screenX, screenY, 2, 0, 2 * Math.PI);
+                    vizCtx.fill();
+                }
+            }
+            
+            // Draw path dots
+            vizCtx.fillStyle = '#00cc66';
+            for (const quadray of pathDots) {
+                const cartesian = quadray.toCartesian();
+                const screenX = centerX + cartesian[0] * scale;
+                const screenY = centerY + cartesian[1] * scale;
+                
+                if (screenX >= 0 && screenX < vizCanvas.width && screenY >= 0 && screenY < vizCanvas.height) {
+                    vizCtx.beginPath();
+                    vizCtx.arc(screenX, screenY, 3, 0, 2 * Math.PI);
+                    vizCtx.fill();
+                }
+            }
+            
+            // Draw selected quadray
+            const selectedCartesian = gameState.selq.toCartesian();
+            const selectedScreenX = centerX + selectedCartesian[0] * scale;
+            const selectedScreenY = centerY + selectedCartesian[1] * scale;
+            
+            vizCtx.fillStyle = '#ff6600';
+            vizCtx.beginPath();
+            vizCtx.arc(selectedScreenX, selectedScreenY, 5, 0, 2 * Math.PI);
+            vizCtx.fill();
+            
+            // Add legend
+            vizCtx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+            vizCtx.fillRect(10, 10, 150, 80);
+            vizCtx.fillStyle = 'white';
+            vizCtx.font = '12px Arial';
+            vizCtx.fillText('Coordinate Grid', 15, 25);
+            vizCtx.fillStyle = '#0066cc';
+            vizCtx.fillRect(15, 35, 10, 10);
+            vizCtx.fillStyle = 'white';
+            vizCtx.fillText('Grid Dots', 30, 44);
+            vizCtx.fillStyle = '#00cc66';
+            vizCtx.fillRect(15, 50, 10, 10);
+            vizCtx.fillStyle = 'white';
+            vizCtx.fillText('Path Dots', 30, 59);
+            vizCtx.fillStyle = '#ff6600';
+            vizCtx.fillRect(15, 65, 10, 10);
+            vizCtx.fillStyle = 'white';
+            vizCtx.fillText('Selected', 30, 74);
+        }
+
+        function clearVisualization() {
+            if (vizCtx && vizCanvas) {
+                vizCtx.clearRect(0, 0, vizCanvas.width, vizCanvas.height);
+            }
+        }
+
+        function exportVisualization() {
+            if (!vizCanvas) {
+                console.log('No visualization canvas available');
+                return;
+            }
+            
+            const dataURL = vizCanvas.toDataURL('image/png');
+            const link = document.createElement('a');
+            link.download = 'quadcraft_visualization_' + Date.now() + '.png';
+            link.href = dataURL;
+            link.click();
+        }
+
+        // ===== INITIALIZATION =====
+        function init() {
+            // Initialize game state
+            gameState = new GameState();
+            
+            // Initialize renderer
+            const canvas = document.getElementById('gameCanvas');
+            renderer = new Renderer(canvas);
+            
+            // Initialize game controller
+            gameController = new GameController();
+            
+            // Update UI
+            updateCameraToUI();
+            updateSelqDisplay();
+            
+            // Initialize visualization
+            initVisualization();
+            
+            // Start render loop
+            function gameLoop() {
+                renderer.render();
+                requestAnimationFrame(gameLoop);
+            }
+            gameLoop();
+            
+            console.log('QuadCraft initialized successfully!');
+            console.log('Use WASD/QWERTY keys to navigate, X/Z/C for shapes, mouse to rotate/pan/zoom');
+        }
+
+        // Start the game when page loads
+        window.addEventListener('load', init);
+    </script>
+</body>
+</html> 
