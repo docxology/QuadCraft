@@ -206,26 +206,81 @@
         }
 
         /* Responsive adjustments */
-        @media (max-width: 1200px) {
+        /* Time Series Panel */
+        .time-series-controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            margin-bottom: 8px;
+        }
+
+        .chart-canvas {
+            width: 100%;
+            height: 180px;
+            background: #111;
+            border: 1px solid #333;
+            border-radius: 2px;
+            margin-bottom: 10px;
+        }
+
+        .chart-legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            font-size: 10px;
+            margin-bottom: 8px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .legend-color {
+            width: 12px;
+            height: 12px;
+            border-radius: 2px;
+        }
+
+        .time-range-controls {
+            display: flex;
+            gap: 4px;
+            align-items: center;
+            margin-bottom: 8px;
+            font-size: 12px;
+        }
+
+        .time-range-input {
+            width: 60px;
+            background: #333;
+            border: 1px solid #555;
+            color: #fff;
+            padding: 2px 4px;
+            border-radius: 2px;
+            font-size: 11px;
+        }
+
+        @media (max-width: 1400px) {
             .panel {
                 min-width: 250px;
                 max-width: 280px;
             }
         }
 
-        @media (max-width: 900px) {
+        @media (max-width: 1200px) {
             #app {
                 flex-direction: column;
             }
             .panel {
                 min-width: auto;
                 max-width: none;
-                max-height: 40vh;
+                max-height: 30vh;
                 border-right: none;
                 border-bottom: 2px solid #333;
             }
             .game-canvas {
-                height: 60vh;
+                height: 40vh;
             }
         }
     </style>
@@ -364,6 +419,96 @@
                     <button onclick="exportVisualization()" class="control-btn">Export Viz</button>
                 </div>
                 <canvas id="vizCanvas" class="viz-canvas"></canvas>
+            </div>
+        </div>
+
+        <!-- Time Series Analysis Panel -->
+        <div id="time-series-panel" class="panel">
+            <h2>Time Series Analysis</h2>
+            
+            <!-- Time Range Controls -->
+            <div class="analysis-section">
+                <h3>Time Range Settings</h3>
+                <div class="time-range-controls">
+                    <label>Window: <input type="number" value="60" min="10" max="300" id="timeWindowInput" class="time-range-input"></label>
+                    <label>Interval: <input type="number" value="100" min="50" max="1000" id="intervalInput" class="time-range-input">ms</label>
+                    <button onclick="timeSeriesAnalyzer.resetTimeWindow()" class="control-btn">Reset</button>
+                </div>
+            </div>
+
+            <!-- Quadray Coordinates Chart -->
+            <div class="analysis-section">
+                <h3>Quadray Coordinates (a,b,c,d)</h3>
+                <div class="time-series-controls">
+                    <button onclick="timeSeriesAnalyzer.toggleQuadrayTracking()" id="toggleQuadrayBtn" class="control-btn">Start Quadray Tracking</button>
+                    <button onclick="timeSeriesAnalyzer.clearQuadrayData()" class="control-btn">Clear Data</button>
+                    <button onclick="timeSeriesAnalyzer.exportQuadrayData()" class="control-btn">Export</button>
+                </div>
+                <div class="chart-legend">
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #ff4444;"></div>
+                        <span>a coordinate</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #44ff44;"></div>
+                        <span>b coordinate</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #4444ff;"></div>
+                        <span>c coordinate</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #ffff44;"></div>
+                        <span>d coordinate</span>
+                    </div>
+                </div>
+                <canvas id="quadrayChart" class="chart-canvas"></canvas>
+            </div>
+
+            <!-- XYZ Coordinates Chart -->
+            <div class="analysis-section">
+                <h3>Cartesian Coordinates (x,y,z)</h3>
+                <div class="time-series-controls">
+                    <button onclick="timeSeriesAnalyzer.toggleXYZTracking()" id="toggleXYZBtn" class="control-btn">Start XYZ Tracking</button>
+                    <button onclick="timeSeriesAnalyzer.clearXYZData()" class="control-btn">Clear Data</button>
+                    <button onclick="timeSeriesAnalyzer.exportXYZData()" class="control-btn">Export</button>
+                </div>
+                <div class="chart-legend">
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #ff6666;"></div>
+                        <span>x coordinate</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #66ff66;"></div>
+                        <span>y coordinate</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #6666ff;"></div>
+                        <span>z coordinate</span>
+                    </div>
+                </div>
+                <canvas id="xyzChart" class="chart-canvas"></canvas>
+            </div>
+
+            <!-- Distance and Speed Analysis -->
+            <div class="analysis-section">
+                <h3>Movement Analysis</h3>
+                <div class="time-series-controls">
+                    <button onclick="timeSeriesAnalyzer.toggleMovementTracking()" id="toggleMovementBtn" class="control-btn">Start Movement Tracking</button>
+                    <button onclick="timeSeriesAnalyzer.clearMovementData()" class="control-btn">Clear Data</button>
+                    <button onclick="timeSeriesAnalyzer.exportMovementData()" class="control-btn">Export</button>
+                </div>
+                <div class="chart-legend">
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #ff8844;"></div>
+                        <span>Distance from Origin</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #44ff88;"></div>
+                        <span>Movement Speed</span>
+                    </div>
+                </div>
+                <canvas id="movementChart" class="chart-canvas"></canvas>
             </div>
         </div>
 
@@ -1565,6 +1710,446 @@
             link.click();
         }
 
+        // ===== TIME SERIES ANALYZER =====
+        const timeSeriesAnalyzer = {
+            quadrayTracking: false,
+            xyzTracking: false,
+            movementTracking: false,
+            
+            quadrayData: [],
+            xyzData: [],
+            movementData: [],
+            
+            quadrayInterval: null,
+            xyzInterval: null,
+            movementInterval: null,
+            
+            timeWindow: 60, // seconds
+            updateInterval: 100, // milliseconds
+            
+            lastPosition: null,
+            
+            init: function() {
+                this.initCanvases();
+                this.updateTimeSettings();
+            },
+            
+            initCanvases: function() {
+                const quadrayCanvas = document.getElementById('quadrayChart');
+                const xyzCanvas = document.getElementById('xyzChart');
+                const movementCanvas = document.getElementById('movementChart');
+                
+                if (quadrayCanvas) {
+                    quadrayCanvas.width = quadrayCanvas.clientWidth;
+                    quadrayCanvas.height = quadrayCanvas.clientHeight;
+                }
+                if (xyzCanvas) {
+                    xyzCanvas.width = xyzCanvas.clientWidth;
+                    xyzCanvas.height = xyzCanvas.clientHeight;
+                }
+                if (movementCanvas) {
+                    movementCanvas.width = movementCanvas.clientWidth;
+                    movementCanvas.height = movementCanvas.clientHeight;
+                }
+            },
+            
+            updateTimeSettings: function() {
+                const timeWindowInput = document.getElementById('timeWindowInput');
+                const intervalInput = document.getElementById('intervalInput');
+                
+                if (timeWindowInput) {
+                    this.timeWindow = parseInt(timeWindowInput.value) || 60;
+                }
+                if (intervalInput) {
+                    this.updateInterval = parseInt(intervalInput.value) || 100;
+                }
+            },
+            
+            toggleQuadrayTracking: function() {
+                this.quadrayTracking = !this.quadrayTracking;
+                const btn = document.getElementById('toggleQuadrayBtn');
+                
+                if (this.quadrayTracking) {
+                    btn.textContent = 'Stop Quadray Tracking';
+                    btn.classList.add('status-active');
+                    this.updateTimeSettings();
+                    this.quadrayInterval = setInterval(() => {
+                        this.recordQuadrayData();
+                    }, this.updateInterval);
+                } else {
+                    btn.textContent = 'Start Quadray Tracking';
+                    btn.classList.remove('status-active');
+                    if (this.quadrayInterval) {
+                        clearInterval(this.quadrayInterval);
+                    }
+                }
+            },
+            
+            toggleXYZTracking: function() {
+                this.xyzTracking = !this.xyzTracking;
+                const btn = document.getElementById('toggleXYZBtn');
+                
+                if (this.xyzTracking) {
+                    btn.textContent = 'Stop XYZ Tracking';
+                    btn.classList.add('status-active');
+                    this.updateTimeSettings();
+                    this.xyzInterval = setInterval(() => {
+                        this.recordXYZData();
+                    }, this.updateInterval);
+                } else {
+                    btn.textContent = 'Start XYZ Tracking';
+                    btn.classList.remove('status-active');
+                    if (this.xyzInterval) {
+                        clearInterval(this.xyzInterval);
+                    }
+                }
+            },
+            
+            toggleMovementTracking: function() {
+                this.movementTracking = !this.movementTracking;
+                const btn = document.getElementById('toggleMovementBtn');
+                
+                if (this.movementTracking) {
+                    btn.textContent = 'Stop Movement Tracking';
+                    btn.classList.add('status-active');
+                    this.updateTimeSettings();
+                    this.lastPosition = gameState.selq.toCartesian();
+                    this.movementInterval = setInterval(() => {
+                        this.recordMovementData();
+                    }, this.updateInterval);
+                } else {
+                    btn.textContent = 'Start Movement Tracking';
+                    btn.classList.remove('status-active');
+                    if (this.movementInterval) {
+                        clearInterval(this.movementInterval);
+                    }
+                }
+            },
+            
+            recordQuadrayData: function() {
+                const timestamp = Date.now();
+                const quadray = gameState.selq;
+                
+                this.quadrayData.push({
+                    time: timestamp,
+                    a: quadray.a,
+                    b: quadray.b,
+                    c: quadray.c,
+                    d: quadray.d
+                });
+                
+                // Trim data to time window
+                const cutoff = timestamp - (this.timeWindow * 1000);
+                this.quadrayData = this.quadrayData.filter(d => d.time > cutoff);
+                
+                this.drawQuadrayChart();
+            },
+            
+            recordXYZData: function() {
+                const timestamp = Date.now();
+                const cartesian = gameState.selq.toCartesian();
+                
+                this.xyzData.push({
+                    time: timestamp,
+                    x: cartesian[0],
+                    y: cartesian[1],
+                    z: cartesian[2]
+                });
+                
+                // Trim data to time window
+                const cutoff = timestamp - (this.timeWindow * 1000);
+                this.xyzData = this.xyzData.filter(d => d.time > cutoff);
+                
+                this.drawXYZChart();
+            },
+            
+            recordMovementData: function() {
+                const timestamp = Date.now();
+                const currentPos = gameState.selq.toCartesian();
+                
+                // Calculate distance from origin
+                const distanceFromOrigin = Math.sqrt(
+                    currentPos[0] * currentPos[0] + 
+                    currentPos[1] * currentPos[1] + 
+                    currentPos[2] * currentPos[2]
+                );
+                
+                // Calculate speed (distance moved since last measurement)
+                let speed = 0;
+                if (this.lastPosition && this.movementData.length > 0) {
+                    const timeDiff = (timestamp - this.movementData[this.movementData.length - 1].time) / 1000;
+                    if (timeDiff > 0) {
+                        const distance = Math.sqrt(
+                            Math.pow(currentPos[0] - this.lastPosition[0], 2) +
+                            Math.pow(currentPos[1] - this.lastPosition[1], 2) +
+                            Math.pow(currentPos[2] - this.lastPosition[2], 2)
+                        );
+                        speed = distance / timeDiff;
+                    }
+                }
+                
+                this.movementData.push({
+                    time: timestamp,
+                    distance: distanceFromOrigin,
+                    speed: speed
+                });
+                
+                this.lastPosition = [...currentPos];
+                
+                // Trim data to time window
+                const cutoff = timestamp - (this.timeWindow * 1000);
+                this.movementData = this.movementData.filter(d => d.time > cutoff);
+                
+                this.drawMovementChart();
+            },
+            
+            drawQuadrayChart: function() {
+                const canvas = document.getElementById('quadrayChart');
+                if (!canvas || this.quadrayData.length < 2) return;
+                
+                const ctx = canvas.getContext('2d');
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                
+                const data = this.quadrayData;
+                const colors = ['#ff4444', '#44ff44', '#4444ff', '#ffff44'];
+                const properties = ['a', 'b', 'c', 'd'];
+                
+                this.drawLineChart(ctx, canvas, data, properties, colors, 'time');
+            },
+            
+            drawXYZChart: function() {
+                const canvas = document.getElementById('xyzChart');
+                if (!canvas || this.xyzData.length < 2) return;
+                
+                const ctx = canvas.getContext('2d');
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                
+                const data = this.xyzData;
+                const colors = ['#ff6666', '#66ff66', '#6666ff'];
+                const properties = ['x', 'y', 'z'];
+                
+                this.drawLineChart(ctx, canvas, data, properties, colors, 'time');
+            },
+            
+            drawMovementChart: function() {
+                const canvas = document.getElementById('movementChart');
+                if (!canvas || this.movementData.length < 2) return;
+                
+                const ctx = canvas.getContext('2d');
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                
+                const data = this.movementData;
+                const colors = ['#ff8844', '#44ff88'];
+                const properties = ['distance', 'speed'];
+                
+                this.drawLineChart(ctx, canvas, data, properties, colors, 'time');
+            },
+            
+            drawLineChart: function(ctx, canvas, data, properties, colors, timeProperty) {
+                if (data.length < 2) return;
+                
+                const width = canvas.width;
+                const height = canvas.height;
+                const padding = { top: 20, bottom: 30, left: 40, right: 20 };
+                const chartWidth = width - padding.left - padding.right;
+                const chartHeight = height - padding.top - padding.bottom;
+                
+                // Calculate time and value ranges
+                const times = data.map(d => d[timeProperty]);
+                const minTime = Math.min(...times);
+                const maxTime = Math.max(...times);
+                const timeRange = maxTime - minTime || 1;
+                
+                // Find global min/max for all properties
+                let minValue = Infinity;
+                let maxValue = -Infinity;
+                
+                for (const property of properties) {
+                    const values = data.map(d => d[property]);
+                    minValue = Math.min(minValue, ...values);
+                    maxValue = Math.max(maxValue, ...values);
+                }
+                
+                const valueRange = maxValue - minValue || 1;
+                
+                // Draw grid
+                ctx.strokeStyle = '#333';
+                ctx.lineWidth = 1;
+                
+                // Vertical grid lines (time)
+                for (let i = 0; i <= 5; i++) {
+                    const x = padding.left + (i / 5) * chartWidth;
+                    ctx.beginPath();
+                    ctx.moveTo(x, padding.top);
+                    ctx.lineTo(x, padding.top + chartHeight);
+                    ctx.stroke();
+                }
+                
+                // Horizontal grid lines (values)
+                for (let i = 0; i <= 5; i++) {
+                    const y = padding.top + (i / 5) * chartHeight;
+                    ctx.beginPath();
+                    ctx.moveTo(padding.left, y);
+                    ctx.lineTo(padding.left + chartWidth, y);
+                    ctx.stroke();
+                }
+                
+                // Draw axes
+                ctx.strokeStyle = '#666';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(padding.left, padding.top);
+                ctx.lineTo(padding.left, padding.top + chartHeight);
+                ctx.lineTo(padding.left + chartWidth, padding.top + chartHeight);
+                ctx.stroke();
+                
+                // Draw data lines
+                for (let i = 0; i < properties.length; i++) {
+                    const property = properties[i];
+                    const color = colors[i];
+                    
+                    ctx.strokeStyle = color;
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    
+                    let firstPoint = true;
+                    for (const point of data) {
+                        const x = padding.left + ((point[timeProperty] - minTime) / timeRange) * chartWidth;
+                        const y = padding.top + chartHeight - ((point[property] - minValue) / valueRange) * chartHeight;
+                        
+                        if (firstPoint) {
+                            ctx.moveTo(x, y);
+                            firstPoint = false;
+                        } else {
+                            ctx.lineTo(x, y);
+                        }
+                    }
+                    ctx.stroke();
+                }
+                
+                // Draw value labels
+                ctx.fillStyle = '#aaa';
+                ctx.font = '10px Arial';
+                ctx.textAlign = 'right';
+                
+                for (let i = 0; i <= 5; i++) {
+                    const value = minValue + (i / 5) * valueRange;
+                    const y = padding.top + chartHeight - (i / 5) * chartHeight;
+                    ctx.fillText(value.toFixed(1), padding.left - 5, y + 3);
+                }
+                
+                // Draw time labels
+                ctx.textAlign = 'center';
+                const now = Date.now();
+                for (let i = 0; i <= 5; i++) {
+                    const timeAgo = (5 - i) * (this.timeWindow / 5);
+                    const x = padding.left + (i / 5) * chartWidth;
+                    ctx.fillText(`-${timeAgo.toFixed(0)}s`, x, height - 5);
+                }
+            },
+            
+            clearQuadrayData: function() {
+                this.quadrayData = [];
+                this.drawQuadrayChart();
+            },
+            
+            clearXYZData: function() {
+                this.xyzData = [];
+                this.drawXYZChart();
+            },
+            
+            clearMovementData: function() {
+                this.movementData = [];
+                this.drawMovementChart();
+            },
+            
+            resetTimeWindow: function() {
+                this.updateTimeSettings();
+                // Clear and restart all active tracking
+                if (this.quadrayTracking) {
+                    this.toggleQuadrayTracking();
+                    this.toggleQuadrayTracking();
+                }
+                if (this.xyzTracking) {
+                    this.toggleXYZTracking();
+                    this.toggleXYZTracking();
+                }
+                if (this.movementTracking) {
+                    this.toggleMovementTracking();
+                    this.toggleMovementTracking();
+                }
+            },
+            
+            exportQuadrayData: function() {
+                if (this.quadrayData.length === 0) {
+                    alert('No quadray data to export');
+                    return;
+                }
+                
+                const data = {
+                    type: 'quadray_time_series',
+                    timeWindow: this.timeWindow,
+                    interval: this.updateInterval,
+                    data: this.quadrayData
+                };
+                
+                const json = JSON.stringify(data, null, 2);
+                const blob = new Blob([json], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `quadray_timeseries_${Date.now()}.json`;
+                a.click();
+                URL.revokeObjectURL(url);
+            },
+            
+            exportXYZData: function() {
+                if (this.xyzData.length === 0) {
+                    alert('No XYZ data to export');
+                    return;
+                }
+                
+                const data = {
+                    type: 'xyz_time_series',
+                    timeWindow: this.timeWindow,
+                    interval: this.updateInterval,
+                    data: this.xyzData
+                };
+                
+                const json = JSON.stringify(data, null, 2);
+                const blob = new Blob([json], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `xyz_timeseries_${Date.now()}.json`;
+                a.click();
+                URL.revokeObjectURL(url);
+            },
+            
+            exportMovementData: function() {
+                if (this.movementData.length === 0) {
+                    alert('No movement data to export');
+                    return;
+                }
+                
+                const data = {
+                    type: 'movement_time_series',
+                    timeWindow: this.timeWindow,
+                    interval: this.updateInterval,
+                    data: this.movementData
+                };
+                
+                const json = JSON.stringify(data, null, 2);
+                const blob = new Blob([json], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `movement_timeseries_${Date.now()}.json`;
+                a.click();
+                URL.revokeObjectURL(url);
+            }
+        };
+
         // ===== INITIALIZATION =====
         function init() {
             // Initialize game state
@@ -1584,6 +2169,9 @@
             // Initialize visualization
             initVisualization();
             
+            // Initialize time series analyzer
+            timeSeriesAnalyzer.init();
+            
             // Start render loop
             function gameLoop() {
                 renderer.render();
@@ -1593,6 +2181,7 @@
             
             console.log('QuadCraft initialized successfully!');
             console.log('Use WASD/QWERTY keys to navigate, X/Z/C for shapes, arrow keys for camera, mouse to rotate/pan/zoom');
+            console.log('New: Time series analysis panel with real-time coordinate tracking and line charts!');
         }
 
         // Start the game when page loads

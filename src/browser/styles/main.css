@@ -274,6 +274,16 @@ body {
 }
 
 /* Responsive Design */
+@media (max-width: 1600px) {
+    #time-series-panel {
+        flex: 0 0 300px;
+    }
+    
+    .chart-canvas {
+        height: 150px;
+    }
+}
+
 @media (max-width: 1200px) {
     #app {
         flex-direction: column;
@@ -285,12 +295,18 @@ body {
     }
     
     #game-panel,
-    #analysis-panel {
+    #analysis-panel,
+    #time-series-panel {
         flex: none;
+        max-height: 25vh;
     }
     
     .game-canvas {
-        height: 400px;
+        height: 25vh;
+    }
+    
+    .chart-canvas {
+        height: 120px;
     }
 }
 
@@ -320,6 +336,65 @@ body {
 
 .status-inactive {
     background: #f44336 !important;
+}
+
+/* Time Series Panel */
+#time-series-panel {
+    flex: 0 0 400px;
+}
+
+.time-series-controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin-bottom: 10px;
+}
+
+.chart-canvas {
+    width: 100%;
+    height: 180px;
+    background: #111;
+    border: 1px solid #555;
+    border-radius: 4px;
+    margin-bottom: 10px;
+}
+
+.chart-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    font-size: 10px;
+    margin-bottom: 8px;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.legend-color {
+    width: 12px;
+    height: 12px;
+    border-radius: 2px;
+}
+
+.time-range-controls {
+    display: flex;
+    gap: 5px;
+    align-items: center;
+    margin-bottom: 10px;
+    font-size: 12px;
+}
+
+.time-range-input {
+    width: 60px;
+    background: #333;
+    border: 1px solid #555;
+    color: #fff;
+    padding: 4px;
+    border-radius: 3px;
+    font-size: 11px;
 }
 
 /* Tooltips */

@@ -39,9 +39,10 @@ Open `QuadCraft_Complete_Standalone.html` directly in any modern browser - no se
 ## Files Structure
 
 ### HTML Files
-- **`QuadCraft_Complete_Standalone.html`** - Complete self-contained game (1500+ lines)
+- **`QuadCraft_Complete_Standalone.html`** - Complete self-contained game (1600+ lines)
   - All functionality embedded in single file
   - Works offline, no external dependencies
+  - Includes new time series analysis panel
   - Recommended for distribution and play
 
 ### JavaScript Modules (`js/`)
@@ -92,6 +93,12 @@ Open `QuadCraft_Complete_Standalone.html` directly in any modern browser - no se
 - **`visualizer.js`** - Additional visualization
   - Heatmaps and coordinate grids
   - Canvas-based analysis tools
+  
+- **`timeSeriesAnalyzer.js`** - Time series coordinate tracking
+  - Real-time line chart visualization
+  - Quadray and Cartesian coordinate tracking
+  - Movement speed and distance analysis
+  - Configurable time windows and update intervals
 
 #### Utilities (`js/utils/`)
 - **`constants.js`** - Configuration and constants
@@ -135,6 +142,37 @@ Analysis Tools ← Logger ← GameState
 Visualizer → Analysis Canvas
 ```
 
+## User Interface
+
+### Three-Panel Layout
+The game features a comprehensive three-panel interface:
+
+1. **Game Controls Panel** (Left)
+   - Navigation controls with QWERTY/ASDFGH keys
+   - Shape placement controls (X/Z/C keys)
+   - Camera controls with arrow keys and mouse
+   - Save/load functionality with quicksave slots
+   - Code execution environment
+
+2. **Analysis Panel** (Center)
+   - Real-time coordinate logging with export
+   - Statistical analysis and trajectory plotting
+   - Heatmap and grid visualizations
+   - Shape distribution analysis
+
+3. **Time Series Analysis Panel** (Right)
+   - Live coordinate tracking with line charts
+   - Quadray coordinates (a,b,c,d) over time
+   - Cartesian coordinates (x,y,z) over time
+   - Movement analysis (distance from origin, speed)
+   - Configurable time windows (10-300 seconds)
+   - Adjustable update intervals (50-1000ms)
+   - Data export capabilities for all chart types
+
+4. **Main Game Canvas** (Center-Right)
+   - 3D rendered game world with quadray coordinate system
+   - Interactive camera with mouse controls
+
 ## Features
 
 ### Core Gameplay
@@ -149,6 +187,10 @@ Visualizer → Analysis Canvas
 - **Trajectory plotting** and coordinate range analysis
 - **Heatmap visualization** of visited areas
 - **Live coordinate display** showing current position
+- **Time series analysis** with real-time line charts for coordinates
+- **Quadray coordinate tracking** (a,b,c,d) over time
+- **Cartesian coordinate tracking** (x,y,z) over time
+- **Movement analysis** including distance from origin and speed tracking
 
 ### Code Execution
 - **JavaScript evaluation** in game context
