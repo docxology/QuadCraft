@@ -8,6 +8,13 @@
 	<br>
 	
 	<table border=2><tr><td>
+	<input type=button value="Example code A" onclick="dom('textBoxToEval').innerHTML = 'fillGridByFunc(selq, 5, q=>{\n	return q.toCartesian()[0]==0;\n});';">
+	<input type=button value="B" onclick="dom('textBoxToEval').innerHTML = 'fillGridByFunc(selq, 8, q=>{\n	return q.toCartesian()[0]>1.5;\n});';">
+	<input type=button value="C" onclick="dom('textBoxToEval').innerHTML = 'AddColoredDots(gridDotsNear(selq,5),\'green\');';">
+	<input type=button value="D" onclick="dom('textBoxToEval').innerHTML = 'fillGridByFunc(selq, 5, q=>{\n	return Math.random()<.3;\n});';">
+	<input type=button value="E" onclick="dom('textBoxToEval').innerHTML = 'fillGridByFunc(selq, 14, q=>{\n  let xyz = q.toCartesian();\n  let x = xyz[0], y = xyz[1], z = xyz[2];\n  let xyDist = Math.hypot(x*x,y*y);\n  let yzDist = Math.hypot(y*y,z*z);\n  let xzDist = Math.hypot(x*x,z*z);\n  let xyzDist = Math.hypot(x*x,y*y,z*z);\n  return xyzDist<12 && xyDist>3 && yzDist>3 && xzDist>3;\n});';">
+	<input type=button value="X" title="empty text box" onclick="dom('textBoxToEval').innerHTML = '';">
+	<br>
 <textarea id=textBoxToEval rows=10 cols=40>
 fillGridByFunc(selq, 5, q=>{
 	return q.toCartesian()[0]==0
@@ -51,7 +58,8 @@ fillGridByFunc(selq, 5, q=>{
 			
 		</div>
 		<input type=button onclick="SimKeyPress('Shift');" value="Shift (toggle grid dots)">
-		<input type=button onclick="SimKeyPresses('a a a a d d d d q q q q e eee');" value="example octahedrons and tetrahedrons"><br>
+		<input type=button onclick="SimKeyPresses('a a a a d d d d q q q q e eee');" value="example octahedrons and tetrahedrons">
+		<input type=button value="ClearShapes" onclick="ClearShapes();"></input><br>
 		<input type=button onclick="SimKeyPress('z');" value="'z' (tog tetrahedron Z)">
 		<input type=button onclick="SimKeyPress('x');" value="'x' (tog octahedron)">
 		<input type=button onclick="SimKeyPress('c');" value="'c' (tog tetrahedron X)">
