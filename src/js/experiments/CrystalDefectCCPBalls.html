@@ -21,6 +21,9 @@
   window.addEventListener('resize', resize);
   resize();
 
+  // Toggle graphics mode
+  let isXorGraphics = false; // default false: real balls mode
+
   // Composite modes
   const CLEAR_MODE = 'source-over';
   const XOR_MODE   = 'difference';
@@ -28,16 +31,16 @@
   // Simulation constants
   const BALL_RADIUS   = 35;
   const BALL_DIAMETER = BALL_RADIUS * 2;
-  const NUM_BALLS     = 50;
-  const GRAVITY       = 100;    // gravity strength per pair via potential
-  const DAMPING       = 1.1;
+  const NUM_BALLS     = 100;
+  const GRAVITY       = 40;    // gravity strength per pair via potential
+  const DAMPING       = 2.1;
   const MAX_DIST      = BALL_DIAMETER * 2;
   const WALL          = 250;
   const potenMul      = 1;
-  const ccpPotenMul   = 100;     // enable CCP forces by setting to >0
+  const ccpPotenMul   = 300;
   const maxSpeed      = 1000;
   const EPS           = 1e-3;
-  const collisionForce= 3000;
+  const collisionForce= 430;
 
   // 12 CCP directions scaled to ball diameter
   const theCCPDirections = [
@@ -65,82 +68,62 @@
       pz: Math.random()*200,
       vx: 0, vy: 0, vz: 0,
       color: randomColor(),
-      gx: 0, gy: 0, gz: 0   // gradient accumulators
+      gx: 0, gy: 0, gz: 0
     });
   }
 
   // Pairwise potential: collisions + CCP + gravity
   function poten(x1,y1,z1, x2,y2,z2) {
     let total = 0;
-    // collision repulsion if too close
-    const dx = x2 - x1;
-    const dy = y2 - y1;
-    const dz = z2 - z1;
+    const dx = x2 - x1, dy = y2 - y1, dz = z2 - z1;
     const dist = Math.hypot(dx,dy,dz);
-    //const dist2d = Math.hypot(dx,dy);
-    const minDist = BALL_DIAMETER;  // just touching
-    if(dist < minDist) {
-      total += collisionForce * ((minDist - dist) ** 2);
+    // collision repulsion
+    if(dist < BALL_DIAMETER) {
+      total += collisionForce * ((BALL_DIAMETER - dist) ** 2);
     }
     // CCP spring & exp
     if(ccpPotenMul > 0 && dist > 1e-6) {
       for(const [tx,ty,tz] of theCCPDirections) {
-        const ddx = dx - tx;
-        const ddy = dy - ty;
-        const ddz = dz - tz;
+        const ddx = dx - tx, ddy = dy - ty, ddz = dz - tz;
         const distFromCcp = Math.hypot(ddx,ddy,ddz);
         const windowMul = 1 / (1 + 0.1 * distFromCcp * distFromCcp);
         const distErrSq = (distFromCcp - BALL_DIAMETER) ** 2;
         total += ccpPotenMul * (windowMul * distErrSq + Math.exp(-distFromCcp * 5));
       }
     }
-    // gravity potential by average height
+    // gravity potential
     total += -GRAVITY * ((y1 + y2) / 2);
     return potenMul * total;
   }
 
   // Physics update: finite-difference gradient of total potential
   function update(dt) {
-    // reset gradients
     balls.forEach(b => { b.gx = 0; b.gy = 0; b.gz = 0; });
-
-    // compute gradients per pair
     for(let i=0; i<balls.length; i++) {
       const bi = balls[i];
       for(let j=i+1; j<balls.length; j++) {
         const bj = balls[j];
-        // sample potential at 4 points for bi
-        const U0 = poten(bi.px, bi.py, bi.pz, bj.px, bj.py, bj.pz);
-        const Ux = poten(bi.px + EPS, bi.py, bi.pz, bj.px, bj.py, bj.pz);
-        const Uy = poten(bi.px, bi.py + EPS, bi.pz, bj.px, bj.py, bj.pz);
-        const Uz = poten(bi.px, bi.py, bi.pz + EPS, bj.px, bj.py, bj.pz);
+        const U0 = poten(bi.px,bi.py,bi.pz, bj.px,bj.py,bj.pz);
+        const Ux = poten(bi.px+EPS,bi.py,bi.pz, bj.px,bj.py,bj.pz);
+        const Uy = poten(bi.px,bi.py+EPS,bi.pz, bj.px,bj.py,bj.pz);
+        const Uz = poten(bi.px,bi.py,bi.pz+EPS, bj.px,bj.py,bj.pz);
         const gradx = (Ux - U0) / EPS;
         const grady = (Uy - U0) / EPS;
         const gradz = (Uz - U0) / EPS;
-        bi.gx += gradx;
-        bi.gy += grady;
-        bi.gz += gradz;
-        //bj.gx -= gradx;
-        //bj.gy -= grady;
-        //bj.gz -= gradz;
+        bi.gx += gradx; bi.gy += grady; bi.gz += gradz;
+        //bj.gx -= gradx; bj.gy -= grady; bj.gz -= gradz;
       }
     }
-
-    // apply acceleration, damping, integrate, bounce
-    let dampMul = Math.exp(-dt*DAMPING);
+    const dampMul = Math.exp(-dt*DAMPING);
     balls.forEach(b => {
       b.vx += -b.gx * dt;
       b.vy += -b.gy * dt;
       b.vz += -b.gz * dt;
-      b.vx *= dampMul;
-      b.vy *= dampMul;
-      b.vz *= dampMul;
-      const speed = Math.hypot(b.vx, b.vy, b.vz);
+      b.vx *= dampMul; b.vy *= dampMul; b.vz *= dampMul;
+      const speed = Math.hypot(b.vx,b.vy,b.vz);
       if(speed > maxSpeed) {
         const m = maxSpeed / speed;
-        b.vx *= m;
-        b.vy *= m;
-        b.vz *= m;
+        b.vx *= m; b.vy *= m; b.vz *= m;
       }
       b.px += b.vx * dt;
       b.py += b.vy * dt;
@@ -154,24 +137,33 @@
     });
   }
 
-  // Draw: clear then XOR
+  // Draw helper
+  function drawBall(b) {
+    const scale = 500 / (500 + b.pz);
+    const x = canvas.width/2 + b.px * scale;
+    const y = canvas.height/2 + b.py * scale;
+    const r = BALL_RADIUS * scale;
+    if(r < 0.5 || r > 100) return;
+    ctx.beginPath();
+    ctx.arc(x,y,r,0,2*Math.PI);
+    ctx.fillStyle = b.color;
+    ctx.fill();
+  }
+
+  // Draw: clear, then either XOR or normal sorted
   function draw() {
+    // clear canvas
     ctx.globalCompositeOperation = CLEAR_MODE;
     ctx.clearRect(0,0,canvas.width,canvas.height);
-    ctx.fillStyle = '#111';
-    ctx.fillRect(0,0,canvas.width,canvas.height);
-    ctx.globalCompositeOperation = XOR_MODE;
-    balls.forEach(b => {
-      const scale = 500 / (500 + b.pz);
-      const x = canvas.width/2 + b.px * scale;
-      const y = canvas.height/2 + b.py * scale;
-      const r = BALL_RADIUS * scale;
-      if(r < 0.5 || r > 100) return;
-      ctx.beginPath();
-      ctx.arc(x,y,r,0,2*Math.PI);
-      ctx.fillStyle = b.color;
-      ctx.fill();
-    });
+    ctx.fillStyle = '#111'; ctx.fillRect(0,0,canvas.width,canvas.height);
+    if(isXorGraphics) {
+      ctx.globalCompositeOperation = XOR_MODE;
+      balls.forEach(drawBall);
+    } else {
+      ctx.globalCompositeOperation = CLEAR_MODE;
+      // sort by depth: farthest (small pz) first
+      balls.slice().sort((a,b) => b.pz - a.pz).forEach(drawBall);
+    }
   }
 
   // Animation loop
