@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>CCP Ball Simulation</title>
+  <style>
+    html, body { margin:0; padding:0; overflow:hidden; background:#111; width:100%; height:100%; }
+    canvas { display:block; width:100vw; height:100vh; }
+  </style>
+</head>
+<body>
+  <canvas id="sim"></canvas>
+  <script>
+  // Setup canvas
+  const canvas = document.getElementById('sim');
+  const ctx = canvas.getContext('2d');
+  function resize() {
+    canvas.width = canvas.clientWidth;
+    canvas.height = canvas.clientHeight;
+  }
+  window.addEventListener('resize', resize);
+  resize();
+
+  // Composite modes
+  const CLEAR_MODE = 'source-over';
+  const XOR_MODE   = 'difference';
+
+  // Simulation constants
+  const BALL_RADIUS   = 35;
+  const BALL_DIAMETER = BALL_RADIUS * 2;
+  const NUM_BALLS     = 50;
+  const GRAVITY       = 100;    // gravity strength per pair via potential
+  const DAMPING       = 1.1;
+  const MAX_DIST      = BALL_DIAMETER * 2;
+  const WALL          = 250;
+  const potenMul      = 1;
+  const ccpPotenMul   = 100;     // enable CCP forces by setting to >0
+  const maxSpeed      = 1000;
+  const EPS           = 1e-3;
+  const collisionForce= 3000;
+
+  // 12 CCP directions scaled to ball diameter
+  const theCCPDirections = [
+    [1,1,0],[-1,1,0],[1,-1,0],[-1,-1,0],
+    [0,1,1],[0,1,-1],[0,-1,1],[0,-1,-1],
+    [1,0,1],[1,0,-1],[-1,0,1],[-1,0,-1]
+  ].map(([x,y,z]) => {
+    const len = Math.hypot(x,y,z);
+    return [ x/len * BALL_DIAMETER, y/len * BALL_DIAMETER, z/len * BALL_DIAMETER ];
+  });
+
+  function randomColor() {
+    const r = Math.floor(Math.random()*256);
+    const g = Math.floor(Math.random()*256);
+    const b = Math.floor(Math.random()*256);
+    return `rgb(${r},${g},${b})`;
+  }
+
+  // Initialize balls
+  const balls = [];
+  for(let i=0; i<NUM_BALLS; i++) {
+    balls.push({
+      px: Math.random()*200 - 100,
+      py: Math.random()*200 - 100,
+      pz: Math.random()*200,
+      vx: 0, vy: 0, vz: 0,
+      color: randomColor(),
+      gx: 0, gy: 0, gz: 0   // gradient accumulators
+    });
+  }
+
+  // Pairwise potential: collisions + CCP + gravity
+  function poten(x1,y1,z1, x2,y2,z2) {
+    let total = 0;
+    // collision repulsion if too close
+    const dx = x2 - x1;
+    const dy = y2 - y1;
+    const dz = z2 - z1;
+    const dist = Math.hypot(dx,dy,dz);
+    //const dist2d = Math.hypot(dx,dy);
+    const minDist = BALL_DIAMETER;  // just touching
+    if(dist < minDist) {
+      total += collisionForce * ((minDist - dist) ** 2);
+    }
+    // CCP spring & exp
+    if(ccpPotenMul > 0 && dist > 1e-6) {
+      for(const [tx,ty,tz] of theCCPDirections) {
+        const ddx = dx - tx;
+        const ddy = dy - ty;
+        const ddz = dz - tz;
+        const distFromCcp = Math.hypot(ddx,ddy,ddz);
+        const windowMul = 1 / (1 + 0.1 * distFromCcp * distFromCcp);
+        const distErrSq = (distFromCcp - BALL_DIAMETER) ** 2;
+        total += ccpPotenMul * (windowMul * distErrSq + Math.exp(-distFromCcp * 5));
+      }
+    }
+    // gravity potential by average height
+    total += -GRAVITY * ((y1 + y2) / 2);
+    return potenMul * total;
+  }
+
+  // Physics update: finite-difference gradient of total potential
+  function update(dt) {
+    // reset gradients
+    balls.forEach(b => { b.gx = 0; b.gy = 0; b.gz = 0; });
+
+    // compute gradients per pair
+    for(let i=0; i<balls.length; i++) {
+      const bi = balls[i];
+      for(let j=i+1; j<balls.length; j++) {
+        const bj = balls[j];
+        // sample potential at 4 points for bi
+        const U0 = poten(bi.px, bi.py, bi.pz, bj.px, bj.py, bj.pz);
+        const Ux = poten(bi.px + EPS, bi.py, bi.pz, bj.px, bj.py, bj.pz);
+        const Uy = poten(bi.px, bi.py + EPS, bi.pz, bj.px, bj.py, bj.pz);
+        const Uz = poten(bi.px, bi.py, bi.pz + EPS, bj.px, bj.py, bj.pz);
+        const gradx = (Ux - U0) / EPS;
+        const grady = (Uy - U0) / EPS;
+        const gradz = (Uz - U0) / EPS;
+        bi.gx += gradx;
+        bi.gy += grady;
+        bi.gz += gradz;
+        //bj.gx -= gradx;
+        //bj.gy -= grady;
+        //bj.gz -= gradz;
+      }
+    }
+
+    // apply acceleration, damping, integrate, bounce
+    let dampMul = Math.exp(-dt*DAMPING);
+    balls.forEach(b => {
+      b.vx += -b.gx * dt;
+      b.vy += -b.gy * dt;
+      b.vz += -b.gz * dt;
+      b.vx *= dampMul;
+      b.vy *= dampMul;
+      b.vz *= dampMul;
+      const speed = Math.hypot(b.vx, b.vy, b.vz);
+      if(speed > maxSpeed) {
+        const m = maxSpeed / speed;
+        b.vx *= m;
+        b.vy *= m;
+        b.vz *= m;
+      }
+      b.px += b.vx * dt;
+      b.py += b.vy * dt;
+      b.pz += b.vz * dt;
+      if(b.px < -WALL) { b.px = -WALL; b.vx = Math.abs(b.vx); }
+      if(b.px >  WALL) { b.px =  WALL; b.vx = -Math.abs(b.vx); }
+      if(b.py < -WALL) { b.py = -WALL; b.vy = Math.abs(b.vy); }
+      if(b.py >  WALL) { b.py =  WALL; b.vy = -Math.abs(b.vy); }
+      if(b.pz < -WALL) { b.pz = -WALL; b.vz = Math.abs(b.vz); }
+      if(b.pz >  WALL) { b.pz =  WALL; b.vz = -Math.abs(b.vz); }
+    });
+  }
+
+  // Draw: clear then XOR
+  function draw() {
+    ctx.globalCompositeOperation = CLEAR_MODE;
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    ctx.fillStyle = '#111';
+    ctx.fillRect(0,0,canvas.width,canvas.height);
+    ctx.globalCompositeOperation = XOR_MODE;
+    balls.forEach(b => {
+      const scale = 500 / (500 + b.pz);
+      const x = canvas.width/2 + b.px * scale;
+      const y = canvas.height/2 + b.py * scale;
+      const r = BALL_RADIUS * scale;
+      if(r < 0.5 || r > 100) return;
+      ctx.beginPath();
+      ctx.arc(x,y,r,0,2*Math.PI);
+      ctx.fillStyle = b.color;
+      ctx.fill();
+    });
+  }
+
+  // Animation loop
+  let last = performance.now();
+  function frame(time) {
+    const dt = Math.min(Math.max((time - last) / 1000, 0), 0.1);
+    update(dt);
+    draw();
+    last = time;
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+  </script>
+</body>
+</html>
