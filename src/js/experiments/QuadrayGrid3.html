@@ -611,8 +611,8 @@ const side = 10;
 
 const octCorners = [[0,0,0],[0,0,2],[0,-1,1],[0,1,1],[-1,0,1],[1,0,1]];
 
-//let Add = (vecA,vecB)=>[vecA[0]+vecB[0], vecA[1]+vecB[1], vecA[2]+vecB[2]];
-//let Sub = (vecA,vecB)=>[vecA[0]-vecB[0], vecA[1]-vecB[1], vecA[2]-vecB[2]];
+let Add = (vecA,vecB)=>[vecA[0]+vecB[0], vecA[1]+vecB[1], vecA[2]+vecB[2]];
+let Sub = (vecA,vecB)=>[vecA[0]-vecB[0], vecA[1]-vecB[1], vecA[2]-vecB[2]];
 
 let VecMulScalar = (vecA,scalar)=>[vecA[0]*scalar, vecA[1]*scalar, vecA[2]*scalar];
 
@@ -827,9 +827,9 @@ console.log('inverseRotate tests pass');
 
 var getCameraXYZ = ()=>{
 	if(isQuatCam()){
-		lastCam = inverseRotate([side / 2, side / 2, side / 2 - cubeSize / zoom]);
-	}else{
 		lastCam = [...camPos];
+	}else{
+		lastCam = inverseRotate([side / 2, side / 2, side / 2 - cubeSize / zoom]);
 	}
 	return lastCam;
 };
@@ -869,7 +869,7 @@ function project([x, y, z]){
 		//cz *= -1;
 
 		//const scale = cubeSize / (-cz + side);
-		const scale = cubeSize / cz;
+		const scale = cubeSize / cz; //TODO avoid divide by 0
 		const screenX = canvas.width / 2 + cx * scale;
 		const screenY = canvas.height / 2 - cy * scale;
 		return [screenX, screenY];
@@ -877,6 +877,15 @@ function project([x, y, z]){
 		const scale = cubeSize / (z + side);
 		return [offsetX + (x - side/2) * scale * zoom, offsetY - (y - side/2) * scale * zoom];
 	}
+}
+
+//how far forward/backward is it in current view. Call this on camPos to get 0 (except roundoff).
+function dotProdOfXYZAlongCamForward([x, y, z]){
+	let dx = x - camPos[0];
+	let dy = y - camPos[1];
+	let dz = z - camPos[2];
+	let camForward = calculateForwardVector(camQ);
+	return dx * camForward[0] + dy * camForward[1] + dz * camForward[2];
 }
 
 //p1, p3, and p3 are each a [x,y,z]. Color is like '#aabbc9' or 'blue'.
@@ -887,9 +896,15 @@ function drawTriangle(p1, p2, p3, color){
 	p1 = ScaleGrid(p1);
 	p2 = ScaleGrid(p2);
 	p3 = ScaleGrid(p3);
-	const a = project(rotate(p1));
-	const b = project(rotate(p2));
-	const c = project(rotate(p3));
+	const a = project(rotate(p1)); //[x,y,z]
+	const b = project(rotate(p2)); //[x,y,z]
+	const c = project(rotate(p3)); //[x,y,z]
+	
+	let mid = Ave3(a,b,c); //[x,y,z]
+	if(dotProdOfXYZAlongCamForward(mid) < .1){ //Cull if behind camera
+		return;
+	}
+	
 	ctx.beginPath();
 	ctx.moveTo(...a);
 	ctx.lineTo(...b);
@@ -911,17 +926,37 @@ const toOctCenter = quadrayAve(oct6CornersAtQuadray(Q(0,0,0,0)));
 const toTetZCenter = quadrayAve(TriZ4CornersAtQuadray(Q(0,0,0,0))); //for the z tetrahedron
 const toTetCCenter = quadrayAve(TriX4CornersAtQuadray(Q(0,0,0,0))); //for the c tetrahedron
 
-var sortQuadrayTriZnglesList = ()=>{ //the quadray kind of TriZngles, not the 3d kind
+var sortQuadrayTrianglesList = ()=>{ //the quadray kind of TriZngles, not the 3d kind
 	let view = getCameraXYZ();
 	/*let scorer = tri=>{
 		//FIXME this is 3d code, but only have quadrays: return -Dist(view,Ave3(tri[0],tri[1],tri[2]));
 	}*/
-	let scorer = tri => {
-		let a = UnscaleGrid(tri.e.toCartesian());
-		let b = UnscaleGrid(tri.f.toCartesian());
-		let c = UnscaleGrid(tri.g.toCartesian());
-		return -Dist(view, Ave3(a, b, c));
-	};
+	/*let scorer;
+	if(false && isQuatCam()){
+		scorer = tri => {
+			let a = UnscaleGrid(tri.e.toCartesian());
+			let b = UnscaleGrid(tri.f.toCartesian());
+			let c = UnscaleGrid(tri.g.toCartesian());
+			let mid = Ave3(a, b, c);
+
+			let dx = mid[0] - camPos[0];
+			let dy = mid[1] - camPos[1];
+			let dz = mid[2] - camPos[2];
+
+			// Rotate into camera-local frame
+			let [_, __, camZ] = quatRotateVec(camQ, [dx, dy, dz]);
+
+			return -camZ; // bigger Z = farther away = draw first
+		};
+	}else{
+	*/
+		scorer = tri => {
+			let a = UnscaleGrid(tri.e.toCartesian());
+			let b = UnscaleGrid(tri.f.toCartesian());
+			let c = UnscaleGrid(tri.g.toCartesian());
+			return -Dist(view, Ave3(a, b, c));
+		};
+	//}
 	let gameTrisList = Object.values(gameTris);
 	gameTrisList.sort((a,b)=>Math.sign(scorer(a)-scorer(b)));
 	gameTris = {};
@@ -943,7 +978,7 @@ var viewChanged = false;
 
 var updateIfGridChanged = ()=>{
 	if(gridChanged || viewChanged){
-		sortQuadrayTriZnglesList();
+		sortQuadrayTrianglesList();
 		copyWorldStateToUiControls();
 		gridChanged = false;
 		viewChanged = false;
@@ -977,7 +1012,7 @@ function draw(){
 	ctx.clearRect(0, 0, canvas.width, canvas.height);
 	
 	// Draw quadray-based TriZngles
-	for(const tri of Object.values(gameTris)) {
+	for(const tri of Object.values(gameTris)){
 		drawTriangle(
 			//UnscaleGrid cuz theres 2 coordinate systems that ive aligned here by scaling one by ROOT2. [x,y,z] vs quadray.
 			//The 2 coordinate systems were aligned in QuadGrid.html but the 3d one mostly removed (except camera) in QuadGrid2.html.
@@ -1166,15 +1201,38 @@ window.onload = ()=>{
 };
 
 
+function quatInverse([x, y, z, w]){ //GPT4o
+	return [-x, -y, -z, w];
+}
+
+function quatRotateVec(q, v){ //GPT4o
+	const [x, y, z] = v;
+	const [qx, qy, qz, qw] = q;
+
+	// Quaternion-vector multiplication (q * v * q^-1)
+	const uvx = qw * x + qy * z - qz * y;
+	const uvy = qw * y + qz * x - qx * z;
+	const uvz = qw * z + qx * y - qy * x;
+
+	const uuvx = qy * uvz - qz * uvy;
+	const uuvy = qz * uvx - qx * uvz;
+	const uuvz = qx * uvy - qy * uvx;
+
+	return [
+		x + 2 * (uvx * qw + uuvx),
+		y + 2 * (uvy * qw + uuvy),
+		z + 2 * (uvz * qw + uuvz)
+	];
+}
 
 //START: 2025-7-28+ copying some camera/gamepad code from bellsack236 under MIT license:
 //https://github.com/benrayfield/jsutils/blob/master/src/bellsack/bellsack236_moreStableTerrainReshapingCuzBallsAndTerrainHeldNearStartingPositionsBySprings.html
 
 //let camPos=[0,0,5];
-let camPos=[0,0,-5];
+let camPos = [0,0,-5];
 //let camPos=[0,0,0];
 //let camPos=[0,0,-12]; //far back so can see balls 2025-7-17
-let camQ	=[0,0,0,1];
+let camQ = [0,0,0,1];
 
 function updateFromGamepad(dt){
 	console.log("updateFromGamepad", navigator.getGamepads());
@@ -1188,16 +1246,16 @@ function updateFromGamepad(dt){
 	//const dead= 0; //FIXME
 	let lLen= Math.hypot(lx,ly);
 	if(lLen>dead){
-	let leftover= lLen- dead;
-	lx*= leftover/lLen;
-	ly*= leftover/lLen;
-	} else { lx=0; ly=0; }
+		let leftover= lLen- dead;
+		lx*= leftover/lLen;
+		ly*= leftover/lLen;
+	}else{ lx=0; ly=0; }
 	let rLen= Math.hypot(rx,ry);
 	if(rLen>dead){
-	let leftover2= rLen- dead;
-	rx*= leftover2/rLen;
-	ry*= leftover2/rLen;
-	} else { rx=0; ry=0; }
+		let leftover2= rLen- dead;
+		rx*= leftover2/rLen;
+		ry*= leftover2/rLen;
+	}else{ rx=0; ry=0; }
 	ry*=-1;
 	let turnSpd = 2;
 	//let turnSpd = .8;
@@ -1218,6 +1276,8 @@ function updateFromGamepad(dt){
 	camPos[0]+= (fwd[0]*fwdVal + upv[0]*upDown + rig[0]*leftRight)* moveSpd* dt;
 	camPos[1]+= (fwd[1]*fwdVal + upv[1]*upDown + rig[1]*leftRight)* moveSpd* dt;
 	camPos[2]+= (fwd[2]*fwdVal + upv[2]*upDown + rig[2]*leftRight)* moveSpd* dt;
+	
+	viewChanged = true; //TODO only if changed camPos or camQ
 }
 
 function rotateCamera(rx, ry, dt){
@@ -1229,14 +1289,14 @@ function rotateCamera(rx, ry, dt){
 
 	let combined=[0,0,0,1];
 	if(Math.abs(rx)> threshold){
-	let yawAngle= -rx*2.0* dt;
-	let yawQ= createQuaternion(upv,yawAngle);
-	combined= multiplyQuaternions(yawQ,combined);
+		let yawAngle= -rx*2.0* dt;
+		let yawQ= createQuaternion(upv,yawAngle);
+		combined= multiplyQuaternions(yawQ,combined);
 	}
 	if(Math.abs(ry)> threshold){
-	let pitchAngle= -ry*2.0* dt;
-	let pitchQ= createQuaternion(rig,pitchAngle);
-	combined= multiplyQuaternions(combined,pitchQ);
+		let pitchAngle= -ry*2.0* dt;
+		let pitchQ= createQuaternion(rig,pitchAngle);
+		combined= multiplyQuaternions(combined,pitchQ);
 	}
 	camQ= multiplyQuaternions(combined, camQ);
 	camQ= normalizeQuaternion(camQ);
@@ -1264,9 +1324,9 @@ function calculateUpVector(q){
 
 function cross(a,b){
 	return [
-	a[1]*b[2]-a[2]*b[1],
-	a[2]*b[0]-a[0]*b[2],
-	a[0]*b[1]-a[1]*b[0]
+		a[1]*b[2]-a[2]*b[1],
+		a[2]*b[0]-a[0]*b[2],
+		a[0]*b[1]-a[1]*b[0]
 	];
 }
 
@@ -1280,10 +1340,10 @@ function multiplyQuaternions(q1,q2){
 	const[x1,y1,z1,w1]=q1;
 	const[x2,y2,z2,w2]=q2;
 	return [
-	w1*x2 + x1*w2 + y1*z2 - z1*y2,
-	w1*y2 - x1*z2 + y1*w2 + z1*x2,
-	w1*z2 + x1*y2 - y1*x2 + z1*w2,
-	w1*w2 - x1*x2 - y1*y2 - z1*z2
+		w1*x2 + x1*w2 + y1*z2 - z1*y2,
+		w1*y2 - x1*z2 + y1*w2 + z1*x2,
+		w1*z2 + x1*y2 - y1*x2 + z1*w2,
+		w1*w2 - x1*x2 - y1*y2 - z1*z2
 	];
 }
 
