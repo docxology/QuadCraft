@@ -947,9 +947,9 @@ var sortQuadrayTrianglesList = ()=>{ //the quadray kind of TriZngles, not the 3d
 	/*let scorer = tri=>{
 		//FIXME this is 3d code, but only have quadrays: return -Dist(view,Ave3(tri[0],tri[1],tri[2]));
 	}*/
-	/*let scorer;
-	if(false && isQuatCam()){
-		scorer = tri => {
+	let scorer;
+	if(isQuatCam()){
+		/*scorer = tri => {
 			let a = UnscaleGrid(tri.e.toCartesian());
 			let b = UnscaleGrid(tri.f.toCartesian());
 			let c = UnscaleGrid(tri.g.toCartesian());
@@ -963,16 +963,21 @@ var sortQuadrayTrianglesList = ()=>{ //the quadray kind of TriZngles, not the 3d
 			let [_, __, camZ] = quatRotateVec(camQ, [dx, dy, dz]);
 
 			return -camZ; // bigger Z = farther away = draw first
+		};*/
+		scorer = tri => {
+			let a = tri.e.toCartesian();
+			let b = tri.f.toCartesian();
+			let c = tri.g.toCartesian();
+			return -Dist(view, Ave3(a, b, c));
 		};
 	}else{
-	*/
 		scorer = tri => {
 			let a = UnscaleGrid(tri.e.toCartesian());
 			let b = UnscaleGrid(tri.f.toCartesian());
 			let c = UnscaleGrid(tri.g.toCartesian());
 			return -Dist(view, Ave3(a, b, c));
 		};
-	//}
+	}
 	let gameTrisList = Object.values(gameTris);
 	gameTrisList.sort((a,b)=>Math.sign(scorer(a)-scorer(b)));
 	gameTris = {};
@@ -1002,15 +1007,12 @@ var updateIfGridChanged = ()=>{
 };
 
 var paintXYZColor = (xyz, color)=>{ //draw a 3d dot of chosen [x,y,z] and color
-	const [px, py] = project(rotate(xyz));
-	//const [px, py] = project(xyz);
+	const [px, py] = isQuatCam() ? project(xyz) : project(rotate(ScaleGrid(xyz)));
 	
-	/*todo
-	let mid = Ave3(p1,p2,p3); //[x,y,z]
-	let dot = dotProdOfXYZAlongCamForward(mid);
+	let dot = dotProdOfXYZAlongCamForward(xyz);
 	if(dot < drawDistanceMin || drawDistanceMax < dot){
 		return;
-	}*/
+	}
 	
 	ctx.fillStyle = color;
 	ctx.beginPath();
@@ -1037,22 +1039,23 @@ function draw(){
 	ctx.clearRect(0, 0, canvas.width, canvas.height);
 	
 	// Draw quadray-based TriZngles
+	let isQuat = isQuatCam();
 	for(const tri of Object.values(gameTris)){
 		drawTriangle(
 			//UnscaleGrid cuz theres 2 coordinate systems that ive aligned here by scaling one by ROOT2. [x,y,z] vs quadray.
 			//The 2 coordinate systems were aligned in QuadGrid.html but the 3d one mostly removed (except camera) in QuadGrid2.html.
-			UnscaleGrid(tri.e.toCartesian()),
-			UnscaleGrid(tri.f.toCartesian()),
-			UnscaleGrid(tri.g.toCartesian()),
+			isQuat ? tri.e.toCartesian() : UnscaleGrid(tri.e.toCartesian()),
+			isQuat ? tri.f.toCartesian() : UnscaleGrid(tri.f.toCartesian()),
+			isQuat ? tri.g.toCartesian() : UnscaleGrid(tri.g.toCartesian()),
 			tri.color
 		);
 	}
 
 	if(displayQgridDots) for(const q of Object.values(QGridDots)){
-		paintXYZColor(q.toCartesian(), 'blue');
+		paintXYZColor(isQuat ? q.toCartesian() : UnscaleGrid(q.toCartesian()), 'blue');
 	}
 	for(const q of Object.values(QDots)){
-		paintXYZColor(q.toCartesian(), q.color);
+		paintXYZColor(isQuat ? q.toCartesian() : UnscaleGrid(q.toCartesian()), q.color);
 	}
 	requestAnimationFrame(draw);
 }
