@@ -709,6 +709,25 @@ canvas.addEventListener("wheel", function(e){
 	viewChanged = true;
 });
 
+var xyzInFrontOfCam = dist=>{
+	return Add(camPos, VecMulScalar(calculateForwardVector(camQ),dist));
+};
+
+var quadrayInFrontOfCam = dist=>{
+	return Quadray.fromCartesian(xyzInFrontOfCam(dist));
+};
+
+var toggleVolumeAtQuadray = q=>{
+	fillGridByFunc(q, 0, ()=>true);
+};
+
+var toggleVolumeInFrontOfCam = dist=>{
+	let q = quadrayInFrontOfCam(dist);
+	console.log('toggleVolumeInFrontOfCam q='+q);
+	toggleVolumeAtQuadray(q);
+};
+
+//TODO this toggles not fills. add param for add vs remove vs toggle.
 //centerQ can be selq or any quadray on the grid. hops is how far outward from it in key presses.
 //func(quadray) => true or false, should that part of the volume be filled or not.
 var fillGridByFunc = (centerQ, hops, func)=>{
@@ -1262,8 +1281,14 @@ let camPos = [0,0,-5];
 //let camPos=[0,0,-12]; //far back so can see balls 2025-7-17
 let camQ = [0,0,0,1];
 
+var moveSpd = 8.0;
+
+//var turnSpd = 2;
+var turnSpd = .8;
+//var turnSpd = .6;
+
 function updateFromGamepad(dt){
-	console.log("updateFromGamepad", navigator.getGamepads());
+	//console.log("updateFromGamepad", navigator.getGamepads());
 	let gps= navigator.getGamepads();
 	if(!gps) return;
 	let gp= gps[0];
@@ -1285,50 +1310,67 @@ function updateFromGamepad(dt){
 		ry*= leftover2/rLen;
 	}else{ rx=0; ry=0; }
 	ry*=-1;
-	//let turnSpd = 2;
-	let turnSpd = .8;
-	//let turnSpd = .6;
 	rx *= turnSpd;
 	ry *= turnSpd;
-	rotateCamera(rx,ry,dt);
+	rotateCamera(rx*dt, ry*dt);
 
 	let fwdVal= gp.buttons[7]?.value - gp.buttons[6]?.value;
 	let upDown= -ly;
 	let leftRight= lx;
-	let fwd= calculateForwardVector(camQ);
-	let upv= calculateUpVector(camQ);
-	let rig= cross(fwd, upv); rig= normalize(rig);
-	upv= normalize(cross(rig, fwd));
-	let moveSpd=8.0;
 	//let moveSpd=2.0;
 	//let moveSpd=.8;
-	camPos[0]+= (fwd[0]*fwdVal + upv[0]*upDown + rig[0]*leftRight)* moveSpd* dt;
-	camPos[1]+= (fwd[1]*fwdVal + upv[1]*upDown + rig[1]*leftRight)* moveSpd* dt;
-	camPos[2]+= (fwd[2]*fwdVal + upv[2]*upDown + rig[2]*leftRight)* moveSpd* dt;
+	//camPos[0]+= (fwd[0]*fwdVal + upv[0]*upDown + rig[0]*leftRight)* moveSpd* dt;
+	//camPos[1]+= (fwd[1]*fwdVal + upv[1]*upDown + rig[1]*leftRight)* moveSpd* dt;
+	//camPos[2]+= (fwd[2]*fwdVal + upv[2]*upDown + rig[2]*leftRight)* moveSpd* dt;
+	moveCamera(fwdVal*moveSpd*dt, upDown*moveSpd*dt, leftRight*moveSpd*dt);
 	
-	viewChanged = true; //TODO only if changed camPos or camQ
+	let buttonLb = gp.buttons[4].value; //0 or 1
+	let buttonRb = gp.buttons[5].value; //0 or 1
+	if(buttonLb || buttonRb){
+		toggleVolumeInFrontOfCam(12.3);
+	}
+	
+	//viewChanged = true; //TODO only if changed camPos or camQ
 }
 
-function rotateCamera(rx, ry, dt){
-	const threshold= 0.001;
-	let fwd= calculateForwardVector(camQ);
-	let upv= calculateUpVector(camQ);
-	let rig= cross(fwd, upv); rig= normalize(rig);
-	upv= normalize(cross(rig, fwd));
+function moveCamera(forwardBackward, upDown, leftRight){ //does not deal with deadZone in joystick dt. TODO make moveCamera and rotateCamera consistent with eachother.
+	if(forwardBackward || upDown || leftRight){
+		let fwd= calculateForwardVector(camQ);
+		let upv= calculateUpVector(camQ);
+		let rig= cross(fwd, upv); rig= normalize(rig);
+		upv = normalize(cross(rig, fwd));
+		camPos[0] += (fwd[0]*forwardBackward + upv[0]*upDown + rig[0]*leftRight);
+		camPos[1] += (fwd[1]*forwardBackward + upv[1]*upDown + rig[1]*leftRight);
+		camPos[2] += (fwd[2]*forwardBackward + upv[2]*upDown + rig[2]*leftRight);
+		viewChanged = true; //TODO only if changed camPos or camQ
+	}
+}
 
-	let combined=[0,0,0,1];
-	if(Math.abs(rx)> threshold){
-		let yawAngle= -rx*2.0* dt;
-		let yawQ= createQuaternion(upv,yawAngle);
-		combined= multiplyQuaternions(yawQ,combined);
+function rotateCamera(rx, ry){ //does not deal with deadZone in joystick
+	if(rx || ry){
+		//const threshold= 0.001;
+		let fwd= calculateForwardVector(camQ);
+		let upv= calculateUpVector(camQ);
+		let rig= cross(fwd, upv); rig= normalize(rig);
+		upv = normalize(cross(rig, fwd));
+
+		let combined=[0,0,0,1];
+		//if(Math.abs(rx)> threshold){
+			//let yawAngle= -rx*2.0* dt;
+			let yawAngle= -rx*2.0;
+			let yawQ= createQuaternion(upv,yawAngle);
+			combined= multiplyQuaternions(yawQ,combined);
+		//}
+		//if(Math.abs(ry)> threshold){
+			//let pitchAngle= -ry*2.0* dt;
+			let pitchAngle= -ry*2.0;
+			let pitchQ= createQuaternion(rig,pitchAngle);
+			combined= multiplyQuaternions(combined,pitchQ);
+		//}
+		camQ = multiplyQuaternions(combined, camQ);
+		camQ = normalizeQuaternion(camQ);
+		viewChanged = true;
 	}
-	if(Math.abs(ry)> threshold){
-		let pitchAngle= -ry*2.0* dt;
-		let pitchQ= createQuaternion(rig,pitchAngle);
-		combined= multiplyQuaternions(combined,pitchQ);
-	}
-	camQ= multiplyQuaternions(combined, camQ);
-	camQ= normalizeQuaternion(camQ);
 }
 
 function calculateForwardVector(q){
