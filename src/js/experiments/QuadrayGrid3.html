@@ -133,6 +133,11 @@ var varyPointSizeByDistanceToCamera = false;
 
 var displayQgridDots = true; //toggled by a button press (Shift)
 
+var drawDistanceMin = 1;
+var drawDistanceMax = 1000;
+
+var displayDotDistances = true;
+
 var randColor = ()=>{
 	let s = ''+randInt(2**24).toString(16)
 	while(s.length < 6) s = '0'+s;
@@ -893,15 +898,23 @@ function dotProdOfXYZAlongCamForward([x, y, z]){
 //controlled by mouse left button rotates and right button moves and wheel zooms.
 //Octahedrons and (TODO) tetrahedrons are made this way.
 function drawTriangle(p1, p2, p3, color){
-	p1 = ScaleGrid(p1);
-	p2 = ScaleGrid(p2);
-	p3 = ScaleGrid(p3);
-	const a = project(rotate(p1)); //[x,y,z]
-	const b = project(rotate(p2)); //[x,y,z]
-	const c = project(rotate(p3)); //[x,y,z]
+	let a, b, c;
+	if(isQuatCam()){
+		a = project(p1); //[screenX,screenY]
+		b = project(p2);
+		c = project(p3);
+	}else{
+		p1 = ScaleGrid(p1);
+		p2 = ScaleGrid(p2);
+		p3 = ScaleGrid(p3);
+		a = project(rotate(p1)); //[screenX,screenY]
+		b = project(rotate(p2));
+		c = project(rotate(p3));
+	}
 	
-	let mid = Ave3(a,b,c); //[x,y,z]
-	if(dotProdOfXYZAlongCamForward(mid) < .1){ //Cull if behind camera
+	let mid = Ave3(p1,p2,p3); //[x,y,z]
+	let dot = dotProdOfXYZAlongCamForward(mid);
+	if(dot < drawDistanceMin || drawDistanceMax < dot){
 		return;
 	}
 	
@@ -914,6 +927,9 @@ function drawTriangle(p1, p2, p3, color){
 	ctx.fill();
 	ctx.strokeStyle = '#000';
 	ctx.stroke();
+	if(displayDotDistances){
+		ctx.fillText('dot='+dot, a[0], a[1]);
+	}
 }
 
 //3d not quadray.
@@ -987,6 +1003,15 @@ var updateIfGridChanged = ()=>{
 
 var paintXYZColor = (xyz, color)=>{ //draw a 3d dot of chosen [x,y,z] and color
 	const [px, py] = project(rotate(xyz));
+	//const [px, py] = project(xyz);
+	
+	/*todo
+	let mid = Ave3(p1,p2,p3); //[x,y,z]
+	let dot = dotProdOfXYZAlongCamForward(mid);
+	if(dot < drawDistanceMin || drawDistanceMax < dot){
+		return;
+	}*/
+	
 	ctx.fillStyle = color;
 	ctx.beginPath();
 	let radius = 2;
@@ -1257,8 +1282,8 @@ function updateFromGamepad(dt){
 		ry*= leftover2/rLen;
 	}else{ rx=0; ry=0; }
 	ry*=-1;
-	let turnSpd = 2;
-	//let turnSpd = .8;
+	//let turnSpd = 2;
+	let turnSpd = .8;
 	//let turnSpd = .6;
 	rx *= turnSpd;
 	ry *= turnSpd;
@@ -1271,7 +1296,8 @@ function updateFromGamepad(dt){
 	let upv= calculateUpVector(camQ);
 	let rig= cross(fwd, upv); rig= normalize(rig);
 	upv= normalize(cross(rig, fwd));
-	let moveSpd=2.0;
+	let moveSpd=8.0;
+	//let moveSpd=2.0;
 	//let moveSpd=.8;
 	camPos[0]+= (fwd[0]*fwdVal + upv[0]*upDown + rig[0]*leftRight)* moveSpd* dt;
 	camPos[1]+= (fwd[1]*fwdVal + upv[1]*upDown + rig[1]*leftRight)* moveSpd* dt;
