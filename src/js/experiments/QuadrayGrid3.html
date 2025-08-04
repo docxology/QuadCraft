@@ -157,9 +157,17 @@ var displayCameraCenterAsDot = false; //normal
 var numRandomOctahedrons = 99;
 //var numRandomOctahedrons = 3;
 
-//var qgridBootDepth = 10;
+/*fillGridByFunc(selq, 25, q=>{
+	let xyz = q.toCartesian();
+	let x = xyz[0], y = xyz[1], z = xyz[2];
+	let xyzDist = Math.hypot(x*x,y*y,z*z);
+	return xyzDist<20 && Math.abs(q.toCartesian()[0])<.5;
+});
+*/
+
+var qgridBootDepth = 10;
 //var qgridBootDepth = 5;
-var qgridBootDepth = 3;
+//var qgridBootDepth = 3;
 //var qgridBootDepth = 2;
 //var qgridBootDepth = 1;
 //var qgridBootDepth = 0;
@@ -487,6 +495,18 @@ var toggleOctAtQuadray = q=>{
 	gridChanged = true;
 };
 
+var addOctAtQuadray = q=>{
+	console.log('addOctAtQuadray q='+q);
+	let sixCorners = oct6CornersAtQuadray(q);
+	for(let c of sixCorners) ToggleDot(c);
+	let tris = octTrisAtQuadray(q);
+	for(let tri of tris){
+		AddGameTri(tri);
+	}
+	grid.oct.add(q);
+	gridChanged = true;
+};
+
 //Each quadray on the grid, which is like a 3d checkerboard with 1 of the parities missing,
 //is the primaryKey of 1 octahedron and 2 tetrahedrons.
 var toggleTetZAtQuadray = q=>{
@@ -501,6 +521,18 @@ var toggleTetZAtQuadray = q=>{
 	gridChanged = true;
 };
 
+var addTetZAtQuadray = q=>{
+	console.log('toggleTetZAtQuadray q='+q);
+	let corners = TriZ4CornersAtQuadray(q);
+	for(let c of corners) ToggleDot(c);
+	let tris = tetZTrisAtQuadray(q);
+	for(let tri of tris){
+		AddGameTri(tri);
+	}
+	grid.tetZ.add(q);
+	gridChanged = true;
+};
+
 var toggleTetCAtQuadray = q=>{
 	console.log('toggleTetCAtQuadray q='+q);
 	let corners = TriX4CornersAtQuadray(q);
@@ -510,6 +542,18 @@ var toggleTetCAtQuadray = q=>{
 		ToggleGameTri(tri);
 	}
 	toggleQuadrayInSet(grid.tetC, q);
+	gridChanged = true;
+};
+
+var addTetCAtQuadray = q=>{
+	console.log('toggleTetCAtQuadray q='+q);
+	let corners = TriX4CornersAtQuadray(q);
+	for(let c of corners) ToggleDot(c);
+	let tris = tetXTrisAtQuadray(q);
+	for(let tri of tris){
+		AddGameTri(tri);
+	}
+	grid.tetC.add(q);
 	gridChanged = true;
 };
 
@@ -565,7 +609,8 @@ class Drawable{
 		}else if(this.type==='QGridDot' || this.type==='QDot'){
 			//QGridDot displays as blue instead of its own color
 			let color = this.type==='QDot' ? this.obj.color : 'blue';
-			paintXYZColor(isQuat ? q.toCartesian() : UnscaleGrid(q.toCartesian()), color);
+			//paintXYZColor(isQuat ? q.toCartesian() : UnscaleGrid(q.toCartesian()), color);
+			paintXYZColor(isQuat ? this.xyz : UnscaleGrid(this.xyz), color);
 		}else if(this.type==='tri'){
 			let tri = this.obj;
 			drawTriangle(
@@ -623,7 +668,7 @@ console.log('selq='+selq.toDetailString()); //selq=Q(7.071067811865474,0,0,0) (x
 //map of keyboard button name to Quadray for moving selq (the selected Quadray)
 //will need to scale the 3d checkerboard/parity grid by 1/ROOT2 or is it ROOT2,
 //cuz changing these from ROOT2 to 1.
-var CoreDirections = [
+/*var CoreDirections = [
 	Q(0,  1, -1,  0),  // from [0, -1, 1]
 	Q(1,  0,  0, -1),  // from [0,  1, 1]
 	Q(0,  1,  0, -1),  // from [-1, 0, 1]
@@ -637,6 +682,13 @@ if(CoreDirections[1].normalized() !== CoreDirections[4].Neg().normalized()){
 if(CoreDirections[0].normalized() !== CoreDirections[5].Neg().normalized()){
 	Err('CoreDirections[0] !== CoreDirections[5].Neg()');
 }else console.log('Verified buggy duplicate mirror exists: CoreDirections[0] !== CoreDirections[5].Neg() normed.');
+*/
+/*var CoreDirections = [
+	Q(0,  1, -1,  0),  // from [0, -1, 1]
+	Q(1,  0,  0, -1),  // from [0,  1, 1]
+	Q(0,  1,  0, -1),  // from [-1, 0, 1]
+	Q(1,  0, -1,  0),  // from [1, 0, 1]
+];*/
 /*var CoreDirections=[ //from gpt-o3 2025-8-4
 	Q(1,-1,0,0),	// +x –y
 	Q(1,0,-1,0),	// +x –z
@@ -655,6 +707,14 @@ if(CoreDirections[0].normalized() !== CoreDirections[5].Neg().normalized()){
 	//was Q( 0,-1,1, 0) → duplicate of 0
 	Q(0, 0, 1,-1)     // 5  NEW unique dir
 ];*/
+var CoreDirections = [
+	Q(0,  1,-1, 0),   // 0  (keep)
+	Q(1,  0, 0,-1),   // 1
+	Q(0,  1, 0,-1),   // 2
+	Q(1,  0,-1, 0),   // 3
+	Q(1,-1, 0, 0),    // 4  ← NEW (was −1,0,0,1)
+	Q(0, 0, 1,-1)     // 5  ← NEW (was  0,-1,1,0)
+];
 var CoreDirectionsNormed = CoreDirections.map(x=>x.normalized());
 for(let i=0; i<CoreDirections.length; i++){
 	if(CoreDirections[i] !== CoreDirectionsNormed[i]){
@@ -734,7 +794,9 @@ var expandQgridDotsOneDeeper = ()=>{
 var gridDotsNear = (center, hops)=>{
 	let set = new Set(); //of quadrays
 	set.add(center);
-	let directions = Object.values(CoreDirections);
+	//let directions = Object.values(CoreDirections); //normal
+	let directions = Object.values(Directions); //normal
+	//let directions = [CoreDirections[0],CoreDirections[1],CoreDirections[2],CoreDirections[3]]; //test, ignore last 2 cuz was duplicates mirrored
 	for(let h=1; h<=hops; h++){
 		let setList = [...(set.keys())]; //copy of the Set
 		for(let q of setList){
@@ -916,19 +978,22 @@ var fillGridByFunc = (centerQ, hops, func)=>{
 	let countTetCNo = 0;
 	for(let q of gridQuadrays){
 		if(func(q.add(toOctCenter))){
-			toggleOctAtQuadray(q); //TODO add instead of toggle?
+			//toggleOctAtQuadray(q); //TODO add instead of toggle?
+			addOctAtQuadray(q);
 			countOctYes++;
 		}else{
 			countOctNo++;
 		}
 		if(func(q.add(toTetZCenter))){
-			toggleTetZAtQuadray(q); //TODO add instead of toggle?
+			//toggleTetZAtQuadray(q); //TODO add instead of toggle?
+			addTetZAtQuadray(q);
 			countTetZYes++;
 		}else{
 			countTetZNo++;
 		}
 		if(func(q.add(toTetCCenter))){
-			toggleTetCAtQuadray(q); //TODO add instead of toggle?
+			//toggleTetCAtQuadray(q); //TODO add instead of toggle?
+			addTetCAtQuadray(q);
 			countTetCYes++;
 		}else{
 			countTetCNo++;
@@ -1180,9 +1245,14 @@ var sortQuadrayTrianglesList = ()=>{ //the quadray kind of Triangles, not the 3d
 	for(let tri of gameTrisList) AddGameTri(tri); //into gameTris. js {} gives keys in order they were first added, keeping sort
 };
 
-AddQgridDot(selq);
+/*AddQgridDot(selq);
 for(let depth=1; depth<=qgridBootDepth; depth++){
 	expandQgridDotsOneDeeper();
+}*/
+
+let theGridDots = gridDotsNear(selq, qgridBootDepth);
+for(let q of theGridDots){
+	AddQgridDot(q);
 }
 
 var gridChanged = false;
@@ -1301,6 +1371,14 @@ function draw(){
 	for(const tri of Object.values(gameTris)){
 		let mid=Ave3(tri.e.toCartesian(),tri.f.toCartesian(),tri.g.toCartesian());
 		drawables.push(new Drawable('tri',tri,mid));
+	}
+	for(const q of Object.values(QDots)){
+		drawables.push(new Drawable('QDot', q, q.toCartesian()));
+	}
+	if(displayQgridDots) for(const q of Object.values(QGridDots)){
+		if(!QDots[q]){ //display QDots/selfColoredAnyColor over QGridDots/blue
+			drawables.push(new Drawable('QGridDot', q, q.toCartesian()));
+		}
 	}
 	drawables.sort((a,b)=>(b.depth-a.depth));
 
