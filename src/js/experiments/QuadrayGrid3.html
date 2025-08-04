@@ -102,6 +102,8 @@ fillGridByFunc(selq, 5, q=>{
 		<input type=button onclick="SimKeyPress('x');" value="'x' (tog octahedron)">
 		<input type=button onclick="SimKeyPress('c');" value="'c' (tog tetrahedron X)">
 		<input type=button onclick="SimKeyPress(' ');" value="' ' space (all 3)">
+		&nbsp;&nbsp;&nbsp;
+		<input type=button onclick="addDirectionsBalls();" value="add Directions balls">
 		<br>
 		<nobr>offsetX=<input type=number step=10 id=numOffsetX oninput="copyUiControlsToWorldState();" style="width: 60px;"></input></nobr>
 		<nobr>offsetY=<input type=number step=10 id=numOffsetY oninput="copyUiControlsToWorldState();" style="width: 60px;"></input></nobr>
@@ -172,7 +174,8 @@ var displayQgridDots = true; //toggled by a button press (Shift)
 var drawDistanceMin = 1;
 var drawDistanceMax = 1000;
 
-var displayDotDistances = true;
+//var displayDotDistances = true; //test
+var displayDotDistances = false; //normal
 
 var randColor = ()=>{
 	let s = ''+randInt(2**24).toString(16)
@@ -337,7 +340,7 @@ class Tri{
 //given a quadray, returns a [] list of 6 quadrays similar to
 //"const octCorners = [[0,0,0],[0,0,2],[0,-1,1],[0,1,1],[-1,0,1],[1,0,1]];"
 //but as quadrays instead of xyz.
-var oct6CornersAtQuadray = q=>{
+/*var oct6CornersAtQuadray = q=>{
 	let A = CoreDirections[0].Neg();
 	let B = CoreDirections[4].Neg();
 	return [
@@ -348,7 +351,37 @@ var oct6CornersAtQuadray = q=>{
 		q.add(CoreDirections[5]).add(CoreDirections[3]),
 		q.add(CoreDirections[3].Neg()).add(CoreDirections[1]),
 	];
+};*/
+/*var oct6CornersAtQuadray = q=>{ //from gpt-o3 2025-8-4
+	let A = CoreDirections[0].Neg();   // same as before
+	// let B = CoreDirections[4].Neg(); // ❌ old duplicate path
+	let B = CoreDirections[1];         // ✅ identical to the old result
+
+	return [
+		q,
+		q.add(A).add(B),
+		q.add(CoreDirections[1]),
+		// q.add(CoreDirections[5]),                     ❌
+		q.add(CoreDirections[0].Neg()),                 // ✅ same offset
+		// q.add(CoreDirections[5]).add(CoreDirections[3]), ❌
+		q.add(CoreDirections[0].Neg()).add(CoreDirections[3]), // ✅
+		q.add(CoreDirections[3].Neg()).add(CoreDirections[1]),
+	];
+};*/
+var oct6CornersAtQuadray=q=>{ //from gpt-o3 2025-8-4
+	let A=CoreDirections[0].Neg();		// same as old CoreDirections[5]
+	let B=CoreDirections[1];			// same as old CoreDirections[4].Neg()
+	return[
+		q,								// 0 bottom apex
+		q.add(A).add(B),				// 1 opposite apex
+		q.add(CoreDirections[1]),		// 2
+		q.add(A),						// 3
+		q.add(A).add(CoreDirections[3]),// 4
+		q.add(CoreDirections[3].Neg()).add(CoreDirections[1])// 5
+	];
 };
+
+
 
 var TriZ4CornersAtQuadray = ray=>([
 	ray, //the main corner shared between octahedron and 2 tetrahedrons
@@ -598,6 +631,30 @@ var CoreDirections = [
 	Q(-1, 0,  0,  1),  // from [0, -1, -1]
 	Q(0, -1, 1,  0),   // from [0, 1, -1]
 ];
+if(CoreDirections[1].normalized() !== CoreDirections[4].Neg().normalized()){
+	Err('CoreDirections[1] !== CoreDirections[4].Neg()');
+}else console.log('Verified buggy duplicate mirror exists: CoreDirections[1] !== CoreDirections[4].Neg() normed.');
+if(CoreDirections[0].normalized() !== CoreDirections[5].Neg().normalized()){
+	Err('CoreDirections[0] !== CoreDirections[5].Neg()');
+}else console.log('Verified buggy duplicate mirror exists: CoreDirections[0] !== CoreDirections[5].Neg() normed.');
+/*var CoreDirections=[ //from gpt-o3 2025-8-4
+	Q(1,-1,0,0),	// +x –y
+	Q(1,0,-1,0),	// +x –z
+	Q(1,0,0,-1),	// +x –w
+	Q(0,1,-1,0),	// +y –z
+	Q(0,1,0,-1),	// +y –w
+	Q(0,0,1,-1)		// +z –w
+];*/
+/*var CoreDirections = [ //from gpt-o3 2025-8-4
+	Q(0,  1,-1, 0),   // 0   unchanged
+	Q(1,  0, 0,-1),   // 1
+	Q(0,  1, 0,-1),   // 2
+	Q(1,  0,-1, 0),   // 3
+	//was Q(-1,0,0, 1)  → duplicate of 1
+	Q(1,-1, 0, 0),    // 4  NEW unique dir
+	//was Q( 0,-1,1, 0) → duplicate of 0
+	Q(0, 0, 1,-1)     // 5  NEW unique dir
+];*/
 var CoreDirectionsNormed = CoreDirections.map(x=>x.normalized());
 for(let i=0; i<CoreDirections.length; i++){
 	if(CoreDirections[i] !== CoreDirectionsNormed[i]){
@@ -629,6 +686,12 @@ var Directions = {
 	
 	h: CoreDirections[5],
 	y: CoreDirections[5].mul(-1),
+};
+
+var addDirectionsBalls = ()=>{
+	for(let q of Object.values(Directions)){
+		AddBall(q);
+	}
 };
 
 //Quadray param, adds or removes it from QDots
