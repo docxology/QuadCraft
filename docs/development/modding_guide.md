@@ -898,7 +898,7 @@ Ensure your `mod.json` file is complete and includes all necessary information:
         "source": "https://github.com/username/example_mod",
         "issues": "https://github.com/username/example_mod/issues"
     },
-    "license": "MIT",
+    "license": "Apache-2.0",
     "environment": "client,server",
     "entrypoints": {
         "main": "ExampleMod"
