@@ -11,6 +11,14 @@
 	and to put 1 octahedron and/or 2 tetrahedrons at each dot, which can fill 3d space.
 	With either of the 2 sets of CoreDirections (qwerty or asdfgh) you can reach every grid point and no non-grid points, but there is some duplication if you include all 12. On browser console you can type Q(1,2,3,4) or any 4 numbers. If you set selq to that, also set viewChanged = true; so it updates on screen. Save and load works in localStorage cookies or files, depending which button. It includes the octahedrons and tetrahedrons and 3d viewing position and angle. The quicksave/quickload is stored locally and gets erased if you clear your browser cache, so save important stuff to files. Its the same json data either way.
 	<br>
+	TODO plane-cone intersection in paintBall, to display balls more accurately, as they appear to have gaps<br>
+	between them despite all being diameter 2 and being center to center distance 2 from eachother.<br>
+	https://en.wikipedia.org/wiki/Conic_section The plane-cone intersection we need is camPos is<br>
+	the cone point and the flat screen is the plane, and the ball being drawn is anywhere along the<br> center line of the cone.<br>
+	TODO also i'll get you some keyboard buttons to move in 3d and use mouse for turning, as a<br>
+	third mode, if you want. The mouse doing both movement and turning slows things down.<br>
+	I could do movement with the 4 arrow keys being 4 quadray directions relative to camera but<br>
+	id expect that to be hard to use. or both.<br>
 	TODO keyboard buttons for moving in 6 directions and just turn with mouse, as an option.<br>
 	<b>TODO moveCamera(fwdVal*moveSpd*dt, upDown*moveSpd*dt, leftRight*moveSpd*dt); rotateCamera(rx*dt, ry*dt); on mouse.<br>
 	TODO 2d grid of [] lists of ints in CCP grid as where the balls start vs stop. if tilted square corner grid it uses evens and odds. if not tilted, excludes one of those parities.<br>
@@ -107,6 +115,7 @@ fillGridByFunc(selq, 5, q=>{
 		<input type=button onclick="SimKeyPresses('a a a a d d d d q q q q e eee');" value="example octahedrons and tetrahedrons">
 		<input type=button value="ClearShapes" onclick="ClearShapes();"></input>
 		<input type="checkbox" id="chkQuaternionCamera" checked><label for="chkQuaternionCamera" title="2025-7-28+ upgrading the camera code to use camPos and camQ instead of zoom, angleX, etc. This should fix the distortion of 3d positions at some angles and positions and allow you to fly through it with a gamepad with 2 analog triggers and 2 analog joysticks, or mouse.">quaternion camera (gamepad or mouse)</label>
+		<input type="checkbox" id="isConePlaneIntersection" checked><label for="isConePlaneIntersection" title="use this graphics mode to paint an oval instead of circle so the balls touch eachother on screen if they're touching in 3d.">isConePlaneIntersection</label>
 		<br>
 		<input type=button onclick="SimKeyPress('z');" value="'z' (tog tetrahedron Z)">
 		<input type=button onclick="SimKeyPress('x');" value="'x' (tog octahedron)">
@@ -706,7 +715,8 @@ class Drawable{
 		if(this.type==='ball'){
 			let fill = true;
 			let radius = 1;
-			paintBall(this.xyz, radius, this.obj.color, fill);	//throws if !isQuatCam()
+			let isConePlaneIntersection = dom('isConePlaneIntersection').checked;
+			paintBall(this.xyz, radius, this.obj.color, fill, isConePlaneIntersection);	//throws if !isQuatCam()
 		}else if(this.type==='QGridDot' || this.type==='QDot'){
 			//QGridDot displays as blue instead of its own color
 			let color = this.type==='QDot' ? this.obj.color : 'blue';
@@ -1394,7 +1404,8 @@ var paintXYZColor = (xyz, color, optionalRadius)=>{
 };
 
 var paintCircle2d = (screenX, screenY, radius, color, isFillElseOutline)=>{
-	ctx.beginPath();
+	paintOval2d(screenX, screenY, radius, 0, 0, radius, color, isFillElseOutline);
+	/*ctx.beginPath();
 	ctx.arc(screenX, screenY, radius, 0, Math.PI*2);
 	if(isFillElseOutline){
 		ctx.fillStyle = color;
@@ -1403,8 +1414,30 @@ var paintCircle2d = (screenX, screenY, radius, color, isFillElseOutline)=>{
 		ctx.lineWidth = 2; //circle outline thickness
 		ctx.strokeStyle = color;
 		ctx.stroke();
-	}
+	}*/
 };
+
+var paintOval2d = (centerX, centerY, aX, aY, bX, bY, color, isFillElseOutline)=>{
+  ctx.save();
+  ctx.translate(centerX, centerY);
+  ctx.transform(aX, aY, bX, bY, 0, 0);   // columns are a, b
+
+  ctx.beginPath();
+  ctx.arc(0, 0, 1, 0, Math.PI*2);
+
+  if(isFillElseOutline){
+    ctx.fillStyle = color;
+    ctx.fill();
+  }else{
+    const det = aX*bY - aY*bX;           // area scale (Jacobian)
+    const s = Math.sqrt(Math.max(1e-9, Math.abs(det)));
+    ctx.lineWidth = 2 / s;               // roughly constant screen stroke
+    ctx.strokeStyle = color;
+    ctx.stroke();
+  }
+  ctx.restore();
+};
+
 
 /*var paintBall=(xyz,rWorld=1,color)=>{
 	if(!isQuatCam()){
@@ -1423,7 +1456,7 @@ var paintCircle2d = (screenX, screenY, radius, color, isFillElseOutline)=>{
 	}
 	const ctr = project(xyz);
 	const edge = project([xyz[0]+radius,xyz[1],xyz[2]]); //offset in 3d by 1 radius
-	const radius2d = Math.hypot(edge[0]-ctr[0],edge[1]-ctr[1]);
+	const radius2d = Math.hypot(edge[0]-ctr[0],edge[1]-ctr[1]);	
 
 	let dot = dotProdOfXYZAlongCamForward(xyz);
 	if(dot<drawDistanceMin || drawDistanceMax<dot){
@@ -1431,7 +1464,7 @@ var paintCircle2d = (screenX, screenY, radius, color, isFillElseOutline)=>{
 	}
 	paintCircle2d(ctr[0],ctr[1],radius2d,color);
 };*/
-var paintBall = (xyz, radius, color, isFillElseOutline) => {
+/*var paintBall = (xyz, radius, color, isFillElseOutline) => {
 	if(!isQuatCam())	return;						// circles only in quat-cam
 
 	//project centre once
@@ -1445,7 +1478,205 @@ var paintBall = (xyz, radius, color, isFillElseOutline) => {
 	const pr = radius * cubeSize / dot;
 
 	paintCircle2d(ctr[0], ctr[1], pr, color, isFillElseOutline);
+};*/
+// --- paintBall: simplified call path ---
+var paintBall = (xyz, radius, color, isFillElseOutline, isConePlaneIntersection)=>{
+	if(!isQuatCam()) return;
+
+	// depth for culling + legacy radius
+	const cz = dotProdOfXYZAlongCamForward(xyz);
+	if(cz < drawDistanceMin || drawDistanceMax < cz || cz === 0) return;
+	
+	let doConePlane = isConePlaneIntersection;
+	const affine = conePlaneIntersection(xyz, radius);
+	let err = false;
+	if(!affine){
+		err = true;
+		doConePlane = false; //didnt find intersection, maybe it crossed both ends of cone or not ellipse.
+	}
+	if(doConePlane){
+		// either a true ellipse, or the "inside sphere" big fill case
+		const [centerX, centerY, aX, aY, bX, bY] = affine;
+		paintOval2d(centerX, centerY, aX, aY, bX, bY, color, isFillElseOutline);		
+	}else{
+		if(err) color = 'red';
+		const ctr = project(xyz);
+		const pr  = radius * cubeSize / cz;
+		paintCircle2d(ctr[0], ctr[1], pr, color, isFillElseOutline);
+	}
 };
+
+//by GPT5. not sure if this works, todo test.
+// --- exact cone∩plane silhouette as a 2D affine ---
+// Returns [centerX, centerY, aX, aY, bX, bY] in *screen pixels*, or null on degenerate cases.
+/*var conePlaneIntersection = (xyz, radius)=>{
+	// camera basis
+	const dx = xyz[0]-camPos[0], dy = xyz[1]-camPos[1], dz = xyz[2]-camPos[2];
+	let f = calculateForwardVector(camQ);
+	let u = calculateUpVector(camQ);
+	let r = cross(f, u); r = normalize(r);
+	u = normalize(cross(r, f));
+
+	// sphere center in camera space
+	const cx = dx*r[0] + dy*r[1] + dz*r[2];
+	const cy = dx*u[0] + dy*u[1] + dz*u[2];
+	const cz = dx*f[0] + dy*f[1] + dz*f[2];
+
+	// clip / reject
+	if(cz <= 0 || cz < drawDistanceMin || drawDistanceMax < cz) return null;
+
+	const d = cubeSize;               // image plane z = d, must match project()
+	const L = Math.hypot(cx, cy, cz); // ||C||
+	if(L < 1e-9) return null;
+
+	// inside sphere → huge fill (signal caller to draw circle big)
+	if(radius >= L*0.999999) return [ ...project(xyz), 1e6, 0, 0, 1e6 ];
+
+	// cone parameters
+	const s = radius / L;
+	const cos2 = Math.max(0, 1 - s*s);
+	const ux = cx/L, uy = cy/L, uz = cz/L;
+
+	// conic: A x² + B xy + C y² + D x + E y + F = 0 on z=d
+	const A = ux*ux - cos2;
+	const B = 2*ux*uy;
+	const C = uy*uy - cos2;
+	const D = 2*d*ux*uz;
+	const E = 2*d*uy*uz;
+	const F = d*d*(uz*uz - cos2);
+
+	// ellipse center
+	const denom = 4*A*C - B*B;
+	if(Math.abs(denom) < 1e-12) return null;
+	const x0 = (B*E - 2*C*D) / denom;
+	const y0 = (B*D - 2*A*E) / denom;
+
+	// translate to center: uᵀ Q u = k
+	const Fc = (A*x0*x0 + B*x0*y0 + C*y0*y0 + D*x0 + E*y0 + F);
+	const k  = -Fc;
+	if(!(k > 0)) return null;
+
+	// Q SPD: [[A, B/2],[B/2, C]] ; Cholesky Q = L Lᵀ
+	const l11 = Math.sqrt(Math.max(1e-18, A));
+	const l21 = (B*0.5) / l11;
+	const cRem = C - l21*l21;
+	if(!(cRem > 0)) return null;
+	const l22 = Math.sqrt(cRem);
+
+	// (Lᵀ)⁻¹ for Lᵀ = [[l11, l21],[0, l22]]
+	const invLT11 = 1 / l11;
+	const invLT12 = -l21 / (l11*l22);
+	const invLT21 = 0;
+	const invLT22 = 1 / l22;
+
+	// plane transform T_plane = √k · (Lᵀ)⁻¹  (x-right, y-up)
+	const sK = Math.sqrt(k);
+	const t11 = sK * invLT11;
+	const t12 = sK * invLT12;
+	const t21 = sK * invLT21;  // = 0
+	const t22 = sK * invLT22;
+
+	// plane → screen: Y flip; screen center
+	const centerX = canvas.width/2  + x0;
+	const centerY = canvas.height/2 - y0;
+	const aX =  t11;
+	const aY = -t21;   // 0 but keep form
+	const bX =  t12;
+	const bY = -t22;
+
+	// quick sanity: finite, non-NaN
+	if(!isFinite(centerX+centerY+aX+aY+bX+bY)) return null;
+
+	return [centerX, centerY, aX, aY, bX, bY];
+};*/
+// --- exact cone∩plane silhouette as a 2D affine ---
+// Returns [centerX, centerY, aX, aY, bX, bY] in screen pixels, or null if not drawable.
+var conePlaneIntersection = (xyz, radius)=>{
+  // camera basis
+  const dx = xyz[0]-camPos[0], dy = xyz[1]-camPos[1], dz = xyz[2]-camPos[2];
+  let f = calculateForwardVector(camQ);
+  let u = calculateUpVector(camQ);
+  let r = cross(f, u); r = normalize(r);
+  u = normalize(cross(r, f));
+
+  // sphere center in camera space
+  const cx = dx*r[0] + dy*r[1] + dz*r[2];
+  const cy = dx*u[0] + dy*u[1] + dz*u[2];
+  const cz = dx*f[0] + dy*f[1] + dz*f[2];
+
+  // clip / reject
+  if (cz <= 0 || cz < drawDistanceMin || drawDistanceMax < cz) return null;
+
+  const d = cubeSize;               // must match project()
+  const L = Math.hypot(cx, cy, cz); // ||C||
+  if (L < 1e-9) return null;
+
+  // camera inside the sphere → huge fill
+  if (radius >= L*0.999999){
+    const [px,py] = project(xyz);
+    return [px, py, 1e6, 0, 0, 1e6];
+  }
+
+  // tangent-cone parameters
+  const s = radius / L;
+  const cos2 = Math.max(0, 1 - s*s);
+  const ux = cx/L, uy = cy/L, uz = cz/L;
+
+  // conic on plane z=d: A x² + B xy + C y² + D x + E y + F = 0
+  const A = ux*ux - cos2;
+  const B = 2*ux*uy;
+  const C = uy*uy - cos2;
+  const D = 2*d*ux*uz;
+  const E = 2*d*uy*uz;
+  const F = d*d*(uz*uz - cos2);
+
+  // center: solve [2A B; B 2C] [x0;y0] = -[D;E] (use gentle regularization if near-singular)
+  let det = 4*A*C - B*B;
+  if (!isFinite(det)) det = 0;
+  if (Math.abs(det) < 1e-9) det = (det >= 0 ? 1 : -1) * 1e-9; // keep sign to avoid flipping the center wildly
+  const x0 = (B*E - 2*C*D) / det;
+  const y0 = (B*D - 2*A*E) / det;
+
+  // translate to center → uᵀ Q u = k
+  const Fc = (A*x0*x0 + B*x0*y0 + C*y0*y0 + D*x0 + E*y0 + F);
+  let k = -Fc;                       // for an ellipse, k and the eigenvalues share the same sign
+
+  // eigen-decompose Q (no Cholesky; works for either sign)
+  const trace = A + C;
+  const diff  = A - C;
+  const disc  = Math.hypot(diff, B);       // sqrt((A-C)^2 + B^2)
+  let   lam1  = (trace + disc)/2;
+  let   lam2  = (trace - disc)/2;
+
+  if (k === 0) return null;
+
+  // ensure radii² = k/λ are positive; if not, flip both sides
+  if ((k/lam1) <= 0 || (k/lam2) <= 0){
+    k = -k; lam1 = -lam1; lam2 = -lam2;
+    if ((k/lam1) <= 0 || (k/lam2) <= 0) return null; // truly non-elliptic (shouldn't happen for visible spheres)
+  }
+
+  const t1 = Math.sqrt(k/lam1);   // semi-axis length along eigenvector 1 (plane coords, y-up)
+  const t2 = Math.sqrt(k/lam2);   // semi-axis length along eigenvector 2
+
+  // rotation angle of principal axes
+  const phi = 0.5 * Math.atan2(B, (A - C));
+  const cs = Math.cos(phi), sn = Math.sin(phi);
+
+  // plane → screen: y-flip and add screen center
+  const centerX = canvas.width/2  + x0;
+  const centerY = canvas.height/2 - y0;
+
+  // columns of T_screen = R_flip * R(phi) * diag(t1, t2)
+  const aX =  cs * t1;
+  const aY = -sn * t1;
+  const bX = -sn * t2;
+  const bY = -cs * t2;
+
+  if (!isFinite(centerX+centerY+aX+aY+bX+bY)) return null;
+  return [centerX, centerY, aX, aY, bX, bY];
+};
+
 
 
 function draw(){
