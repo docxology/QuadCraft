@@ -3,8 +3,8 @@
 <center style="color:white">
 	<br>
 	<font color=#00cc00>
-	<b>MOVE LEFT/RIGHT/UP/DOWN:</b> gamepad left joystick <b>OR</b> drag mouse left button.<br>
-	<b>MOVE FORWARD/BACKWARD:</b> gamepad 2 analog triggers <b>OR</b> drag both mouse buttons at once.<br>
+	<b>MOVE LEFT/RIGHT/UP/DOWN:</b> gamepad left joystick <b>OR</b> drag mouse left button <b>OR</b> 4 arrow keys<br>
+	<b>MOVE FORWARD/BACKWARD:</b> gamepad 2 analog triggers <b>OR</b> drag both mouse buttons at once <b>OR</b> Control/Insert beside arrow keys.<br>
 	<b>TURN:</b> gamepad right joystick <b>OR</b> drag mouse right button.<br>
 	</font>
 	Push buttons on keyboard or here to move the flashing colored dot (the selected Quadray in js var selq).
@@ -25,6 +25,9 @@
 	TODO multiplayer 3d painting using a small JSP in tomcat.
 	</b>
 	<h1>
+	TODO fix the gamepad buttons that paint octahedrons and tetrahedrons to snap those to grid.
+	<br><br>
+	
 	players each make a different color for paths moved thru the keys. make that the 1 ball paintbrush. he calls it a contrail/history. will also be bigger paintbrushes. make delete key for the contrail.
 	..
 	move on to QuadrayGrid4.html now, leave QuadrayGrid3.html as is 2025-8-5-11p.
@@ -166,6 +169,8 @@ var Err = str=>{
 const ROOT2 = Math.SQRT2;
 const SCALE = 2/ROOT2; //multiply quadrays by this to always be on 3d integer grid after .toCartesian()
 const S3 = Math.sqrt(9 / 8);
+
+var Buttons = {}; //keyboard button string to 1 if down, deleted or 0 if not.
 
 var randInt = max=>(randFlo(max)|0);
 
@@ -435,6 +440,62 @@ class Quadray{
 		map = map[this.c] || (map[this.c] = {});
 		return map[this.d] || (map[this.d] = this);
 	}
+	
+	//nearest quadray on CCP grid.
+	//2025-8-16 added quadray.nearestCCP() func, so the gamepad buttons put octahedrons/tetrahedrons aligned to grid.
+	nearestCCP = function(){
+		return Quadray.fromRawCartesian( nearestCCPRawXyz(this.toRawCartesian()) );
+	}
+
+}
+
+/* By GPT5, todo test.
+
+	Nearest CCP/FCC site in *raw* xyz space (the one from toRawCartesian()).
+
+	Lattice test in this space:
+		- x,y,z are even integers, and
+		- (x + y + z) ≡ 0 (mod 4).
+
+	100% reliable minimal search:
+		For each axis, the closest even is either evenFloor(v) or evenFloor(v)+2.
+		Check the 2×2×2 = 8 combos; among them, exactly half pass the mod-4 test.
+		Pick the one with smallest squared distance.
+
+	Note: there’s a faster O(1) exact route via FCC coords
+		u=(x+y−z)/4, v=(x+z−y)/4, w=(y+z−x)/4
+		and rounding (with tiny ±1 tweaks), but this 8-point scan is
+		simple, deterministic, and plenty fast.
+		
+Directions {a: Quadray, q: Quadray, s: Quadray, w: Quadray, d: Quadray, …} a : Quadray {a: 0, b: 1, c: -1, d: 0, color: '#d72ef9'} d : Quadray {a: 0, b: 1, c: 0, d: -1, color: '#6e6eea'} e : Quadray {a: 1, b: 0, c: 1, d: 2, color: '#33ba3e'} f : Quadray {a: 1, b: 0, c: -1, d: 0, color: '#eb9efa'} g : Quadray {a: 1, b: -1, c: 0, d: 0, color: '#e77b7c'} h : Quadray {a: 0, b: 0, c: 1, d: -1, color: '#06fb62'} q : Quadray {a: 1, b: 0, c: 2, d: 1, color: '#7ea16c'} r : Quadray {a: 0, b: 1, c: 2, d: 1, color: '#018f38'} s : Quadray {a: 1, b: 0, c: 0, d: -1, color: '#816be5'} t : Quadray {a: 0, b: 2, c: 1, d: 1, color: '#d57aba'} w : Quadray {a: 0, b: 1, c: 1, d: 2, color: '#0fb011'} y : Quadray {a: 1, b: 1, c: 0, d: 2, color: '#c4c603'} [[Prototype]] : Object Object.values(Directions).map(x=>x.toRawCartesian()) (12) [Array(3), Array(3), Array(3), Array(3), Array(3), Array(3), Array(3), Array(3), Array(3), Array(3), Array(3), Array(3)] 0 : (3) [0, -2, 2] 1 : (3) [0, 2, -2] 2 : (3) [0, 2, 2] 3 : (3) [0, -2, -2] 4 : (3) [-2, 0, 2] 5 : (3) [2, 0, -2] 6 : (3) [2, 0, 2] 7 : (3) [-2, 0, -2] 8 : (3) [2, 2, 0] 9 : (3) [-2, -2, 0] 10 : (3) [-2, 2, 0] 11 : (3) [2, -2, 0] length : 12 [[Prototype]] : Array(0)
+*/
+function nearestCCPRawXyz(xyz){
+	let x = xyz[0], y = xyz[1], z = xyz[2];
+
+	let ex = evenFloor(x);
+	let ey = evenFloor(y);
+	let ez = evenFloor(z);
+
+	let bx = ex, by = ey, bz = ez;	// best so far
+	let bd = Infinity;							// best squared distance
+
+	for (let xi = ex; xi <= ex+2; xi += 2)
+	for (let yi = ey; yi <= ey+2; yi += 2)
+	for (let zi = ez; zi <= ez+2; zi += 2){
+		// require (xi+yi+zi) ≡ 0 (mod 4)
+		if ( ((xi + yi + zi) & 3) ) continue;
+
+		let dx = xi - x, dy = yi - y, dz = zi - z;
+		let s	= dx*dx + dy*dy + dz*dz;
+
+		if (s < bd){ bd = s; bx = xi; by = yi; bz = zi; }
+	}
+	return [bx, by, bz];
+}
+
+// Largest even integer ≤ t (works for negatives too).
+function evenFloor(t){
+  return 2 * Math.floor(t / 2);
 }
 
 
@@ -460,6 +521,14 @@ class CCPBallRange {
 /* This could be improved by not using concatted string keys (use 2 {} deep} and needs testing
 to make sure its doing the 2d surface of 3d optimization (isnt making alot of size 1 CCPBallRange's,
 and that it actually scales to big volumes. Test it by making 3d shaped paintbrushes and painting onto this.
+
+Added CCPBallGrid and CCPBallRange classes. This is how its gonna store arbitrarily shaped 3d volumes just
+by the balls on their surface. It will display a ball if it exists AND is beside at least
+1 empty slot (no ball in that 1 of 12 slots).
+
+PrimaryKey of list of CCPBallRange's is a compositeKey of [Directions.a,Directions.s],
+and value is Directions.d, some integer multiple of all 3 of those.
+TODO rename i and j and k to that.
 
 CCPBallGrid {NBR: Array(12), QA: Quadray, QS: Quadray, QD: Quadray, cols: Map(15)}
 NBR
@@ -1374,6 +1443,7 @@ var toggleVolumeAtQuadray = q=>{
 var toggleVolumeInFrontOfCam = dist=>{
 	let q = quadrayInFrontOfCam(dist);
 	console.log('toggleVolumeInFrontOfCam q='+q);
+	q = q.nearestCCP();
 	toggleVolumeAtQuadray(q);
 };
 
@@ -1452,7 +1522,12 @@ document.addEventListener("keydown", function(e){
 	if(e.target == dom('textBoxToEval')){
 		return; //ignore game controls when in textarea. WARNING: if you add other things that take key presses, do this too,
 	}
+	Buttons[e.key] = 1;
 	SimKeyPress(e.key);
+});
+
+document.addEventListener("keyup", function(e){
+	delete Buttons[e.key];
 });
 
 function rotate([x, y, z]){ //3d not quadray
@@ -1984,6 +2059,7 @@ function draw(){
 	let dt = 1/60; //TODO measure and clamp it
 	
 	updateFromGamepad(dt);
+	updateFromHoldingKeyboardButtons(dt);
 	getCameraXYZ(); //to update lastCam. xyz not quadray.
 
 	//selq and TriZngle corners and octahedron corners and tetrahedron corners are all quadrays,
@@ -2319,6 +2395,28 @@ function updateFromGamepad(dt){
 	}
 	
 	//viewChanged = true; //TODO only if changed camPos or camQ
+}
+
+function updateFromHoldingKeyboardButtons(dt){
+	//console.log("Buttons = "+JSON.stringify(Buttons));
+	let speed = 2.1;
+	let mul = speed*dt;
+	/*let fwd = calculateForwardVector(camQ);
+	let upv = calculateUpVector(camQ);
+	let rig = normalize(cross(fwd, upv));
+	let sumXYZ = [0,0,0];
+	//if(Buttons.ArrowUp) sumXYZ[0] +=
+	if(Buttons.ArrowUp) sumXYZ += VecMulScalar(fwd,speed);
+	if(Buttons.ArrowDown) sumXYZ -= VecMulScalar(fwd,speed);
+	if(Buttons.ArrowRight) sumXYZ += VecMulScalar(rig,speed);
+	if(Buttons.ArrowLeft) sumXYZ -= VecMulScalar(rig,speed);
+	if(Buttons.PageUp) sumXYZ += VecMulScalar(upv,speed);
+	if(Buttons.PageDown) sumXYZ -= VecMulScalar(upv,speed);
+	*/
+	let forwardBackward = ((Buttons.Control ? 1 : 0)-(Buttons.Insert ? 1 : 0))*mul;
+	let upDown = ((Buttons.ArrowUp ? 1 : 0)-(Buttons.ArrowDown ? 1 : 0))*mul;
+	let leftRight = ((Buttons.ArrowRight ? 1 : 0)-(Buttons.ArrowLeft ? 1 : 0))*mul;
+	moveCamera(forwardBackward, upDown, leftRight);
 }
 
 function moveCamera(forwardBackward, upDown, leftRight){ //does not deal with deadZone in joystick dt. TODO make moveCamera and rotateCamera consistent with eachother.
