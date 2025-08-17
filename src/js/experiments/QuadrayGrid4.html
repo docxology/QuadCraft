@@ -2391,11 +2391,19 @@ const timeOffset_ = performance.timing.navigationStart;
 //UTC seconds with fraction. More precise than Date.now()*.001. Chrome seems to have 4 digits after decimal point, and brave and firefox 3 digits.
 const time = ()=>((timeOffset_+performance.now())*.001);
 
-window.onload = ()=>{
-	populatePaintbrushSelect();
-	copyWorldStateToUiControls();
-	paintXYZColor([0,0,1],randColor());
+var onloadHappened = false;
+
+var onload = ()=>{
+	if(!onloadHappened){
+		onloadHappened = true;
+		populatePaintbrushSelect();
+		copyWorldStateToUiControls();
+		paintXYZColor([0,0,1],randColor());
+	}
 };
+
+window.onload = onload;
+setTimeout(onload, .5); //in case its in an iframe that blocks window.onload
 
 
 function quatInverse([x, y, z, w]){ //GPT4o
