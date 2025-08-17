@@ -10,60 +10,15 @@
 	Push buttons on keyboard or here to move the flashing colored dot (the selected Quadray in js var selq).
 	and to put 1 octahedron and/or 2 tetrahedrons at each dot, which can fill 3d space.
 	With either of the 2 sets of CoreDirections (qwerty or asdfgh) you can reach every grid point and no non-grid points, but there is some duplication if you include all 12. On browser console you can type Q(1,2,3,4) or any 4 numbers. If you set selq to that, also set viewChanged = true; so it updates on screen. Save and load works in localStorage cookies or files, depending which button. It includes the octahedrons and tetrahedrons and 3d viewing position and angle. The quicksave/quickload is stored locally and gets erased if you clear your browser cache, so save important stuff to files. Its the same json data either way.
-	<br>
-	TODO plane-cone intersection in paintBall, to display balls more accurately, as they appear to have gaps<br>
-	between them despite all being diameter 2 and being center to center distance 2 from eachother.<br>
-	https://en.wikipedia.org/wiki/Conic_section The plane-cone intersection we need is camPos is<br>
-	the cone point and the flat screen is the plane, and the ball being drawn is anywhere along the<br> center line of the cone.<br>
-	TODO also i'll get you some keyboard buttons to move in 3d and use mouse for turning, as a<br>
-	third mode, if you want. The mouse doing both movement and turning slows things down.<br>
+	---
 	I could do movement with the 4 arrow keys being 4 quadray directions relative to camera but<br>
-	id expect that to be hard to use. or both.<br>
-	TODO keyboard buttons for moving in 6 directions and just turn with mouse, as an option.<br>
-	<b>TODO moveCamera(fwdVal*moveSpd*dt, upDown*moveSpd*dt, leftRight*moveSpd*dt); rotateCamera(rx*dt, ry*dt); on mouse.<br>
-	TODO 2d grid of [] lists of ints in CCP grid as where the balls start vs stop. if tilted square corner grid it uses evens and odds. if not tilted, excludes one of those parities.<br>
+	---
+	---
+	TODO 2d grid of [] lists of ints in CCP grid as where the balls start vs stop. if tilted square corner grid it uses evens and odds. if not tilted, excludes one of those parities.
+	---
 	TODO multiplayer 3d painting using a small JSP in tomcat.
 	</b>
-	<h1>
-	TODO fix the gamepad buttons that paint octahedrons and tetrahedrons to snap those to grid.
-	<br><br>
-	
-	players each make a different color for paths moved thru the keys. make that the 1 ball paintbrush. he calls it a contrail/history. will also be bigger paintbrushes. make delete key for the contrail.
-	..
-	move on to QuadrayGrid4.html now, leave QuadrayGrid3.html as is 2025-8-5-11p.
-	..
-	qrcode to join?
-	..
-	todo 2 weeks from 2025-8-5 have this milestone done, then pause and wait for them.
-	</h1>
-	<br>
-	FIXME Is there a specific direction missing?
-I listed the missing offsets yesterday:
-
-What I find is that the follow offsets are not available: {ivm_vector(a=0, b=2, c=1, d=1),  
-ivm_vector(a=1, b=1, c=0, d=2), 
- ivm_vector(a=1, b=1, c=2, d=0),  
-ivm_vector(a=2, b=0, c=1, d=1)}  
-
-Those are offsets and come in pairs. From (0,0,0,0), these will be the ones I can't get to, but should be able to get to.
-Kirby Urner · 10:35 AM
-
-(6) [Quadray, Quadray, Quadray, Quadray, Quadray, Quadray]
-0: Quadray {a: 0, b: 1, c: -1, d: 0, color: '#2d71c2'}
-1: Quadray {a: 1, b: 0, c: 0, d: -1, color: '#3f4a50'}
-2: Quadray {a: 0, b: 1, c: 0, d: -1, color: '#03a50e'}
-3: Quadray {a: 1, b: 0, c: -1, d: 0, color: '#6dc5a8'}
-4: Quadray {a: -1, b: 0, c: 0, d: 1, color: '#fd42f3'}
-5: Quadray {a: 0, b: -1, c: 1, d: 0, color: '#2fe3f9'}
-Seen by 1 person
-
-i see thats not shaped as a 4 choose 2 cuz there is none that is nonzero in both A and B.
-10:50 AM
-·
-Seen by 1 person
-
-I might be confusing it with the 3d checkerboard model
-	
+	<br>	
 	<table border=2><tr><td>
 	<input type=button value="Example code A" onclick="dom('textBoxToEval').innerHTML = 'fillGridByFunc(selq, 5, q=>{\n	return q.toCartesian()[0]==0;\n});';">
 	<input type=button value="B" onclick="dom('textBoxToEval').innerHTML = 'fillGridByFunc(selq, 8, q=>{\n	return q.toCartesian()[0]>1.5;\n});';">
@@ -1068,6 +1023,8 @@ var ToggleBall = q=>{
 	}
 };
 
+const ballRadius = 1;
+
 //These are created again each graphics/draw cycle (about 1/60 second), not stored between that.
 //Tri (triangle) with type 'tri', or Quadray with type 'QGridDot' or 'QDot' or 'ball'.
 class Drawable{
@@ -1081,9 +1038,8 @@ class Drawable{
 		let isQuat = isQuatCam();
 		if(this.type==='ball'){
 			let fill = true;
-			let radius = 1;
 			let isConePlaneIntersection = dom('isConePlaneIntersection').checked;
-			paintBall(this.xyz, radius, this.obj.color, fill, isConePlaneIntersection);	//throws if !isQuatCam()
+			paintBall(this.xyz, ballRadius, this.obj.color, fill, isConePlaneIntersection);	//throws if !isQuatCam()
 		}else if(this.type==='QGridDot' || this.type==='QDot'){
 			//QGridDot displays as blue instead of its own color
 			let color = this.type==='QDot' ? this.obj.color : 'blue';
@@ -1224,6 +1180,62 @@ var Directions = {
 	
 	h: CoreDirections[5],
 	y: CoreDirections[5].mul(-1),
+};
+
+
+
+var paintbrushes = {
+	/*fillGridByFuncOutTo2_noDelete: {
+		func: isPaintElseUnpaint=>{
+			fillGridByFunc(targetQ(), 2, ()=>true); //only does paint, not unpaint as of 2025-8-17'
+		}
+	},
+	oneOctahedron: {
+		octahedrons: [Q(0,0,0,0)]
+	},
+	oneTetrahedronZ:{
+		tetrahedronZs: [Q(0,0,0,0)]
+	},
+	oneTetrahedronC:{
+		tetrahedronCs: [Q(0,0,0,0)]
+	},*/
+	oneBall: {
+		balls: [Q(0,0,0,0)]
+	},
+	repeatA2: {
+		balls: [Q(0,0,0,0), Directions.a]
+	},
+	repeatA3: {
+		balls: [Q(0,0,0,0), Directions.a, Directions.a.add(Directions.a)]
+	},
+	repeatA4: {
+		balls: [Q(0,0,0,0), Directions.a, Directions.a.add(Directions.a), Directions.a.add(Directions.a).add(Directions.a)]
+	},
+	repeatA5: {
+		balls: [
+			Q(0,0,0,0), Directions.a, Directions.a.add(Directions.a),
+			Directions.a.add(Directions.a).add(Directions.a), Directions.a.add(Directions.a).add(Directions.a).add(Directions.a)
+		]
+	},
+	repeatS5: {
+		balls: [
+			Q(0,0,0,0), Directions.s, Directions.s.add(Directions.s),
+			Directions.s.add(Directions.s).add(Directions.s), Directions.s.add(Directions.s).add(Directions.s).add(Directions.s)
+		]
+	},
+	distance1: {
+		balls: [
+			Q(0,0,0,0), Directions.a, Directions.q,
+			Directions.s, Directions.w,
+			Directions.d, Directions.e,
+			Directions.f, Directions.r,
+			Directions.g, Directions.t,
+			Directions.h, Directions.y
+		]
+	},
+	getRandomBallsPaintbrush: {
+		paintbrushNames: ['oneBall', 'repeatA2', 'repeatA3', 'repeatA4', 'repeatA5', 'repeatS5', 'distance1']
+	}
 };
 
 // one CCP grid for the whole app
@@ -1432,6 +1444,9 @@ var xyzInFrontOfCam = dist=>{
 	return Add(camPos, VecMulScalar(calculateForwardVector(camQ),dist));
 };
 
+//target quadray in front of camPos along the forward direction of camQ. CCP grid aligned.
+var targetQ = ()=>(quadrayInFrontOfCam(12.3).nearestCCP());
+
 var quadrayInFrontOfCam = dist=>{
 	return Quadray.fromCartesian(xyzInFrontOfCam(dist));
 };
@@ -1440,16 +1455,57 @@ var toggleVolumeAtQuadray = q=>{
 	fillGridByFunc(q, 0, ()=>true);
 };
 
-var toggleVolumeInFrontOfCam = dist=>{
+//whatever is the selected paint tool, paints or unpaints with it
+var paint = (q, paintbrush, isPaintElseUnpaint)=>{
+	console.log('Paint at q='+q+' isPaintElseUnpaint='+isPaintElseUnpaint+' paintbrushKeys='+Object.keys(paintbrush));
+	if(paintbrush.func){
+		paintbrush.func(isPaintElseUnpaint);
+	}
+	if(paintbrush.octahedrons) for(let octQ of paintbrush.octahedrons){
+		if(isPaintElseUnpaint){
+			addOctAtQuadray(q.add(octQ));
+		}else{
+			console.warn('TODO remove octahedron at quadray '+q);
+		}
+	}
+	if(paintbrush.tetrahedronCs) for(let tetcQ of paintbrush.tetrahedronCs){
+		if(isPaintElseUnpaint){
+			addTetCAtQuadray(q.add(tetcQ));
+		}else{
+			console.warn('TODO remove tetrahedronCs at quadray '+q);
+		}
+	}
+	if(paintbrush.tetrahedronZs) for(let tetzQ of paintbrush.tetrahedronZs){
+		if(isPaintElseUnpaint){
+			addTetZAtQuadray(q.add(tetzQ));
+		}else{
+			console.warn('TODO remove tetrahedronZs at quadray '+q);
+		}
+	}
+	if(paintbrush.balls) for(let ballQ of paintbrush.balls){
+		if(isPaintElseUnpaint){
+			AddBall(q.add(ballQ));
+		}else{
+			RemBall(q.add(ballQ));
+		}
+	}
+	//TODO what other paint tools
+	//fillGridByFunc(q, 1, ()=>isPaintElseUnpaint);
+	//fillGridByFunc(q, 1, ()=>true); //only does paint, not unpaint as of 2025-8-17
+	//toggleVolumeAtQuadray(q); //FIXME
+};
+
+/*var toggleVolumeInFrontOfCam = dist=>{
 	let q = quadrayInFrontOfCam(dist);
 	console.log('toggleVolumeInFrontOfCam q='+q);
 	q = q.nearestCCP();
 	toggleVolumeAtQuadray(q);
-};
+};*/
 
 //TODO this toggles not fills. add param for add vs remove vs toggle.
 //centerQ can be selq or any quadray on the grid. hops is how far outward from it in key presses.
 //func(quadray) => true or false, should that part of the volume be filled or not.
+//TODO add isDelete param, but theres only addOctAtQuadray no remove param, and if u remove u gotta handle shared triangles between octahedrons/tetrahedrons.
 var fillGridByFunc = (centerQ, hops, func)=>{
 	let gridQuadrays = gridDotsNear(centerQ, hops);
 	let countOctYes = 0;
@@ -1461,7 +1517,10 @@ var fillGridByFunc = (centerQ, hops, func)=>{
 	for(let q of gridQuadrays){
 		if(func(q.add(toOctCenter))){
 			//toggleOctAtQuadray(q); //TODO add instead of toggle?
-			addOctAtQuadray(q);
+			//if(isDelete){
+			//}else{
+				addOctAtQuadray(q);
+			//}
 			countOctYes++;
 		}else{
 			countOctNo++;
@@ -2100,6 +2159,11 @@ function draw(){
 	for(const d of drawables){
 		d.draw();
 	}
+	
+	let targ = targetQ(); //in front of camera, grid aligned.
+	let fill = false; //circle/oval outline
+	let isConePlaneIntersection = dom('isConePlaneIntersection').checked;
+	paintBall(targ.toCartesian(), ballRadius, '#ffffff', fill, isConePlaneIntersection); //paint white circle 3d cursor in front of cam
 
 	
 	/*
@@ -2351,6 +2415,11 @@ const secondMoveSpeedMul = .007; //if isQuatCam() then use moveSpd*secondMoveSpe
 var turnSpd = .8;
 //var turnSpd = .6;
 
+var selectedPaintbrush = ()=>{
+	let brushes = Object.values(paintbrushes);
+	return brushes[randInt(brushes.length)]; //FIXME
+};
+
 function updateFromGamepad(dt){
 	//console.log("updateFromGamepad", navigator.getGamepads());
 	let gps= navigator.getGamepads();
@@ -2390,8 +2459,11 @@ function updateFromGamepad(dt){
 	
 	let buttonLb = gp.buttons[4].value; //0 or 1
 	let buttonRb = gp.buttons[5].value; //0 or 1
-	if(buttonLb || buttonRb){
-		toggleVolumeInFrontOfCam(12.3);
+	//if(buttonLb || buttonRb){
+		//toggleVolumeInFrontOfCam(12.3);
+	//}
+	if(buttonLb ^ buttonRb){
+		paint(targetQ(), selectedPaintbrush(), buttonRb);
 	}
 	
 	//viewChanged = true; //TODO only if changed camPos or camQ
