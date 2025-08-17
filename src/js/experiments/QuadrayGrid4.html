@@ -19,7 +19,14 @@
 	TODO multiplayer 3d painting using a small JSP in tomcat.
 	</b>
 	<br>	
-	<table border=2><tr><td>
+	<table border=2><tr><td valign="top">
+	<select id="paintbrushSelect"
+			size="8"			<!-- 8 items → no scrollbar -->
+			style="min-width: 170px"
+			onchange="selPaintbrushName=this.value">
+	  <!-- options filled by JS -->
+	</select>
+	</td></td>
 	<input type=button value="Example code A" onclick="dom('textBoxToEval').innerHTML = 'fillGridByFunc(selq, 5, q=>{\n	return q.toCartesian()[0]==0;\n});';">
 	<input type=button value="B" onclick="dom('textBoxToEval').innerHTML = 'fillGridByFunc(selq, 8, q=>{\n	return q.toCartesian()[0]>1.5;\n});';">
 	<input type=button value="C" onclick="dom('textBoxToEval').innerHTML = 'AddColoredDots(gridDotsNear(selq,5),\'green\');';">
@@ -461,11 +468,11 @@ function evenFloor(t){
 // One immutable run [k0,k1) along D in the (i,j) column
 //class CCPBallRange written by GPT5 2025-8-15. TODO test.
 class CCPBallRange {
-  constructor(i, j, k0, k1){            // k1 is exclusive
-    this.i  = i|0; this.j  = j|0;
-    this.k0 = k0|0; this.k1 = k1|0;
-    if (this.k1 < this.k0) [this.k0, this.k1] = [this.k1, this.k0];
-    Object.freeze(this);
+  constructor(i, j, k0, k1){			// k1 is exclusive
+	this.i  = i|0; this.j  = j|0;
+	this.k0 = k0|0; this.k1 = k1|0;
+	if (this.k1 < this.k0) [this.k0, this.k1] = [this.k1, this.k0];
+	Object.freeze(this);
   }
   get size(){ return this.k1 - this.k0; }
   contains(i,j,k){ return (i===this.i && j===this.j && this.k0 <= k && k < this.k1); }
@@ -589,11 +596,11 @@ Object
 */
 class CCPBallGrid {
   constructor(){
-    // Basis (do not flip—these are your CCP axes)
-    this.QA = Directions.a; // Q(0,1,-1,0)
-    this.QS = Directions.s; // Q(1,0,0,-1)
-    this.QD = Directions.d; // Q(0,1,0,-1)
-    this.cols = new Map();  // key "i,j" -> Array<CCPBallRange>
+	// Basis (do not flip—these are your CCP axes)
+	this.QA = Directions.a; // Q(0,1,-1,0)
+	this.QS = Directions.s; // Q(1,0,0,-1)
+	this.QD = Directions.d; // Q(0,1,0,-1)
+	this.cols = new Map();  // key "i,j" -> Array<CCPBallRange>
   }
   
 	// add inside CCPBallGrid (e.g., right after constructor)
@@ -632,14 +639,14 @@ class CCPBallGrid {
 
   // ---- Quadray <-> (i,j,k) on the CCP ASD lattice ----
   toASD(q){
-    const {a,b,c,d} = q;
-    const k = ((b - d) - (a - c)) / 2;
-    const i = ((b - c) - k) / 2;
-    const j = ((a - d) - k) / 2;
-    return [i|0, j|0, k|0];
+	const {a,b,c,d} = q;
+	const k = ((b - d) - (a - c)) / 2;
+	const i = ((b - c) - k) / 2;
+	const j = ((a - d) - k) / 2;
+	return [i|0, j|0, k|0];
   }
   fromASD(i,j,k){
-    return this.QA.mul(i).add(this.QS.mul(j)).add(this.QD.mul(k)).normalized();
+	return this.QA.mul(i).add(this.QS.mul(j)).add(this.QD.mul(k)).normalized();
   }
 
   // ---- sparse column storage helpers ----
@@ -649,86 +656,86 @@ class CCPBallGrid {
 
   // lower_bound by k0
   _lbK0(list, k){
-    let lo=0, hi=list.length;
-    while (lo<hi){ const m=(lo+hi)>>1; (list[m].k0 < k) ? lo=m+1 : hi=m; }
-    return lo;
+	let lo=0, hi=list.length;
+	while (lo<hi){ const m=(lo+hi)>>1; (list[m].k0 < k) ? lo=m+1 : hi=m; }
+	return lo;
   }
 
   // public query
   isSolid(i,j,k){
-    const list = this._get(i,j);
-    // lower_bound on k1
-    let lo=0, hi=list.length;
-    while (lo<hi){ const m=(lo+hi)>>1; (list[m].k1 <= k) ? lo=m+1 : hi=m; }
-    if (lo>=list.length) return false;
-    const r = list[lo];
-    return (r.k0 <= k && k < r.k1);
+	const list = this._get(i,j);
+	// lower_bound on k1
+	let lo=0, hi=list.length;
+	while (lo<hi){ const m=(lo+hi)>>1; (list[m].k1 <= k) ? lo=m+1 : hi=m; }
+	if (lo>=list.length) return false;
+	const r = list[lo];
+	return (r.k0 <= k && k < r.k1);
   }
 
   // ---- add/remove a single ball (Quadray) ----
   addQuadray(q){
-    const [i,j,k] = this.toASD(q);
-    let list = this._get(i,j);
-    // Already solid? (no-op)
-    if (this.isSolid(i,j,k)) return;
+	const [i,j,k] = this.toASD(q);
+	let list = this._get(i,j);
+	// Already solid? (no-op)
+	if (this.isSolid(i,j,k)) return;
 
-    // Find neighbors by k0 to decide merge cases
-    const idx  = this._lbK0(list, k+1);     // first with k0 >= k+1
-    const prev = (idx>0 ? list[idx-1] : null);
-    const next = (idx<list.length ? list[idx] : null);
+	// Find neighbors by k0 to decide merge cases
+	const idx  = this._lbK0(list, k+1);	 // first with k0 >= k+1
+	const prev = (idx>0 ? list[idx-1] : null);
+	const next = (idx<list.length ? list[idx] : null);
 
-    const touchL = !!(prev && prev.k1 === k);     // [.. prev.k1) meets [k,k+1)
-    const touchR = !!(next && next.k0 === k+1);   // [k,k+1) meets [next.k0 ..)
+	const touchL = !!(prev && prev.k1 === k);	 // [.. prev.k1) meets [k,k+1)
+	const touchR = !!(next && next.k0 === k+1);   // [k,k+1) meets [next.k0 ..)
 
-    const out = list.slice(0, Math.max(0, idx-1)); // up to prev (excluded)
-    if (touchL && touchR){
-      // merge prev + [k,k+1) + next
-      out.push(new CCPBallRange(i,j, prev.k0, next.k1));
-      // skip 'next'
-      for (let t=idx+1; t<list.length; t++) out.push(list[t]);
-    } else if (touchL){
-      // extend prev right by 1
-      out.push(new CCPBallRange(i,j, prev.k0, prev.k1+1));
-      for (let t=idx; t<list.length; t++) out.push(list[t]);
-    } else if (touchR){
-      // extend next left by 1
-      out.push(new CCPBallRange(i,j, k, next.k1));
-      for (let t=idx+1; t<list.length; t++) out.push(list[t]);
-    } else {
-      // insert new singleton [k,k+1)
-      out.push(new CCPBallRange(i,j, k, k+1));
-      for (let t=idx; t<list.length; t++) out.push(list[t]);
-    }
-    this._set(i,j,out);
+	const out = list.slice(0, Math.max(0, idx-1)); // up to prev (excluded)
+	if (touchL && touchR){
+	  // merge prev + [k,k+1) + next
+	  out.push(new CCPBallRange(i,j, prev.k0, next.k1));
+	  // skip 'next'
+	  for (let t=idx+1; t<list.length; t++) out.push(list[t]);
+	} else if (touchL){
+	  // extend prev right by 1
+	  out.push(new CCPBallRange(i,j, prev.k0, prev.k1+1));
+	  for (let t=idx; t<list.length; t++) out.push(list[t]);
+	} else if (touchR){
+	  // extend next left by 1
+	  out.push(new CCPBallRange(i,j, k, next.k1));
+	  for (let t=idx+1; t<list.length; t++) out.push(list[t]);
+	} else {
+	  // insert new singleton [k,k+1)
+	  out.push(new CCPBallRange(i,j, k, k+1));
+	  for (let t=idx; t<list.length; t++) out.push(list[t]);
+	}
+	this._set(i,j,out);
   }
 
   removeQuadray(q){
-    const [i,j,k] = this.toASD(q);
-    let list = this._get(i,j);
-    if (!list.length) return;
+	const [i,j,k] = this.toASD(q);
+	let list = this._get(i,j);
+	if (!list.length) return;
 
-    // Find range that contains k (by k1 lower_bound)
-    let lo=0, hi=list.length;
-    while (lo<hi){ const m=(lo+hi)>>1; (list[m].k1 <= k) ? lo=m+1 : hi=m; }
-    if (lo>=list.length) return;
-    const r = list[lo];
-    if (!(r.k0 <= k && k < r.k1)) return;  // not solid (no-op)
+	// Find range that contains k (by k1 lower_bound)
+	let lo=0, hi=list.length;
+	while (lo<hi){ const m=(lo+hi)>>1; (list[m].k1 <= k) ? lo=m+1 : hi=m; }
+	if (lo>=list.length) return;
+	const r = list[lo];
+	if (!(r.k0 <= k && k < r.k1)) return;  // not solid (no-op)
 
-    const out = list.slice(0, lo);         // keep ranges before r
-    // Cases: remove singleton, shrink left/right, or split into two
-    if (r.k0 === k && r.k1 === k+1){
-      // drop r entirely
-    } else if (k === r.k0){
-      out.push(new CCPBallRange(i,j, k+1, r.k1));
-    } else if (k === r.k1-1){
-      out.push(new CCPBallRange(i,j, r.k0, r.k1-1));
-    } else {
-      out.push(new CCPBallRange(i,j, r.k0, k));
-      out.push(new CCPBallRange(i,j, k+1, r.k1));
-    }
-    // append the rest
-    for (let t=lo+1; t<list.length; t++) out.push(list[t]);
-    this._set(i,j,out);
+	const out = list.slice(0, lo);		 // keep ranges before r
+	// Cases: remove singleton, shrink left/right, or split into two
+	if (r.k0 === k && r.k1 === k+1){
+	  // drop r entirely
+	} else if (k === r.k0){
+	  out.push(new CCPBallRange(i,j, k+1, r.k1));
+	} else if (k === r.k1-1){
+	  out.push(new CCPBallRange(i,j, r.k0, r.k1-1));
+	} else {
+	  out.push(new CCPBallRange(i,j, r.k0, k));
+	  out.push(new CCPBallRange(i,j, k+1, r.k1));
+	}
+	// append the rest
+	for (let t=lo+1; t<list.length; t++) out.push(list[t]);
+	this._set(i,j,out);
   }
 }
 
@@ -785,14 +792,14 @@ class Tri{
 /*var oct6CornersAtQuadray = q=>{ //from gpt-o3 2025-8-4
 	let A = CoreDirections[0].Neg();   // same as before
 	// let B = CoreDirections[4].Neg(); // ❌ old duplicate path
-	let B = CoreDirections[1];         // ✅ identical to the old result
+	let B = CoreDirections[1];		 // ✅ identical to the old result
 
 	return [
 		q,
 		q.add(A).add(B),
 		q.add(CoreDirections[1]),
-		// q.add(CoreDirections[5]),                     ❌
-		q.add(CoreDirections[0].Neg()),                 // ✅ same offset
+		// q.add(CoreDirections[5]),					 ❌
+		q.add(CoreDirections[0].Neg()),				 // ✅ same offset
 		// q.add(CoreDirections[5]).add(CoreDirections[3]), ❌
 		q.add(CoreDirections[0].Neg()).add(CoreDirections[3]), // ✅
 		q.add(CoreDirections[3].Neg()).add(CoreDirections[1]),
@@ -872,6 +879,9 @@ var ToggleGameTri = tri=>{
 	}
 	gridChanged = true;
 };
+
+//var selPaintbrushName = 'oneBall';
+var selPaintbrushName = ()=>(dom('paintbrushSelect').value || 'oneBall');
 
 //This contains all octahedrons and tetrahedrons as 1 quadray and 1 group name each.
 //grid.oct is a SEt if q is a quadray whose bottom corner is q. Theres 6 corners of it.
@@ -1137,17 +1147,17 @@ if(CoreDirections[0].normalized() !== CoreDirections[5].Neg().normalized()){
 	Q(0,  1, 0,-1),   // 2
 	Q(1,  0,-1, 0),   // 3
 	//was Q(-1,0,0, 1)  → duplicate of 1
-	Q(1,-1, 0, 0),    // 4  NEW unique dir
+	Q(1,-1, 0, 0),	// 4  NEW unique dir
 	//was Q( 0,-1,1, 0) → duplicate of 0
-	Q(0, 0, 1,-1)     // 5  NEW unique dir
+	Q(0, 0, 1,-1)	 // 5  NEW unique dir
 ];*/
 var CoreDirections = [
 	Q(0,  1,-1, 0),   // 0  (keep)
 	Q(1,  0, 0,-1),   // 1
 	Q(0,  1, 0,-1),   // 2
 	Q(1,  0,-1, 0),   // 3
-	Q(1,-1, 0, 0),    // 4  ← NEW (was −1,0,0,1)
-	Q(0, 0, 1,-1)     // 5  ← NEW (was  0,-1,1,0)
+	Q(1,-1, 0, 0),	// 4  ← NEW (was −1,0,0,1)
+	Q(0, 0, 1,-1)	 // 5  ← NEW (was  0,-1,1,0)
 ];
 var CoreDirectionsNormed = CoreDirections.map(x=>x.normalized());
 for(let i=0; i<CoreDirections.length; i++){
@@ -1458,6 +1468,11 @@ var toggleVolumeAtQuadray = q=>{
 //whatever is the selected paint tool, paints or unpaints with it
 var paint = (q, paintbrush, isPaintElseUnpaint)=>{
 	console.log('Paint at q='+q+' isPaintElseUnpaint='+isPaintElseUnpaint+' paintbrushKeys='+Object.keys(paintbrush));
+	if(paintbrush.paintbrushNames){
+		let brushes = Object.values(paintbrushes);
+		let brush = brushes[randInt(brushes.length)];
+		return paint(q, brush, isPaintElseUnpaint);
+	}
 	if(paintbrush.func){
 		paintbrush.func(isPaintElseUnpaint);
 	}
@@ -1861,14 +1876,14 @@ var paintOval2d = (centerX, centerY, aX, aY, bX, bY, color, isFillElseOutline)=>
   ctx.arc(0, 0, 1, 0, Math.PI*2);
 
   if(isFillElseOutline){
-    ctx.fillStyle = color;
-    ctx.fill();
+	ctx.fillStyle = color;
+	ctx.fill();
   }else{
-    const det = aX*bY - aY*bX;           // area scale (Jacobian)
-    const s = Math.sqrt(Math.max(1e-9, Math.abs(det)));
-    ctx.lineWidth = 2 / s;               // roughly constant screen stroke
-    ctx.strokeStyle = color;
-    ctx.stroke();
+	const det = aX*bY - aY*bX;		   // area scale (Jacobian)
+	const s = Math.sqrt(Math.max(1e-9, Math.abs(det)));
+	ctx.lineWidth = 2 / s;			   // roughly constant screen stroke
+	ctx.strokeStyle = color;
+	ctx.stroke();
   }
   ctx.restore();
 };
@@ -1960,7 +1975,7 @@ var paintBall = (xyz, radius, color, isFillElseOutline, isConePlaneIntersection)
 	// clip / reject
 	if(cz <= 0 || cz < drawDistanceMin || drawDistanceMax < cz) return null;
 
-	const d = cubeSize;               // image plane z = d, must match project()
+	const d = cubeSize;			   // image plane z = d, must match project()
 	const L = Math.hypot(cx, cy, cz); // ||C||
 	if(L < 1e-9) return null;
 
@@ -2042,14 +2057,14 @@ var conePlaneIntersection = (xyz, radius)=>{
   // clip / reject
   if (cz <= 0 || cz < drawDistanceMin || drawDistanceMax < cz) return null;
 
-  const d = cubeSize;               // must match project()
+  const d = cubeSize;			   // must match project()
   const L = Math.hypot(cx, cy, cz); // ||C||
   if (L < 1e-9) return null;
 
   // camera inside the sphere → huge fill
   if (radius >= L*0.999999){
-    const [px,py] = project(xyz);
-    return [px, py, 1e6, 0, 0, 1e6];
+	const [px,py] = project(xyz);
+	return [px, py, 1e6, 0, 0, 1e6];
   }
 
   // tangent-cone parameters
@@ -2074,12 +2089,12 @@ var conePlaneIntersection = (xyz, radius)=>{
 
   // translate to center → uᵀ Q u = k
   const Fc = (A*x0*x0 + B*x0*y0 + C*y0*y0 + D*x0 + E*y0 + F);
-  let k = -Fc;                       // for an ellipse, k and the eigenvalues share the same sign
+  let k = -Fc;					   // for an ellipse, k and the eigenvalues share the same sign
 
   // eigen-decompose Q (no Cholesky; works for either sign)
   const trace = A + C;
   const diff  = A - C;
-  const disc  = Math.hypot(diff, B);       // sqrt((A-C)^2 + B^2)
+  const disc  = Math.hypot(diff, B);	   // sqrt((A-C)^2 + B^2)
   let   lam1  = (trace + disc)/2;
   let   lam2  = (trace - disc)/2;
 
@@ -2087,8 +2102,8 @@ var conePlaneIntersection = (xyz, radius)=>{
 
   // ensure radii² = k/λ are positive; if not, flip both sides
   if ((k/lam1) <= 0 || (k/lam2) <= 0){
-    k = -k; lam1 = -lam1; lam2 = -lam2;
-    if ((k/lam1) <= 0 || (k/lam2) <= 0) return null; // truly non-elliptic (shouldn't happen for visible spheres)
+	k = -k; lam1 = -lam1; lam2 = -lam2;
+	if ((k/lam1) <= 0 || (k/lam2) <= 0) return null; // truly non-elliptic (shouldn't happen for visible spheres)
   }
 
   const t1 = Math.sqrt(k/lam1);   // semi-axis length along eigenvector 1 (plane coords, y-up)
@@ -2163,7 +2178,14 @@ function draw(){
 	let targ = targetQ(); //in front of camera, grid aligned.
 	let fill = false; //circle/oval outline
 	let isConePlaneIntersection = dom('isConePlaneIntersection').checked;
-	paintBall(targ.toCartesian(), ballRadius, '#ffffff', fill, isConePlaneIntersection); //paint white circle 3d cursor in front of cam
+	let brush = selectedPaintbrush();
+	if(brush.balls){ //display white circles of actual shape of paintbrush
+		for(let ballQ of brush.balls){
+			paintBall(targ.add(ballQ).toCartesian(), ballRadius, '#ffffff', fill, isConePlaneIntersection);
+		}
+	}else{ //display others as: paint white circle 3d cursor in front of cam
+		paintBall(targ.toCartesian(), ballRadius, '#ffffff', fill, isConePlaneIntersection);
+	}
 
 	
 	/*
@@ -2370,6 +2392,7 @@ const timeOffset_ = performance.timing.navigationStart;
 const time = ()=>((timeOffset_+performance.now())*.001);
 
 window.onload = ()=>{
+	populatePaintbrushSelect();
 	copyWorldStateToUiControls();
 	paintXYZColor([0,0,1],randColor());
 };
@@ -2416,8 +2439,7 @@ var turnSpd = .8;
 //var turnSpd = .6;
 
 var selectedPaintbrush = ()=>{
-	let brushes = Object.values(paintbrushes);
-	return brushes[randInt(brushes.length)]; //FIXME
+	return paintbrushes[selPaintbrushName()];
 };
 
 function updateFromGamepad(dt){
@@ -2463,7 +2485,7 @@ function updateFromGamepad(dt){
 		//toggleVolumeInFrontOfCam(12.3);
 	//}
 	if(buttonLb ^ buttonRb){
-		paint(targetQ(), selectedPaintbrush(), buttonRb);
+		paint(targetQ(), selectedPaintbrush(), buttonRb); //buttonRb paints, buttonLb unpaints
 	}
 	
 	//viewChanged = true; //TODO only if changed camPos or camQ
@@ -2586,6 +2608,22 @@ function normalizeQuaternion(q){
 	const ln= Math.hypot(q[0],q[1],q[2],q[3]);
 	if(ln<1e-9) return [0,0,0,1];
 	return [q[0]/ln, q[1]/ln, q[2]/ln, q[3]/ln];
+}
+
+function populatePaintbrushSelect(){
+	const sel = document.getElementById('paintbrushSelect');
+	if(!sel) return;					   // HTML not yet in DOM
+
+	// add one <option> per paintbrush key
+	Object.keys(paintbrushes).forEach(name=>{
+		const opt = document.createElement('option');
+		opt.value = name;
+		opt.textContent = name;
+		sel.appendChild(opt);
+	});
+
+  // highlight current choice
+  sel.value = selPaintbrushName;
 }
 
 //END: 2025-7-28+ copying some camera/gamepad code from bellsack236 under MIT license.
