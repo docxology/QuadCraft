@@ -46,6 +46,7 @@ flowchart TD
     Mathematics --> TetrahedralGeometry
 
     Development --> TechnicalArchitecture
+    Development --> JavaScriptImplementation
 ```
 
 ## Documentation Contents
@@ -73,6 +74,14 @@ flowchart TD
 ### Development
 
 - [Technical Architecture](development/architecture.md) - Detailed technical architecture, systems, and implementation details.
+- **JavaScript Implementation Guide** (`docs/development/javascript_implementation_guide.md`) - Complete guide to the browser-based JavaScript implementation (`QuadrayGrid4.html`).
+- **Cone-Plane Intersection Rendering** (`docs/development/cone_plane_intersection_rendering.md`) - Advanced mathematical rendering technique for accurate sphere visualization.
+- **CCP Ball Grid System** (`docs/development/ccp_ball_grid_system.md`) - Close-Centered Packing optimization for efficient ball management.
+- **Gamepad Integration Guide** (`docs/development/gamepad_integration_guide.md`) - Comprehensive controller support with advanced features.
+- **Paintbrush System** (`docs/development/paintbrush_system.md`) - Customizable pattern painting system with real-time code evaluation.
+- **JavaScript Performance Optimization** (`docs/development/javascript_performance_optimization.md`) - Browser-specific optimization techniques.
+- **Real-time Code Evaluation** (`docs/development/realtime_code_evaluation.md`) - Dynamic JavaScript execution system.
+- **Quaternion Camera System** (`docs/development/quaternion_camera_system.md`) - Advanced 3D camera with smooth rotation and movement.
 
 ## How to Use This Documentation
 
@@ -113,6 +122,10 @@ The following documentation sections are planned for future development:
 - Multiplayer Systems
 - Asset Creation Guide
 - Advanced Building Techniques
+- **JavaScript Implementation Guide** (for QuadrayGrid4.html and similar implementations)
+- **Cone-Plane Intersection Rendering** (documenting the advanced rendering techniques)
+- **Gamepad Integration Guide** (documenting controller support and quaternion camera)
+- **CCP Ball Grid System** (documenting the Close-Centered Packing optimization)
 
 ## License
 

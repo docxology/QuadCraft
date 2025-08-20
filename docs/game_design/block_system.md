@@ -147,6 +147,9 @@ Blocks with special functions:
 - **Storage**: Blocks that can contain items or materials
 - **Transportation**: Blocks that assist with player or item movement
 - **Liquid**: Blocks with fluid properties that flow and fill spaces
+- **Balls**: Spherical objects that can be placed and interact with the CCP Grid system
+- **Octahedrons**: Complex 8-faced polyhedra formed from tetrahedral building blocks
+- **Tetrahedrons**: Basic tetrahedral building blocks in two orientations (Z and X variants)
 
 ### Special Block Types
 

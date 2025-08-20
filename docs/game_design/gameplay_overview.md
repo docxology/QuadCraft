@@ -61,10 +61,14 @@ graph TD
 
 Creative mode focuses on free building and experimentation with tetrahedral structures. Players have:
 - Unlimited resources
-- Flight capabilities
+- Flight capabilities with both quaternion and traditional camera systems
 - No environmental hazards
-- Access to all block types
-- Ability to save and share creations
+- Access to all block types including octahedrons and tetrahedrons
+- Advanced paintbrush system with customizable patterns
+- Real-time JavaScript code evaluation for custom paintbrushes
+- Ability to save and share creations to local storage or files
+- CCP Ball Grid optimization for handling large numbers of balls
+- Cone-Plane Intersection rendering for accurate ball visualization
 
 ### Exploration Mode
 

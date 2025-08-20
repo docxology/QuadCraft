@@ -521,6 +521,79 @@ Mobile control features:
 - Auto-jump option
 - Motion control options
 
+## Advanced Input Features
+
+The JavaScript implementation includes sophisticated input handling systems:
+
+```mermaid
+graph TD
+    subgraph "Advanced Input Features"
+        GamepadIntegration["Gamepad Integration"]
+        MouseControls["Mouse Controls"]
+        TouchSupport["Touch Support"]
+        InputDebugging["Input Debugging"]
+        DeviceSupport["Multi-Device Support"]
+    end
+
+    GamepadIntegration --> AnalogControls["Analog Controls"]
+    GamepadIntegration --> ButtonMapping["Button Mapping"]
+    GamepadIntegration --> DeadZoneHandling["Dead Zone Handling"]
+
+    MouseControls --> DragRotation["Drag Rotation"]
+    MouseControls --> MultiButton["Multi-Button Support"]
+    MouseControls --> Sensitivity["Sensitivity Adjustment"]
+
+    TouchSupport --> VirtualJoysticks["Virtual Joysticks"]
+    TouchSupport --> GestureRecognition["Gesture Recognition"]
+
+    InputDebugging --> VisualFeedback["Visual Feedback"]
+    InputDebugging --> RealTimeMonitoring["Real-time Monitoring"]
+
+    DeviceSupport --> SimultaneousInput["Simultaneous Input"]
+    DeviceSupport --> DevicePrioritization["Device Prioritization"]
+```
+
+### Gamepad Integration Features
+
+- **Analog Controls**: Full support for analog sticks and triggers with dead zone handling
+- **Button Mapping**: Comprehensive button mapping for all gamepad buttons
+- **Haptic Feedback**: Vibration feedback for actions and events
+- **Dual Camera Control**: Separate sticks for movement and camera rotation
+- **Trigger Sensitivity**: Configurable sensitivity for analog triggers
+- **Adaptive Dead Zones**: Dynamic dead zone adjustment based on controller type
+
+### Mouse Control Enhancements
+
+- **Three-Button Support**: Left, right, and middle mouse button support
+- **Drag and Rotation**: Advanced mouse dragging for camera control
+- **Multi-Button Combinations**: Support for multiple button combinations
+- **Sensitivity Calibration**: Real-time sensitivity adjustment
+- **Cursor State Management**: Proper cursor state management for different modes
+
+### Touch and Mobile Features
+
+- **Virtual Joystick System**: On-screen virtual joysticks for movement and camera
+- **Gesture Recognition**: Touch gesture support for camera control
+- **Multi-Touch Support**: Support for multiple simultaneous touch points
+- **Responsive Layout**: Adaptive UI layout for different screen sizes
+- **Touch Feedback**: Visual and haptic feedback for touch interactions
+
+### Input Debugging and Monitoring
+
+- **Real-time Input Display**: Visual feedback showing current input states
+- **Button State Monitoring**: Real-time monitoring of all input device states
+- **Input Event Logging**: Detailed logging of input events for debugging
+- **Performance Metrics**: Input processing performance monitoring
+- **Device Detection**: Automatic detection and configuration of input devices
+
+### Multi-Device Input Support
+
+- **Simultaneous Device Usage**: Support for using multiple input devices simultaneously
+- **Device Prioritization**: Configurable priority system for conflicting inputs
+- **Seamless Switching**: Smooth transitions between different input devices
+- **Profile Management**: Input profiles for different device combinations
+- **Accessibility Options**: Enhanced support for accessibility devices
+
 ## Navigation Challenges in Tetrahedral Space
 
 Tetrahedral space presents unique navigation challenges:
