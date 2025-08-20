@@ -20,18 +20,18 @@
 	</b>
 	<br>	
 	<table border=2><tr><td valign="top">
-	<select id="paintbrushSelect"
-			size="8"			<!-- 8 items → no scrollbar -->
-			style="min-width: 170px"
-			onchange="selPaintbrushName=this.value">
-	  <!-- options filled by JS -->
-	</select>
-	</td></td>
+		<select id="paintbrushSelect"
+				size="8"			<!-- 8 items → no scrollbar -->
+				style="min-width: 170px"
+				onchange="selPaintbrushName=this.value">
+			<!-- options filled by JS -->
+		</select>
+	</td><td>
 	<input type=button value="Example code A" onclick="dom('textBoxToEval').innerHTML = 'fillGridByFunc(selq, 5, q=>{\n	return q.toCartesian()[0]==0;\n});';">
 	<input type=button value="B" onclick="dom('textBoxToEval').innerHTML = 'fillGridByFunc(selq, 8, q=>{\n	return q.toCartesian()[0]>1.5;\n});';">
 	<input type=button value="C" onclick="dom('textBoxToEval').innerHTML = 'AddColoredDots(gridDotsNear(selq,5),\'green\');';">
 	<input type=button value="D" onclick="dom('textBoxToEval').innerHTML = 'fillGridByFunc(selq, 5, q=>{\n	return Math.random()<.3;\n});';">
-	<input type=button value="E" onclick="dom('textBoxToEval').innerHTML = 'fillGridByFunc(selq, 14, q=>{\n  let xyz = q.toCartesian();\n  let x = xyz[0], y = xyz[1], z = xyz[2];\n  let xyDist = Math.hypot(x*x,y*y);\n  let yzDist = Math.hypot(y*y,z*z);\n  let xzDist = Math.hypot(x*x,z*z);\n  let xyzDist = Math.hypot(x*x,y*y,z*z);\n  return xyzDist<12 && xyDist>3 && yzDist>3 && xzDist>3;\n});';">
+	<input type=button value="E" onclick="dom('textBoxToEval').innerHTML = 'fillGridByFunc(selq, 14, q=>{\n	let xyz = q.toCartesian();\n	let x = xyz[0], y = xyz[1], z = xyz[2];\n	let xyDist = Math.hypot(x*x,y*y);\n	let yzDist = Math.hypot(y*y,z*z);\n	let xzDist = Math.hypot(x*x,z*z);\n	let xyzDist = Math.hypot(x*x,y*y,z*z);\n	return xyzDist<12 && xyDist>3 && yzDist>3 && xzDist>3;\n});';">
 	<input type=button value="X" title="empty text box" onclick="dom('textBoxToEval').innerHTML = '';">
 	<br>
 <textarea id=textBoxToEval rows=10 cols=40>
@@ -79,9 +79,9 @@ fillGridByFunc(selq, 5, q=>{
 		<input type=button onclick="SimKeyPress('Shift');" value="Shift (toggle grid dots)">
 		<input type=button onclick="SimKeyPresses('a a a a d d d d q q q q e eee');" value="example octahedrons and tetrahedrons">
 		<input type=button value="ClearShapes" onclick="ClearShapes();"></input>
+		<br>
 		<input type="checkbox" id="chkQuaternionCamera" checked><label for="chkQuaternionCamera" title="2025-7-28+ upgrading the camera code to use camPos and camQ instead of zoom, angleX, etc. This should fix the distortion of 3d positions at some angles and positions and allow you to fly through it with a gamepad with 2 analog triggers and 2 analog joysticks, or mouse.">quaternion camera (gamepad or mouse)</label>
 		<input type="checkbox" id="isConePlaneIntersection" checked><label for="isConePlaneIntersection" title="use this graphics mode to paint an oval instead of circle so the balls touch eachother on screen if they're touching in 3d.">isConePlaneIntersection</label>
-		<br>
 		<input type="checkbox" id="isCcpBallGrid" checked><label for="isCcpBallGrid" title="CCPBallGrid class is an optimization to store a volume of CCP aligned balls as CCPBallRange objects so costs 2d surface instead of 3d volume.">isCcpBallGrid</label>
 		<br>
 		<input type=button onclick="SimKeyPress('z');" value="'z' (tog tetrahedron Z)">
@@ -226,13 +226,13 @@ class Quadray{
 	Copy
 	Edit
 	toScaledCartesian() {
-	  // exact integer lattice coords (unit spacing)
-	  return this.toRawCartesian();
+		// exact integer lattice coords (unit spacing)
+		return this.toRawCartesian();
 	}
 
 	static fromScaledCartesian([x, y, z]) {
-	  // exact inverse on the CCP lattice (x,y,z should be integers of same parity)
-	  return Quadray.fromRawCartesian([x, y, z]);
+		// exact inverse on the CCP lattice (x,y,z should be integers of same parity)
+		return Quadray.fromRawCartesian([x, y, z]);
 	}
 	]]]
 	
@@ -309,10 +309,10 @@ class Quadray{
 		return new Quadray(a, b, c, d).normalized();
 	}*/
 	static fromRawCartesian([x, y, z]){
-		const a = (Math.max(0,  x) + Math.max(0,  y) + Math.max(0,  z)) / 2;
-		const b = (Math.max(0, -x) + Math.max(0, -y) + Math.max(0,  z)) / 2;
-		const c = (Math.max(0, -x) + Math.max(0,  y) + Math.max(0, -z)) / 2;
-		const d = (Math.max(0,  x) + Math.max(0, -y) + Math.max(0, -z)) / 2;
+		const a = (Math.max(0,	x) + Math.max(0,	y) + Math.max(0,	z)) / 2;
+		const b = (Math.max(0, -x) + Math.max(0, -y) + Math.max(0,	z)) / 2;
+		const c = (Math.max(0, -x) + Math.max(0,	y) + Math.max(0, -z)) / 2;
+		const d = (Math.max(0,	x) + Math.max(0, -y) + Math.max(0, -z)) / 2;
 		return new Quadray(a, b, c, d).normalized();
 	}
 	
@@ -457,7 +457,7 @@ function nearestCCPRawXyz(xyz){
 
 // Largest even integer ≤ t (works for negatives too).
 function evenFloor(t){
-  return 2 * Math.floor(t / 2);
+	return 2 * Math.floor(t / 2);
 }
 
 
@@ -468,14 +468,48 @@ function evenFloor(t){
 // One immutable run [k0,k1) along D in the (i,j) column
 //class CCPBallRange written by GPT5 2025-8-15. TODO test.
 class CCPBallRange {
-  constructor(i, j, k0, k1){			// k1 is exclusive
-	this.i  = i|0; this.j  = j|0;
-	this.k0 = k0|0; this.k1 = k1|0;
-	if (this.k1 < this.k0) [this.k0, this.k1] = [this.k1, this.k0];
-	Object.freeze(this);
-  }
-  get size(){ return this.k1 - this.k0; }
-  contains(i,j,k){ return (i===this.i && j===this.j && this.k0 <= k && k < this.k1); }
+	constructor(i, j, k0, k1){			// k1 is exclusive
+		this.i	= i|0; this.j	= j|0;
+		this.k0 = k0|0; this.k1 = k1|0;
+		if (this.k1 < this.k0) [this.k0, this.k1] = [this.k1, this.k0];
+		Object.freeze(this);
+	}
+	
+	get size(){
+		return this.k1 - this.k0;
+	}
+	
+	contains(i,j,k){
+		return (i===this.i && j===this.j && this.containsK(k));
+	}
+	
+	containsK(k){
+		return this.k0 <= k && k < this.k1;
+	}
+	
+	static singleton(i,j,k){ //range size 1
+		return new CCPBallRange(i,j,k,k+1);
+	}
+	
+	//returns a list of 0, 1, or 2 CCPBallRange's after the edit, to replace this one.
+	removeK(k){
+		if (!this.containsK(k)) return [this];		// not in this range → unchanged
+		if (this.size === 1) return [];			// whole thing disappears
+
+		if (k === this.k0) {
+			// chop off leftmost unit
+			return [ new CCPBallRange(this.i, this.j, this.k0+1, this.k1) ];
+		}
+		if (k === this.k1-1) {
+			// chop off rightmost unit
+			return [ new CCPBallRange(this.i, this.j, this.k0, this.k1-1) ];
+		}
+		// remove in the middle → split into two
+		return [
+			new CCPBallRange(this.i, this.j, this.k0, k),
+			new CCPBallRange(this.i, this.j, k+1, this.k1),
+		];
+	}
 }
 
 // CCP-only sparse grid: (i,j) -> [CCPBallRange,...] (sorted, non-overlapping, coalesced)
@@ -593,150 +627,227 @@ Map
 [[Prototype]]
 : 
 Object
+
+ASD is IJK.
 */
 class CCPBallGrid {
-  constructor(){
-	// Basis (do not flip—these are your CCP axes)
-	this.QA = Directions.a; // Q(0,1,-1,0)
-	this.QS = Directions.s; // Q(1,0,0,-1)
-	this.QD = Directions.d; // Q(0,1,0,-1)
-	this.cols = new Map();  // key "i,j" -> Array<CCPBallRange>
-  }
-  
+	constructor(){
+		// Basis (do not flip—these are your CCP axes)
+		this.QA = Directions.a; // Q(0,1,-1,0)
+		this.QS = Directions.s; // Q(1,0,0,-1)
+		this.QD = Directions.d; // Q(0,1,0,-1)
+		this.cols = new Map();	// key "i,j" -> Array<CCPBallRange>
+	}
+	
 	// add inside CCPBallGrid (e.g., right after constructor)
 	NBR = [
-	  [ 1,  0,  0], [-1,  0,  0],
-	  [ 0,  1,  0], [ 0, -1,  0],
-	  [ 0,  0,  1], [ 0,  0, -1],
-	  [-1,  0,  1], [ 1,  0, -1],
-	  [ 0, -1,  1], [ 0,  1, -1],
-	  [ 1,  1, -1], [-1, -1,  1],
+		[ 1,	0,	0], [-1,	0,	0],
+		[ 0,	1,	0], [ 0, -1,	0],
+		[ 0,	0,	1], [ 0,	0, -1],
+		[-1,	0,	1], [ 1,	0, -1],
+		[ 0, -1,	1], [ 0,	1, -1],
+		[ 1,	1, -1], [-1, -1,	1],
 	];
 
-	// exact “solid & touches empty” rule
-	*surfaceQuadrays(){
-	  for (const [key, list] of this.cols.entries()){
-		if (!list.length) continue;
-		const [iStr, jStr] = key.split(',');
-		const i = +iStr, j = +jStr;
+	//get list of quadrays on the surface, excluding those with neighborCount 12.
+	surfaceQuadrays(){
+		let retList = [];
+		for (const [key, list] of this.cols.entries()){
+			if (!list.length) continue;
+			const [iStr, jStr] = key.split(',');
+			const i = +iStr, j = +jStr;
 
-		for (const r of list){
-		  for (let k = r.k0; k < r.k1; k++){
-			// solid here; check 12 neighbors
-			let exposed = false;
-			for (let t=0; t<this.NBR.length; t++){
-			  const di = i + this.NBR[t][0];
-			  const dj = j + this.NBR[t][1];
-			  const dk = k + this.NBR[t][2];
-			  if (!this.isSolid(di, dj, dk)){ exposed = true; break; }
+			for (const r of list){ //r is a CCPBallRange
+				for (let k = r.k0; k < r.k1; k++){
+					// solid here; check 12 neighbors
+					/*let exposed = false;
+					for (let t=0; t<this.NBR.length; t++){
+						const di = i + this.NBR[t][0];
+						const dj = j + this.NBR[t][1];
+						const dk = k + this.NBR[t][2];
+						if (!this.isSolid(di, dj, dk)){ exposed = true; break; }
+					}
+					if(exposed){
+						retList.push(this.fromASD(i,j,k));
+					}*/
+					if(this.neighborCount(i,j,k)<12){
+						retList.push(this.fromASD(i,j,k));
+					}
+				}
 			}
-			if (exposed) yield this.fromASD(i,j,k);
-		  }
 		}
-	  }
+		return retList; //quadrays
 	}
 
 
-  // ---- Quadray <-> (i,j,k) on the CCP ASD lattice ----
-  toASD(q){
-	const {a,b,c,d} = q;
-	const k = ((b - d) - (a - c)) / 2;
-	const i = ((b - c) - k) / 2;
-	const j = ((a - d) - k) / 2;
-	return [i|0, j|0, k|0];
-  }
-  fromASD(i,j,k){
-	return this.QA.mul(i).add(this.QS.mul(j)).add(this.QD.mul(k)).normalized();
-  }
-
-  // ---- sparse column storage helpers ----
-  _key(i,j){ return ((i|0)+","+(j|0)); }
-  _get(i,j){ return this.cols.get(this._key(i,j)) || []; }
-  _set(i,j,arr){ const k=this._key(i,j); arr.length? this.cols.set(k,arr) : this.cols.delete(k); }
-
-  // lower_bound by k0
-  _lbK0(list, k){
-	let lo=0, hi=list.length;
-	while (lo<hi){ const m=(lo+hi)>>1; (list[m].k0 < k) ? lo=m+1 : hi=m; }
-	return lo;
-  }
-
-  // public query
-  isSolid(i,j,k){
-	const list = this._get(i,j);
-	// lower_bound on k1
-	let lo=0, hi=list.length;
-	while (lo<hi){ const m=(lo+hi)>>1; (list[m].k1 <= k) ? lo=m+1 : hi=m; }
-	if (lo>=list.length) return false;
-	const r = list[lo];
-	return (r.k0 <= k && k < r.k1);
-  }
-
-  // ---- add/remove a single ball (Quadray) ----
-  addQuadray(q){
-	const [i,j,k] = this.toASD(q);
-	let list = this._get(i,j);
-	// Already solid? (no-op)
-	if (this.isSolid(i,j,k)) return;
-
-	// Find neighbors by k0 to decide merge cases
-	const idx  = this._lbK0(list, k+1);	 // first with k0 >= k+1
-	const prev = (idx>0 ? list[idx-1] : null);
-	const next = (idx<list.length ? list[idx] : null);
-
-	const touchL = !!(prev && prev.k1 === k);	 // [.. prev.k1) meets [k,k+1)
-	const touchR = !!(next && next.k0 === k+1);   // [k,k+1) meets [next.k0 ..)
-
-	const out = list.slice(0, Math.max(0, idx-1)); // up to prev (excluded)
-	if (touchL && touchR){
-	  // merge prev + [k,k+1) + next
-	  out.push(new CCPBallRange(i,j, prev.k0, next.k1));
-	  // skip 'next'
-	  for (let t=idx+1; t<list.length; t++) out.push(list[t]);
-	} else if (touchL){
-	  // extend prev right by 1
-	  out.push(new CCPBallRange(i,j, prev.k0, prev.k1+1));
-	  for (let t=idx; t<list.length; t++) out.push(list[t]);
-	} else if (touchR){
-	  // extend next left by 1
-	  out.push(new CCPBallRange(i,j, k, next.k1));
-	  for (let t=idx+1; t<list.length; t++) out.push(list[t]);
-	} else {
-	  // insert new singleton [k,k+1)
-	  out.push(new CCPBallRange(i,j, k, k+1));
-	  for (let t=idx; t<list.length; t++) out.push(list[t]);
+	// ---- Quadray <-> (i,j,k) on the CCP ASD lattice ----
+	toASD(q){
+		const {a,b,c,d} = q;
+		const k = ((b - d) - (a - c)) / 2;
+		const i = ((b - c) - k) / 2;
+		const j = ((a - d) - k) / 2;
+		return [i|0, j|0, k|0];
 	}
-	this._set(i,j,out);
-  }
-
-  removeQuadray(q){
-	const [i,j,k] = this.toASD(q);
-	let list = this._get(i,j);
-	if (!list.length) return;
-
-	// Find range that contains k (by k1 lower_bound)
-	let lo=0, hi=list.length;
-	while (lo<hi){ const m=(lo+hi)>>1; (list[m].k1 <= k) ? lo=m+1 : hi=m; }
-	if (lo>=list.length) return;
-	const r = list[lo];
-	if (!(r.k0 <= k && k < r.k1)) return;  // not solid (no-op)
-
-	const out = list.slice(0, lo);		 // keep ranges before r
-	// Cases: remove singleton, shrink left/right, or split into two
-	if (r.k0 === k && r.k1 === k+1){
-	  // drop r entirely
-	} else if (k === r.k0){
-	  out.push(new CCPBallRange(i,j, k+1, r.k1));
-	} else if (k === r.k1-1){
-	  out.push(new CCPBallRange(i,j, r.k0, r.k1-1));
-	} else {
-	  out.push(new CCPBallRange(i,j, r.k0, k));
-	  out.push(new CCPBallRange(i,j, k+1, r.k1));
+	fromASD(i,j,k){
+		return this.QA.mul(i).add(this.QS.mul(j)).add(this.QD.mul(k)).normalized();
 	}
-	// append the rest
-	for (let t=lo+1; t<list.length; t++) out.push(list[t]);
-	this._set(i,j,out);
-  }
+
+	// ---- sparse column storage helpers ----
+	_key(i,j){ return ((i|0)+","+(j|0)); }
+	_get(i,j){ return this.cols.get(this._key(i,j)) || []; }
+	_set(i,j,arr){ const k=this._key(i,j); arr.length? this.cols.set(k,arr) : this.cols.delete(k); }
+
+	// lower_bound by k0
+	_lbK0(list, k){
+		let lo=0, hi=list.length;
+		while (lo<hi){ const m=(lo+hi)>>1; (list[m].k0 < k) ? lo=m+1 : hi=m; }
+		return lo;
+	}
+
+	/*//assumes sorted, but its not: // public query
+	isSolid(i,j,k){
+		const list = this._get(i,j);
+		// lower_bound on k1
+		let lo=0, hi=list.length;
+		while (lo<hi){ const m=(lo+hi)>>1; (list[m].k1 <= k) ? lo=m+1 : hi=m; }
+		if (lo>=list.length) return false;
+		const r = list[lo];
+		return (r.k0 <= k && k < r.k1);
+	}*/
+	/** True if unit (i,j,k) currently contains a ball.
+	*  Works even when the column list is unsorted or overlapping.
+	*/
+	isSolid(i,j,k){
+		const list = this._get(i,j);
+		for(const r of list){					// brute-force scan
+			if(r.k0 <= k && k < r.k1) return true;
+		}
+		return false;
+	}
+
+	
+	//Return how many of the 12 CCP-adjacent sites contain a ball.
+	neighborCount(i,j,k){
+		let n = 0;
+		for (const [di,dj,dk] of this.NBR){
+			if (this.isSolid(i+di, j+dj, k+dk)) n++;
+		}
+		return n;						// 0 … 12
+	}
+	
+	shadeForNeighborCount(count){
+		// digit = 3 … 15  (0x3 … 0xF)   →  "#333333" … "#ffffff"
+		const d = (3 + count).toString(16);   // "3" … "f"
+		return '#' + d.repeat(6);
+	}
+	
+	/** This is called after modifying a list.
+	It could be alot faster but its not the bottleneck so leave that for later if ever.
+	Rebuild column (i,j) by brute‑forcing with isSolid; no Sets, no sort.
+	Uses current ranges at (i,j) to define scan bounds, then rewrites that column.
+	i is in units of Directions.a, and j in units of Directions.s, and k in units of Directions.d.
+	*/
+	rebuildListIJ(i,j){
+		const list = this._get(i,j);
+		if (!list || list.length === 0){
+			this._set(i,j,[]);
+			return [];
+		}
+
+		// find scan bounds
+		let minK = Infinity, maxK = -Infinity;
+		for (const r of list){
+			if (r.k0 < minK) minK = r.k0;
+			if (r.k1-1 > maxK) maxK = r.k1-1;
+		}
+		if (!isFinite(minK)){
+			this._set(i,j,[]);
+			return [];
+		}
+
+		// sweep k=minK..maxK using isSolid and build contiguous runs
+		const out = [];
+		let runStart = null;
+
+		for (let k=minK; k<=maxK; k++){
+			if (this.isSolid(i,j,k)){
+				if (runStart === null) runStart = k;
+			}else if (runStart !== null){
+				out.push(new CCPBallRange(i,j, runStart, k));
+				runStart = null;
+			}
+		}
+		if (runStart !== null){
+			out.push(new CCPBallRange(i,j, runStart, maxK+1));
+		}
+
+		this._set(i,j,out);
+		return out;
+	}
+
+	// ───────── add/remove a single ball ─────────
+	addQuadray(q){
+		const [i,j,k] = this.toASD(q);
+		if (this.isSolid(i,j,k)) return;						// already there
+
+		// append singleton then normalise
+		const list = this._get(i,j).slice();
+		list.push( CCPBallRange.singleton(i,j,k) );
+		this._set(i,j,list);
+		this.rebuildListIJ(i,j);
+	}
+
+	removeQuadray(q){
+		const [i,j,k] = this.toASD(q);
+		if (!this.isSolid(i,j,k)) return;						// nothing to do
+
+		// let each range split itself, then normalise
+		let next = [];
+		for (const r of this._get(i,j)) next.push(...r.removeK(k));
+		this._set(i,j,next);
+		this.rebuildListIJ(i,j);
+	}
+	
+	clear(){
+		this.cols.clear();
+	}
+	
+		//load 1 i_j list of state, alternating k0 k1 k0 k1...
+	loadIJ(i,j,kEnds){
+		const list=[];
+		for(let t=0;t<kEnds.length;t+=2){
+			list.push(new CCPBallRange(i,j,kEnds[t],kEnds[t+1]));
+		}
+		this._set(i,j,list);
+		this.rebuildListIJ(i,j);	// coalesce once
+	}
+
+	saveIJ(i,j){
+		const out=[];
+		for(const r of this._get(i,j)) out.push(r.k0,r.k1);
+		return out;					// [k0,k1,k0,k1,…]
+	}
+
+	//after clear() or as diffs from whats already loaded, load what comes out of save().
+	load(map){
+		this.clear();
+		for(const key in map){
+			const [i,j]=key.split(',').map(Number);
+			this.loadIJ(i,j,map[key]);
+		}
+	}
+
+
+	//get jsonable {} of this state, you can use with loadIJ
+	save(){
+		const obj=Object.create(null);	// { "i,j": [k0,k1,…], … }
+		for(const [key] of this.cols){
+			const [i,j]=key.split(',').map(Number);
+			obj[key]=this.saveIJ(i,j);
+		}
+		return obj;
+	}
+
 }
 
 
@@ -790,7 +901,7 @@ class Tri{
 	];
 };*/
 /*var oct6CornersAtQuadray = q=>{ //from gpt-o3 2025-8-4
-	let A = CoreDirections[0].Neg();   // same as before
+	let A = CoreDirections[0].Neg();	 // same as before
 	// let B = CoreDirections[4].Neg(); // ❌ old duplicate path
 	let B = CoreDirections[1];		 // ✅ identical to the old result
 
@@ -881,7 +992,7 @@ var ToggleGameTri = tri=>{
 };
 
 //var selPaintbrushName = 'oneBall';
-var selPaintbrushName = ()=>(dom('paintbrushSelect').value || 'oneBall');
+var selPaintbrushName = ()=>(dom('paintbrushSelect').value || 'repeatD10');
 
 //This contains all octahedrons and tetrahedrons as 1 quadray and 1 group name each.
 //grid.oct is a SEt if q is a quadray whose bottom corner is q. Theres 6 corners of it.
@@ -1038,10 +1149,11 @@ const ballRadius = 1;
 //These are created again each graphics/draw cycle (about 1/60 second), not stored between that.
 //Tri (triangle) with type 'tri', or Quadray with type 'QGridDot' or 'QDot' or 'ball'.
 class Drawable{
-	constructor(type,obj,xyz){
+	constructor(type,obj,xyz,color=null){
 		this.type = type;			//'ball'|'tri' (later 'dot'…)
 		this.obj = obj;			//Quadray or Tri
 		this.xyz = xyz;			//world-space [x,y,z]
+		this.color = color; //if nonnull, overrides color at quadray etc.
 		this.depth = dotProdOfXYZAlongCamForward(xyz);	//bigger = farther
 	}
 	draw(){ //on canvas
@@ -1049,7 +1161,9 @@ class Drawable{
 		if(this.type==='ball'){
 			let fill = true;
 			let isConePlaneIntersection = dom('isConePlaneIntersection').checked;
-			paintBall(this.xyz, ballRadius, this.obj.color, fill, isConePlaneIntersection);	//throws if !isQuatCam()
+			//paintBall(this.xyz, ballRadius, this.obj.color, fill, isConePlaneIntersection);	//throws if !isQuatCam()
+			const clr = this.color ?? this.obj.color;   // <-- new
+			paintBall(this.xyz, ballRadius, clr, fill, isConePlaneIntersection);
 		}else if(this.type==='QGridDot' || this.type==='QDot'){
 			//QGridDot displays as blue instead of its own color
 			let color = this.type==='QDot' ? this.obj.color : 'blue';
@@ -1073,13 +1187,38 @@ class Drawable{
 
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
-canvas.width = window.innerWidth;
-canvas.height = window.innerHeight;
+//canvas.width = window.innerWidth;
+//canvas.height = window.innerHeight;
 
 // mouse/drag/zoom/rotate setup
-let offsetX = canvas.width / 2;
-let offsetY = canvas.height / 2;
+//let offsetX = canvas.width / 2;
+//let offsetY = canvas.height / 2;
 let drag = false, rotateDrag = false, lastX = 0, lastY = 0;
+
+/*function resizeCanvas(){
+	console.log('resizeCanvas');
+	const rect = canvas.getBoundingClientRect();			// top-edge under the UI
+	canvas.width	= window.innerWidth;								// full viewport width
+	canvas.height = window.innerHeight - rect.top;		// only the exposed height
+	offsetX = canvas.width / 2;
+	offsetY = canvas.height / 2;
+}*/
+function resizeCanvas(){
+	const rect	 = canvas.getBoundingClientRect();					 // top of canvas below UI
+	const visW	 = window.innerWidth;
+	const visH	 = window.innerHeight - rect.top;						// exposed height
+
+	// same numbers for both the drawing buffer *and* the DOM element
+	canvas.width	= visW;
+	canvas.height = visH;
+	canvas.style.width	= visW + 'px';
+	canvas.style.height = visH + 'px';
+
+	offsetX = canvas.width	/ 2;				// legacy vars for the old camera path
+	offsetY = canvas.height / 2;
+}
+resizeCanvas();												 // run once now
+window.addEventListener('resize', resizeCanvas);	// run on every window resize
 
 let zoom = 1.0;
 let angleX = 0, angleY = 0;
@@ -1113,12 +1252,12 @@ console.log('selq='+selq.toDetailString()); //selq=Q(7.071067811865474,0,0,0) (x
 //will need to scale the 3d checkerboard/parity grid by 1/ROOT2 or is it ROOT2,
 //cuz changing these from ROOT2 to 1.
 /*var CoreDirections = [
-	Q(0,  1, -1,  0),  // from [0, -1, 1]
-	Q(1,  0,  0, -1),  // from [0,  1, 1]
-	Q(0,  1,  0, -1),  // from [-1, 0, 1]
-	Q(1,  0, -1,  0),  // from [1, 0, 1]
-	Q(-1, 0,  0,  1),  // from [0, -1, -1]
-	Q(0, -1, 1,  0),   // from [0, 1, -1]
+	Q(0,	1, -1,	0),	// from [0, -1, 1]
+	Q(1,	0,	0, -1),	// from [0,	1, 1]
+	Q(0,	1,	0, -1),	// from [-1, 0, 1]
+	Q(1,	0, -1,	0),	// from [1, 0, 1]
+	Q(-1, 0,	0,	1),	// from [0, -1, -1]
+	Q(0, -1, 1,	0),	 // from [0, 1, -1]
 ];
 if(CoreDirections[1].normalized() !== CoreDirections[4].Neg().normalized()){
 	Err('CoreDirections[1] !== CoreDirections[4].Neg()');
@@ -1128,10 +1267,10 @@ if(CoreDirections[0].normalized() !== CoreDirections[5].Neg().normalized()){
 }else console.log('Verified buggy duplicate mirror exists: CoreDirections[0] !== CoreDirections[5].Neg() normed.');
 */
 /*var CoreDirections = [
-	Q(0,  1, -1,  0),  // from [0, -1, 1]
-	Q(1,  0,  0, -1),  // from [0,  1, 1]
-	Q(0,  1,  0, -1),  // from [-1, 0, 1]
-	Q(1,  0, -1,  0),  // from [1, 0, 1]
+	Q(0,	1, -1,	0),	// from [0, -1, 1]
+	Q(1,	0,	0, -1),	// from [0,	1, 1]
+	Q(0,	1,	0, -1),	// from [-1, 0, 1]
+	Q(1,	0, -1,	0),	// from [1, 0, 1]
 ];*/
 /*var CoreDirections=[ //from gpt-o3 2025-8-4
 	Q(1,-1,0,0),	// +x –y
@@ -1142,22 +1281,22 @@ if(CoreDirections[0].normalized() !== CoreDirections[5].Neg().normalized()){
 	Q(0,0,1,-1)		// +z –w
 ];*/
 /*var CoreDirections = [ //from gpt-o3 2025-8-4
-	Q(0,  1,-1, 0),   // 0   unchanged
-	Q(1,  0, 0,-1),   // 1
-	Q(0,  1, 0,-1),   // 2
-	Q(1,  0,-1, 0),   // 3
-	//was Q(-1,0,0, 1)  → duplicate of 1
-	Q(1,-1, 0, 0),	// 4  NEW unique dir
+	Q(0,	1,-1, 0),	 // 0	 unchanged
+	Q(1,	0, 0,-1),	 // 1
+	Q(0,	1, 0,-1),	 // 2
+	Q(1,	0,-1, 0),	 // 3
+	//was Q(-1,0,0, 1)	→ duplicate of 1
+	Q(1,-1, 0, 0),	// 4	NEW unique dir
 	//was Q( 0,-1,1, 0) → duplicate of 0
-	Q(0, 0, 1,-1)	 // 5  NEW unique dir
+	Q(0, 0, 1,-1)	 // 5	NEW unique dir
 ];*/
 var CoreDirections = [
-	Q(0,  1,-1, 0),   // 0  (keep)
-	Q(1,  0, 0,-1),   // 1
-	Q(0,  1, 0,-1),   // 2
-	Q(1,  0,-1, 0),   // 3
-	Q(1,-1, 0, 0),	// 4  ← NEW (was −1,0,0,1)
-	Q(0, 0, 1,-1)	 // 5  ← NEW (was  0,-1,1,0)
+	Q(0,	1,-1, 0),	 // 0	(keep)
+	Q(1,	0, 0,-1),	 // 1
+	Q(0,	1, 0,-1),	 // 2
+	Q(1,	0,-1, 0),	 // 3
+	Q(1,-1, 0, 0),	// 4	← NEW (was −1,0,0,1)
+	Q(0, 0, 1,-1)	 // 5	← NEW (was	0,-1,1,0)
 ];
 var CoreDirectionsNormed = CoreDirections.map(x=>x.normalized());
 for(let i=0; i<CoreDirections.length; i++){
@@ -1233,7 +1372,30 @@ var paintbrushes = {
 			Directions.s.add(Directions.s).add(Directions.s), Directions.s.add(Directions.s).add(Directions.s).add(Directions.s)
 		]
 	},
-	distance1: {
+	repeatD3: {
+		balls: [
+			Q(0,0,0,0), Directions.d, Directions.d.add(Directions.d)
+		]
+	},
+	repeatD5: {
+		balls: [
+			Q(0,0,0,0), Directions.d, Directions.d.add(Directions.d),
+			Directions.d.add(Directions.d).add(Directions.d), Directions.d.add(Directions.d).add(Directions.d).add(Directions.d)
+		]
+	},
+	repeatD10: {
+		balls: [
+			Q(0,0,0,0), Directions.d, Directions.d.add(Directions.d),
+			Directions.d.add(Directions.d).add(Directions.d),
+			Directions.d.add(Directions.d).add(Directions.d).add(Directions.d),
+			Directions.d.add(Directions.d).add(Directions.d).add(Directions.d).add(Directions.d),
+			Directions.d.add(Directions.d).add(Directions.d).add(Directions.d).add(Directions.d).add(Directions.d),
+			Directions.d.add(Directions.d).add(Directions.d).add(Directions.d).add(Directions.d).add(Directions.d).add(Directions.d),
+			Directions.d.add(Directions.d).add(Directions.d).add(Directions.d).add(Directions.d).add(Directions.d).add(Directions.d).add(Directions.d),
+			Directions.d.add(Directions.d).add(Directions.d).add(Directions.d).add(Directions.d).add(Directions.d).add(Directions.d).add(Directions.d).add(Directions.d)
+		]
+	},
+	distance0To1_13Balls: {
 		balls: [
 			Q(0,0,0,0), Directions.a, Directions.q,
 			Directions.s, Directions.w,
@@ -1244,7 +1406,7 @@ var paintbrushes = {
 		]
 	},
 	getRandomBallsPaintbrush: {
-		paintbrushNames: ['oneBall', 'repeatA2', 'repeatA3', 'repeatA4', 'repeatA5', 'repeatS5', 'distance1']
+		paintbrushNames: ['oneBall', 'repeatA2', 'repeatA3', 'repeatA4', 'repeatA5', 'repeatS5', 'distance0To1_13Balls']
 	}
 };
 
@@ -1454,8 +1616,11 @@ var xyzInFrontOfCam = dist=>{
 	return Add(camPos, VecMulScalar(calculateForwardVector(camQ),dist));
 };
 
+//var cursor3dDistanceInFrontOfCam = 12.3;
+var cursor3dDistanceInFrontOfCam = 20;
+
 //target quadray in front of camPos along the forward direction of camQ. CCP grid aligned.
-var targetQ = ()=>(quadrayInFrontOfCam(12.3).nearestCCP());
+var targetQ = ()=>(quadrayInFrontOfCam(cursor3dDistanceInFrontOfCam).nearestCCP());
 
 var quadrayInFrontOfCam = dist=>{
 	return Quadray.fromCartesian(xyzInFrontOfCam(dist));
@@ -1868,24 +2033,24 @@ var paintCircle2d = (screenX, screenY, radius, color, isFillElseOutline)=>{
 };
 
 var paintOval2d = (centerX, centerY, aX, aY, bX, bY, color, isFillElseOutline)=>{
-  ctx.save();
-  ctx.translate(centerX, centerY);
-  ctx.transform(aX, aY, bX, bY, 0, 0);   // columns are a, b
+	ctx.save();
+	ctx.translate(centerX, centerY);
+	ctx.transform(aX, aY, bX, bY, 0, 0);	 // columns are a, b
 
-  ctx.beginPath();
-  ctx.arc(0, 0, 1, 0, Math.PI*2);
+	ctx.beginPath();
+	ctx.arc(0, 0, 1, 0, Math.PI*2);
 
-  if(isFillElseOutline){
+	if(isFillElseOutline){
 	ctx.fillStyle = color;
 	ctx.fill();
-  }else{
-	const det = aX*bY - aY*bX;		   // area scale (Jacobian)
+	}else{
+	const det = aX*bY - aY*bX;			 // area scale (Jacobian)
 	const s = Math.sqrt(Math.max(1e-9, Math.abs(det)));
-	ctx.lineWidth = 2 / s;			   // roughly constant screen stroke
+	ctx.lineWidth = 2 / s;				 // roughly constant screen stroke
 	ctx.strokeStyle = color;
 	ctx.stroke();
-  }
-  ctx.restore();
+	}
+	ctx.restore();
 };
 
 
@@ -1951,7 +2116,7 @@ var paintBall = (xyz, radius, color, isFillElseOutline, isConePlaneIntersection)
 	}else{
 		if(err) color = 'red';
 		const ctr = project(xyz);
-		const pr  = radius * cubeSize / cz;
+		const pr	= radius * cubeSize / cz;
 		paintCircle2d(ctr[0], ctr[1], pr, color, isFillElseOutline);
 	}
 };
@@ -1975,7 +2140,7 @@ var paintBall = (xyz, radius, color, isFillElseOutline, isConePlaneIntersection)
 	// clip / reject
 	if(cz <= 0 || cz < drawDistanceMin || drawDistanceMax < cz) return null;
 
-	const d = cubeSize;			   // image plane z = d, must match project()
+	const d = cubeSize;				 // image plane z = d, must match project()
 	const L = Math.hypot(cx, cy, cz); // ||C||
 	if(L < 1e-9) return null;
 
@@ -2003,7 +2168,7 @@ var paintBall = (xyz, radius, color, isFillElseOutline, isConePlaneIntersection)
 
 	// translate to center: uᵀ Q u = k
 	const Fc = (A*x0*x0 + B*x0*y0 + C*y0*y0 + D*x0 + E*y0 + F);
-	const k  = -Fc;
+	const k	= -Fc;
 	if(!(k > 0)) return null;
 
 	// Q SPD: [[A, B/2],[B/2, C]] ; Cholesky Q = L Lᵀ
@@ -2019,19 +2184,19 @@ var paintBall = (xyz, radius, color, isFillElseOutline, isConePlaneIntersection)
 	const invLT21 = 0;
 	const invLT22 = 1 / l22;
 
-	// plane transform T_plane = √k · (Lᵀ)⁻¹  (x-right, y-up)
+	// plane transform T_plane = √k · (Lᵀ)⁻¹	(x-right, y-up)
 	const sK = Math.sqrt(k);
 	const t11 = sK * invLT11;
 	const t12 = sK * invLT12;
-	const t21 = sK * invLT21;  // = 0
+	const t21 = sK * invLT21;	// = 0
 	const t22 = sK * invLT22;
 
 	// plane → screen: Y flip; screen center
-	const centerX = canvas.width/2  + x0;
+	const centerX = canvas.width/2	+ x0;
 	const centerY = canvas.height/2 - y0;
-	const aX =  t11;
-	const aY = -t21;   // 0 but keep form
-	const bX =  t12;
+	const aX =	t11;
+	const aY = -t21;	 // 0 but keep form
+	const bX =	t12;
 	const bY = -t22;
 
 	// quick sanity: finite, non-NaN
@@ -2042,89 +2207,89 @@ var paintBall = (xyz, radius, color, isFillElseOutline, isConePlaneIntersection)
 // --- exact cone∩plane silhouette as a 2D affine ---
 // Returns [centerX, centerY, aX, aY, bX, bY] in screen pixels, or null if not drawable.
 var conePlaneIntersection = (xyz, radius)=>{
-  // camera basis
-  const dx = xyz[0]-camPos[0], dy = xyz[1]-camPos[1], dz = xyz[2]-camPos[2];
-  let f = calculateForwardVector(camQ);
-  let u = calculateUpVector(camQ);
-  let r = cross(f, u); r = normalize(r);
-  u = normalize(cross(r, f));
+	// camera basis
+	const dx = xyz[0]-camPos[0], dy = xyz[1]-camPos[1], dz = xyz[2]-camPos[2];
+	let f = calculateForwardVector(camQ);
+	let u = calculateUpVector(camQ);
+	let r = cross(f, u); r = normalize(r);
+	u = normalize(cross(r, f));
 
-  // sphere center in camera space
-  const cx = dx*r[0] + dy*r[1] + dz*r[2];
-  const cy = dx*u[0] + dy*u[1] + dz*u[2];
-  const cz = dx*f[0] + dy*f[1] + dz*f[2];
+	// sphere center in camera space
+	const cx = dx*r[0] + dy*r[1] + dz*r[2];
+	const cy = dx*u[0] + dy*u[1] + dz*u[2];
+	const cz = dx*f[0] + dy*f[1] + dz*f[2];
 
-  // clip / reject
-  if (cz <= 0 || cz < drawDistanceMin || drawDistanceMax < cz) return null;
+	// clip / reject
+	if (cz <= 0 || cz < drawDistanceMin || drawDistanceMax < cz) return null;
 
-  const d = cubeSize;			   // must match project()
-  const L = Math.hypot(cx, cy, cz); // ||C||
-  if (L < 1e-9) return null;
+	const d = cubeSize;				 // must match project()
+	const L = Math.hypot(cx, cy, cz); // ||C||
+	if (L < 1e-9) return null;
 
-  // camera inside the sphere → huge fill
-  if (radius >= L*0.999999){
+	// camera inside the sphere → huge fill
+	if (radius >= L*0.999999){
 	const [px,py] = project(xyz);
 	return [px, py, 1e6, 0, 0, 1e6];
-  }
+	}
 
-  // tangent-cone parameters
-  const s = radius / L;
-  const cos2 = Math.max(0, 1 - s*s);
-  const ux = cx/L, uy = cy/L, uz = cz/L;
+	// tangent-cone parameters
+	const s = radius / L;
+	const cos2 = Math.max(0, 1 - s*s);
+	const ux = cx/L, uy = cy/L, uz = cz/L;
 
-  // conic on plane z=d: A x² + B xy + C y² + D x + E y + F = 0
-  const A = ux*ux - cos2;
-  const B = 2*ux*uy;
-  const C = uy*uy - cos2;
-  const D = 2*d*ux*uz;
-  const E = 2*d*uy*uz;
-  const F = d*d*(uz*uz - cos2);
+	// conic on plane z=d: A x² + B xy + C y² + D x + E y + F = 0
+	const A = ux*ux - cos2;
+	const B = 2*ux*uy;
+	const C = uy*uy - cos2;
+	const D = 2*d*ux*uz;
+	const E = 2*d*uy*uz;
+	const F = d*d*(uz*uz - cos2);
 
-  // center: solve [2A B; B 2C] [x0;y0] = -[D;E] (use gentle regularization if near-singular)
-  let det = 4*A*C - B*B;
-  if (!isFinite(det)) det = 0;
-  if (Math.abs(det) < 1e-9) det = (det >= 0 ? 1 : -1) * 1e-9; // keep sign to avoid flipping the center wildly
-  const x0 = (B*E - 2*C*D) / det;
-  const y0 = (B*D - 2*A*E) / det;
+	// center: solve [2A B; B 2C] [x0;y0] = -[D;E] (use gentle regularization if near-singular)
+	let det = 4*A*C - B*B;
+	if (!isFinite(det)) det = 0;
+	if (Math.abs(det) < 1e-9) det = (det >= 0 ? 1 : -1) * 1e-9; // keep sign to avoid flipping the center wildly
+	const x0 = (B*E - 2*C*D) / det;
+	const y0 = (B*D - 2*A*E) / det;
 
-  // translate to center → uᵀ Q u = k
-  const Fc = (A*x0*x0 + B*x0*y0 + C*y0*y0 + D*x0 + E*y0 + F);
-  let k = -Fc;					   // for an ellipse, k and the eigenvalues share the same sign
+	// translate to center → uᵀ Q u = k
+	const Fc = (A*x0*x0 + B*x0*y0 + C*y0*y0 + D*x0 + E*y0 + F);
+	let k = -Fc;						 // for an ellipse, k and the eigenvalues share the same sign
 
-  // eigen-decompose Q (no Cholesky; works for either sign)
-  const trace = A + C;
-  const diff  = A - C;
-  const disc  = Math.hypot(diff, B);	   // sqrt((A-C)^2 + B^2)
-  let   lam1  = (trace + disc)/2;
-  let   lam2  = (trace - disc)/2;
+	// eigen-decompose Q (no Cholesky; works for either sign)
+	const trace = A + C;
+	const diff	= A - C;
+	const disc	= Math.hypot(diff, B);		 // sqrt((A-C)^2 + B^2)
+	let	 lam1	= (trace + disc)/2;
+	let	 lam2	= (trace - disc)/2;
 
-  if (k === 0) return null;
+	if (k === 0) return null;
 
-  // ensure radii² = k/λ are positive; if not, flip both sides
-  if ((k/lam1) <= 0 || (k/lam2) <= 0){
+	// ensure radii² = k/λ are positive; if not, flip both sides
+	if ((k/lam1) <= 0 || (k/lam2) <= 0){
 	k = -k; lam1 = -lam1; lam2 = -lam2;
 	if ((k/lam1) <= 0 || (k/lam2) <= 0) return null; // truly non-elliptic (shouldn't happen for visible spheres)
-  }
+	}
 
-  const t1 = Math.sqrt(k/lam1);   // semi-axis length along eigenvector 1 (plane coords, y-up)
-  const t2 = Math.sqrt(k/lam2);   // semi-axis length along eigenvector 2
+	const t1 = Math.sqrt(k/lam1);	 // semi-axis length along eigenvector 1 (plane coords, y-up)
+	const t2 = Math.sqrt(k/lam2);	 // semi-axis length along eigenvector 2
 
-  // rotation angle of principal axes
-  const phi = 0.5 * Math.atan2(B, (A - C));
-  const cs = Math.cos(phi), sn = Math.sin(phi);
+	// rotation angle of principal axes
+	const phi = 0.5 * Math.atan2(B, (A - C));
+	const cs = Math.cos(phi), sn = Math.sin(phi);
 
-  // plane → screen: y-flip and add screen center
-  const centerX = canvas.width/2  + x0;
-  const centerY = canvas.height/2 - y0;
+	// plane → screen: y-flip and add screen center
+	const centerX = canvas.width/2	+ x0;
+	const centerY = canvas.height/2 - y0;
 
-  // columns of T_screen = R_flip * R(phi) * diag(t1, t2)
-  const aX =  cs * t1;
-  const aY = -sn * t1;
-  const bX = -sn * t2;
-  const bY = -cs * t2;
+	// columns of T_screen = R_flip * R(phi) * diag(t1, t2)
+	const aX =	cs * t1;
+	const aY = -sn * t1;
+	const bX = -sn * t2;
+	const bY = -cs * t2;
 
-  if (!isFinite(centerX+centerY+aX+aY+bX+bY)) return null;
-  return [centerX, centerY, aX, aY, bX, bY];
+	if (!isFinite(centerX+centerY+aX+aY+bX+bY)) return null;
+	return [centerX, centerY, aX, aY, bX, bY];
 };
 
 
@@ -2150,7 +2315,15 @@ function draw(){
 	if (dom('isCcpBallGrid').checked){
 		for (const q of ccp.surfaceQuadrays()){
 			// pass world coords once; Drawable('ball') uses xyz directly
-			drawables.push(new Drawable('ball', q, q.toCartesian()));
+			//drawables.push(new Drawable('ball', q, q.toCartesian()));
+			const [i,j,k] = ccp.toASD(q);
+			//let neighbors = ccp.neighborCount(i,j,k);
+			//const shade   = ccp.shadeForNeighborCount(neighbors);
+			//let color = neighbors==12 ? '#808080' : null; //gray if its inside (not surface)
+			//let color = neighbors==12 ? '#ff0000' : '#0000ff'; //red if inside, blue if surface surface)
+			let color = null;
+			//console.log('neighbors='+neighbors+' color='+color);
+			drawables.push(new Drawable('ball', q, q.toCartesian(), color));
 		}
 	}
 	if(isQuatCam()){
@@ -2287,6 +2460,7 @@ var ClearShapes = ()=>{
 	for(key in grid){
 		grid[key].clear(); //Set of quadray
 	}
+	ccp.clear();
 	gridChanged=true;
 };
 
@@ -2304,6 +2478,7 @@ var StateMap = ()=>({
 	camQ: [...camQ], //quaternion list size 4, used if isCamQuat()
 	textBoxToEval: dom('textBoxToEval').value,
 	grid: gridToMap(grid),
+	ccp: ccp.save(),
 });
 
 var LoadMap = map=>{
@@ -2345,6 +2520,10 @@ var LoadMap = map=>{
 		t.color = tri.color;
 		AddGameTri(t);
 	}*/
+	
+	if(map.ccp){
+		ccp.load(map.ccp);
+	}
 	
 	if(map.textBoxToEval !== undefined){
 		dom('textBoxToEval').value = map.textBoxToEval;
@@ -2620,7 +2799,7 @@ function normalizeQuaternion(q){
 
 function populatePaintbrushSelect(){
 	const sel = document.getElementById('paintbrushSelect');
-	if(!sel) return;					   // HTML not yet in DOM
+	if(!sel) return;						 // HTML not yet in DOM
 
 	// add one <option> per paintbrush key
 	Object.keys(paintbrushes).forEach(name=>{
@@ -2630,8 +2809,8 @@ function populatePaintbrushSelect(){
 		sel.appendChild(opt);
 	});
 
-  // highlight current choice
-  sel.value = selPaintbrushName;
+	// highlight current choice
+	sel.value = selPaintbrushName;
 }
 
 //END: 2025-7-28+ copying some camera/gamepad code from bellsack236 under MIT license.
