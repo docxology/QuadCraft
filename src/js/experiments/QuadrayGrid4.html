@@ -10,9 +10,10 @@
 	</font>
 	<table border=2><tr><td valign="top">
 		Paintbrush shape<br>(TODO multi select):<br>
-		<select id="paintbrushSelect"
-				size="12"			<!-- 8 items → no scrollbar -->
-				style="min-width: 170px">
+		<select id="paintbrushSelect" multiple
+				size="12"
+				style="min-width: 170px"
+				onchange="recomputeBrushFromSelect()">
 			<!-- options filled by JS -->
 		</select>
 	</td><td>
@@ -1438,6 +1439,77 @@ var paintbrushes = {
 	}*/
 };
 
+/*// Merge two paintbrushes. Result: { mask: a.mask|b.mask, quads: outer-join in deterministic order }
+var mergeBrushes = (a,b)=>{
+	const mask = a.mask|b.mask;
+
+	const seen = new Set();		// dedup by reference (Q() interns)
+	const quads = [];
+	
+	
+
+	function add(list){
+		if(!Array.isArray(list)) return;
+		for(const q of list){
+			if(!seen.has(q)){
+				seen.add(q);
+				quads.push(q);	// first time we encounter q → keep order
+			}
+		}
+	}
+
+	add(a.quads);
+	add(b.quads);
+
+	return { mask, quads };
+};*/
+// Merge two paintbrushes → ORed mask and **Minkowski-sum** of quads (outer-join).
+// deterministic: result quads sorted lexicographically by a,b,c,d
+var mergeBrushes = (a,b)=>{
+	const mask = (a.mask|0) | (b.mask|0);
+
+	const set = new Set();								// dedup by reference (Q() interns)
+	for(const qa of a.quads) for(const qb of b.quads){
+		set.add( qa.add(qb) );							// pairwise sum
+	}
+
+	const quads = Array.from(set).sort(
+		(q1,q2)=>(q1.a-q2.a)||(q1.b-q2.b)||(q1.c-q2.c)||(q1.d-q2.d)
+	);
+
+	return {mask, quads};
+};
+
+//Collect brush objects from the select box
+var getSelectedBrushes = ()=>{
+	const sel = dom('paintbrushSelect');
+	const brushes = [];
+	for (let i = 0; i < sel.options.length; i++){
+		const opt = sel.options[i];
+		if (opt.selected){
+			const b = paintbrushes[opt.value];
+			if (b) brushes.push(b);
+		}
+	}
+	return brushes;
+};
+
+//Merge N brush objects into one Brush
+var buildBrushFromBrushes = list=>{
+	if (!list || list.length === 0) return {mask:0, quads:[]};
+	return list.reduce(mergeBrushes);
+};
+
+//Recompute the global Brush from the select box
+var recomputeBrushFromSelect = ()=>{
+	Brush = buildBrushFromBrushes(getSelectedBrushes());
+};
+
+
+//computed from outerjoin of selected paintbrushes[name].quads and | aka OR of paintbrush.mask,
+//when you do multi select in dom('paintbrushSelect').
+var Brush = paintbrushes.oneBall; //FIXME
+
 // one CCP grid for the whole app
 const ccp = new CCPBallGrid();
 
@@ -2384,10 +2456,13 @@ function draw(){
 	let targ = targetQ(); //in front of camera, grid aligned.
 	let fill = false; //circle/oval outline
 	let isConePlaneIntersection = dom('isConePlaneIntersection').checked;
-	let brush = selectedPaintbrush();
-	if(brush.balls){ //display white circles of actual shape of paintbrush
-		for(let ballQ of brush.balls){
-			paintBall(targ.add(ballQ).toCartesian(), ballRadius, '#ffffff', fill, isConePlaneIntersection);
+	//let brush = selectedPaintbrush();
+	//if(brush.balls){ //display white circles of actual shape of paintbrush
+	if(Brush.quads && Brush.quads.length){	// display preview of all quads in Brush
+		for(let qPart of Brush.quads){
+			//FIXME check Brush.mask for which kind of shape (tetz oct tetz ball).
+			//displaying as white circles as if it were balls:
+			paintBall(targ.add(qPart).toCartesian(), ballRadius, '#ffffff', fill, isConePlaneIntersection);
 		}
 	}else{ //display others as: paint white circle 3d cursor in front of cam
 		paintBall(targ.toCartesian(), ballRadius, '#ffffff', fill, isConePlaneIntersection);
@@ -2609,6 +2684,7 @@ var onload = ()=>{
 	if(!onloadHappened){
 		onloadHappened = true;
 		populatePaintbrushSelect();
+		recomputeBrushFromSelect(); //build Brush at startup. Happens again when multiselect list of brushes is modified.
 		copyWorldStateToUiControls();
 		paintXYZColor([0,0,1],randColor());
 	}
@@ -2659,12 +2735,13 @@ const secondMoveSpeedMul = .007; //if isQuatCam() then use moveSpd*secondMoveSpe
 var turnSpd = .8;
 //var turnSpd = .6;
 
-var selectedPaintbrush = ()=>{
+/*var selectedPaintbrush = ()=>{
 	return paintbrushes[selPaintbrushName()];
-};
+};*/
 
 var paintOrUnpaint = isPaint=>{
-	paint(targetQ(), selectedPaintbrush(), isPaint);
+	//paint(targetQ(), selectedPaintbrush(), isPaint);
+	paint(targetQ(), Brush, isPaint);
 };
 
 function updateFromGamepad(dt){
