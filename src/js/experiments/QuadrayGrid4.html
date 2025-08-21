@@ -9,7 +9,7 @@
 		<b>UNPAINT/PAINT</b> (with current paintbrush): LB/RB on gamepad <b>OR</b> `/1 on keyboard<br>
 	</font>
 	<table border=2><tr><td valign="top">
-		Paintbrush shape:<br>
+		Paintbrush shape<br>(TODO multi select):<br>
 		<select id="paintbrushSelect"
 				size="12"			<!-- 8 items → no scrollbar -->
 				style="min-width: 170px">
@@ -1327,60 +1327,89 @@ var Directions = {
 	y: CoreDirections[5].mul(-1),
 };
 
-
+//mask these together in paintbrushes
+const PB_OTHER = 1, PB_TETZ = 2, PB_OCT = 4, PB_TETC = 8, PB_BALL = 16;
 
 var paintbrushes = {
 	/*fillGridByFuncOutTo4_noDelete: {
 		func: isPaintElseUnpaint=>{
 			fillGridByFunc(targetQ(), 2, ()=>true); //only does paint, not unpaint as of 2025-8-17'
 		}
-	},
+	},*/
 	oneOctahedron: {
-		octahedrons: [Q(0,0,0,0)]
+		mask: PB_OCT,
+		quads: [Q(0,0,0,0)]
 	},
 	oneTetrahedronZ:{
-		tetrahedronZs: [Q(0,0,0,0)]
+		mask: PB_TETZ,
+		quads: [Q(0,0,0,0)]
 	},
 	oneTetrahedronC:{
-		tetrahedronCs: [Q(0,0,0,0)]
-	},*/
+		mask: PB_TETC,
+		quads: [Q(0,0,0,0)]
+	},
+	bothTets:{
+		mask: PB_TETZ | PB_TETC,
+		quads: [Q(0,0,0,0)]
+	},
+	bothTetsAndOct:{
+		mask: PB_TETZ | PB_OCT | PB_TETC,
+		quads: [Q(0,0,0,0)]
+	},
+	bothTetsAndOct:{
+		mask: PB_TETZ | PB_OCT | PB_TETC,
+		quads: [Q(0,0,0,0)]
+	},
+	oneOfEach:{
+		mask: PB_TETZ | PB_OCT | PB_TETC | PB_BALL,
+		quads: [Q(0,0,0,0)]
+	},
 	oneBall: {
-		balls: [Q(0,0,0,0)]
+		mask: PB_BALL,
+		quads: [Q(0,0,0,0)]
 	},
 	repeatA2: {
-		balls: [Q(0,0,0,0), Directions.a]
+		mask: PB_BALL,
+		quads: [Q(0,0,0,0), Directions.a]
 	},
 	repeatA3: {
-		balls: [Q(0,0,0,0), Directions.a, Directions.a.add(Directions.a)]
+		mask: PB_BALL,
+		quads: [Q(0,0,0,0), Directions.a, Directions.a.add(Directions.a)]
 	},
 	repeatA4: {
-		balls: [Q(0,0,0,0), Directions.a, Directions.a.add(Directions.a), Directions.a.add(Directions.a).add(Directions.a)]
+		mask: PB_BALL,
+		quads: [Q(0,0,0,0), Directions.a, Directions.a.add(Directions.a), Directions.a.add(Directions.a).add(Directions.a)]
 	},
 	repeatA5: {
-		balls: [
+		mask: PB_BALL,
+		quads: [
 			Q(0,0,0,0), Directions.a, Directions.a.add(Directions.a),
 			Directions.a.add(Directions.a).add(Directions.a), Directions.a.add(Directions.a).add(Directions.a).add(Directions.a)
 		]
 	},
 	repeatS5: {
-		balls: [
+		mask: PB_BALL,
+		quads: [
 			Q(0,0,0,0), Directions.s, Directions.s.add(Directions.s),
 			Directions.s.add(Directions.s).add(Directions.s), Directions.s.add(Directions.s).add(Directions.s).add(Directions.s)
 		]
 	},
 	repeatD3: {
-		balls: [
+		mask: PB_BALL,
+		quads: [
 			Q(0,0,0,0), Directions.d, Directions.d.add(Directions.d)
 		]
 	},
 	repeatD5: {
-		balls: [
+		mask: PB_BALL,
+		quads: [
 			Q(0,0,0,0), Directions.d, Directions.d.add(Directions.d),
 			Directions.d.add(Directions.d).add(Directions.d), Directions.d.add(Directions.d).add(Directions.d).add(Directions.d)
 		]
 	},
 	repeatD10: {
-		balls: [
+		mask: PB_BALL,
+		quads: [
 			Q(0,0,0,0), Directions.d, Directions.d.add(Directions.d),
 			Directions.d.add(Directions.d).add(Directions.d),
 			Directions.d.add(Directions.d).add(Directions.d).add(Directions.d),
@@ -1392,7 +1421,8 @@ var paintbrushes = {
 		]
 	},
 	distance0To1_13Balls: {
-		balls: [
+		mask: PB_BALL,
+		quads: [
 			Q(0,0,0,0), Directions.a, Directions.q,
 			Directions.s, Directions.w,
 			Directions.d, Directions.e,
@@ -1401,9 +1431,11 @@ var paintbrushes = {
 			Directions.h, Directions.y
 		]
 	},
-	getRandomBallsPaintbrush: {
+	/*getRandomBallsPaintbrush: {
+		mask: PB_OTHER,
 		paintbrushNames: ['oneBall', 'repeatA2', 'repeatA3', 'repeatA4', 'repeatA5', 'repeatS5', 'distance0To1_13Balls']
-	}
+		quads: [], //FIXME?
+	}*/
 };
 
 // one CCP grid for the whole app
@@ -1635,31 +1667,31 @@ var paint = (q, paintbrush, isPaintElseUnpaint)=>{
 		let brush = brushes[randInt(brushes.length)];
 		return paint(q, brush, isPaintElseUnpaint);
 	}
-	if(paintbrush.func){
+	/*if(paintbrush.func){
 		paintbrush.func(isPaintElseUnpaint);
-	}
-	if(paintbrush.octahedrons) for(let octQ of paintbrush.octahedrons){
+	}*/
+	if(paintbrush.mask & PB_OCT) for(let octQ of paintbrush.quads){
 		if(isPaintElseUnpaint){
 			addOctAtQuadray(q.add(octQ));
 		}else{
 			console.warn('TODO remove octahedron at quadray '+q);
 		}
 	}
-	if(paintbrush.tetrahedronCs) for(let tetcQ of paintbrush.tetrahedronCs){
+	if(paintbrush.mask & PB_TETC) for(let tetcQ of paintbrush.quads){
 		if(isPaintElseUnpaint){
 			addTetCAtQuadray(q.add(tetcQ));
 		}else{
 			console.warn('TODO remove tetrahedronCs at quadray '+q);
 		}
 	}
-	if(paintbrush.tetrahedronZs) for(let tetzQ of paintbrush.tetrahedronZs){
+	if(paintbrush.mask & PB_TETZ) for(let tetzQ of paintbrush.quads){
 		if(isPaintElseUnpaint){
 			addTetZAtQuadray(q.add(tetzQ));
 		}else{
 			console.warn('TODO remove tetrahedronZs at quadray '+q);
 		}
 	}
-	if(paintbrush.balls) for(let ballQ of paintbrush.balls){
+	if(paintbrush.mask & PB_BALL) for(let ballQ of paintbrush.quads){
 		if(isPaintElseUnpaint){
 			AddBall(q.add(ballQ));
 		}else{
