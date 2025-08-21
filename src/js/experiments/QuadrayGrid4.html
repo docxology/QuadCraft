@@ -9,9 +9,11 @@
 		<b>UNPAINT/PAINT</b> (with current paintbrush): LB/RB on gamepad <b>OR</b> `/1 on keyboard<br>
 	</font>
 	<table border=2><tr><td valign="top">
-		Paintbrush shape<br>(TODO multi select):<br>
+		Paintbrush shape<br>Hold ctrl for multi select<br>
+		to make bigger<br>3d paint brushes. Balls,<br>
+		Tetrahedrons, octahedrons.<br>
 		<select id="paintbrushSelect" multiple
-				size="12"
+				size="10"
 				style="min-width: 170px"
 				onchange="recomputeBrushFromSelect()">
 			<!-- options filled by JS -->
@@ -73,6 +75,7 @@ fillGridByFunc(selq, 5, q=>{
 		<input type="checkbox" id="chkQuaternionCamera" checked><label for="chkQuaternionCamera" title="2025-7-28+ upgrading the camera code to use camPos and camQ instead of zoom, angleX, etc. This should fix the distortion of 3d positions at some angles and positions and allow you to fly through it with a gamepad with 2 analog triggers and 2 analog joysticks, or mouse.">quaternion camera (gamepad or mouse)</label>
 		<input type="checkbox" id="isConePlaneIntersection" checked><label for="isConePlaneIntersection" title="use this graphics mode to paint an oval instead of circle so the balls touch eachother on screen if they're touching in 3d.">isConePlaneIntersection</label>
 		<input type="checkbox" id="isCcpBallGrid" checked><label for="isCcpBallGrid" title="CCPBallGrid class is an optimization to store a volume of CCP aligned balls as CCPBallRange objects so costs 2d surface instead of 3d volume.">isCcpBallGrid</label>
+		<input type="checkbox" id="useSurfaceCacheInRanges" checked><label for="useSurfaceCacheInRanges" title="CCPBallGrid.surfaceQuadrays optimization">useSurfaceCacheInRanges</label>
 		<br>
 		<input type=button onclick="SimKeyPress('z');" value="'z' (tog tetrahedron Z)">
 		<input type=button onclick="SimKeyPress('x');" value="'x' (tog octahedron)">
@@ -468,6 +471,7 @@ class CCPBallRange {
 		this.i	= i|0; this.j	= j|0;
 		this.k0 = k0|0; this.k1 = k1|0;
 		if (this.k1 < this.k0) [this.k0, this.k1] = [this.k1, this.k0];
+		this.surf = new Set(); //cache of balls that should be in CCPBallGrid.surfaceQuadrays
 		Object.freeze(this);
 	}
 	
@@ -505,6 +509,17 @@ class CCPBallRange {
 			new CCPBallRange(this.i, this.j, this.k0, k),
 			new CCPBallRange(this.i, this.j, k+1, this.k1),
 		];
+	}
+	
+	//call whenever neighbours may have changed
+	rebuildSurface(ccp){
+		const {i,j} = this;
+		this.surf.clear();
+		for(let k=this.k0;k<this.k1;k++){
+			if(ccp.neighborCount(i,j,k) !== 12){	// at least one face exposed
+				this.surf.add( ccp.fromASD(i,j,k) );
+			}
+		}
 	}
 }
 
@@ -646,28 +661,37 @@ class CCPBallGrid {
 	];
 
 	//get list of quadrays on the surface, excluding those with neighborCount 12.
-	surfaceQuadrays(){
+	surfaceQuadrays(useSurfaceCacheInRanges=false){
 		let retList = [];
-		for (const [key, list] of this.cols.entries()){
-			if (!list.length) continue;
-			const [iStr, jStr] = key.split(',');
-			const i = +iStr, j = +jStr;
+		if(useSurfaceCacheInRanges){ //fast here, but slower to edit. u pay the slow edit cost either way.
+			for (const list of this.cols.values()){
+				for (const r of list){
+					if (!r.surf || r.surf.size === 0) continue;
+					for (const q of r.surf) retList.push(q);
+				}
+			}
+		}else{ //brute force, can get slow
+			for (const [key, list] of this.cols.entries()){
+				if (!list.length) continue;
+				const [iStr, jStr] = key.split(',');
+				const i = +iStr, j = +jStr;
 
-			for (const r of list){ //r is a CCPBallRange
-				for (let k = r.k0; k < r.k1; k++){
-					// solid here; check 12 neighbors
-					/*let exposed = false;
-					for (let t=0; t<this.NBR.length; t++){
-						const di = i + this.NBR[t][0];
-						const dj = j + this.NBR[t][1];
-						const dk = k + this.NBR[t][2];
-						if (!this.isSolid(di, dj, dk)){ exposed = true; break; }
-					}
-					if(exposed){
-						retList.push(this.fromASD(i,j,k));
-					}*/
-					if(this.neighborCount(i,j,k)<12){
-						retList.push(this.fromASD(i,j,k));
+				for (const r of list){ //r is a CCPBallRange
+					for (let k = r.k0; k < r.k1; k++){
+						// solid here; check 12 neighbors
+						/*let exposed = false;
+						for (let t=0; t<this.NBR.length; t++){
+							const di = i + this.NBR[t][0];
+							const dj = j + this.NBR[t][1];
+							const dk = k + this.NBR[t][2];
+							if (!this.isSolid(di, dj, dk)){ exposed = true; break; }
+						}
+						if(exposed){
+							retList.push(this.fromASD(i,j,k));
+						}*/
+						if(this.neighborCount(i,j,k)<12){
+							retList.push(this.fromASD(i,j,k));
+						}
 					}
 				}
 			}
@@ -778,6 +802,7 @@ class CCPBallGrid {
 		}
 
 		this._set(i,j,out);
+		this._updateSurfaceAround(i,j);	
 		return out;
 	}
 
@@ -802,6 +827,15 @@ class CCPBallGrid {
 		for (const r of this._get(i,j)) next.push(...r.removeK(k));
 		this._set(i,j,next);
 		this.rebuildListIJ(i,j);
+	}
+	
+	_updateSurfaceAround(i,j){
+		for(let di=-1; di<=1; di++){
+			for(let dj=-1; dj<=1; dj++){
+				const list = this._get(i+di, j+dj);
+				for(const r of list) r.rebuildSurface(this);
+			}
+		}
 	}
 	
 	clear(){
@@ -2397,10 +2431,15 @@ var conePlaneIntersection = (xyz, radius)=>{
 	return [centerX, centerY, aX, aY, bX, bY];
 };
 
+let timeOfLastDraw = 0;
 
+var maxDt = .2;
 
 function draw(){
-	let dt = 1/60; //TODO measure and clamp it
+	//let dt = 1/60; //TODO measure and clamp it
+	let now = time();
+	let dt = Math.max(0, Math.min(now-timeOfLastDraw, maxDt));
+	timeOfLastDraw = now;
 	
 	updateFromGamepad(dt);
 	updateFromHoldingKeyboardButtons(dt);
@@ -2418,7 +2457,7 @@ function draw(){
 	//--- collect, sort, draw farthest→nearest ---
 	let drawables=[];
 	if (dom('isCcpBallGrid').checked){
-		for (const q of ccp.surfaceQuadrays()){
+		for (const q of ccp.surfaceQuadrays(dom('useSurfaceCacheInRanges').checked)){
 			// pass world coords once; Drawable('ball') uses xyz directly
 			//drawables.push(new Drawable('ball', q, q.toCartesian()));
 			const [i,j,k] = ccp.toASD(q);
