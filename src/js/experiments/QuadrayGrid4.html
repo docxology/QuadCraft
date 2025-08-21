@@ -3,36 +3,25 @@
 <center style="color:white">
 	<br>
 	<font color=#00cc00>
-	<b>MOVE LEFT/RIGHT/UP/DOWN:</b> gamepad left joystick <b>OR</b> drag mouse left button <b>OR</b> 4 arrow keys<br>
-	<b>MOVE FORWARD/BACKWARD:</b> gamepad 2 analog triggers <b>OR</b> drag both mouse buttons at once <b>OR</b> Control/Insert beside arrow keys.<br>
-	<b>TURN:</b> gamepad right joystick <b>OR</b> drag mouse right button.<br>
+		<b>MOVE LEFT/RIGHT/UP/DOWN:</b> gamepad left joystick <b>OR</b> drag mouse left button <b>OR</b> 4 arrow keys<br>
+		<b>MOVE FORWARD/BACKWARD:</b> gamepad 2 analog triggers <b>OR</b> drag both mouse buttons at once <b>OR</b> Control/Insert beside arrow keys.<br>
+		<b>TURN:</b> gamepad right joystick <b>OR</b> drag mouse right button.<br>
+		<b>UNPAINT/PAINT</b> (with current paintbrush): LB/RB on gamepad <b>OR</b> `/1 on keyboard<br>
 	</font>
-	Push buttons on keyboard or here to move the flashing colored dot (the selected Quadray in js var selq).
-	and to put 1 octahedron and/or 2 tetrahedrons at each dot, which can fill 3d space.
-	With either of the 2 sets of CoreDirections (qwerty or asdfgh) you can reach every grid point and no non-grid points, but there is some duplication if you include all 12. On browser console you can type Q(1,2,3,4) or any 4 numbers. If you set selq to that, also set viewChanged = true; so it updates on screen. Save and load works in localStorage cookies or files, depending which button. It includes the octahedrons and tetrahedrons and 3d viewing position and angle. The quicksave/quickload is stored locally and gets erased if you clear your browser cache, so save important stuff to files. Its the same json data either way.
-	---
-	I could do movement with the 4 arrow keys being 4 quadray directions relative to camera but<br>
-	---
-	---
-	TODO 2d grid of [] lists of ints in CCP grid as where the balls start vs stop. if tilted square corner grid it uses evens and odds. if not tilted, excludes one of those parities.
-	---
-	TODO multiplayer 3d painting using a small JSP in tomcat.
-	</b>
-	<br>	
 	<table border=2><tr><td valign="top">
+		Paintbrush shape:<br>
 		<select id="paintbrushSelect"
-				size="8"			<!-- 8 items → no scrollbar -->
-				style="min-width: 170px"
-				onchange="selPaintbrushName=this.value">
+				size="12"			<!-- 8 items → no scrollbar -->
+				style="min-width: 170px">
 			<!-- options filled by JS -->
 		</select>
 	</td><td>
-	<input type=button value="Example code A" onclick="dom('textBoxToEval').innerHTML = 'fillGridByFunc(selq, 5, q=>{\n	return q.toCartesian()[0]==0;\n});';">
-	<input type=button value="B" onclick="dom('textBoxToEval').innerHTML = 'fillGridByFunc(selq, 8, q=>{\n	return q.toCartesian()[0]>1.5;\n});';">
-	<input type=button value="C" onclick="dom('textBoxToEval').innerHTML = 'AddColoredDots(gridDotsNear(selq,5),\'green\');';">
-	<input type=button value="D" onclick="dom('textBoxToEval').innerHTML = 'fillGridByFunc(selq, 5, q=>{\n	return Math.random()<.3;\n});';">
-	<input type=button value="E" onclick="dom('textBoxToEval').innerHTML = 'fillGridByFunc(selq, 14, q=>{\n	let xyz = q.toCartesian();\n	let x = xyz[0], y = xyz[1], z = xyz[2];\n	let xyDist = Math.hypot(x*x,y*y);\n	let yzDist = Math.hypot(y*y,z*z);\n	let xzDist = Math.hypot(x*x,z*z);\n	let xyzDist = Math.hypot(x*x,y*y,z*z);\n	return xyzDist<12 && xyDist>3 && yzDist>3 && xzDist>3;\n});';">
-	<input type=button value="X" title="empty text box" onclick="dom('textBoxToEval').innerHTML = '';">
+	<input type=button value="Example code A" onclick="dom('textBoxToEval').value = 'fillGridByFunc(selq, 5, q=>{\n	return q.toCartesian()[0]==0;\n});';">
+	<input type=button value="B" onclick="dom('textBoxToEval').value = 'fillGridByFunc(selq, 8, q=>{\n	return q.toCartesian()[0]>1.5;\n});';">
+	<input type=button value="C" onclick="dom('textBoxToEval').value = 'AddColoredDots(gridDotsNear(selq,5),\'green\');';">
+	<input type=button value="D" onclick="dom('textBoxToEval').value = 'fillGridByFunc(selq, 5, q=>{\n	return Math.random()<.3;\n});';">
+	<input type=button value="E" onclick="dom('textBoxToEval').value = 'fillGridByFunc(selq, 14, q=>{\n	let xyz = q.toCartesian();\n	let x = xyz[0], y = xyz[1], z = xyz[2];\n	let xyDist = Math.hypot(x*x,y*y);\n	let yzDist = Math.hypot(y*y,z*z);\n	let xzDist = Math.hypot(x*x,z*z);\n	let xyzDist = Math.hypot(x*x,y*y,z*z);\n	return xyzDist<12 && xyDist>3 && yzDist>3 && xzDist>3;\n});';">
+	<input type=button value="X" title="empty text box" onclick="dom('textBoxToEval').value = '';">
 	<br>
 <textarea id=textBoxToEval rows=10 cols=40>
 fillGridByFunc(selq, 5, q=>{
@@ -60,7 +49,7 @@ fillGridByFunc(selq, 5, q=>{
 			<input type=button value="7" onclick="quicksave('7');">
 			<input type=button value="8" onclick="quicksave('8');">
 			<input type=button value="9" onclick="quicksave('9');">
-			<input type=button value="Save (file) " onclick="console.log('save file clicked'); let filename = prompt('Filename?','quadcraft_quadgrid2_'+time()+'.json'); if(filename) saveFile(filename, 'application/json', StateJson());">
+			<input type=button value="Save (file) " onclick="console.log('save file clicked'); let filename = prompt('Filename?','quadcraft_quadgrid4_'+time()+'.json'); if(filename) saveFile(filename, 'application/json', StateJson());">
 			<br>
 			&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
 			&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
@@ -91,6 +80,7 @@ fillGridByFunc(selq, 5, q=>{
 		&nbsp;&nbsp;&nbsp;
 		<input type=button onclick="addDirectionsBalls();" value="add Directions balls">
 		<br>
+		offsetX, offsetY, zoom, angleX, and angleY are only relevant in the old way, NOT quaternion camera (unchecked).<br>
 		<nobr>offsetX=<input type=number step=10 id=numOffsetX oninput="copyUiControlsToWorldState();" style="width: 60px;"></input></nobr>
 		<nobr>offsetY=<input type=number step=10 id=numOffsetY oninput="copyUiControlsToWorldState();" style="width: 60px;"></input></nobr>
 		<nobr>zoom=<input type=number step=.04 id=numZoom oninput="copyUiControlsToWorldState();" style="width: 60px;"></input></nobr>
@@ -98,23 +88,28 @@ fillGridByFunc(selq, 5, q=>{
 		<nobr>angleY=<input type=number step=.05 id=numAngleY oninput="copyUiControlsToWorldState();" style="width: 60px;"></input></nobr>
 		<label id=labelUnderUiControls>...</label>
 		<table id=uiControls><tr><td>
-			<input type=button onclick="SimKeyPress('q');" value="q">
-			<input type=button onclick="SimKeyPress('w');" value="w">
-			<input type=button onclick="SimKeyPress('e');" value="e">
-			<input type=button onclick="SimKeyPress('r');" value="r">
-			<input type=button onclick="SimKeyPress('t');" value="t">
-			<input type=button onclick="SimKeyPress('y');" value="y">
+			<nobr>
+				<input type=button onclick="SimKeyPress('q');" value="q">
+				<input type=button onclick="SimKeyPress('w');" value="w">
+				<input type=button onclick="SimKeyPress('e');" value="e">
+				<input type=button onclick="SimKeyPress('r');" value="r">
+				<input type=button onclick="SimKeyPress('t');" value="t">
+				<input type=button onclick="SimKeyPress('y');" value="y">
+			</nobr>
 		</td><td>
-			6 backward directions
+			6 backward directions (can push these on keyboard)
 		</td></tr><tr><td>
-			<input type=button onclick="SimKeyPress('a');" value="a">
-			<input type=button onclick="SimKeyPress('s');" value="s">
-			<input type=button onclick="SimKeyPress('d');" value="d">
-			<input type=button onclick="SimKeyPress('f');" value="f">
-			<input type=button onclick="SimKeyPress('g');" value="g">
-			<input type=button onclick="SimKeyPress('h');" value="h">
+			<nobr>
+				<input type=button onclick="SimKeyPress('a');" value="a">
+				<input type=button onclick="SimKeyPress('s');" value="s">
+				<input type=button onclick="SimKeyPress('d');" value="d">
+				<input type=button onclick="SimKeyPress('f');" value="f">
+				<input type=button onclick="SimKeyPress('g');" value="g">
+				<input type=button onclick="SimKeyPress('h');" value="h">
+			</nobr>
 		</td><td>
-			6 forward directions
+			6 forward directions (or keyboard)<br>
+			<input type="checkbox" id="directionsButtonsMoveCam" checked><label for="directionsButtonsMoveCam">directionsButtonsMoveCam </label>
 		</td><td>
 			<label id=camQuadLabel></label>
 		</td></tr></table>
@@ -1102,11 +1097,12 @@ var addTetCAtQuadray = q=>{
 
 var T = (e,f,g)=>(new Tri(e,f,g).dedup());
 
-dedupTriMap = {};
+var dedupTriMap = {};
 
 //dedupQuadraysMap[q.a][q.b][q.c][q.d] === q;
 var dedupQuadraysMap = {};
 
+//dedups quadray
 var Q = (a,b,c,d)=>(new Quadray(a,b,c,d).dedup());
 
 //QGridDots and QDots are both quadray 3d points.
@@ -1334,7 +1330,7 @@ var Directions = {
 
 
 var paintbrushes = {
-	/*fillGridByFuncOutTo2_noDelete: {
+	/*fillGridByFuncOutTo4_noDelete: {
 		func: isPaintElseUnpaint=>{
 			fillGridByFunc(targetQ(), 2, ()=>true); //only does paint, not unpaint as of 2025-8-17'
 		}
@@ -1607,7 +1603,7 @@ canvas.addEventListener("wheel", function(e){
 		moveCamera(movedWheel,0,0);
 	}else{
 		//zoom *= e.deltaY < 0 ? 1.1 : 0.9;
-		zoom *= Math.exp(.1*movedWheel);e.deltaY < 0 ? 1.1 : 0.9;
+		zoom *= Math.exp(.1*movedWheel);
 	}
 	viewChanged = true;
 });
@@ -1617,7 +1613,8 @@ var xyzInFrontOfCam = dist=>{
 };
 
 //var cursor3dDistanceInFrontOfCam = 12.3;
-var cursor3dDistanceInFrontOfCam = 20;
+//var cursor3dDistanceInFrontOfCam = 20;
+var cursor3dDistanceInFrontOfCam = 35;
 
 //target quadray in front of camPos along the forward direction of camQ. CCP grid aligned.
 var targetQ = ()=>(quadrayInFrontOfCam(cursor3dDistanceInFrontOfCam).nearestCCP());
@@ -1731,12 +1728,16 @@ var fillGridByFunc = (centerQ, hops, func)=>{
 
 var SimKeyPress = key=>{
 	if(Directions[key]){
-		//RemDot(selq);
-		nextSelq = selq.add(Directions[key]);
-		console.log('selq='+selq.toDetailString()+' nextSelq='+nextSelq.toDetailString());
-		selq = nextSelq;
-		AddDot(selq);
-		AddBall(selq);
+		if(dom('directionsButtonsMoveCam').checked){
+			camPos = Directions[key].add(Quadray.fromCartesian(camPos)).toCartesian();
+		}else{
+			//RemDot(selq);
+			nextSelq = selq.add(Directions[key]);
+			console.log('selq='+selq.toDetailString()+' nextSelq='+nextSelq.toDetailString());
+			selq = nextSelq;
+			AddDot(selq);
+			AddBall(selq);
+		}
 	//}else if(key=='Enter'){
 	//	displayCheckerboardDots = !displayCheckerboardDots;
 	}else if(key=='z'){
@@ -2457,7 +2458,7 @@ var ClearShapes = ()=>{
 	for(let k in QDots){
 		delete QDots[k];
 	}
-	for(key in grid){
+	for(let key in grid){
 		grid[key].clear(); //Set of quadray
 	}
 	ccp.clear();
@@ -2465,7 +2466,7 @@ var ClearShapes = ()=>{
 };
 
 var StateMap = ()=>({
-	type: 'quadcraft_quadraygrid2_state',
+	type: 'quadcraft_quadraygrid4_state',
 	selq: [selq.a, selq.b, selq.c, selq.d],
 	camera: { //used if !isCamQuat()
 		offsetX,
@@ -2482,7 +2483,7 @@ var StateMap = ()=>({
 });
 
 var LoadMap = map=>{
-	if(map.type !== 'quadcraft_quadraygrid2_state') return;
+	if(map.type !== 'quadcraft_quadraygrid4_state') return;
 	
 	ClearShapes();
 
@@ -2618,7 +2619,8 @@ let camPos = [0,0,-5];
 //let camPos=[0,0,-12]; //far back so can see balls 2025-7-17
 let camQ = [0,0,0,1];
 
-var moveSpd = 8.0; //speed of movement by gamepad joysticks/analogTriggers AND mouse when right button held
+//var moveSpd = 8.0; //speed of movement by gamepad joysticks/analogTriggers AND mouse when right button held
+var moveSpd = 15;
 const secondMoveSpeedMul = .007; //if isQuatCam() then use moveSpd*secondMoveSpeedMul as ratio between them
 
 //var turnSpd = 2;
@@ -2627,6 +2629,10 @@ var turnSpd = .8;
 
 var selectedPaintbrush = ()=>{
 	return paintbrushes[selPaintbrushName()];
+};
+
+var paintOrUnpaint = isPaint=>{
+	paint(targetQ(), selectedPaintbrush(), isPaint);
 };
 
 function updateFromGamepad(dt){
@@ -2672,7 +2678,7 @@ function updateFromGamepad(dt){
 		//toggleVolumeInFrontOfCam(12.3);
 	//}
 	if(buttonLb ^ buttonRb){
-		paint(targetQ(), selectedPaintbrush(), buttonRb); //buttonRb paints, buttonLb unpaints
+		paintOrUnpaint(buttonRb); //buttonRb paints, buttonLb unpaints
 	}
 	
 	//viewChanged = true; //TODO only if changed camPos or camQ
@@ -2694,6 +2700,9 @@ function updateFromHoldingKeyboardButtons(dt){
 	if(Buttons.PageUp) sumXYZ += VecMulScalar(upv,speed);
 	if(Buttons.PageDown) sumXYZ -= VecMulScalar(upv,speed);
 	*/
+	if(Buttons['`'] || Buttons['1']){
+		paintOrUnpaint(Buttons['1']); //` unpaints, 1 paints. also has gamepad controls.
+	}
 	let forwardBackward = ((Buttons.Control ? 1 : 0)-(Buttons.Insert ? 1 : 0))*mul;
 	let upDown = ((Buttons.ArrowUp ? 1 : 0)-(Buttons.ArrowDown ? 1 : 0))*mul;
 	let leftRight = ((Buttons.ArrowRight ? 1 : 0)-(Buttons.ArrowLeft ? 1 : 0))*mul;
@@ -2810,7 +2819,7 @@ function populatePaintbrushSelect(){
 	});
 
 	// highlight current choice
-	sel.value = selPaintbrushName;
+	sel.value = selPaintbrushName(); //get default name once, otherwise its circular-logic
 }
 
 //END: 2025-7-28+ copying some camera/gamepad code from bellsack236 under MIT license.
