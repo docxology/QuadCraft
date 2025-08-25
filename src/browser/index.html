@@ -127,6 +127,18 @@ fillGridByFunc(selq, 5, q=>{
 </center>
 <script>
 
+var Game = V.Quadcraft;
+//var Bellsack = V.Bellsack is another namespace,
+//and Blob Monsters Game used V.testnet
+//(would be V.Testnet in the new way, cant start with lowercase letter).
+//It auto creates childs when you say http://V.Quadcraft.Whatever.You.Want .
+
+var Room = Game.Room1;
+//put balls here like Ball.B500.X.p is the x position
+//of V.Quadcraft.Room1.Ball.B500, and similarly .Y and .Z
+//and whatever other vars you want to put in a ball.
+var Ball = Room.Ball;
+
 var Err = str=>{
 	throw new Error(str);
 };
@@ -140,6 +152,8 @@ var Buttons = {}; //keyboard button string to 1 if down, deleted or 0 if not.
 var randInt = max=>(randFlo(max)|0);
 
 var randFlo = max=>(Math.random()*max);
+
+var randRange = (min,max)=>(min+randFlo(max-min));
 
 var randXYZ = ()=>[randFlo(side),randFlo(side),randFlo(side)];
 
@@ -182,6 +196,10 @@ var randColor = ()=>{
 	while(s.length < 6) s = '0'+s;
 	return '#'+s;
 };
+
+const timeOffset_ = performance.timing.navigationStart;
+//UTC seconds with fraction. More precise than Date.now()*.001. Chrome seems to have 4 digits after decimal point, and brave and firefox 3 digits.
+const time = ()=>((timeOffset_+performance.now())*.001);
 
 //If made by Q(...) you can compare them using quadrayA===quadrayB or ==.
 class Quadray{
@@ -2439,6 +2457,40 @@ let timeOfLastDraw = 0;
 
 var maxDt = .2;
 
+var timeCreateNextBall = time();
+var ballCreateInterval = .01;
+
+var mainBallSpawnXYZ = [0, 20, 0];
+
+var doGameLogic = (now,dt)=>{
+	if(timeCreateNextBall <= now){ //create next ball falling from sky if its time
+		let randCubeSide = 2;
+		let randVelCubeSide = 5.3;
+		let newBallPositionXYZ = Add(
+			mainBallSpawnXYZ,
+			[	randRange(-randCubeSide/2,randCubeSide/2),
+				randRange(-randCubeSide/2,randCubeSide/2),
+				randRange(-randCubeSide/2,randCubeSide/2)
+			]
+		);
+		let newBallVelocityXYZ = [
+			randRange(-randVelCubeSide/2,randVelCubeSide/2),
+			randRange(-randVelCubeSide/2,randVelCubeSide/2),
+			randRange(-randVelCubeSide/2,randVelCubeSide/2)
+		]
+		let ball = newBallAtXYZ(newBallPositionXYZ, newBallVelocityXYZ);
+		timeCreateNextBall += ballCreateInterval;
+	}
+	let rollballs = getAllRollBalls(); //list of Var which each have .X .Y and .Z Var's.
+	for(let rb of rollballs){
+		//TODO
+	}
+	let vars = getAllVarsToUpdate();
+	for(let vr of vars){
+		vr.nextState(dt); //update vr.p (position) and vr.v (velocity) based on other fields in vr
+	}
+};
+
 function draw(){
 	//let dt = 1/60; //TODO measure and clamp it
 	let now = time();
@@ -2452,6 +2504,8 @@ function draw(){
 	//selq and TriZngle corners and octahedron corners and tetrahedron corners are all quadrays,
 	//converted to xyz at last moment for display.
 	selq.color = randColor(); //make it flash
+	
+	doGameLogic(now,dt);
 
 	updateIfGridChanged();
 	ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -2490,6 +2544,13 @@ function draw(){
 			drawables.push(new Drawable('QGridDot', q, q.toCartesian()));
 		}
 	}
+	let rollballs = getAllRollBalls();
+	for(let rb of rollballs){
+		let xyz = [rb.X.p, rb.Y.p, rb.Z.p];
+		let q = Quadray.fromCartesian(xyz);
+		drawables.push(new Drawable('ball',q,xyz));
+	}
+	
 	drawables.sort((a,b)=>(b.depth-a.depth));
 
 	for(const d of drawables){
@@ -2718,9 +2779,40 @@ var copyUiControlsToWorldState = ()=>{
 	viewChanged = true;
 };
 
-const timeOffset_ = performance.timing.navigationStart;
-//UTC seconds with fraction. More precise than Date.now()*.001. Chrome seems to have 4 digits after decimal point, and brave and firefox 3 digits.
-const time = ()=>((timeOffset_+performance.now())*.001);
+var nextBallNameSuffix = 1;
+
+var newBallName = ()=>('B'+(nextBallNameSuffix++));
+
+//creates in V/Var tree
+var newBallAtXYZ = (xyz,optionalVelocityXYZ)=>{
+	let ball = Ball[newBallName()];
+	ball.X.p = xyz[0];
+	ball.Y.p = xyz[1];
+	ball.Z.p = xyz[2];
+	if(optionalVelocityXYZ){
+		ball.X.v = optionalVelocityXYZ[0];
+		ball.Y.v = optionalVelocityXYZ[1];
+		ball.Z.v = optionalVelocityXYZ[2];
+	}
+	console.log('Created ball '+ball.path()); //path() is its V/Var tree id
+	return ball;
+};
+
+//all balls, childs of for example V.QuadCraft.Room1.Ball .
+//Includes all balls that can move/roll/bounce, unlike balls stuck on the CCP grid.
+var getAllRollBalls = ()=>Object.values(Ball.pu);
+
+//returns list of Var
+var getAllVarsToUpdate = ()=>{
+	let ret = [];
+	for(let ball of getAllRollBalls()){
+		ret.push(ball);
+		for(let childVar of Object.values(ball.pu)){ //ball.X ball.Y ball.Z and any other fields you add
+			ret.push(childVar);
+		}
+	}
+	return ret;
+};
 
 var onloadHappened = false;
 
@@ -2985,6 +3077,18 @@ window.addEventListener("gamepaddisconnected", e => {
 	console.log("DISCONNECTED:", e.gamepad);
 });
 
+
+/*
+We are editing index.html to add moving/rolling/bouncing balls. They will go in the Var tree in Ball.B3445.X .Y .Z for example in ball named B3445 in V.QuadCraft.Room1.Ball
+
+First I want you to define a 3d density field xyz=>float as ccp.densityAtXYZ(xyz)=>float based on the sparse lists of CCPBallRange in ccp (CCPBallGrid). This density field is for collision physics. The ccp doesnt move but the balls do. If the ball is not touching any ball in the ccp then density is 0. If it is touching, density is positive. The deeper inside ccp volumes, the higher density, so by gradient descent i can roll ball out of there. Whats most important is for balls not to get stuck inside ccp. If all balls in ccp are the same then it would tend to get stuck in the gaps between balls. static balls in ccp i mean. moving ball get stuck between static balls. So I want a density model that always points (downhill in gradient) somewhere outward to escape ccp. A simple way to do this is for each CCPBallRange to detect if the query point is inside its range, and if so, have higher density in the middle of the range and gradually lower toward its ends. but that will only work in 1 direction (Directions.d and its opposite are CCPBallRange directions, and Directions.a and Directions.s are the other 2 directions that sparse lists are keyed by). I'd prefer it be by something liike dijkstra in 3d but i might not have the speed for it.
+
+[Bottom line: This density field does not normally push balls in only 1 of 2 opposite directions. It produces a smooth 3-D vector that always points toward free space] but if it only looks in di and dj plus/minus 1, and a CCPBallRange can be alot longer than that, its not symmetric in the 12 directions (Directions {})
+
+...GPT...
+
+ur not getting the problem. this can be used with large volumes. like ranges of size 50 packed together so its thick in all directions. If a moving ball gets stuck somewhere inside it, checking 12 near balls isnt gonna do it unless density is sloped to get it out the whole path. we can do that in direction of range efficiently (cost of surface area), but would cost volume (not surface) to do dijkstra etc. If we could by best effort approximately find nearest ijk where theres no ccp ball, per moving ball, we could when its inside a range accelerate it toward that, define its densityAtXYZ in terms of distance from that. But how would we do it?
+*/
 
 //made by Ben F Rayfield for Active Inference Institute at
 //https://github.com/docxology/QuadCraft/blob/main/src/js/experiments/QuadrayGrid4.html
