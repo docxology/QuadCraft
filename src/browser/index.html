@@ -4,6 +4,10 @@
 <script src="lib/Var.js"></script>
 </head>
 <body style="margin: 0; overflow: hidden; background: #111;">
+
+<input type="checkbox" id="displayTopStuff" onchange="let d=dom('topStuff');let hide=d.style.display!='none';d.style.display=hide?'none':'block';resizeCanvas();" checked>
+<label for="displayTopStuff"><font color=white>displayTopStuff (push Esc)</font></label>
+<div id=topStuff style="visibility:visible">
 <center style="color:white">
 	<br>
 	<font color=#00cc00>
@@ -17,7 +21,7 @@
 		to make bigger<br>3d paint brushes. Balls,<br>
 		Tetrahedrons, octahedrons.<br>
 		<select id="paintbrushSelect" multiple
-				size="10"
+				size="8"
 				style="min-width: 170px"
 				onchange="recomputeBrushFromSelect()">
 			<!-- options filled by JS -->
@@ -79,7 +83,9 @@ fillGridByFunc(selq, 5, q=>{
 		<input type="checkbox" id="chkQuaternionCamera" checked><label for="chkQuaternionCamera" title="2025-7-28+ upgrading the camera code to use camPos and camQ instead of zoom, angleX, etc. This should fix the distortion of 3d positions at some angles and positions and allow you to fly through it with a gamepad with 2 analog triggers and 2 analog joysticks, or mouse.">quaternion camera (gamepad or mouse)</label>
 		<input type="checkbox" id="isConePlaneIntersection" checked><label for="isConePlaneIntersection" title="use this graphics mode to paint an oval instead of circle so the balls touch eachother on screen if they're touching in 3d.">isConePlaneIntersection</label>
 		<input type="checkbox" id="isCcpBallGrid" checked><label for="isCcpBallGrid" title="CCPBallGrid class is an optimization to store a volume of CCP aligned balls as CCPBallRange objects so costs 2d surface instead of 3d volume.">isCcpBallGrid</label>
+		<br>
 		<input type="checkbox" id="useSurfaceCacheInRanges" checked><label for="useSurfaceCacheInRanges" title="CCPBallGrid.surfaceQuadrays optimization">useSurfaceCacheInRanges</label>
+		<input type="checkbox" id="display_camQuadLabel" onchange="gridChanged=true; //redraw"><label for="display_camQuadLabel" title="display camPos= etc">display camPos= etc"</label>
 		<br>
 		<input type=button onclick="SimKeyPress('z');" value="'z' (tog tetrahedron Z)">
 		<input type=button onclick="SimKeyPress('x');" value="'x' (tog octahedron)">
@@ -122,12 +128,13 @@ fillGridByFunc(selq, 5, q=>{
 			<label id=camQuadLabel></label>
 		</td></tr></table>
 	</td></tr></table>
-	
-	<canvas id="canvas" style="display: block; width: 100vw; height: 100vh; cursor: grab"></canvas>
 </center>
+</div>
+<canvas id="canvas" style="display: block; width: 100vw; height: 100vh; cursor: grab"></canvas>
+
 <script>
 
-var Game = V.Quadcraft;
+const Game = V.QuadCraft;
 //var Bellsack = V.Bellsack is another namespace,
 //and Blob Monsters Game used V.testnet
 //(would be V.Testnet in the new way, cant start with lowercase letter).
@@ -138,6 +145,16 @@ var Room = Game.Room1;
 //of V.Quadcraft.Room1.Ball.B500, and similarly .Y and .Z
 //and whatever other vars you want to put in a ball.
 var Ball = Room.Ball;
+
+//options go here. just write any Opt.AnyOption567.p or Opt.AnyOption567.v etc and it exists
+//and will get auto synced with the V/Var tree.
+var Opt = Room.Opt;
+
+//only if its .p is 0 will it set this. in case was loaded from V/Var earlier.
+//FIXME what if you wanted gravity to be 0/off?
+Opt.GravityY.if0(-2.3);
+
+Opt.DeleteBallsIfLowerThanY.if0(-50);
 
 var Err = str=>{
 	throw new Error(str);
@@ -1923,6 +1940,9 @@ document.addEventListener("keydown", function(e){
 		return; //ignore game controls when in textarea. WARNING: if you add other things that take key presses, do this too,
 	}
 	Buttons[e.key] = 1;
+	if(e.key == 'Escape'){
+		dom('displayTopStuff').click(); //display/hide top stuff
+	}
 	SimKeyPress(e.key);
 });
 
@@ -2460,7 +2480,7 @@ var maxDt = .2;
 var timeCreateNextBall = time();
 var ballCreateInterval = .01;
 
-var mainBallSpawnXYZ = [0, 20, 0];
+var mainBallSpawnXYZ = [0, 10, 50];
 
 var doGameLogic = (now,dt)=>{
 	if(timeCreateNextBall <= now){ //create next ball falling from sky if its time
@@ -2483,11 +2503,18 @@ var doGameLogic = (now,dt)=>{
 	}
 	let rollballs = getAllRollBalls(); //list of Var which each have .X .Y and .Z Var's.
 	for(let rb of rollballs){
-		//TODO
+		rb.Y.dv += Opt.GravityY.p; //dv is change in velocity per time aka accel
 	}
 	let vars = getAllVarsToUpdate();
 	for(let vr of vars){
 		vr.nextState(dt); //update vr.p (position) and vr.v (velocity) based on other fields in vr
+	}
+	for(let rb of rollballs){
+		if(rb.Y.p <= Opt.DeleteBallsIfLowerThanY.p){
+			console.log('Deleting ball '+rb.path()+' cuz rb.Y.p ('+
+				rb.Y.p+') <= Opt.DeleteBallsIfLowerThanY.p ('+Opt.DeleteBallsIfLowerThanY.p+')');
+			rb.del(); //delete this ball. TODO?: In some Var.js code that does the same as rb.set(0) or rb.p=0;
+		}
 	}
 };
 
@@ -2767,7 +2794,8 @@ var copyWorldStateToUiControls = ()=>{
 	dom('numAngleX').value = angleX;
 	dom('numAngleY').value = angleY;
 	dom('labelUnderUiControls').innerHTML = 'selq='+selq;
-	dom('camQuadLabel').innerHTML = 'camPos='+JSON.stringify(camPos)+'<br>camQ='+JSON.stringify(camQ)+'<br>navigator.getGamepads()[0]='+navigator.getGamepads()[0];
+	dom('camQuadLabel').innerHTML = dom('display_camQuadLabel').checked ?
+		('camPos='+JSON.stringify(camPos)+'<br>camQ='+JSON.stringify(camQ)+'<br>navigator.getGamepads()[0]='+navigator.getGamepads()[0]) : '';
 };
 
 var copyUiControlsToWorldState = ()=>{
@@ -2823,6 +2851,7 @@ var onload = ()=>{
 		recomputeBrushFromSelect(); //build Brush at startup. Happens again when multiselect list of brushes is modified.
 		copyWorldStateToUiControls();
 		paintXYZColor([0,0,1],randColor());
+		dom('displayTopStuff').click(); //hide top stuff at boot
 	}
 };
 
