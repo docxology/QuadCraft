@@ -86,6 +86,8 @@ fillGridByFunc(selq, 5, q=>{
 		<br>
 		<input type="checkbox" id="useSurfaceCacheInRanges" checked><label for="useSurfaceCacheInRanges" title="CCPBallGrid.surfaceQuadrays optimization">useSurfaceCacheInRanges</label>
 		<input type="checkbox" id="display_camQuadLabel" onchange="gridChanged=true; //redraw"><label for="display_camQuadLabel" title="display camPos= etc">display camPos= etc"</label>
+		<input type="checkbox" id="holdTestBallInFrontOfCam"><label for="holdTestBallInFrontOfCam" title="hold TestBall in front of cam to test collision detection etc">holdTestBallInFrontOfCam</label>
+		TestBall
 		<br>
 		<input type=button onclick="SimKeyPress('z');" value="'z' (tog tetrahedron Z)">
 		<input type=button onclick="SimKeyPress('x');" value="'x' (tog octahedron)">
@@ -1924,7 +1926,9 @@ var xyzInFrontOfCam = dist=>{
 var cursor3dDistanceInFrontOfCam = 35;
 
 //target quadray in front of camPos along the forward direction of camQ. CCP grid aligned.
-var targetQ = ()=>(quadrayInFrontOfCam(cursor3dDistanceInFrontOfCam).nearestCCP());
+var targetQ = ()=>(targetQRaw().nearestCCP());
+
+var targetQRaw = ()=>(quadrayInFrontOfCam(cursor3dDistanceInFrontOfCam));
 
 var quadrayInFrontOfCam = dist=>{
 	return Quadray.fromCartesian(xyzInFrontOfCam(dist));
@@ -2652,6 +2656,7 @@ var doGameLogic = (now,dt)=>{
 			let derivative = (perturbedSample-neutralSample)/child.epsilon;
 			//add to gradient. Will adjust velocity by negative gradient in nextState(dt).
 			child.gr += derivative;
+			child.accelMul = 100; //FIXME
 		}
 	}
 	let vars = getAllVarsToUpdate();
@@ -2667,7 +2672,7 @@ var doGameLogic = (now,dt)=>{
 	}
 };
 
-function draw(){
+function draw(){ //todo rename this to nextGameState
 	//let dt = 1/60; //TODO measure and clamp it
 	let now = time();
 	let dt = Math.max(0, Math.min(now-timeOfLastDraw, maxDt));
@@ -2729,7 +2734,7 @@ function draw(){
 		//	color = 'red';
 		//	//TODO rb.IsHitCCP.p
 		//}
-		color = rb.IsHitCCP.p ? 'red' : 'gray';
+		color = rb.IsHitCCP.p ? 'white' : 'gray';
 		//drawables.push(new Drawable('ball',q,xyz,color));
 		//rollball/rb as object to draw instead of Quadray,
 		//so it doesnt fill the quadray dedup which doesnt get garbcoled as of 2025-8-28.
@@ -2742,7 +2747,14 @@ function draw(){
 		d.draw();
 	}
 	
-	let targ = targetQ(); //in front of camera, grid aligned.
+	let targ = targetQ(); //in front of camera, grid aligned. //FIXME make sure this doesnt fill Quadray dedup cuz never garbcol.
+	if(dom('holdTestBallInFrontOfCam').checked){
+		let targXYZ = targetQRaw().toCartesian(); //not grid aligned, moves smoothly with cam. //FIXME make sure this doesnt fill Quadray dedup cuz never garbcol.
+		TestBall.X.set(targXYZ[0]); //sets TestBall.X.p after TestBall.X.nextState.
+		//TODO TestBall.V.v? else it might keep going faster and faster but be reset to same position in front of cam.
+		TestBall.Y.set(targXYZ[1]);
+		TestBall.Z.set(targXYZ[2]);
+	}
 	let fill = false; //circle/oval outline
 	let isConePlaneIntersection = dom('isConePlaneIntersection').checked;
 	//let brush = selectedPaintbrush();
@@ -2985,6 +2997,8 @@ var newBallAtXYZ = (xyz,optionalVelocityXYZ)=>{
 	console.log('Created ball '+ball.path()); //path() is its V/Var tree id
 	return ball;
 };
+
+var TestBall = newBallAtXYZ([2,3,4]); //hold this one in front of camera to test collision detection
 
 //all balls, childs of for example V.QuadCraft.Room1.Ball .
 //Includes all balls that can move/roll/bounce, unlike balls stuck on the CCP grid.
