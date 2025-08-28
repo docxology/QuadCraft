@@ -134,6 +134,8 @@ fillGridByFunc(selq, 5, q=>{
 
 <script>
 
+const atBoot_displayTopStuff = true;
+
 const Game = V.QuadCraft;
 //var Bellsack = V.Bellsack is another namespace,
 //and Blob Monsters Game used V.testnet
@@ -152,7 +154,9 @@ var Opt = Room.Opt;
 
 //only if its .p is 0 will it set this. in case was loaded from V/Var earlier.
 //FIXME what if you wanted gravity to be 0/off?
-Opt.GravityY.if0(-2.3);
+//Opt.GravityY.if0(-2.3);
+//Opt.GravityY.if0(-.6);
+Opt.GravityY.if0(-.01);
 
 Opt.DeleteBallsIfLowerThanY.if0(-50);
 
@@ -449,6 +453,71 @@ class Quadray{
 
 }
 
+/*xyzToQa xyzToQb xyzToQc xyzToQd: xyzTo* the a b c d in fromRawCartesian:
+static fromRawCartesian([x, y, z]){
+	const a = (Math.max(0,	x) + Math.max(0,	y) + Math.max(0,	z)) / 2;
+	const b = (Math.max(0, -x) + Math.max(0, -y) + Math.max(0,	z)) / 2;
+	const c = (Math.max(0, -x) + Math.max(0,	y) + Math.max(0, -z)) / 2;
+	const d = (Math.max(0,	x) + Math.max(0, -y) + Math.max(0, -z)) / 2;
+	return new Quadray(a, b, c, d).normalized();
+}*/
+
+function xyzToQa(x, y, z){
+  return (Math.max(0, x) + Math.max(0, y) + Math.max(0, z)) * ROOT2/2;
+}
+
+function xyzToQb(x, y, z){
+  return (Math.max(0, -x) + Math.max(0, -y) + Math.max(0, z)) * ROOT2/2;
+}
+
+function xyzToQc(x, y, z){
+  return (Math.max(0, -x) + Math.max(0, y) + Math.max(0, -z)) * ROOT2/2;
+}
+
+function xyzToQd(x, y, z){
+  return (Math.max(0, x) + Math.max(0, -y) + Math.max(0, -z)) * ROOT2/2;
+}
+
+function qaQbQcQdToD(Qa, Qb, Qc, Qd) { // k
+  return 0.5 * ((Qb - Qd) - (Qa - Qc));
+}
+
+function qaQbQcQdToA(Qa, Qb, Qc, Qd) { // i
+  const k = 0.5 * ((Qb - Qd) - (Qa - Qc));
+  return 0.5 * ((Qb - Qc) - k);
+}
+
+function qaQbQcQdToS(Qa, Qb, Qc, Qd) { // j
+  const k = 0.5 * ((Qb - Qd) - (Qa - Qc));
+  return 0.5 * ((Qa - Qd) - k);
+}
+
+var countQuadraysInDedupMap = ()=>{
+	let count = 0;
+	for(let keyA in dedupQuadraysMap){
+		let mapB = dedupQuadraysMap[keyA];
+		for(let keyB in mapB){
+			let mapC = mapB[keyB];
+			for(let keyC in mapC){
+				let mapD = mapC[keyC];
+				for(keyD in mapD){
+					count++;
+				}
+			}
+		}
+	}
+	return count;
+};
+
+//for dedupQuadraysMap
+var countMapRecursive = map=>{
+	let count = 1; //for the map itself
+	for(let key in map){
+		
+	}
+	return count;
+}
+
 /* By GPT5, todo test.
 
 	Nearest CCP/FCC site in *raw* xyz space (the one from toRawCartesian()).
@@ -505,7 +574,7 @@ function evenFloor(t){
 //
 // One immutable run [k0,k1) along D in the (i,j) column
 //class CCPBallRange written by GPT5 2025-8-15. TODO test.
-class CCPBallRange {
+class CCPBallRange { //TODO rename ijk to asd
 	constructor(i, j, k0, k1){			// k1 is exclusive
 		this.i	= i|0; this.j	= j|0;
 		this.k0 = k0|0; this.k1 = k1|0;
@@ -738,6 +807,9 @@ class CCPBallGrid {
 		return retList; //quadrays
 	}
 
+	xyzToASD(xyz){
+		return Quadray.toASD(Quadray.fromCartesian(xyz));
+	}
 
 	// ---- Quadray <-> (i,j,k) on the CCP ASD lattice ----
 	toASD(q){
@@ -745,7 +817,7 @@ class CCPBallGrid {
 		const k = ((b - d) - (a - c)) / 2;
 		const i = ((b - c) - k) / 2;
 		const j = ((a - d) - k) / 2;
-		return [i|0, j|0, k|0];
+		return [i, j, k];
 	}
 	fromASD(i,j,k){
 		return this.QA.mul(i).add(this.QS.mul(j)).add(this.QD.mul(k)).normalized();
@@ -782,6 +854,64 @@ class CCPBallGrid {
 			if(r.k0 <= k && k < r.k1) return true;
 		}
 		return false;
+	}
+	
+	//a rollball has .X .Y .Z and maybe .R (radius), not a CCP ball.
+	//This does ccpBall-rollball collisions gradually by potential energy (poten).
+	potenOfRollball(rollball){
+		
+		//xyzToAsd and the creation of [x,y,z] is creating too much heap objects 2025-8-28,
+		//so am making xyzToQa etc funcs to do it without heap:
+		//let xyz = [rollball.X.p, rollball.Y.p, rollball.Z.p]; //TODO faster by avoid creating lists
+		//let asd = this.xyzToASD(xyz); //TODO faster by avoid creating lists
+		//let a = asd[0], s = asd[1], d = asd[2];
+		let x = rollball.X.p, y = rollball.Y.p, z = rollball.Z.p;
+		let qa = xyzToQa(x,y,z);
+		let qb = xyzToQb(x,y,z);
+		let qc = xyzToQc(x,y,z);
+		let qd = xyzToQd(x,y,z);
+		let a = qaQbQcQdToA(qa, qb, qc, qd);  // i, todo rename ijk to asd
+		let s = qaQbQcQdToS(qa, qb, qc, qd);  // j, todo rename ijk to asd
+		let d = qaQbQcQdToD(qa, qb, qc, qd);  // k, todo rename ijk to asd
+		
+		
+		//FIXME should it be |0 vs Math.round? toASD uses |0.
+		//Consider ball center, where is it. Collision physics matters.
+		let aInt = Math.round(a); //Directions.a
+		let sInt = Math.round(s); //Directions.s
+		let list = this._get(a,s); //TODO rename ijk to asd.
+		let maxPoten = 0;
+		for(let range of list){
+			let poten = 0;
+			let minD = range.k0; //TODO rename ijk to asd
+			let maxD = range.k1; //TODO rename ijk to asd
+			let bounceAgainstD;
+			//let bounceForceMultiplier = 1;
+			if(d<minD){
+				bounceAgainstD = minD;
+			}else if(d>maxD){
+				bounceAgainstD = maxD;
+			}else{ //inside
+				//FIXME cuz asd is tilted vs xyz is flat, so this is not the exact closest point
+				bounceAgainstD = d;
+				//TODO bounceForceMultiplier = 
+			}
+			let distSq = (a-aInt)**2 + (s-sInt)**2 + (d-bounceAgainstD)**2;
+			//FIXME make it higher poten to be inside range than outside. Closer to middle the higher.
+			
+			let rollballRadius = ballRadius;
+			let rangeRadius = ballRadius;
+			let radiusSum = rollballRadius+rangeRadius;
+			if(distSq < (radiusSum**2)){ //collision between rollball and CCPBallRange, do physics.
+				let dist = Math.sqrt(distSq);
+				let howFarTheyStickIntoEachother = rangeRadius-dist;
+				let rangeRollballCollisionForceMul = 1;
+				poten += rangeRollballCollisionForceMul*(howFarTheyStickIntoEachother**2); //squared error
+			}
+			maxPoten = Math.max(maxPoten, poten);
+		}
+		rollball.IsHitCCP.p = maxPoten ? 1 : 0; //for debug graphics, to change rollball's color when it hits CCP
+		return maxPoten;
 	}
 
 	
@@ -2478,9 +2608,18 @@ let timeOfLastDraw = 0;
 var maxDt = .2;
 
 var timeCreateNextBall = time();
-var ballCreateInterval = .01;
+//var ballCreateInterval = .01;
+var ballCreateInterval = .1;
 
 var mainBallSpawnXYZ = [0, 10, 50];
+
+//potential energy of rollball like Ball.B507, not CCP balls.
+var potenOfRollball = ball=>{
+	let poten = 0;
+	//TODO collisions with nearby balls, least squares of overlap distance.
+	poten += ccp.potenOfRollball(ball);
+	return poten;
+};
 
 var doGameLogic = (now,dt)=>{
 	if(timeCreateNextBall <= now){ //create next ball falling from sky if its time
@@ -2504,6 +2643,16 @@ var doGameLogic = (now,dt)=>{
 	let rollballs = getAllRollBalls(); //list of Var which each have .X .Y and .Z Var's.
 	for(let rb of rollballs){
 		rb.Y.dv += Opt.GravityY.p; //dv is change in velocity per time aka accel
+		let neutralSample = potenOfRollball(rb);
+		for(let childName in rb.pu){
+			let child = rb.pu[childName];
+			child.pushEpsilon();
+			let perturbedSample = potenOfRollball(rb);
+			child.popEpsilon();
+			let derivative = (perturbedSample-neutralSample)/child.epsilon;
+			//add to gradient. Will adjust velocity by negative gradient in nextState(dt).
+			child.gr += derivative;
+		}
 	}
 	let vars = getAllVarsToUpdate();
 	for(let vr of vars){
@@ -2574,8 +2723,17 @@ function draw(){
 	let rollballs = getAllRollBalls();
 	for(let rb of rollballs){
 		let xyz = [rb.X.p, rb.Y.p, rb.Z.p];
-		let q = Quadray.fromCartesian(xyz);
-		drawables.push(new Drawable('ball',q,xyz));
+		//let q = Quadray.fromCartesian(xyz);
+		let color = null; //if null, uses balls color in its Quadray
+		//if(Math.random()<1.1){
+		//	color = 'red';
+		//	//TODO rb.IsHitCCP.p
+		//}
+		color = rb.IsHitCCP.p ? 'red' : 'gray';
+		//drawables.push(new Drawable('ball',q,xyz,color));
+		//rollball/rb as object to draw instead of Quadray,
+		//so it doesnt fill the quadray dedup which doesnt get garbcoled as of 2025-8-28.
+		drawables.push(new Drawable('ball',rb,xyz,color));
 	}
 	
 	drawables.sort((a,b)=>(b.depth-a.depth));
@@ -2632,6 +2790,8 @@ function draw(){
 		paintXYZColor(isQuat ? q.toCartesian() : UnscaleGrid(q.toCartesian()), q.color);
 	}
 	*/
+	
+	console.log('countQuadraysInDedupMap()='+countQuadraysInDedupMap());
 	
 	requestAnimationFrame(draw);
 }
@@ -2851,7 +3011,9 @@ var onload = ()=>{
 		recomputeBrushFromSelect(); //build Brush at startup. Happens again when multiselect list of brushes is modified.
 		copyWorldStateToUiControls();
 		paintXYZColor([0,0,1],randColor());
-		dom('displayTopStuff').click(); //hide top stuff at boot
+		if(!atBoot_displayTopStuff){
+			dom('displayTopStuff').click(); //hide top stuff at boot
+		}
 	}
 };
 
