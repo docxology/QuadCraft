@@ -933,10 +933,16 @@ class CCPBallGrid {
 				let listA = Math.round(ballCenterA+da); //Directions.a
 				let listS = Math.round(ballCenterS+ds); //Directions.s
 				let list = this._get(listA,listS); //TODO rename ijk to asd.
+				if(!list.length) continue;
+
+				//vector S = P1 − P0 is pure D in ASD (same A,S for every ball in the column)
+				
 				//let aInt = Math.round(a); //Directions.a
 				//let sInt = Math.round(s); //Directions.s
 				for(let range of list){
 					let poten = 0;
+					
+					/*bug 2025-8-30_1_gpto3ExplainsAsPicABugInCollisionDetectionAgainstALineOfCCPBallsDueTo(Directions.d)BeingTiltedVs(Directions.a)And(Directions.s) see .jpg and .txt
 					let minD = range.k0; //TODO rename ijk to asd
 					let maxD = range.k1-1; //k1 is exclusive. k0 inclusive. on integers. TODO rename ijk to asd
 					let bounceAgainstD; //along line in list thats parallel to Directions.d
@@ -952,18 +958,53 @@ class CCPBallGrid {
 					}
 					
 					
-					/*This way is wrong cuz it measures in ASD coords but all 3 of those A S D are not perpendicular to eachother.
+					*This way is wrong cuz it measures in ASD coords but all 3 of those A S D are not perpendicular to eachother.
 					A and S are perpendicular to eachother but D is not perpendicular to the other 2, is tilted for CCP grid,
 					so each ball is adjacent to exactly 12 other balls when dense.
 					let asdDistSq = (a-listA)**2 + (s-listS)**2 + (d-bounceAgainstD)**2;
 					let distSq = asdDistSq*asdLenSq;
 					//FIXME make it higher poten to be inside range than outside. Closer to middle the higher.
-					*/
+					*
 					// Use true XYZ metric via asdToX/Y/Z (no heap)
 					let dx = asdToX(ballCenterA - listA, ballCenterS - listS, ballCenterD - bounceAgainstD);
 					let dy = asdToY(ballCenterA - listA, ballCenterS - listS, ballCenterD - bounceAgainstD);
 					let dz = asdToZ(ballCenterA - listA, ballCenterS - listS, ballCenterD - bounceAgainstD);
 					let distSq = dx*dx + dy*dy + dz*dz;
+					*/
+
+					const k0 = range.k0;         // first occupied centre
+					const k1 = range.k1 - 1;     // last  occupied centre
+					const segLenD = k1 - k0;     // >= 0 integer
+
+					/* ---------- convert once to XYZ ---------- */
+					const sX = asdToX(0, 0, segLenD);
+					const sY = asdToY(0, 0, segLenD);
+					const sZ = asdToZ(0, 0, segLenD);
+					const sLenSq = sX*sX + sY*sY + sZ*sZ;   // |S|²  (≥0)
+
+					/* vector V  from P0(k0) to ball centre, in XYZ */
+					const vX = asdToX(ballCenterA - listA, ballCenterS - listS, ballCenterD - k0);
+					const vY = asdToY(ballCenterA - listA, ballCenterS - listS, ballCenterD - k0);
+					const vZ = asdToZ(ballCenterA - listA, ballCenterS - listS, ballCenterD - k0);
+
+					/* ---------- orthogonal projection ---------- */
+					let t = 0;        // parameter along S   (0 ≤ t ≤ 1)
+					if (sLenSq > 0){
+						t = (vX*sX + vY*sY + vZ*sZ) / sLenSq;
+						if (t < 0) t = 0;
+						else if (t > 1) t = 1;
+					}
+					/* closest point C = P0 + t·S   but P0→(0,0,0) in this frame */
+					const cX = t * sX;
+					const cY = t * sY;
+					const cZ = t * sZ;
+
+					/* radial difference D = V − C */
+					const dX = vX - cX;
+					const dY = vY - cY;
+					const dZ = vZ - cZ;
+					const distSq = dX*dX + dY*dY + dZ*dZ;
+					
 					
 					let rollballRadius = ballRadius;
 					let rangeRadius = ballRadius;
