@@ -157,7 +157,9 @@ var Opt = Room.Opt;
 //FIXME what if you wanted gravity to be 0/off?
 //Opt.GravityY.if0(-2.3);
 //Opt.GravityY.if0(-.6);
-Opt.GravityY.if0(-.01);
+//Opt.GravityY.if0(-.1);
+Opt.GravityY.if0(-.02);
+//Opt.GravityY.if0(-.01);
 
 Opt.DeleteBallsIfLowerThanY.if0(-50);
 
@@ -2034,10 +2036,8 @@ var xyzInFrontOfCam = dist=>{
 	return Add(camPos, VecMulScalar(calculateForwardVector(camQ),dist));
 };
 
-Opt.Cursor3dDistanceInFrontOfCam.if0(5); //for testing with holdTestBallInFrontOfCam checkbox checked
-//Opt.Cursor3dDistanceInFrontOfCam.if0(12.3);
-//Opt.Cursor3dDistanceInFrontOfCam.if0(20);
-//Opt.Cursor3dDistanceInFrontOfCam.if0(35); //normal
+//Opt.Cursor3dDistanceInFrontOfCam.if0(5); //for testing with holdTestBallInFrontOfCam checkbox checked
+Opt.Cursor3dDistanceInFrontOfCam.if0(35); //normal
 
 //target quadray in front of camPos along the forward direction of camQ. CCP grid aligned.
 var targetQ = ()=>(targetQRaw().nearestCCP());
@@ -2780,6 +2780,7 @@ var doGameLogic = (now,dt)=>{
 			//add to gradient. Will adjust velocity by negative gradient in nextState(dt).
 			child.gr += derivative;
 			child.accelMul = 100; //FIXME
+			//child.accelMul = 500; //FIXME
 		}
 	}
 	let vars = getAllVarsToUpdate();
