@@ -1,0 +1,290 @@
+I changed it to 3x3. but its still not working.
+
+Could it be related to asdLen is 2? Doesnt seem it would be cuz it varies by 3d angle and is no the same on opposite sides. In one thin direction I found the min distance it turns white is farther than at the opposite direction.
+ChatGPT said:
+Thought for 1m 25s
+
+Here’s the only change that matters – we just make sure the “closest‐point-on-column” really lands on a real ball centre (integer D inside the range) instead of the arbitrary floating D we were using before.
+
+@@   if(ballCenterD<minD){
+        bounceAgainstD = minD;
+@@   }else if(ballCenterD>maxD){
+        bounceAgainstD = maxD;
+@@   }else{ //inside column
+-       //FIXME cuz asd is tilted vs xyz is flat, so this is not the exact closest point
+-       bounceAgainstD = ballCenterD;
+-       //TODO bounceForceMultiplier = 
++       // Snap to the nearest CCP-ball centre along this column so
++       // the distance is measured to a *real* sphere (eliminates the
++       // asymmetric “thin-side” bug you’re seeing).
++       bounceAgainstD = Math.round(ballCenterD);
++       if(bounceAgainstD < minD) bounceAgainstD = minD;
++       else if(bounceAgainstD > maxD) bounceAgainstD = maxD;
+ }
+
+Why this fixes the odd “one thin direction needs ~½-ball more clearance” effect
+
+Before: when the roll-ball’s D coordinate lay between two CCP centres
+we treated the closest point as having the same D; because D isn’t
+perpendicular to (A,S), that added an unnecessary slanted component to
+the distance vector, so the reported gap varied with direction.
+
+After: we always measure to the nearest actual CCP sphere centre
+(integer D), so the radial distance is correct in every orientation.
+The two opposite thin directions now give identical touch-points, and all
+four quadrants behave symmetrically.
+
+No other lines touched – comments kept, const/let left alone.
+
+You said:
+bounceAgainstD is not the problem. I know this cuz it works precisely at the 2 ends, when its 2*radius (center to center distance) past either end and on the line (thats parallel to Directions.d)
+ChatGPT said:
+Thought for a couple of seconds
+
+The distance is still being measured to the original column centre (aInt, sInt) even while you iterate through neighbour columns.
+So for offsets like (di,dj) = (±1,±1) the code compares the roll-ball to the wrong place, and you get the “requires extra clearance” effect in those directions.
+
+You only need to change where you subtract the column centre when you
+compute dx, dy, dz.
+Everything else (neighbour list, bounceAgainstD, etc.) can stay exactly as it is.
+
+@@ inside the inner  for (let range of list)  loop
+-            let dx = asdToX(a - aInt, s - sInt, d - bounceAgainstD);
+-            let dy = asdToY(a - aInt, s - sInt, d - bounceAgainstD);
+-            let dz = asdToZ(a - aInt, s - sInt, d - bounceAgainstD);
++            // subtract the centre of *this* neighbour column (aInt+di , sInt+dj)
++            let dx = asdToX(a - (aInt + di), s - (sInt + dj), d - bounceAgainstD);
++            let dy = asdToY(a - (aInt + di), s - (sInt + dj), d - bounceAgainstD);
++            let dz = asdToZ(a - (aInt + di), s - (sInt + dj), d - bounceAgainstD);
+
+
+No new variables, no extra allocations – just replace those three subtraction
+terms.
+After this, every neighbour column is tested against its own true centre, so the touch-distance is the same in all thin directions.
+
+You said:
+there is no aInt or sInt anymore.
+
+	//a rollball has .X .Y .Z and maybe .R (radius), not a CCP ball.
+	//This does ccpBall-rollball collisions gradually by potential energy (poten).
+	potenOfRollball(rollball){
+		
+		//xyzToAsd and the creation of [x,y,z] is creating too much heap objects 2025-8-28,
+		//so am making xyzToQa etc funcs to do it without heap:
+		//let xyz = [rollball.X.p, rollball.Y.p, rollball.Z.p]; //TODO faster by avoid creating lists
+		//let asd = this.xyzToASD(xyz); //TODO faster by avoid creating lists
+		//let a = asd[0], s = asd[1], d = asd[2];
+		let x = rollball.X.p, y = rollball.Y.p, z = rollball.Z.p;
+		let qa = xyzToQa(x,y,z);
+		let qb = xyzToQb(x,y,z);
+		let qc = xyzToQc(x,y,z);
+		let qd = xyzToQd(x,y,z);
+		let ballCenterA = qaQbQcQdToA(qa, qb, qc, qd);  // i, todo rename ijk to asd
+		let ballCenterS = qaQbQcQdToS(qa, qb, qc, qd);  // j, todo rename ijk to asd
+		let ballCenterD = qaQbQcQdToD(qa, qb, qc, qd);  // k, todo rename ijk to asd
+		
+		
+		//FIXME should it be |0 vs Math.round? toASD uses |0.
+		//Consider ball center, where is it. Collision physics matters.
+		//let aInt = Math.round(a); //Directions.a
+		//let sInt = Math.round(s); //Directions.s
+		//let list = this._get(a,s); //TODO rename ijk to asd.
+		let maxPoten = 0;
+		
+		//check all AS/IJ lists that it could be touching.
+		
+		//for(let colOffset of colOffsetsForBallsSameSizeAsCcpBalls){
+		//	let da = colOffset[0]; //asd
+		//	let ds = colOffset[1]; //asd
+		for(let da=-1; da<=1; da++){
+			for(let ds=-1; ds<=1; ds++){
+				//3x3 lists around it. Only works if rollball is at most as big as ccp ball, else you need to check more lists.
+				//TODO optimize: in theory this might be doable with 2x2.
+				let listA = Math.round(ballCenterA+da); //Directions.a
+				let listS = Math.round(ballCenterS+ds); //Directions.s
+				let list = this._get(listA,listS); //TODO rename ijk to asd.
+				//let aInt = Math.round(a); //Directions.a
+				//let sInt = Math.round(s); //Directions.s
+				for(let range of list){
+					let poten = 0;
+					let minD = range.k0; //TODO rename ijk to asd
+					let maxD = range.k1-1; //k1 is exclusive. k0 inclusive. on integers. TODO rename ijk to asd
+					let bounceAgainstD; //along line in list thats parallel to Directions.d
+					//let bounceForceMultiplier = 1;
+					if(ballCenterD<minD){
+						bounceAgainstD = minD;
+					}else if(ballCenterD>maxD){
+						bounceAgainstD = maxD;
+					}else{ //inside
+						//FIXME cuz asd is tilted vs xyz is flat, so this is not the exact closest point
+						bounceAgainstD = ballCenterD;
+						//TODO bounceForceMultiplier = 
+					}
+					
+					
+					/*This way is wrong cuz it measures in ASD coords but all 3 of those A S D are not perpendicular to eachother.
+					A and S are perpendicular to eachother but D is not perpendicular to the other 2, is tilted for CCP grid,
+					so each ball is adjacent to exactly 12 other balls when dense.
+					let asdDistSq = (a-listA)**2 + (s-listS)**2 + (d-bounceAgainstD)**2;
+					let distSq = asdDistSq*asdLenSq;
+					//FIXME make it higher poten to be inside range than outside. Closer to middle the higher.
+					*/
+					// Use true XYZ metric via asdToX/Y/Z (no heap)
+					let dx = asdToX(ballCenterA - listA, ballCenterS - listS, ballCenterD - bounceAgainstD);
+					let dy = asdToY(ballCenterA - listA, ballCenterS - listS, ballCenterD - bounceAgainstD);
+					let dz = asdToZ(ballCenterA - listA, ballCenterS - listS, ballCenterD - bounceAgainstD);
+					let distSq = dx*dx + dy*dy + dz*dz;
+					
+					let rollballRadius = ballRadius;
+					let rangeRadius = ballRadius;
+					let radiusSum = rollballRadius+rangeRadius;
+					if(distSq < (radiusSum**2)){ //collision between rollball and CCPBallRange, do physics.
+						let dist = Math.sqrt(distSq);
+						let howFarTheyStickIntoEachother = radiusSum-dist;
+						let rangeRollballCollisionForceMul = 1;
+						poten += rangeRollballCollisionForceMul*(howFarTheyStickIntoEachother**2); //squared error
+					}
+					
+					maxPoten = Math.max(maxPoten, poten);
+				}
+			}
+		}
+		rollball.IsHitCCP.p = maxPoten ? 1 : 0; //for debug graphics, to change rollball's color when it hits CCP
+		return maxPoten;
+	}
+ChatGPT said:
+Thought for 12s
+
+The “thin-side” miss happens only when the roll-ball’s centre‐D lies inside the
+range’s [k0,k1 – 1].
+In that branch you still use
+
+bounceAgainstD = ballCenterD;      // a float
+
+
+so the distance to every neighbour column is measured to a non-existent
+point between CCP centres.
+Depending on which side you approach from, the extra ΔD is up to 0.5 ball-unit,
+producing the asymmetry you see.
+
+Snap bounceAgainstD to the nearest real CCP centre (integer k) when you are
+inside the range; clamp it to the range ends so it stays valid.
+
+@@                 if(ballCenterD<minD){
+                     bounceAgainstD = minD;
+                 }else if(ballCenterD>maxD){
+                     bounceAgainstD = maxD;
+                 }else{ //inside the D-range of this column
+-                    bounceAgainstD = ballCenterD;
++                    // use the nearest integer k (real ball centre)
++                    bounceAgainstD = Math.round(ballCenterD);
++                    if (bounceAgainstD < minD) bounceAgainstD = minD;
++                    else if (bounceAgainstD > maxD) bounceAgainstD = maxD;
+                 }
+
+
+Nothing else changes.
+Now, no matter which of the four thin directions you take, the distance is
+computed to an actual CCP sphere centre, so the roll-ball turns white at the
+same centre-to-centre gap (exactly 2 × radius) on all sides.
+
+You said:
+[so the distance to every neighbour column is measured to a non-existent
+point between CCP centres.]
+
+Yes, thats right, cuz its supposed to be a cylinder (not the balls in the middle on ccp grid) between 2 half spheres. But since its tilted (Directions.d is not perpendicular to Directions.a or Directions.s, tho Directions.a is perpendicular to Directions.s) that might make it an oval shape by mistake in how I coded it. Is that whats happening?
+
+The reason I want it to be a cylinder is the balls of CCPBallRange's together represent a volume with balls on its surface (ccp.surfaceQuadrays func gets those, excluding the balls inside the volume). But when outside the surface I still want the outer balls on the surface to do collisions on as balls.
+ChatGPT said:
+Thought for 17s
+
+Why one “thin” direction still needs extra clearance
+
+potenOfRollball measures the lateral gap by forcing
+dd = ballCenterD – bounceAgainstD.
+When the ball’s centre lies inside the range this sets dd = 0, i.e. you keep
+the same d-coordinate as the ball and slide straight sideways in
+(Δa,Δs).
+That is not the true shortest distance to the line of centres, because the
+column’s axis‐vector v = Directions.d is tilted with respect to A and S
+(60° to each).
+The real closest point is the orthogonal projection of the centre onto that
+line, not the point with identical d.
+For two opposite thin directions the error is positive, for the other two it is
+negative, hence the asymmetry you see.
+
+Minimal fix — project onto the column axis
+
+Add these pre-computed scalars once (no heap in hot path):
+
+/* put near init */
+const dVec   = Directions.d.toCartesian();    // direction of column axis
+const dLenSq = dVec[0]**2 + dVec[1]**2 + dVec[2]**2;
+
+
+Then replace the three dx dy dz lines only:
+
+-            let dx = asdToX(ballCenterA - listA, ballCenterS - listS,
+-                            ballCenterD - bounceAgainstD);
+-            let dy = asdToY(ballCenterA - listA, ballCenterS - listS,
+-                            ballCenterD - bounceAgainstD);
+-            let dz = asdToZ(ballCenterA - listA, ballCenterS - listS,
+-                            ballCenterD - bounceAgainstD);
++            /* vector from current column centre (listA,listS,*) at minD
++               to the roll-ball centre, in XYZ                         */
++            let vx = asdToX(ballCenterA - listA,
++                            ballCenterS - listS,
++                            ballCenterD - minD);
++            let vy = asdToY(ballCenterA - listA,
++                            ballCenterS - listS,
++                            ballCenterD - minD);
++            let vz = asdToZ(ballCenterA - listA,
++                            ballCenterS - listS,
++                            ballCenterD - minD);
++
++            /* orthogonal projection length t  (in d-steps)            */
++            let t = (vx*dVec[0] + vy*dVec[1] + vz*dVec[2]) / dLenSq;
++            /* clamp to the occupied segment [k0 , k1-1]              */
++            if (t < 0)       t = 0;
++            else if (t > maxD - minD) t = maxD - minD;
++
++            /* closest point on the column axis */
++            let cx = dVec[0]*t;
++            let cy = dVec[1]*t;
++            let cz = dVec[2]*t;
++
++            /* radial difference */
++            let dx = vx - cx;
++            let dy = vy - cy;
++            let dz = vz - cz;
+
+
+Everything after this ( distSq, radius check, poten update ) stays exactly
+the same.
+
+No arrays are allocated in the hot path—just scalar math—so performance stays
+O(1).
+Now the distance is truly orthogonal to the column axis, giving the same
+touch-point in all four thin directions.
+
+You said:
+make a pic explaining the bug
+ChatGPT said:
+Image created
+Share
+
+Here’s a quick sketch that visualises the problem.
+
+What it shows
+
+Grey circles — CCP balls along one column (tilted line: Directions.d).
+
+White test ball — being moved in from the “thin” side.
+
+Red arrows
+
+upper arrow = incorrect closest-point calculation (same D-coordinate, just slide sideways).
+
+lower arrow = correct orthogonal projection onto the column axis (shorter, true minimum distance).
+
+Because the current code uses the upper arrow distance inside the range, the hit-test fires late (needs extra push-in) in two of the thin directions. The fix is to use the orthogonal projection (lower arrow) or snap bounceAgainstD to the nearest integer centre as shown earlier.

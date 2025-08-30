@@ -5,7 +5,7 @@
 </head>
 <body style="margin: 0; overflow: hidden; background: #111;">
 
-<input type="checkbox" id="displayTopStuff" onchange="let d=dom('topStuff');let hide=d.style.display!='none';d.style.display=hide?'none':'block';resizeCanvas();" checked>
+<input type="checkbox" id="displayTopStuff" onchange="let d=Dom('topStuff');let hide=d.style.display!='none';d.style.display=hide?'none':'block';resizeCanvas();" checked>
 <label for="displayTopStuff"><font color=white>displayTopStuff (push Esc)</font></label>
 <div id=topStuff style="visibility:visible">
 <center style="color:white">
@@ -27,12 +27,12 @@
 			<!-- options filled by JS -->
 		</select>
 	</td><td>
-	<input type=button value="Example code A" onclick="dom('textBoxToEval').value = 'fillGridByFunc(selq, 5, q=>{\n	return q.toCartesian()[0]==0;\n});';">
-	<input type=button value="B" onclick="dom('textBoxToEval').value = 'fillGridByFunc(selq, 8, q=>{\n	return q.toCartesian()[0]>1.5;\n});';">
-	<input type=button value="C" onclick="dom('textBoxToEval').value = 'AddColoredDots(gridDotsNear(selq,5),\'green\');';">
-	<input type=button value="D" onclick="dom('textBoxToEval').value = 'fillGridByFunc(selq, 5, q=>{\n	return Math.random()<.3;\n});';">
-	<input type=button value="E" onclick="dom('textBoxToEval').value = 'fillGridByFunc(selq, 14, q=>{\n	let xyz = q.toCartesian();\n	let x = xyz[0], y = xyz[1], z = xyz[2];\n	let xyDist = Math.hypot(x*x,y*y);\n	let yzDist = Math.hypot(y*y,z*z);\n	let xzDist = Math.hypot(x*x,z*z);\n	let xyzDist = Math.hypot(x*x,y*y,z*z);\n	return xyzDist<12 && xyDist>3 && yzDist>3 && xzDist>3;\n});';">
-	<input type=button value="X" title="empty text box" onclick="dom('textBoxToEval').value = '';">
+	<input type=button value="Example code A" onclick="Dom('textBoxToEval').value = 'fillGridByFunc(selq, 5, q=>{\n	return q.toCartesian()[0]==0;\n});';">
+	<input type=button value="B" onclick="Dom('textBoxToEval').value = 'fillGridByFunc(selq, 8, q=>{\n	return q.toCartesian()[0]>1.5;\n});';">
+	<input type=button value="C" onclick="Dom('textBoxToEval').value = 'AddColoredDots(gridDotsNear(selq,5),\'green\');';">
+	<input type=button value="D" onclick="Dom('textBoxToEval').value = 'fillGridByFunc(selq, 5, q=>{\n	return Math.random()<.3;\n});';">
+	<input type=button value="E" onclick="Dom('textBoxToEval').value = 'fillGridByFunc(selq, 14, q=>{\n	let xyz = q.toCartesian();\n	let x = xyz[0], y = xyz[1], z = xyz[2];\n	let xyDist = Math.hypot(x*x,y*y);\n	let yzDist = Math.hypot(y*y,z*z);\n	let xzDist = Math.hypot(x*x,z*z);\n	let xyzDist = Math.hypot(x*x,y*y,z*z);\n	return xyzDist<12 && xyDist>3 && yzDist>3 && xzDist>3;\n});';">
+	<input type=button value="X" title="empty text box" onclick="Dom('textBoxToEval').value = '';">
 	<br>
 <textarea id=textBoxToEval rows=10 cols=40>
 fillGridByFunc(selq, 5, q=>{
@@ -47,7 +47,7 @@ fillGridByFunc(selq, 5, q=>{
 	return Math.random()<.3;
 });*/
 </textarea><br>
-		<input type=button onclick="let jsCode = dom('textBoxToEval').value; console.log('evalling: '+jsCode); let ret = eval(jsCode); console.log('Returned: '+ret);" value="eval text box (see errors on browser console)"></input>
+		<input type=button onclick="let jsCode = Dom('textBoxToEval').value; console.log('evalling: '+jsCode); let ret = eval(jsCode); console.log('Returned: '+ret);" value="eval text box (see errors on browser console)"></input>
 	</td><td>
 		<div id=saveLoadDiv>
 			<input type=button value="Delete QuickSaves" onclick="deleteCookies();" title="delete cookies, including those saved by Quicksave (cookie) 1 to 9.">
@@ -87,7 +87,6 @@ fillGridByFunc(selq, 5, q=>{
 		<input type="checkbox" id="useSurfaceCacheInRanges" checked><label for="useSurfaceCacheInRanges" title="CCPBallGrid.surfaceQuadrays optimization">useSurfaceCacheInRanges</label>
 		<input type="checkbox" id="display_camQuadLabel" onchange="gridChanged=true; //redraw"><label for="display_camQuadLabel" title="display camPos= etc">display camPos= etc"</label>
 		<input type="checkbox" id="holdTestBallInFrontOfCam"><label for="holdTestBallInFrontOfCam" title="hold TestBall in front of cam to test collision detection etc">holdTestBallInFrontOfCam</label>
-		TestBall
 		<br>
 		<input type=button onclick="SimKeyPress('z');" value="'z' (tog tetrahedron Z)">
 		<input type=button onclick="SimKeyPress('x');" value="'x' (tog octahedron)">
@@ -494,6 +493,20 @@ function qaQbQcQdToS(Qa, Qb, Qc, Qd) { // j
   return 0.5 * ((Qa - Qd) - k);
 }
 
+// ---- one-time init (ok to call once after Directions are ready) ----
+var ax, ay, az, sx, sy, sz, dx, dy, dz;
+
+function initASDToXYZ_NoAlloc() {
+  const A = Directions.a.toCartesian(); ax = A[0]; ay = A[1]; az = A[2];
+  const S = Directions.s.toCartesian(); sx = S[0]; sy = S[1]; sz = S[2];
+  const D = Directions.d.toCartesian(); dx = D[0]; dy = D[1]; dz = D[2];
+}
+
+//to avoid heap/garbcol
+function asdToX(a, s, d) { return ax*a + sx*s + dx*d; }
+function asdToY(a, s, d) { return ay*a + sy*s + dy*d; }
+function asdToZ(a, s, d) { return az*a + sz*s + dz*d; }
+
 var countQuadraysInDedupMap = ()=>{
 	let count = 0;
 	for(let keyA in dedupQuadraysMap){
@@ -632,6 +645,25 @@ class CCPBallRange { //TODO rename ijk to asd
 		}
 	}
 }
+
+/*Commentedout cuz replacing with -1 0 1 for each of A and S, 9 not 7:
+//In theory, if you check these 7 IJ/AS offsets of lists of CCPBallRange's,
+//thats everything that could be touching a ball of the same radius as the ccp balls.
+//TODO Maybe can do it with less than 7, but doing all 7 is the simplest way.
+//FIXME If you use bigger balls than ccp balls, you need to check more lists that could touch it.
+//"In the A–S plane your columns lie on a hexagonal lattice (A and S are equal-length, 60° apart).
+//Use axial hex coords (a,s) with the implicit third coord t = −(a+s)." --GPT
+const colOffsetsForBallsSameSizeAsCcpBalls = [
+	[ 0, 0],  // self
+	[ 1, 0],  // +A
+	[-1, 0],  // -A
+	[ 0, 1],  // +S
+	[ 0,-1],  // -S
+	[ 1,-1],  // +A -S
+	[-1, 1],  // -A +S
+];
+I did that but its only working (approximately) for some directions but not others. On the thin directions of a repeatD10 line (of 10 balls that i move 1 ball held in front of camera to check if its white/collision vs gray/noCollision), theres 2 opposite directions where it works at approx the right center to center distance (2*radius), but the perpendicular directions to those which are also the thin directions, are about half that, gotta get closer to the line center to turn white. I suspect this is cuz you need 9 instead of 7 colOffsets. btw i renamed that to colOffsetsForBallsSameSizeAsCcpBalls. The reason for 9 is list primaryKey is in Directions.a and Directions.s which have a 90 degree angle between eachother.
+*/
 
 // CCP-only sparse grid: (i,j) -> [CCPBallRange,...] (sorted, non-overlapping, coalesced)
 //class CCPBallGrid written by GPT5 2025-8-15. TODO test.
@@ -826,7 +858,12 @@ class CCPBallGrid {
 	}
 
 	// ---- sparse column storage helpers ----
-	_key(i,j){ return ((i|0)+","+(j|0)); }
+	//_key(i,j){ return ((i|0)+","+(j|0)); }
+	_key(i,j){
+		//snap to grid. [0,0,0] is the center of some ball (look for orange dot),
+		//so [-.4,-.1,.3] and [.4,.4,.4] should both get the same list.
+		return (Math.round(i)+","+Math.round(j));
+	}
 	_get(i,j){ return this.cols.get(this._key(i,j)) || []; }
 	_set(i,j,arr){ const k=this._key(i,j); arr.length? this.cols.set(k,arr) : this.cols.delete(k); }
 
@@ -872,45 +909,75 @@ class CCPBallGrid {
 		let qb = xyzToQb(x,y,z);
 		let qc = xyzToQc(x,y,z);
 		let qd = xyzToQd(x,y,z);
-		let a = qaQbQcQdToA(qa, qb, qc, qd);  // i, todo rename ijk to asd
-		let s = qaQbQcQdToS(qa, qb, qc, qd);  // j, todo rename ijk to asd
-		let d = qaQbQcQdToD(qa, qb, qc, qd);  // k, todo rename ijk to asd
+		let ballCenterA = qaQbQcQdToA(qa, qb, qc, qd);  // i, todo rename ijk to asd
+		let ballCenterS = qaQbQcQdToS(qa, qb, qc, qd);  // j, todo rename ijk to asd
+		let ballCenterD = qaQbQcQdToD(qa, qb, qc, qd);  // k, todo rename ijk to asd
 		
 		
 		//FIXME should it be |0 vs Math.round? toASD uses |0.
 		//Consider ball center, where is it. Collision physics matters.
-		let aInt = Math.round(a); //Directions.a
-		let sInt = Math.round(s); //Directions.s
-		let list = this._get(a,s); //TODO rename ijk to asd.
+		//let aInt = Math.round(a); //Directions.a
+		//let sInt = Math.round(s); //Directions.s
+		//let list = this._get(a,s); //TODO rename ijk to asd.
 		let maxPoten = 0;
-		for(let range of list){
-			let poten = 0;
-			let minD = range.k0; //TODO rename ijk to asd
-			let maxD = range.k1; //TODO rename ijk to asd
-			let bounceAgainstD;
-			//let bounceForceMultiplier = 1;
-			if(d<minD){
-				bounceAgainstD = minD;
-			}else if(d>maxD){
-				bounceAgainstD = maxD;
-			}else{ //inside
-				//FIXME cuz asd is tilted vs xyz is flat, so this is not the exact closest point
-				bounceAgainstD = d;
-				//TODO bounceForceMultiplier = 
+		
+		//check all AS/IJ lists that it could be touching.
+		
+		//for(let colOffset of colOffsetsForBallsSameSizeAsCcpBalls){
+		//	let da = colOffset[0]; //asd
+		//	let ds = colOffset[1]; //asd
+		for(let da=-1; da<=1; da++){
+			for(let ds=-1; ds<=1; ds++){
+				//3x3 lists around it. Only works if rollball is at most as big as ccp ball, else you need to check more lists.
+				//TODO optimize: in theory this might be doable with 2x2.
+				let listA = Math.round(ballCenterA+da); //Directions.a
+				let listS = Math.round(ballCenterS+ds); //Directions.s
+				let list = this._get(listA,listS); //TODO rename ijk to asd.
+				//let aInt = Math.round(a); //Directions.a
+				//let sInt = Math.round(s); //Directions.s
+				for(let range of list){
+					let poten = 0;
+					let minD = range.k0; //TODO rename ijk to asd
+					let maxD = range.k1-1; //k1 is exclusive. k0 inclusive. on integers. TODO rename ijk to asd
+					let bounceAgainstD; //along line in list thats parallel to Directions.d
+					//let bounceForceMultiplier = 1;
+					if(ballCenterD<minD){
+						bounceAgainstD = minD;
+					}else if(ballCenterD>maxD){
+						bounceAgainstD = maxD;
+					}else{ //inside
+						//FIXME cuz asd is tilted vs xyz is flat, so this is not the exact closest point
+						bounceAgainstD = ballCenterD;
+						//TODO bounceForceMultiplier = 
+					}
+					
+					
+					/*This way is wrong cuz it measures in ASD coords but all 3 of those A S D are not perpendicular to eachother.
+					A and S are perpendicular to eachother but D is not perpendicular to the other 2, is tilted for CCP grid,
+					so each ball is adjacent to exactly 12 other balls when dense.
+					let asdDistSq = (a-listA)**2 + (s-listS)**2 + (d-bounceAgainstD)**2;
+					let distSq = asdDistSq*asdLenSq;
+					//FIXME make it higher poten to be inside range than outside. Closer to middle the higher.
+					*/
+					// Use true XYZ metric via asdToX/Y/Z (no heap)
+					let dx = asdToX(ballCenterA - listA, ballCenterS - listS, ballCenterD - bounceAgainstD);
+					let dy = asdToY(ballCenterA - listA, ballCenterS - listS, ballCenterD - bounceAgainstD);
+					let dz = asdToZ(ballCenterA - listA, ballCenterS - listS, ballCenterD - bounceAgainstD);
+					let distSq = dx*dx + dy*dy + dz*dz;
+					
+					let rollballRadius = ballRadius;
+					let rangeRadius = ballRadius;
+					let radiusSum = rollballRadius+rangeRadius;
+					if(distSq < (radiusSum**2)){ //collision between rollball and CCPBallRange, do physics.
+						let dist = Math.sqrt(distSq);
+						let howFarTheyStickIntoEachother = radiusSum-dist;
+						let rangeRollballCollisionForceMul = 1;
+						poten += rangeRollballCollisionForceMul*(howFarTheyStickIntoEachother**2); //squared error
+					}
+					
+					maxPoten = Math.max(maxPoten, poten);
+				}
 			}
-			let distSq = (a-aInt)**2 + (s-sInt)**2 + (d-bounceAgainstD)**2;
-			//FIXME make it higher poten to be inside range than outside. Closer to middle the higher.
-			
-			let rollballRadius = ballRadius;
-			let rangeRadius = ballRadius;
-			let radiusSum = rollballRadius+rangeRadius;
-			if(distSq < (radiusSum**2)){ //collision between rollball and CCPBallRange, do physics.
-				let dist = Math.sqrt(distSq);
-				let howFarTheyStickIntoEachother = rangeRadius-dist;
-				let rangeRollballCollisionForceMul = 1;
-				poten += rangeRollballCollisionForceMul*(howFarTheyStickIntoEachother**2); //squared error
-			}
-			maxPoten = Math.max(maxPoten, poten);
 		}
 		rollball.IsHitCCP.p = maxPoten ? 1 : 0; //for debug graphics, to change rollball's color when it hits CCP
 		return maxPoten;
@@ -1193,7 +1260,7 @@ var ToggleGameTri = tri=>{
 };
 
 //var selPaintbrushName = 'oneBall';
-var selPaintbrushName = ()=>(dom('paintbrushSelect').value || 'repeatD10');
+var selPaintbrushName = ()=>(Dom('paintbrushSelect').value || 'repeatD10');
 
 //This contains all octahedrons and tetrahedrons as 1 quadray and 1 group name each.
 //grid.oct is a SEt if q is a quadray whose bottom corner is q. Theres 6 corners of it.
@@ -1323,7 +1390,7 @@ var QDots = {};
 //like QDots but balls instead of dots
 var QBalls = {};				//Quadray.toString() ➜ Quadray
 var AddBall = q=>{
-	if(dom('isCcpBallGrid').checked){
+	if(Dom('isCcpBallGrid').checked){
 		ccp.addQuadray(q);
 	}else{
 		QBalls[q] = q; //q.toString()
@@ -1331,7 +1398,7 @@ var AddBall = q=>{
 	//dont gridChanged cuz thats just for the octahedron and tetrahedron grid
 };
 var RemBall = q=>{
-	if(dom('isCcpBallGrid').checked){
+	if(Dom('isCcpBallGrid').checked){
 		ccp.removeQuadray(q);
 	}else{
 		delete QBalls[q]; //q.toString()
@@ -1362,7 +1429,7 @@ class Drawable{
 		let isQuat = isQuatCam();
 		if(this.type==='ball'){
 			let fill = true;
-			let isConePlaneIntersection = dom('isConePlaneIntersection').checked;
+			let isConePlaneIntersection = Dom('isConePlaneIntersection').checked;
 			//paintBall(this.xyz, ballRadius, this.obj.color, fill, isConePlaneIntersection);	//throws if !isQuatCam()
 			const clr = this.color ?? this.obj.color;   // <-- new
 			paintBall(this.xyz, ballRadius, clr, fill, isConePlaneIntersection);
@@ -1533,6 +1600,11 @@ var Directions = {
 	y: CoreDirections[5].mul(-1),
 };
 
+const asdLen = Len(Directions.a.toCartesian()); //should be 2
+const asdLenSq = asdLen**2;
+
+initASDToXYZ_NoAlloc();
+
 //mask these together in paintbrushes
 const PB_OTHER = 1, PB_TETZ = 2, PB_OCT = 4, PB_TETC = 8, PB_BALL = 16;
 
@@ -1687,7 +1759,7 @@ var mergeBrushes = (a,b)=>{
 
 //Collect brush objects from the select box
 var getSelectedBrushes = ()=>{
-	const sel = dom('paintbrushSelect');
+	const sel = Dom('paintbrushSelect');
 	const brushes = [];
 	for (let i = 0; i < sel.options.length; i++){
 		const opt = sel.options[i];
@@ -1712,7 +1784,7 @@ var recomputeBrushFromSelect = ()=>{
 
 
 //computed from outerjoin of selected paintbrushes[name].quads and | aka OR of paintbrush.mask,
-//when you do multi select in dom('paintbrushSelect').
+//when you do multi select in Dom('paintbrushSelect').
 var Brush = paintbrushes.oneBall; //FIXME
 
 // one CCP grid for the whole app
@@ -1921,14 +1993,15 @@ var xyzInFrontOfCam = dist=>{
 	return Add(camPos, VecMulScalar(calculateForwardVector(camQ),dist));
 };
 
-//var cursor3dDistanceInFrontOfCam = 12.3;
-//var cursor3dDistanceInFrontOfCam = 20;
-var cursor3dDistanceInFrontOfCam = 35;
+Opt.Cursor3dDistanceInFrontOfCam.if0(5); //for testing with holdTestBallInFrontOfCam checkbox checked
+//Opt.Cursor3dDistanceInFrontOfCam.if0(12.3);
+//Opt.Cursor3dDistanceInFrontOfCam.if0(20);
+//Opt.Cursor3dDistanceInFrontOfCam.if0(35); //normal
 
 //target quadray in front of camPos along the forward direction of camQ. CCP grid aligned.
 var targetQ = ()=>(targetQRaw().nearestCCP());
 
-var targetQRaw = ()=>(quadrayInFrontOfCam(cursor3dDistanceInFrontOfCam));
+var targetQRaw = ()=>(quadrayInFrontOfCam(Opt.Cursor3dDistanceInFrontOfCam.p));
 
 var quadrayInFrontOfCam = dist=>{
 	return Quadray.fromCartesian(xyzInFrontOfCam(dist));
@@ -2039,7 +2112,7 @@ var fillGridByFunc = (centerQ, hops, func)=>{
 
 var SimKeyPress = key=>{
 	if(Directions[key]){
-		if(dom('directionsButtonsMoveCam').checked){
+		if(Dom('directionsButtonsMoveCam').checked){
 			camPos = Directions[key].add(Quadray.fromCartesian(camPos)).toCartesian();
 		}else{
 			//RemDot(selq);
@@ -2070,12 +2143,12 @@ var SimKeyPress = key=>{
 };
 
 document.addEventListener("keydown", function(e){
-	if(e.target == dom('textBoxToEval')){
+	if(e.target == Dom('textBoxToEval')){
 		return; //ignore game controls when in textarea. WARNING: if you add other things that take key presses, do this too,
 	}
 	Buttons[e.key] = 1;
 	if(e.key == 'Escape'){
-		dom('displayTopStuff').click(); //display/hide top stuff
+		Dom('displayTopStuff').click(); //display/hide top stuff
 	}
 	SimKeyPress(e.key);
 });
@@ -2521,6 +2594,15 @@ var paintBall = (xyz, radius, color, isFillElseOutline, isConePlaneIntersection)
 };*/
 // --- exact cone∩plane silhouette as a 2D affine ---
 // Returns [centerX, centerY, aX, aY, bX, bY] in screen pixels, or null if not drawable.
+//
+//FIXME 2025-8-30 noticed that when paint 1 repeatD10 (paintbrush type) line of 10 balls
+//and view it from some angles while strafing around it, the balls are too long of ovals and
+//overlap when one moves in front of the other, from near sideways on screen they are overlapping
+//when they shouldnt. Balls in a repeatD10 line should never overlap when they're
+//sideways or vertical on screen, only when some are farther away from the screen than others,
+//which is different than farther from camPos than others.
+//Look up 3d frustum calculations in game graphics in general how its supposed to work.
+//
 var conePlaneIntersection = (xyz, radius)=>{
 	// camera basis
 	const dx = xyz[0]-camPos[0], dy = xyz[1]-camPos[1], dz = xyz[2]-camPos[2];
@@ -2695,8 +2777,8 @@ function draw(){ //todo rename this to nextGameState
 	
 	//--- collect, sort, draw farthest→nearest ---
 	let drawables=[];
-	if (dom('isCcpBallGrid').checked){
-		for (const q of ccp.surfaceQuadrays(dom('useSurfaceCacheInRanges').checked)){
+	if (Dom('isCcpBallGrid').checked){
+		for (const q of ccp.surfaceQuadrays(Dom('useSurfaceCacheInRanges').checked)){
 			// pass world coords once; Drawable('ball') uses xyz directly
 			//drawables.push(new Drawable('ball', q, q.toCartesian()));
 			const [i,j,k] = ccp.toASD(q);
@@ -2748,7 +2830,7 @@ function draw(){ //todo rename this to nextGameState
 	}
 	
 	let targ = targetQ(); //in front of camera, grid aligned. //FIXME make sure this doesnt fill Quadray dedup cuz never garbcol.
-	if(dom('holdTestBallInFrontOfCam').checked){
+	if(Dom('holdTestBallInFrontOfCam').checked){
 		let targXYZ = targetQRaw().toCartesian(); //not grid aligned, moves smoothly with cam. //FIXME make sure this doesnt fill Quadray dedup cuz never garbcol.
 		TestBall.X.set(targXYZ[0]); //sets TestBall.X.p after TestBall.X.nextState.
 		//TODO TestBall.V.v? else it might keep going faster and faster but be reset to same position in front of cam.
@@ -2756,7 +2838,7 @@ function draw(){ //todo rename this to nextGameState
 		TestBall.Z.set(targXYZ[2]);
 	}
 	let fill = false; //circle/oval outline
-	let isConePlaneIntersection = dom('isConePlaneIntersection').checked;
+	let isConePlaneIntersection = Dom('isConePlaneIntersection').checked;
 	//let brush = selectedPaintbrush();
 	//if(brush.balls){ //display white circles of actual shape of paintbrush
 	if(Brush.quads && Brush.quads.length){	// display preview of all quads in Brush
@@ -2803,6 +2885,8 @@ function draw(){ //todo rename this to nextGameState
 	}
 	*/
 	
+	paintXYZColor([0,0,0],'orange'); //orange dot at origin (0,0,0) painted over everything else
+	
 	console.log('countQuadraysInDedupMap()='+countQuadraysInDedupMap());
 	
 	requestAnimationFrame(draw);
@@ -2816,7 +2900,7 @@ var SimKeyPresses = str=>{
 	}
 };
 
-var dom = id=>document.getElementById(id);
+var Dom = id=>document.getElementById(id);
 
 var quicksave = function(name){
 	console.log('quicksave '+name);
@@ -2888,7 +2972,7 @@ var StateMap = ()=>({
 	},
 	camPos: [...camPos], //[x,y,z], used if isCamQuat()
 	camQ: [...camQ], //quaternion list size 4, used if isCamQuat()
-	textBoxToEval: dom('textBoxToEval').value,
+	textBoxToEval: Dom('textBoxToEval').value,
 	grid: gridToMap(grid),
 	ccp: ccp.save(),
 });
@@ -2938,7 +3022,7 @@ var LoadMap = map=>{
 	}
 	
 	if(map.textBoxToEval !== undefined){
-		dom('textBoxToEval').value = map.textBoxToEval;
+		Dom('textBoxToEval').value = map.textBoxToEval;
 	}
 
 	copyWorldStateToUiControls();
@@ -2960,22 +3044,22 @@ var openFileInputClicked = event=>{
 
 
 var copyWorldStateToUiControls = ()=>{
-	dom('numOffsetX').value = offsetX;
-	dom('numOffsetY').value = offsetY;
-	dom('numZoom').value = zoom;
-	dom('numAngleX').value = angleX;
-	dom('numAngleY').value = angleY;
-	dom('labelUnderUiControls').innerHTML = 'selq='+selq;
-	dom('camQuadLabel').innerHTML = dom('display_camQuadLabel').checked ?
+	Dom('numOffsetX').value = offsetX;
+	Dom('numOffsetY').value = offsetY;
+	Dom('numZoom').value = zoom;
+	Dom('numAngleX').value = angleX;
+	Dom('numAngleY').value = angleY;
+	Dom('labelUnderUiControls').innerHTML = Dom('display_camQuadLabel').checked ? 'selq='+selq : '';
+	Dom('camQuadLabel').innerHTML = Dom('display_camQuadLabel').checked ?
 		('camPos='+JSON.stringify(camPos)+'<br>camQ='+JSON.stringify(camQ)+'<br>navigator.getGamepads()[0]='+navigator.getGamepads()[0]) : '';
 };
 
 var copyUiControlsToWorldState = ()=>{
-	offsetX = dom('numOffsetX').valueAsNumber;
-	offsetY = dom('numOffsetY').valueAsNumber;
-	zoom = dom('numZoom').valueAsNumber;
-	angleX = dom('numAngleX').valueAsNumber;
-	angleY = dom('numAngleY').valueAsNumber;
+	offsetX = Dom('numOffsetX').valueAsNumber;
+	offsetY = Dom('numOffsetY').valueAsNumber;
+	zoom = Dom('numZoom').valueAsNumber;
+	angleX = Dom('numAngleX').valueAsNumber;
+	angleY = Dom('numAngleY').valueAsNumber;
 	viewChanged = true;
 };
 
@@ -3026,7 +3110,7 @@ var onload = ()=>{
 		copyWorldStateToUiControls();
 		paintXYZColor([0,0,1],randColor());
 		if(!atBoot_displayTopStuff){
-			dom('displayTopStuff').click(); //hide top stuff at boot
+			Dom('displayTopStuff').click(); //hide top stuff at boot
 		}
 	}
 };
