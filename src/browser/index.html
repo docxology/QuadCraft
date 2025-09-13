@@ -85,7 +85,7 @@ fillGridByFunc(selq, 5, q=>{
 		<input type="checkbox" id="isCcpBallGrid" checked><label for="isCcpBallGrid" title="CCPBallGrid class is an optimization to store a volume of CCP aligned balls as CCPBallRange objects so costs 2d surface instead of 3d volume.">isCcpBallGrid</label>
 		<br>
 		<input type="checkbox" id="useSurfaceCacheInRanges" checked><label for="useSurfaceCacheInRanges" title="CCPBallGrid.surfaceQuadrays optimization">useSurfaceCacheInRanges</label>
-		<input type="checkbox" id="display_camQuadLabel" onchange="gridChanged=true; //redraw"><label for="display_camQuadLabel" title="display camPos= etc">display camPos= etc"</label>
+		<input type="checkbox" id="display_camQuadLabel" onchange="gridChanged=true; //redraw"><label for="display_camQuadLabel" title="display camPos= etc">display camPos= etc</label>
 		<input type="checkbox" id="holdTestBallInFrontOfCam"><label for="holdTestBallInFrontOfCam" title="hold TestBall in front of cam to test collision detection etc">holdTestBallInFrontOfCam</label>
 		<br>
 		<input type=button onclick="SimKeyPress('z');" value="'z' (tog tetrahedron Z)">
@@ -895,6 +895,14 @@ class CCPBallGrid {
 			if(r.k0 <= k && k < r.k1) return true;
 		}
 		return false;
+	}
+	
+	isSolidQ(q){
+		return ccp.isSolid(
+			Math.round(qaQbQcQdToA(q.a, q.b, q.c, q.d)),
+			Math.round(qaQbQcQdToS(q.a, q.b, q.c, q.d)),
+			Math.round(qaQbQcQdToD(q.a, q.b, q.c, q.d))
+		);
 	}
 	
 	//a rollball has .X .Y .Z and maybe .R (radius), not a CCP ball.
@@ -1825,6 +1833,28 @@ var recomputeBrushFromSelect = ()=>{
 	Brush = buildBrushFromBrushes(getSelectedBrushes());
 };
 
+var selectedBrushNames =
+	()=>Array.from(Dom('paintbrushSelect').selectedOptions).map(opt => opt.value);
+
+
+var selectBrushNames = names=>{ //list of strings
+    const sel = Dom('paintbrushSelect');
+    if (!sel) return;
+
+    // clear all first
+    for (let i = 0; i < sel.options.length; i++) {
+        sel.options[i].selected = false;
+    }
+
+    // select those in names[]
+    for (let i = 0; i < sel.options.length; i++) {
+        if (names.includes(sel.options[i].value)) {
+            sel.options[i].selected = true;
+        }
+    }
+
+    recomputeBrushFromSelect(); // refresh global Brush
+};
 
 //computed from outerjoin of selected paintbrushes[name].quads and | aka OR of paintbrush.mask,
 //when you do multi select in Dom('paintbrushSelect').
@@ -2751,7 +2781,8 @@ var potenOfRollball = ball=>{
 var doGameLogic = (now,dt)=>{
 	if(timeCreateNextBall <= now){ //create next ball falling from sky if its time
 		let randCubeSide = 2;
-		let randVelCubeSide = 5.3;
+		//let randVelCubeSide = 5.3;
+		let randVelCubeSide = .8;
 		let newBallPositionXYZ = Add(
 			mainBallSpawnXYZ,
 			[	randRange(-randCubeSide/2,randCubeSide/2),
@@ -2883,14 +2914,21 @@ function draw(){ //todo rename this to nextGameState
 	let isConePlaneIntersection = Dom('isConePlaneIntersection').checked;
 	//let brush = selectedPaintbrush();
 	//if(brush.balls){ //display white circles of actual shape of paintbrush
+	let circleOutlineColorTouchingCcpBall = '';
+	let circleOutlineColorInOpenSpace = '#ffffff';
+	//FIXME make this part of drawables so it happens in an order, but make that order these always being on top,
+	//cuz otherwise it will sometimes draw far circle outlines over near circle outlines.
 	if(Brush.quads && Brush.quads.length){	// display preview of all quads in Brush
 		for(let qPart of Brush.quads){
 			//FIXME check Brush.mask for which kind of shape (tetz oct tetz ball).
 			//displaying as white circles as if it were balls:
-			paintBall(targ.add(qPart).toCartesian(), ballRadius, '#ffffff', fill, isConePlaneIntersection);
+			let targPlus = targ.add(qPart);
+			let color = ccp.isSolidQ(targPlus) ? circleOutlineColorTouchingCcpBall : circleOutlineColorInOpenSpace;
+			paintBall(targPlus.toCartesian(), ballRadius, color, fill, isConePlaneIntersection);
 		}
 	}else{ //display others as: paint white circle 3d cursor in front of cam
-		paintBall(targ.toCartesian(), ballRadius, '#ffffff', fill, isConePlaneIntersection);
+		let color = ccp.isSolidQ(targ) ? circleOutlineColorTouchingCcpBall : circleOutlineColorInOpenSpace;
+		paintBall(targ.toCartesian(), ballRadius, color, fill, isConePlaneIntersection);
 	}
 
 	
@@ -2987,6 +3025,36 @@ var LoadJson = json=>LoadMap(JSON.parse(json));
 //get state as json
 var StateJson = ()=>JSON.stringify(StateMap());
 
+//{checkboxId: true, otherCheckboxId: false}
+var loadCheckboxes = map=>{
+	for(let id in map){
+		let chk = Dom(id);
+		if(chk){
+			let val = !!map[id];
+			console.log('Loaded checkbox id='+id+' val='+val);
+			chk.checked = val;
+		}else{
+			console.err('No checkbox found id='+id);
+		}
+	}
+	for(let chk of checkboxesToSaveAndLoad()){
+		
+	}
+};
+
+var checkboxesToMap = list=>{
+	let map = {};
+	for(let chk of list) map[chk.id] = !!chk.checked;
+	return map;
+};
+
+var checkboxesToSaveAndLoad = ()=>{
+	//in case you want to exclude some
+	return allCheckboxes();
+};
+
+var allCheckboxes = ()=>Array.from(document.querySelectorAll("input[type=checkbox]"));
+
 var ClearShapes = ()=>{
 	for(let k in gameTris){
 		delete gameTris[k];
@@ -3016,7 +3084,11 @@ var StateMap = ()=>({
 	camQ: [...camQ], //quaternion list size 4, used if isCamQuat()
 	textBoxToEval: Dom('textBoxToEval').value,
 	grid: gridToMap(grid),
+	//ccp is sparse {} of 2d key (Directions.a and Directions.s) to
+	//sparse list of start/end ranges where theres balls along Directions.d .
 	ccp: ccp.save(),
+	chk: checkboxesToMap(checkboxesToSaveAndLoad()), //{checkboxId: true, otherCheckboxId: false}
+	selectBrushNames: selectedBrushNames(), //list of strings
 });
 
 var LoadMap = map=>{
@@ -3065,6 +3137,13 @@ var LoadMap = map=>{
 	
 	if(map.textBoxToEval !== undefined){
 		Dom('textBoxToEval').value = map.textBoxToEval;
+	}
+	
+	if(map.chk){
+		loadCheckboxes(map.chk);
+	}
+	if(map.selectBrushNames){ //list of strings
+		selectBrushNames(map.selectBrushNames);
 	}
 
 	copyWorldStateToUiControls();
