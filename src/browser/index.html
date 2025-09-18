@@ -161,6 +161,8 @@ var Opt = Room.Opt;
 Opt.GravityY.if0(-.02);
 //Opt.GravityY.if0(-.01);
 
+Opt.BallBounceForce.if0(.3);
+
 Opt.DeleteBallsIfLowerThanY.if0(-50);
 
 var Err = str=>{
@@ -466,42 +468,42 @@ static fromRawCartesian([x, y, z]){
 }*/
 
 function xyzToQa(x, y, z){
-  return (Math.max(0, x) + Math.max(0, y) + Math.max(0, z)) * ROOT2/2;
+	return (Math.max(0, x) + Math.max(0, y) + Math.max(0, z)) * ROOT2/2;
 }
 
 function xyzToQb(x, y, z){
-  return (Math.max(0, -x) + Math.max(0, -y) + Math.max(0, z)) * ROOT2/2;
+	return (Math.max(0, -x) + Math.max(0, -y) + Math.max(0, z)) * ROOT2/2;
 }
 
 function xyzToQc(x, y, z){
-  return (Math.max(0, -x) + Math.max(0, y) + Math.max(0, -z)) * ROOT2/2;
+	return (Math.max(0, -x) + Math.max(0, y) + Math.max(0, -z)) * ROOT2/2;
 }
 
 function xyzToQd(x, y, z){
-  return (Math.max(0, x) + Math.max(0, -y) + Math.max(0, -z)) * ROOT2/2;
+	return (Math.max(0, x) + Math.max(0, -y) + Math.max(0, -z)) * ROOT2/2;
 }
 
 function qaQbQcQdToD(Qa, Qb, Qc, Qd) { // k
-  return 0.5 * ((Qb - Qd) - (Qa - Qc));
+	return 0.5 * ((Qb - Qd) - (Qa - Qc));
 }
 
 function qaQbQcQdToA(Qa, Qb, Qc, Qd) { // i
-  const k = 0.5 * ((Qb - Qd) - (Qa - Qc));
-  return 0.5 * ((Qb - Qc) - k);
+	const k = 0.5 * ((Qb - Qd) - (Qa - Qc));
+	return 0.5 * ((Qb - Qc) - k);
 }
 
 function qaQbQcQdToS(Qa, Qb, Qc, Qd) { // j
-  const k = 0.5 * ((Qb - Qd) - (Qa - Qc));
-  return 0.5 * ((Qa - Qd) - k);
+	const k = 0.5 * ((Qb - Qd) - (Qa - Qc));
+	return 0.5 * ((Qa - Qd) - k);
 }
 
 // ---- one-time init (ok to call once after Directions are ready) ----
 var ax, ay, az, sx, sy, sz, dx, dy, dz;
 
 function initASDToXYZ_NoAlloc() {
-  const A = Directions.a.toCartesian(); ax = A[0]; ay = A[1]; az = A[2];
-  const S = Directions.s.toCartesian(); sx = S[0]; sy = S[1]; sz = S[2];
-  const D = Directions.d.toCartesian(); dx = D[0]; dy = D[1]; dz = D[2];
+	const A = Directions.a.toCartesian(); ax = A[0]; ay = A[1]; az = A[2];
+	const S = Directions.s.toCartesian(); sx = S[0]; sy = S[1]; sz = S[2];
+	const D = Directions.d.toCartesian(); dx = D[0]; dy = D[1]; dz = D[2];
 }
 
 //to avoid heap/garbcol
@@ -656,13 +658,13 @@ class CCPBallRange { //TODO rename ijk to asd
 //"In the A–S plane your columns lie on a hexagonal lattice (A and S are equal-length, 60° apart).
 //Use axial hex coords (a,s) with the implicit third coord t = −(a+s)." --GPT
 const colOffsetsForBallsSameSizeAsCcpBalls = [
-	[ 0, 0],  // self
-	[ 1, 0],  // +A
-	[-1, 0],  // -A
-	[ 0, 1],  // +S
-	[ 0,-1],  // -S
-	[ 1,-1],  // +A -S
-	[-1, 1],  // -A +S
+	[ 0, 0],	// self
+	[ 1, 0],	// +A
+	[-1, 0],	// -A
+	[ 0, 1],	// +S
+	[ 0,-1],	// -S
+	[ 1,-1],	// +A -S
+	[-1, 1],	// -A +S
 ];
 I did that but its only working (approximately) for some directions but not others. On the thin directions of a repeatD10 line (of 10 balls that i move 1 ball held in front of camera to check if its white/collision vs gray/noCollision), theres 2 opposite directions where it works at approx the right center to center distance (2*radius), but the perpendicular directions to those which are also the thin directions, are about half that, gotta get closer to the line center to turn white. I suspect this is cuz you need 9 instead of 7 colOffsets. btw i renamed that to colOffsetsForBallsSameSizeAsCcpBalls. The reason for 9 is list primaryKey is in Directions.a and Directions.s which have a 90 degree angle between eachother.
 */
@@ -887,7 +889,7 @@ class CCPBallGrid {
 		return (r.k0 <= k && k < r.k1);
 	}*/
 	/** True if unit (i,j,k) currently contains a ball.
-	*  Works even when the column list is unsorted or overlapping.
+	*	Works even when the column list is unsorted or overlapping.
 	*/
 	isSolid(i,j,k){
 		const list = this._get(i,j);
@@ -919,9 +921,9 @@ class CCPBallGrid {
 		let qb = xyzToQb(x,y,z);
 		let qc = xyzToQc(x,y,z);
 		let qd = xyzToQd(x,y,z);
-		let ballCenterA = qaQbQcQdToA(qa, qb, qc, qd);  // i, todo rename ijk to asd
-		let ballCenterS = qaQbQcQdToS(qa, qb, qc, qd);  // j, todo rename ijk to asd
-		let ballCenterD = qaQbQcQdToD(qa, qb, qc, qd);  // k, todo rename ijk to asd
+		let ballCenterA = qaQbQcQdToA(qa, qb, qc, qd);	// i, todo rename ijk to asd
+		let ballCenterS = qaQbQcQdToS(qa, qb, qc, qd);	// j, todo rename ijk to asd
+		let ballCenterD = qaQbQcQdToD(qa, qb, qc, qd);	// k, todo rename ijk to asd
 		
 		
 		//FIXME should it be |0 vs Math.round? toASD uses |0.
@@ -982,29 +984,29 @@ class CCPBallGrid {
 					let distSq = dx*dx + dy*dy + dz*dz;
 					*/
 
-					const k0 = range.k0;         // first occupied centre
-					const k1 = range.k1 - 1;     // last  occupied centre
-					const segLenD = k1 - k0;     // >= 0 integer
+					const k0 = range.k0;				 // first occupied centre
+					const k1 = range.k1 - 1;		 // last	occupied centre
+					const segLenD = k1 - k0;		 // >= 0 integer
 
 					/* ---------- convert once to XYZ ---------- */
 					const sX = asdToX(0, 0, segLenD);
 					const sY = asdToY(0, 0, segLenD);
 					const sZ = asdToZ(0, 0, segLenD);
-					const sLenSq = sX*sX + sY*sY + sZ*sZ;   // |S|²  (≥0)
+					const sLenSq = sX*sX + sY*sY + sZ*sZ;	 // |S|²	(≥0)
 
-					/* vector V  from P0(k0) to ball centre, in XYZ */
+					/* vector V	from P0(k0) to ball centre, in XYZ */
 					const vX = asdToX(ballCenterA - listA, ballCenterS - listS, ballCenterD - k0);
 					const vY = asdToY(ballCenterA - listA, ballCenterS - listS, ballCenterD - k0);
 					const vZ = asdToZ(ballCenterA - listA, ballCenterS - listS, ballCenterD - k0);
 
 					/* ---------- orthogonal projection ---------- */
-					let t = 0;        // parameter along S   (0 ≤ t ≤ 1)
+					let t = 0;				// parameter along S	 (0 ≤ t ≤ 1)
 					if (sLenSq > 0){
 						t = (vX*sX + vY*sY + vZ*sZ) / sLenSq;
 						if (t < 0) t = 0;
 						else if (t > 1) t = 1;
 					}
-					/* closest point C = P0 + t·S   but P0→(0,0,0) in this frame */
+					/* closest point C = P0 + t·S	 but P0→(0,0,0) in this frame */
 					const cX = t * sX;
 					const cY = t * sY;
 					const cZ = t * sZ;
@@ -1045,8 +1047,8 @@ class CCPBallGrid {
 	}
 	
 	shadeForNeighborCount(count){
-		// digit = 3 … 15  (0x3 … 0xF)   →  "#333333" … "#ffffff"
-		const d = (3 + count).toString(16);   // "3" … "f"
+		// digit = 3 … 15	(0x3 … 0xF)	 →	"#333333" … "#ffffff"
+		const d = (3 + count).toString(16);	 // "3" … "f"
 		return '#' + d.repeat(6);
 	}
 	
@@ -1482,7 +1484,7 @@ class Drawable{
 			let fill = true;
 			let isConePlaneIntersection = Dom('isConePlaneIntersection').checked;
 			//paintBall(this.xyz, ballRadius, this.obj.color, fill, isConePlaneIntersection);	//throws if !isQuatCam()
-			const clr = this.color ?? this.obj.color;   // <-- new
+			const clr = this.color ?? this.obj.color;	 // <-- new
 			paintBall(this.xyz, ballRadius, clr, fill, isConePlaneIntersection);
 		}else if(this.type==='QGridDot' || this.type==='QDot'){
 			//QGridDot displays as blue instead of its own color
@@ -1838,22 +1840,22 @@ var selectedBrushNames =
 
 
 var selectBrushNames = names=>{ //list of strings
-    const sel = Dom('paintbrushSelect');
-    if (!sel) return;
+		const sel = Dom('paintbrushSelect');
+		if (!sel) return;
 
-    // clear all first
-    for (let i = 0; i < sel.options.length; i++) {
-        sel.options[i].selected = false;
-    }
+		// clear all first
+		for (let i = 0; i < sel.options.length; i++) {
+				sel.options[i].selected = false;
+		}
 
-    // select those in names[]
-    for (let i = 0; i < sel.options.length; i++) {
-        if (names.includes(sel.options[i].value)) {
-            sel.options[i].selected = true;
-        }
-    }
+		// select those in names[]
+		for (let i = 0; i < sel.options.length; i++) {
+				if (names.includes(sel.options[i].value)) {
+						sel.options[i].selected = true;
+				}
+		}
 
-    recomputeBrushFromSelect(); // refresh global Brush
+		recomputeBrushFromSelect(); // refresh global Brush
 };
 
 //computed from outerjoin of selected paintbrushes[name].quads and | aka OR of paintbrush.mask,
@@ -2766,9 +2768,10 @@ var maxDt = .2;
 
 var timeCreateNextBall = time();
 //var ballCreateInterval = .01;
-var ballCreateInterval = .1;
+//var ballCreateInterval = .1;
+var ballCreateInterval = 1;
 
-var mainBallSpawnXYZ = [0, 10, 50];
+var mainBallSpawnXYZ = [0, -4, 50];
 
 //potential energy of rollball like Ball.B507, not CCP balls.
 var potenOfRollball = ball=>{
@@ -2800,9 +2803,11 @@ var doGameLogic = (now,dt)=>{
 	}
 	let rollballs = getAllRollBalls(); //list of Var which each have .X .Y and .Z Var's.
 	for(let rb of rollballs){
+		rb.IsHitOtherBall.p = 0; //for color, unset this but set it to 1 in forAllCollidingBallPairs if hits
+		rb.IsHitCCP.p = 0; //for color, unset this but set it to 1 in forAllCollidingBallPairs if hits
 		rb.Y.dv += Opt.GravityY.p; //dv is change in velocity per time aka accel
 		let neutralSample = potenOfRollball(rb);
-		for(let childName in rb.pu){
+		for(let childName in rb.pu){ //ball.X ball.Y ball.Z etc
 			let child = rb.pu[childName];
 			child.pushEpsilon();
 			let perturbedSample = potenOfRollball(rb);
@@ -2814,6 +2819,20 @@ var doGameLogic = (now,dt)=>{
 			//child.accelMul = 500; //FIXME
 		}
 	}
+	forAllCollidingBallPairs((ballA,ballB)=>{
+		ballA.IsHitOtherBall.p = 1; //for color, to show ball is hitting another ball
+		let neutralSample = potenOfRollballPair(ballA,ballB);
+		//for(let childName in ballA.pu){ //ballA.X ballA.Y ballA.Z, and possibly others but we only need X Y Z
+		for(let child of [ballA.X, ballA.Y, ballA.Z]){
+			child.pushEpsilon();
+			let perturbedSample = potenOfRollballPair(ballA,ballB); //sample loss function aka potentialEnergy, to compute gradient
+			child.popEpsilon();
+			let derivative = (perturbedSample-neutralSample)/child.epsilon;
+			//add to gradient. Will adjust velocity by negative gradient in nextState(dt).
+			child.gr += derivative;
+			//child.accelMul = 100; //FIXME
+		}
+	});
 	let vars = getAllVarsToUpdate();
 	for(let vr of vars){
 		vr.nextState(dt); //update vr.p (position) and vr.v (velocity) based on other fields in vr
@@ -2826,6 +2845,19 @@ var doGameLogic = (now,dt)=>{
 		}
 	}
 };
+
+var potenOfRollballPair = (ballA, ballB, ballRadius = 1)=>{
+	const dx = ballB.X.p - ballA.X.p;
+	const dy = ballB.Y.p - ballA.Y.p;
+	const dz = ballB.Z.p - ballA.Z.p;
+	const dist = Math.hypot(dx, dy, dz);
+
+	const signedDistance = dist - 2*ballRadius; // negative if overlapping
+	const overlap = Math.min(0, signedDistance);
+
+	return Opt.BallBounceForce.p * overlap * overlap; // quadratic penalty
+};
+
 
 function draw(){ //todo rename this to nextGameState
 	//let dt = 1/60; //TODO measure and clamp it
@@ -2856,7 +2888,7 @@ function draw(){ //todo rename this to nextGameState
 			//drawables.push(new Drawable('ball', q, q.toCartesian()));
 			const [i,j,k] = ccp.toASD(q);
 			//let neighbors = ccp.neighborCount(i,j,k);
-			//const shade   = ccp.shadeForNeighborCount(neighbors);
+			//const shade	 = ccp.shadeForNeighborCount(neighbors);
 			//let color = neighbors==12 ? '#808080' : null; //gray if its inside (not surface)
 			//let color = neighbors==12 ? '#ff0000' : '#0000ff'; //red if inside, blue if surface surface)
 			let color = null;
@@ -2889,7 +2921,7 @@ function draw(){ //todo rename this to nextGameState
 		//	color = 'red';
 		//	//TODO rb.IsHitCCP.p
 		//}
-		color = rb.IsHitCCP.p ? 'white' : 'gray';
+		color = (rb.IsHitCCP.p || rb.IsHitOtherBall.p) ? 'white' : 'gray';
 		//drawables.push(new Drawable('ball',q,xyz,color));
 		//rollball/rb as object to draw instead of Quadray,
 		//so it doesnt fill the quadray dedup which doesnt get garbcoled as of 2025-8-28.
@@ -3199,6 +3231,7 @@ var newBallAtXYZ = (xyz,optionalVelocityXYZ)=>{
 		ball.Y.v = optionalVelocityXYZ[1];
 		ball.Z.v = optionalVelocityXYZ[2];
 	}
+	ball.X.cv = ball.Y.cv = ball.Z.cv = .31; //base velocity decay. .kv adds to this and is where u add dynamic velocity decay.
 	console.log('Created ball '+ball.path()); //path() is its V/Var tree id
 	return ball;
 };
@@ -3478,6 +3511,39 @@ function populatePaintbrushSelect(){
 }
 
 //END: 2025-7-28+ copying some camera/gamepad code from bellsack236 under MIT license.
+
+//calls onBallPair(ballA,ballB) for all pairs of
+//balls (rollballs in V/Var tree, not the ccp grid) near enough to collide.
+//Calls twice for each pair, in both orders. Excludes self with self.
+var forAllCollidingBallPairs = (onBallPair, ballRadius=1)=>{
+	const balls = Object.values(Ball.pu);
+	const r2 = (2 * ballRadius) ** 2;
+
+	// sort balls by X position
+	balls.sort((a,b)=>(a.X.p-b.X.p));
+
+	for (let i = 0; i < balls.length; i++) {
+		const A = balls[i];
+		const ax = A.X.p, ay = A.Y.p, az = A.Z.p;
+
+		for (let j = i + 1; j < balls.length; j++) {
+			const B = balls[j];
+
+			// early exit if X separation too large
+			const dx = B.X.p - ax;
+			if (dx > 2 * ballRadius) break;
+
+			const dy = B.Y.p - ay;
+			const dz = B.Z.p - az;
+			const dist2 = dx * dx + dy * dy + dz * dz;
+
+			if (dist2 < r2) {
+				onBallPair(A, B);
+				onBallPair(B, A);
+			}
+		}
+	}
+};
 
 window.addEventListener("gamepadconnected", e => {
 	console.log("CONNECTED:", e.gamepad);
