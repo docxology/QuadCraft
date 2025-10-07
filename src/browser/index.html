@@ -87,6 +87,7 @@ fillGridByFunc(selq, 5, q=>{
 		<input type="checkbox" id="useSurfaceCacheInRanges" checked><label for="useSurfaceCacheInRanges" title="CCPBallGrid.surfaceQuadrays optimization">useSurfaceCacheInRanges</label>
 		<input type="checkbox" id="display_camQuadLabel" onchange="gridChanged=true; //redraw"><label for="display_camQuadLabel" title="display camPos= etc">display camPos= etc</label>
 		<input type="checkbox" id="holdTestBallInFrontOfCam"><label for="holdTestBallInFrontOfCam" title="hold TestBall in front of cam to test collision detection etc">holdTestBallInFrontOfCam</label>
+		<input type="checkbox" id="dbgShowNearestVoid" checked><label for="dbgShowNearestVoid" title="Draw an outline at the nearest empty CCP cell for every roll-ball">show nearestEmptyXYZ</label>
 		<br>
 		<input type=button onclick="SimKeyPress('z');" value="'z' (tog tetrahedron Z)">
 		<input type=button onclick="SimKeyPress('x');" value="'x' (tog octahedron)">
@@ -3130,6 +3131,7 @@ function draw(){ //todo rename this to nextGameState
 			drawables.push(new Drawable('QGridDot', q, q.toCartesian()));
 		}
 	}
+	let isConePlaneIntersection = Dom('isConePlaneIntersection').checked;
 	let rollballs = getAllRollBalls();
 	for(let rb of rollballs){
 		let xyz = [rb.X.p, rb.Y.p, rb.Z.p];
@@ -3144,6 +3146,18 @@ function draw(){ //todo rename this to nextGameState
 		//rollball/rb as object to draw instead of Quadray,
 		//so it doesnt fill the quadray dedup which doesnt get garbcoled as of 2025-8-28.
 		drawables.push(new Drawable('ball',rb,xyz,color));
+		
+	    // ───────── debug: draw nearest empty CCP slot ─────────
+		if(Dom('dbgShowNearestVoid').checked){
+			const [vx, vy, vz] = ccp.nearestEmptyXYZ(...xyz);
+			paintBall(
+				[vx, vy, vz],          // outline center
+				ballRadius,            // same radius as a CCP ball
+				'#00ffff',             // cyan stroke
+				/*fill=*/false,        // outline only
+				isConePlaneIntersection
+			);
+		}
 	}
 	
 	drawables.sort((a,b)=>(b.depth-a.depth));
@@ -3161,7 +3175,6 @@ function draw(){ //todo rename this to nextGameState
 		TestBall.Z.set(targXYZ[2]);
 	}
 	let fill = false; //circle/oval outline
-	let isConePlaneIntersection = Dom('isConePlaneIntersection').checked;
 	//let brush = selectedPaintbrush();
 	//if(brush.balls){ //display white circles of actual shape of paintbrush
 	let circleOutlineColorTouchingCcpBall = '';
