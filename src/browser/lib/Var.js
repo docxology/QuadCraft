@@ -193,8 +193,8 @@ Var.prototype.new = function(optionalPrefix, optionalSuffix){
 
 var randInt = max=>((Math.random()*max)|0);
 
-var DefaultEpsilon = window.DefaultEpsilon = 2**-7; //FIXME which scripts (of the 3 in this html) use this?
-//var DefaultEpsilon = 2**-12; //FIXME is this small enuf? is it for float32 or float64?
+//var DefaultEpsilon = window.DefaultEpsilon = 2**-7; //FIXME which scripts (of the 3 in this html) use this?
+var DefaultEpsilon = 2**-12; //FIXME is this small enuf? is it for float32 or float64?
 
 //This should be a little more than the common epsilon of 1 for pixel coordinates (1 pixel over)
 //so it can jump a little past that. If its 1, it moves a little too slow. If 2 its noticably jumpy.

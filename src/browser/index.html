@@ -156,12 +156,18 @@ var Opt = Room.Opt;
 //only if its .p is 0 will it set this. in case was loaded from V/Var earlier.
 //FIXME what if you wanted gravity to be 0/off?
 //Opt.GravityY.if0(-2.3);
-//Opt.GravityY.if0(-.6);
+Opt.GravityY.if0(-.6);
 //Opt.GravityY.if0(-.1);
-Opt.GravityY.if0(-.02);
+//Opt.GravityY.if0(-.02);
 //Opt.GravityY.if0(-.01);
 
-Opt.BallBounceForce.if0(.3);
+//Opt.BallBounceForce.if0(.3);
+Opt.BallBounceForce.if0(.8);
+//Opt.BallBounceForce.if0(3.3);
+//Opt.BallBounceForce.if0(23.3);
+
+Opt.NewBallExtraDownAccel.if0(5);
+//Opt.NewBallExtraDownAccel.if0(20);
 
 Opt.DeleteBallsIfLowerThanY.if0(-50);
 
@@ -1171,7 +1177,57 @@ class CCPBallGrid {
 
 }
 
+/** list is from a CCPBallGrid, the list at a (A,S) primaryKey,
+varying D. param d here is scalar, not necessarily integer, but returns an integer
+of the closest open slot, in that list. Remember the list is tilted in Directions.d.
+...
+Nearest empty integer K to fractional d using sparse ranges.
+Only checks two integers per range: (k0-1) and (k1).
+Assumption: (k0-1) and (k1) are empty for every range.
+*/
+var nearestEmptyKOnColumn = (list, d)=>{
+	// If no ranges, nearest empty is just round(d)
+	if(!list || list.length === 0) return Math.round(d)|0;
 
+	let bestK = null;
+	let bestAbs = Infinity;
+
+	// 1) Prefer the rounded slot if it's not inside any range (cheap single pass)
+	const k0 = Math.round(d)|0;
+	let insideRounded = false;
+	for(let i=0;i<list.length;i++){
+		const r = list[i];
+		if(r.k0 <= k0 && k0 < r.k1){ insideRounded = true; break; }
+	}
+	if(!insideRounded){
+		bestK = k0;
+		bestAbs = Math.abs(d - k0);
+	}
+
+	// 2) Consider just two candidates per range: left boundary - 1, right boundary
+	for(let i=0;i<list.length;i++){
+		const r = list[i];
+		const KL = (r.k0|0) - 1; // empty by assumption
+		const KR = (r.k1|0);		 // empty by assumption
+
+		// Left candidate
+		const aL = Math.abs(d - KL);
+		if(aL < bestAbs){
+			bestAbs = aL; bestK = KL;
+		}
+
+		// Right candidate
+		const aR = Math.abs(d - KR);
+		if(aR < bestAbs){
+			bestAbs = aR; bestK = KR;
+		}
+	}
+
+	// 3) Fallback (shouldn’t happen unless list mutated mid-loop)
+	if(bestK === null) bestK = k0;
+
+	return bestK|0;
+};
 
 var distance3d = (xyz1, xyz2)=>Math.hypot(xyz1[0]-xyz2[0], xyz1[1]-xyz2[1], xyz1[2]-xyz2[2]);
 
@@ -1657,6 +1713,17 @@ const asdLen = Len(Directions.a.toCartesian()); //should be 2
 const asdLenSq = asdLen**2;
 
 initASDToXYZ_NoAlloc();
+
+var distanceSq3dOfASD = (da, ds, dd)=>{
+  const dx = asdToX(da, ds, dd);
+  const dy = asdToY(da, ds, dd);
+  const dz = asdToZ(da, ds, dd);
+  return dx*dx + dy*dy + dz*dz;
+};
+
+var distance3dOfASD = (da, ds, dd)=>{
+  return Math.sqrt(distanceSq3dOfASD(da, ds, dd));
+};
 
 //mask these together in paintbrushes
 const PB_OTHER = 1, PB_TETZ = 2, PB_OCT = 4, PB_TETC = 8, PB_BALL = 16;
@@ -2769,7 +2836,9 @@ var maxDt = .2;
 var timeCreateNextBall = time();
 //var ballCreateInterval = .01;
 //var ballCreateInterval = .1;
-var ballCreateInterval = 1;
+//var ballCreateInterval = 1;
+//Opt.BallCreateInterval.if0(1);
+Opt.BallCreateInterval.if0(.1);
 
 var mainBallSpawnXYZ = [0, -4, 50];
 
@@ -2795,11 +2864,11 @@ var doGameLogic = (now,dt)=>{
 		);
 		let newBallVelocityXYZ = [
 			randRange(-randVelCubeSide/2,randVelCubeSide/2),
-			randRange(-randVelCubeSide/2,randVelCubeSide/2),
+			randRange(-randVelCubeSide/2,randVelCubeSide/2)-Opt.NewBallExtraDownAccel.p,
 			randRange(-randVelCubeSide/2,randVelCubeSide/2)
 		]
 		let ball = newBallAtXYZ(newBallPositionXYZ, newBallVelocityXYZ);
-		timeCreateNextBall += ballCreateInterval;
+		timeCreateNextBall += Opt.BallCreateInterval.p;
 	}
 	let rollballs = getAllRollBalls(); //list of Var which each have .X .Y and .Z Var's.
 	for(let rb of rollballs){
@@ -2858,6 +2927,10 @@ var potenOfRollballPair = (ballA, ballB, ballRadius = 1)=>{
 	return Opt.BallBounceForce.p * overlap * overlap; // quadratic penalty
 };
 
+//Opt.PhysicsCyclesPerVideoFrame.if0(1); //must be at least 1 and an integer
+//Opt.PhysicsCyclesPerVideoFrame.if0(4);
+Opt.PhysicsCyclesPerVideoFrame.if0(10);
+//Opt.PhysicsCyclesPerVideoFrame.if0(50);
 
 function draw(){ //todo rename this to nextGameState
 	//let dt = 1/60; //TODO measure and clamp it
@@ -2873,7 +2946,13 @@ function draw(){ //todo rename this to nextGameState
 	//converted to xyz at last moment for display.
 	selq.color = randColor(); //make it flash
 	
-	doGameLogic(now,dt);
+	let physicsCycles = Math.max(1, Opt.PhysicsCyclesPerVideoFrame.p|0);
+	let partialDt = dt/physicsCycles;
+	let partialNow = now;
+	for(let cyc=0; cyc<physicsCycles; cyc++){
+		doGameLogic(partialNow, partialDt); //for more accurate physics if more than 1 call of	this
+		partialNow += partialDt;
+	}
 
 	updateIfGridChanged();
 	ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -3231,7 +3310,8 @@ var newBallAtXYZ = (xyz,optionalVelocityXYZ)=>{
 		ball.Y.v = optionalVelocityXYZ[1];
 		ball.Z.v = optionalVelocityXYZ[2];
 	}
-	ball.X.cv = ball.Y.cv = ball.Z.cv = .31; //base velocity decay. .kv adds to this and is where u add dynamic velocity decay.
+	//ball.X.cv = ball.Y.cv = ball.Z.cv = .31; //base velocity decay. .kv adds to this and is where u add dynamic velocity decay.
+	ball.X.cv = ball.Y.cv = ball.Z.cv = 2.31;
 	console.log('Created ball '+ball.path()); //path() is its V/Var tree id
 	return ball;
 };
@@ -3307,7 +3387,8 @@ let camPos = [0,0,-5];
 let camQ = [0,0,0,1];
 
 //var moveSpd = 8.0; //speed of movement by gamepad joysticks/analogTriggers AND mouse when right button held
-var moveSpd = 15;
+//var moveSpd = 15;
+var moveSpd = 35;
 const secondMoveSpeedMul = .007; //if isQuatCam() then use moveSpd*secondMoveSpeedMul as ratio between them
 
 //var turnSpd = 2;
