@@ -171,6 +171,11 @@ Opt.NewBallExtraDownAccel.if0(5);
 
 Opt.DeleteBallsIfLowerThanY.if0(-50);
 
+//This in theory should fix the balls going inside CCPBallGrid shapes, crossing their surface.
+//Opt.RepelBallsUsingPenetrationDepth_mul.if0(1); //FIXME
+Opt.RepelBallsUsingPenetrationDepth_mul.if0(100); //FIXME
+
+
 var Err = str=>{
 	throw new Error(str);
 };
@@ -913,6 +918,121 @@ class CCPBallGrid {
 		);
 	}
 	
+	/*─────────────────────────────────────────────────────────────────────────────
+		nearestEmptyXYZ	–	Find the XYZ-centre of the nearest *empty* CCP slot
+							to an arbitrary cartesian point (x, y, z).
+
+		CCP lattice recap
+		─────────────────
+		• Integer (A,S) identify a vertical “column” of CCP balls.
+		• Within that column, integer K steps along the tilted D axis.
+		• Converting (A,S,D) → XYZ is done via asdToX/Y/Z.
+
+		Search strategy
+		───────────────
+		 1.	Convert the query point to **fractional ASD**:	(a,s,d).
+		 2.	Start at the column that contains that point:	 (round(a),round(s)).
+		 3.	Expand outward in **square rings** of columns
+			 – ring radius r	:=	max(|Δa|,|Δs|)	 (Chebyshev distance).
+			 – Each ring adds the perimeter of an (2r+1)×(2r+1) square.
+		 4.	For every column on the ring’s perimeter:
+			 • Call nearestEmptyKOnColumn( … , d )	➜	ONE candidate K.
+			 • Measure true XYZ distance using distanceSq3dOfASD.
+			 • Keep the best candidate seen so far.
+		 5.	Early-exit:	if the shortest possible step to the **next** ring
+			 ( one more A- or S-step ) is already longer than the current best
+			 distance, no farther column can win → stop expanding.
+		 6.	Convert the best lattice coordinates back to XYZ and return.
+	─────────────────────────────────────────────────────────────────────────────*/
+	nearestEmptyXYZ(x, y, z, maxSearchRadius = 8){
+		/*──────────────── 1) Cartesian → fractional ASD ────────────────*/
+		const qA = xyzToQa(x, y, z),	qB = xyzToQb(x, y, z),
+			qC = xyzToQc(x, y, z),	qD = xyzToQd(x, y, z);
+
+		const fracA = qaQbQcQdToA(qA, qB, qC, qD);
+		const fracS = qaQbQcQdToS(qA, qB, qC, qD);
+		const fracD = qaQbQcQdToD(qA, qB, qC, qD);
+
+		const startAColumn = Math.round(fracA) | 0;	 // integer lattice column
+		const startSColumn = Math.round(fracS) | 0;
+
+		/* Pre-compute squared lengths of one lattice step along A and S.
+		 Used for an optimistic lower bound when deciding to stop expanding. */
+		const stepLenSq_A		 = distanceSq3dOfASD(1, 0, 0);	 // |vA|²
+		const stepLenSq_S		 = distanceSq3dOfASD(0, 1, 0);	 // |vS|²
+		const shortestStepSq	= Math.min(stepLenSq_A, stepLenSq_S);
+
+		/*──────────────── best-so-far tracker ────────────────*/
+		let bestDistSq		 = Infinity;							// smallest XYZ² distance found
+		let bestAColumn		= startAColumn;
+		let bestSColumn		= startSColumn;
+		let bestKInteger	 = Math.round(fracD) | 0;
+
+		/* Helper: evaluate ONE lattice column (integer A,S) */
+		const checkColumn = (aColumn, sColumn) => {
+			const sparseRanges	 = this._get(aColumn, sColumn);					 // CCP ranges
+			const emptyK				 = nearestEmptyKOnColumn(sparseRanges, fracD);
+			const distSq				 = distanceSq3dOfASD(
+										fracA - aColumn,
+										fracS - sColumn,
+										fracD - emptyK);
+
+			if (distSq < bestDistSq) {
+				bestDistSq	 = distSq;
+				bestAColumn	= aColumn;
+				bestSColumn	= sColumn;
+				bestKInteger = emptyK;
+			}
+		};
+
+		/*──────────────── 2–4) Expand in square rings ────────────────*/
+		for (let ringRadius = 0; ringRadius <= maxSearchRadius; ringRadius++) {
+
+		/* top & bottom edges of the current square ring */
+		for (let aCol = startAColumn - ringRadius;
+			 aCol <= startAColumn + ringRadius;
+			 aCol++) {
+
+			if (ringRadius === 0) {
+			/* centre column (only once) */
+			checkColumn(aCol, startSColumn);
+			} else {
+			/* top edge (S = startSColumn - r) */
+			checkColumn(aCol, startSColumn - ringRadius);
+			/* bottom edge (S = startSColumn + r) */
+			checkColumn(aCol, startSColumn + ringRadius);
+			}
+		}
+
+		/* left & right edges of the ring (skip four corners already done) */
+		for (let sCol = startSColumn - ringRadius + 1;
+			 sCol <= startSColumn + ringRadius - 1;
+			 sCol++) {
+
+			/* left edge (A = startAColumn - r) */
+			checkColumn(startAColumn - ringRadius, sCol);
+			/* right edge (A = startAColumn + r) */
+			checkColumn(startAColumn + ringRadius, sCol);
+		}
+
+		/*────────── Early-exit test ──────────
+			The next ring starts one lattice step farther away in either A or S.
+			shortestStepSq	= min( |vA|² , |vS|² ).
+			If even that optimistic distance (nextRing² * shortestStepSq) is
+			already ≥ bestDistSq, no farther ring can improve → stop.					*/
+		const nextRing				= ringRadius + 1;
+		const lowerBoundSq		= nextRing * nextRing * shortestStepSq;
+		if (lowerBoundSq >= bestDistSq) break;
+		}
+
+		/*──────────────── 5) Convert winning slot back to XYZ ────────────────*/
+		const nearestX = asdToX(bestAColumn, bestSColumn, bestKInteger);
+		const nearestY = asdToY(bestAColumn, bestSColumn, bestKInteger);
+		const nearestZ = asdToZ(bestAColumn, bestSColumn, bestKInteger);
+
+		return [nearestX, nearestY, nearestZ];
+	}
+	
 	//a rollball has .X .Y .Z and maybe .R (radius), not a CCP ball.
 	//This does ccpBall-rollball collisions gradually by potential energy (poten).
 	potenOfRollball(rollball){
@@ -1038,6 +1158,25 @@ class CCPBallGrid {
 				}
 			}
 		}
+		
+		if(Opt.RepelBallsUsingPenetrationDepth_mul.p){
+			/* ---------- extra loss factor based on nearest empty slot ---------- */
+			if (maxPoten > 0){                           // only do this when we had contact
+				const [ex, ey, ez] = this.nearestEmptyXYZ(x, y, z);   // new helper
+				const dxV = ex - x,  dyV = ey - y,  dzV = ez - z;
+				const distVoid = Math.sqrt(dxV*dxV + dyV*dyV + dzV*dzV);
+
+				const rollR     = (rollball.R !== undefined) ? rollball.R : ballRadius;
+				const radiusSum = rollR + ballRadius;               // same as surf test
+
+				/* penetration depth relative to an empty CCP centre              */
+				let penetrationDepth = Math.max(0, radiusSum - distVoid);  // 0 outside
+
+				/* scale the existing loss term smoothly */
+				maxPoten *= (1 + Opt.RepelBallsUsingPenetrationDepth_mul.p*penetrationDepth); // ← multiplier
+			}
+		}
+		
 		rollball.IsHitCCP.p = maxPoten ? 1 : 0; //for debug graphics, to change rollball's color when it hits CCP
 		return maxPoten;
 	}
@@ -1715,14 +1854,14 @@ const asdLenSq = asdLen**2;
 initASDToXYZ_NoAlloc();
 
 var distanceSq3dOfASD = (da, ds, dd)=>{
-  const dx = asdToX(da, ds, dd);
-  const dy = asdToY(da, ds, dd);
-  const dz = asdToZ(da, ds, dd);
-  return dx*dx + dy*dy + dz*dz;
+	const dx = asdToX(da, ds, dd);
+	const dy = asdToY(da, ds, dd);
+	const dz = asdToZ(da, ds, dd);
+	return dx*dx + dy*dy + dz*dz;
 };
 
 var distance3dOfASD = (da, ds, dd)=>{
-  return Math.sqrt(distanceSq3dOfASD(da, ds, dd));
+	return Math.sqrt(distanceSq3dOfASD(da, ds, dd));
 };
 
 //mask these together in paintbrushes
