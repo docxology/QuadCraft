@@ -1664,30 +1664,38 @@ var ToggleBall = q=>{
 
 const ballRadius = 1;
 
+//Opt.AddToDepthOfCircleOutline.if0(0);
+//Opt.AddToDepthOfCircleOutline.if0(-1000); //display in front. or does that cut it off cuz behind camera?
+Opt.AddToDepthOfCircleOutline.if0(-.01); //slightly in front, so ball at same position as it doesnt cover it up
+
 //These are created again each graphics/draw cycle (about 1/60 second), not stored between that.
 //Tri (triangle) with type 'tri', or Quadray with type 'QGridDot' or 'QDot' or 'ball'.
+//xyzs is [[x,y,z]] normally but you can add [[x,y,z],[x2,y2,z2]] for a line that needs 2 points.
 class Drawable{
-	constructor(type,obj,xyz,color=null){
+	constructor(type,obj,xyzs,color=null){
 		this.type = type;			//'ball'|'tri' (later 'dot'…)
 		this.obj = obj;			//Quadray or Tri
-		this.xyz = xyz;			//world-space [x,y,z]
+		this.xyzs = xyzs;			//world-space [[x,y,z],...optional more points...]
 		this.color = color; //if nonnull, overrides color at quadray etc.
-		this.depth = dotProdOfXYZAlongCamForward(xyz);	//bigger = farther
+		this.depth = dotProdOfXYZAlongCamForward(xyzs[0]);	//bigger = farther
+		if(type=='circleOutline' || type=='line'){
+			this.depth += Opt.AddToDepthOfCircleOutline.p;
+		}
 	}
 	draw(){ //on canvas
 		let isQuat = isQuatCam();
-		if(this.type==='ball'){
-			let fill = true;
+		if(this.type=='ball' || this.type=='circleOutline'){
+			let fill = this.type=='ball';
 			let isConePlaneIntersection = Dom('isConePlaneIntersection').checked;
 			//paintBall(this.xyz, ballRadius, this.obj.color, fill, isConePlaneIntersection);	//throws if !isQuatCam()
 			const clr = this.color ?? this.obj.color;	 // <-- new
-			paintBall(this.xyz, ballRadius, clr, fill, isConePlaneIntersection);
-		}else if(this.type==='QGridDot' || this.type==='QDot'){
+			paintBall(this.xyzs[0], ballRadius, clr, fill, isConePlaneIntersection);
+		}else if(this.type=='QGridDot' || this.type=='QDot'){
 			//QGridDot displays as blue instead of its own color
 			let color = this.type==='QDot' ? this.obj.color : 'blue';
 			//paintXYZColor(isQuat ? q.toCartesian() : UnscaleGrid(q.toCartesian()), color);
-			paintXYZColor(isQuat ? this.xyz : UnscaleGrid(this.xyz), color);
-		}else if(this.type==='tri'){
+			paintXYZColor(isQuat ? this.xyzs[0] : UnscaleGrid(this.xyzs[0]), color);
+		}else if(this.type=='tri'){
 			let tri = this.obj;
 			drawTriangle(
 				//UnscaleGrid cuz theres 2 coordinate systems that ive aligned here by scaling one by ROOT2. [x,y,z] vs quadray.
@@ -1697,6 +1705,9 @@ class Drawable{
 				isQuat ? tri.g.toCartesian() : UnscaleGrid(tri.g.toCartesian()),
 				tri.color
 			);
+		}else if(this.type=='line'){
+			//xyzs holds exactly two points
+			drawLineXYZ(this.xyzs[0], this.xyzs[1], this.color||'#00ffff');
 		}else{
 			Err('Unknown drawable.type='+this.type);
 		}
@@ -3072,6 +3083,16 @@ var potenOfRollballPair = (ballA, ballB, ballRadius = 1)=>{
 Opt.PhysicsCyclesPerVideoFrame.if0(10);
 //Opt.PhysicsCyclesPerVideoFrame.if0(50);
 
+function drawLineXYZ(aXYZ, bXYZ, stroke = '#00ffff'){
+    const a = project(aXYZ),  b = project(bXYZ);
+    ctx.beginPath();
+    ctx.moveTo(a[0], a[1]);
+    ctx.lineTo(b[0], b[1]);
+    ctx.strokeStyle = stroke;
+    ctx.lineWidth   = 2;
+    ctx.stroke();
+}
+
 function draw(){ //todo rename this to nextGameState
 	//let dt = 1/60; //TODO measure and clamp it
 	let now = time();
@@ -3104,7 +3125,7 @@ function draw(){ //todo rename this to nextGameState
 	if (Dom('isCcpBallGrid').checked){
 		for (const q of ccp.surfaceQuadrays(Dom('useSurfaceCacheInRanges').checked)){
 			// pass world coords once; Drawable('ball') uses xyz directly
-			//drawables.push(new Drawable('ball', q, q.toCartesian()));
+			//drawables.push(new Drawable('ball', q, [q.toCartesian()]));
 			const [i,j,k] = ccp.toASD(q);
 			//let neighbors = ccp.neighborCount(i,j,k);
 			//const shade	 = ccp.shadeForNeighborCount(neighbors);
@@ -3112,23 +3133,23 @@ function draw(){ //todo rename this to nextGameState
 			//let color = neighbors==12 ? '#ff0000' : '#0000ff'; //red if inside, blue if surface surface)
 			let color = null;
 			//console.log('neighbors='+neighbors+' color='+color);
-			drawables.push(new Drawable('ball', q, q.toCartesian(), color));
+			drawables.push(new Drawable('ball', q, [q.toCartesian()], color));
 		}
 	}
 	if(isQuatCam()){
 		for(const q of Object.values(QBalls))
-			drawables.push(new Drawable('ball',q,q.toCartesian()));
+			drawables.push(new Drawable('ball',q,[q.toCartesian()]));
 	}
 	for(const tri of Object.values(gameTris)){
 		let mid=Ave3(tri.e.toCartesian(),tri.f.toCartesian(),tri.g.toCartesian());
-		drawables.push(new Drawable('tri',tri,mid));
+		drawables.push(new Drawable('tri',tri,[mid]));
 	}
 	for(const q of Object.values(QDots)){
-		drawables.push(new Drawable('QDot', q, q.toCartesian()));
+		drawables.push(new Drawable('QDot', q, [q.toCartesian()]));
 	}
 	if(displayQgridDots) for(const q of Object.values(QGridDots)){
 		if(!QDots[q]){ //display QDots/selfColoredAnyColor over QGridDots/blue
-			drawables.push(new Drawable('QGridDot', q, q.toCartesian()));
+			drawables.push(new Drawable('QGridDot', q, [q.toCartesian()]));
 		}
 	}
 	let isConePlaneIntersection = Dom('isConePlaneIntersection').checked;
@@ -3142,21 +3163,24 @@ function draw(){ //todo rename this to nextGameState
 		//	//TODO rb.IsHitCCP.p
 		//}
 		color = (rb.IsHitCCP.p || rb.IsHitOtherBall.p) ? 'white' : 'gray';
-		//drawables.push(new Drawable('ball',q,xyz,color));
+		//drawables.push(new Drawable('ball',q,[xyz],color));
 		//rollball/rb as object to draw instead of Quadray,
 		//so it doesnt fill the quadray dedup which doesnt get garbcoled as of 2025-8-28.
-		drawables.push(new Drawable('ball',rb,xyz,color));
+		drawables.push(new Drawable('ball',rb,[xyz],color));
 		
 	    // ───────── debug: draw nearest empty CCP slot ─────────
 		if(Dom('dbgShowNearestVoid').checked){
-			const [vx, vy, vz] = ccp.nearestEmptyXYZ(...xyz);
-			paintBall(
-				[vx, vy, vz],          // outline center
+			const nearXYZ = ccp.nearestEmptyXYZ(...xyz);
+			/*paintBall(
+				nearXYZ,          // outline center
 				ballRadius,            // same radius as a CCP ball
 				'#00ffff',             // cyan stroke
-				/*fill=*/false,        // outline only
+				false,        //fill=false outline only
 				isConePlaneIntersection
-			);
+			);*/
+			drawables.push(new Drawable('circleOutline',null,[nearXYZ],color));
+			//line between rollball and circleOutline of the nearest ASD slot that lacks a ccp ball in CCPBallGrid
+			drawables.push(new Drawable('line', null, [xyz,nearXYZ]));
 		}
 	}
 	
