@@ -1707,7 +1707,14 @@ class Drawable{
 			);
 		}else if(this.type=='line'){
 			//xyzs holds exactly two points
-			drawLineXYZ(this.xyzs[0], this.xyzs[1], this.color||'#00ffff');
+			//Skip if both ends are behind the camera (cz ≤ 0) – prevents
+			//runaway lines when the nearest-void slot is outside the frustum.
+			const cz0 = dotProdOfXYZAlongCamForward(this.xyzs[0]);
+			const cz1 = dotProdOfXYZAlongCamForward(this.xyzs[1]);
+			//if(cz0 > 0 || cz1 > 0){ //at least one point visible. Sometimes lines look really long from outside the screen.
+			if(cz0 > 0 && cz1 > 0){ //both points visible. Lines sometimes dont show when they should partly be there.
+				drawLineXYZ(this.xyzs[0], this.xyzs[1], this.color||'#00ffff');
+			}
 		}else{
 			Err('Unknown drawable.type='+this.type);
 		}
