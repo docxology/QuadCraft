@@ -62,8 +62,9 @@ fillGridByFunc(selq, 5, q=>{
 			<input type=button value="9" onclick="quicksave('9');">
 			<input type=button value="Save (file) " onclick="console.log('save file clicked'); let filename = prompt('Filename?','quadcraft_quadgrid4_'+time()+'.json'); if(filename) saveFile(filename, 'application/json', StateJson());">
 			<br>
-			&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-			&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+		
+			<input type=button value="resetVars()" onclick="resetVars();">
+			&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
 			<input type=button value="QuickLoad (cookie) 1" onclick="quickload('1');">
 			<input type=button value="2" onclick="quickload('2');">
 			<input type=button value="3" onclick="quickload('3');">
@@ -138,44 +139,75 @@ fillGridByFunc(selq, 5, q=>{
 
 const atBoot_displayTopStuff = true;
 
-const Game = V.QuadCraft;
+var Game = null; //const Game = V.QuadCraft;
 //var Bellsack = V.Bellsack is another namespace,
 //and Blob Monsters Game used V.testnet
 //(would be V.Testnet in the new way, cant start with lowercase letter).
 //It auto creates childs when you say http://V.Quadcraft.Whatever.You.Want .
 
-var Room = Game.Room1;
+var Room = null; //var Room = Game.Room1;
 //put balls here like Ball.B500.X.p is the x position
 //of V.Quadcraft.Room1.Ball.B500, and similarly .Y and .Z
 //and whatever other vars you want to put in a ball.
-var Ball = Room.Ball;
+var Ball = null; //var Ball = Room.Ball;
 
 //options go here. just write any Opt.AnyOption567.p or Opt.AnyOption567.v etc and it exists
 //and will get auto synced with the V/Var tree.
-var Opt = Room.Opt;
+var Opt = null; //var Opt = Room.Opt;
 
-//only if its .p is 0 will it set this. in case was loaded from V/Var earlier.
-//FIXME what if you wanted gravity to be 0/off?
-//Opt.GravityY.if0(-2.3);
-Opt.GravityY.if0(-.6);
-//Opt.GravityY.if0(-.1);
-//Opt.GravityY.if0(-.02);
-//Opt.GravityY.if0(-.01);
+const ballRadius = 1;
 
-//Opt.BallBounceForce.if0(.3);
-Opt.BallBounceForce.if0(.8);
-//Opt.BallBounceForce.if0(3.3);
-//Opt.BallBounceForce.if0(23.3);
+//reset the V/Var tree and pointers into it and defaults
+var resetVars = ()=>{
+	V.clear(); //built into Var.js
+	Game = V.QuadCraft;
+	Room = Game.Room1;
+	Ball = Room.Ball;
+	Opt = Room.Opt;
+	
+	//only if its .p is 0 will it set this. in case was loaded from V/Var earlier.
+	//FIXME what if you wanted gravity to be 0/off?
+	//Opt.GravityY.if0(-2.3);
+	Opt.GravityY.p = -.6;
+	//Opt.GravityY.if0(-.1);
+	//Opt.GravityY.if0(-.02);
+	//Opt.GravityY.if0(-.01);
 
-Opt.NewBallExtraDownAccel.if0(5);
-//Opt.NewBallExtraDownAccel.if0(20);
+	//just rollball-rollball, not rollball-CCPBallGrid.
+	//Opt.BallBounceForce.if0(.3);
+	Opt.BallBounceForce.p = .8;
+	//Opt.BallBounceForce.if0(3.3);
+	//Opt.BallBounceForce.if0(23.3);
 
-Opt.DeleteBallsIfLowerThanY.if0(-50);
+	Opt.NewBallExtraDownAccel.p = 5;
+	//Opt.NewBallExtraDownAccel.if0(20);
 
-//This in theory should fix the balls going inside CCPBallGrid shapes, crossing their surface.
-//Opt.RepelBallsUsingPenetrationDepth_mul.if0(1); //FIXME
-//Opt.RepelBallsUsingPenetrationDepth_mul.if0(100); //FIXME
-Opt.RepelBallsUsingPenetrationDepth_mul.if0(2500); //FIXME
+	Opt.DeleteBallsIfLowerThanY.p = -50;
+
+	//This in theory should fix the balls going inside CCPBallGrid shapes, crossing their surface.
+	Opt.RepelBallsUsingPenetrationDepth_mul.p = 1; //FIXME
+	//Opt.RepelBallsUsingPenetrationDepth_mul.if0(100); //FIXME
+	//Opt.RepelBallsUsingPenetrationDepth_mul.if0(300); //FIXME
+	//Opt.RepelBallsUsingPenetrationDepth_mul.if0(2500); //FIXME
+	//Opt.RepelBallsUsingPenetrationDepth_mul.p = 2500; //FIXME
+	
+	//dead zone like in a joystick, cuz it measures from the nearest empty ccp slot
+	//Opt.PenetrationDepthDeadZone.p = .6*ballRadius;
+	Opt.PenetrationDepthDeadZone.p = 1.2*ballRadius;
+
+	//Opt.AddToDepthOfCircleOutline.if0(0);
+	//Opt.AddToDepthOfCircleOutline.if0(-1000); //display in front. or does that cut it off cuz behind camera?
+	Opt.AddToDepthOfCircleOutline.p = -.01; //slightly in front, so ball at same position as it doesnt cover it up
+
+	//Opt.Cursor3dDistanceInFrontOfCam.if0(5); //for testing with holdTestBallInFrontOfCam checkbox checked
+	Opt.Cursor3dDistanceInFrontOfCam.p = 35; //normal
+	
+	//Opt.BallCreateInterval.if0(.03);
+	//Opt.BallCreateInterval.p = 1;
+	Opt.BallCreateInterval.if0(.1);
+
+};
+resetVars();
 
 
 var Err = str=>{
@@ -1182,22 +1214,21 @@ class CCPBallGrid {
 			}
 		}
 		
+		maxPoten = 0; //FIXME this turns off collisions between CCPBallGrid surface balls and rollballs, experimentally
+		
 		if(Opt.RepelBallsUsingPenetrationDepth_mul.p){
 			/* ---------- extra loss factor based on nearest empty slot ---------- */
-			if (maxPoten > 0){                           // only do this when we had contact
-				const [ex, ey, ez] = this.nearestEmptyXYZ(x, y, z);   // new helper
-				const dxV = ex - x,  dyV = ey - y,  dzV = ez - z;
-				const distVoid = Math.sqrt(dxV*dxV + dyV*dyV + dzV*dzV);
-
-				const rollR     = (rollball.R !== undefined) ? rollball.R : ballRadius;
-				const radiusSum = rollR + ballRadius;               // same as surf test
-
-				/* penetration depth relative to an empty CCP centre              */
-				let penetrationDepth = Math.max(0, radiusSum - distVoid);  // 0 outside
-
-				/* scale the existing loss term smoothly */
-				maxPoten *= (1 + Opt.RepelBallsUsingPenetrationDepth_mul.p*penetrationDepth); // ← multiplier
+			let potenFromCcpPenetration = 0;
+			let [ex, ey, ez] = this.nearestEmptyXYZ(x, y, z);   // new helper
+			let dxV = ex - x,  dyV = ey - y,  dzV = ez - z;
+			let centerToCenterPenetrationDepth = Math.sqrt(dxV*dxV + dyV*dyV + dzV*dzV);
+			
+			let springDistance = centerToCenterPenetrationDepth-Opt.PenetrationDepthDeadZone.p;
+			//const rollR     = (rollball.R !== undefined) ? rollball.R : ballRadius;
+			if(springDistance > 0){
+				potenFromCcpPenetration += Opt.RepelBallsUsingPenetrationDepth_mul.p*(springDistance**2);
 			}
+			maxPoten += potenFromCcpPenetration;
 		}
 		
 		rollball.IsHitCCP.p = maxPoten ? 1 : 0; //for debug graphics, to change rollball's color when it hits CCP
@@ -1683,12 +1714,6 @@ var ToggleBall = q=>{
 		AddBall(q);
 	}
 };
-
-const ballRadius = 1;
-
-//Opt.AddToDepthOfCircleOutline.if0(0);
-//Opt.AddToDepthOfCircleOutline.if0(-1000); //display in front. or does that cut it off cuz behind camera?
-Opt.AddToDepthOfCircleOutline.if0(-.01); //slightly in front, so ball at same position as it doesnt cover it up
 
 //These are created again each graphics/draw cycle (about 1/60 second), not stored between that.
 //Tri (triangle) with type 'tri', or Quadray with type 'QGridDot' or 'QDot' or 'ball'.
@@ -2314,9 +2339,6 @@ canvas.addEventListener("wheel", function(e){
 var xyzInFrontOfCam = dist=>{
 	return Add(camPos, VecMulScalar(calculateForwardVector(camQ),dist));
 };
-
-//Opt.Cursor3dDistanceInFrontOfCam.if0(5); //for testing with holdTestBallInFrontOfCam checkbox checked
-Opt.Cursor3dDistanceInFrontOfCam.if0(35); //normal
 
 //target quadray in front of camPos along the forward direction of camQ. CCP grid aligned.
 var targetQ = ()=>(targetQRaw().nearestCCP());
@@ -3014,11 +3036,6 @@ let timeOfLastDraw = 0;
 var maxDt = .2;
 
 var timeCreateNextBall = time();
-//var ballCreateInterval = .01;
-//var ballCreateInterval = .1;
-//var ballCreateInterval = 1;
-//Opt.BallCreateInterval.if0(1);
-Opt.BallCreateInterval.if0(.1);
 
 var mainBallSpawnXYZ = [0, -4, 50];
 
@@ -3209,7 +3226,7 @@ function draw(){ //todo rename this to nextGameState
 		}else{ //not error, normal physics
 			color = (rb.IsHitCCP.p || rb.IsHitOtherBall.p) ?
 				//makeColor(rb.Red.p*.5+.5*255,rb.Green.p*.5+.5*255,rb.Blue.p*.5+.5*255) : //if hitting, average with white
-				makeColor(rb.Red.p*.7,rb.Green.p*.7,rb.Blue.p*.7) : //if hitting, darken
+				makeColor(rb.Red.p*.4,rb.Green.p*.4,rb.Blue.p*.4) : //if hitting, darken
 				makeColor(rb.Red.p,rb.Green.p,rb.Blue.p); //if not hitting
 		}
 		
@@ -3428,6 +3445,7 @@ var StateMap = ()=>({
 	ccp: ccp.save(),
 	chk: checkboxesToMap(checkboxesToSaveAndLoad()), //{checkboxId: true, otherCheckboxId: false}
 	selectBrushNames: selectedBrushNames(), //list of strings
+	V: V.toMap(), //Var tree
 });
 
 var LoadMap = map=>{
@@ -3483,6 +3501,11 @@ var LoadMap = map=>{
 	}
 	if(map.selectBrushNames){ //list of strings
 		selectBrushNames(map.selectBrushNames);
+	}
+	
+	if(map.V){
+		resetVars();
+		V.loadMap(map.V);
 	}
 
 	copyWorldStateToUiControls();

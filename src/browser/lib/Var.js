@@ -402,6 +402,9 @@ Var.prototype.loadJson = function(json, optional_isAutoEval){
 
 Var.prototype.clear = function(map){
 	this.nextState(0);
+	for(let key in this.pu){
+		delete this[key]; //cuz is duplicated in this[childName] and this.pu[childName]
+	}
 	this.pu = {}; //empty this.pu
 };
 
