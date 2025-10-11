@@ -168,7 +168,8 @@ var resetVars = ()=>{
 	//only if its .p is 0 will it set this. in case was loaded from V/Var earlier.
 	//FIXME what if you wanted gravity to be 0/off?
 	//Opt.GravityY.if0(-2.3);
-	Opt.GravityY.p = -.6;
+	//Opt.GravityY.p = -.6;
+	Opt.GravityY.p = -.3;
 	//Opt.GravityY.if0(-.1);
 	//Opt.GravityY.if0(-.02);
 	//Opt.GravityY.if0(-.01);
@@ -185,15 +186,23 @@ var resetVars = ()=>{
 	Opt.DeleteBallsIfLowerThanY.p = -50;
 
 	//This in theory should fix the balls going inside CCPBallGrid shapes, crossing their surface.
-	Opt.RepelBallsUsingPenetrationDepth_mul.p = 1; //FIXME
+	//Opt.RepelBallsUsingPenetrationDepth_mul.p = 1; //FIXME
+	//Opt.RepelBallsUsingPenetrationDepth_mul.p = 0; //FIXME
+	Opt.RepelBallsUsingPenetrationDepth_mul.p = 1.2; //FIXME
 	//Opt.RepelBallsUsingPenetrationDepth_mul.if0(100); //FIXME
 	//Opt.RepelBallsUsingPenetrationDepth_mul.if0(300); //FIXME
 	//Opt.RepelBallsUsingPenetrationDepth_mul.if0(2500); //FIXME
 	//Opt.RepelBallsUsingPenetrationDepth_mul.p = 2500; //FIXME
 	
+	Opt.RepelRollallsAgainstCCPSurfaceBalls_mul.p = 1;
+	
 	//dead zone like in a joystick, cuz it measures from the nearest empty ccp slot
 	//Opt.PenetrationDepthDeadZone.p = .6*ballRadius;
-	Opt.PenetrationDepthDeadZone.p = 1.2*ballRadius;
+	//Opt.PenetrationDepthDeadZone.p = 1.2*ballRadius;
+	//Opt.PenetrationDepthDeadZone.p = 1.3*ballRadius;
+	//Opt.PenetrationDepthDeadZone.p = 1*ballRadius;
+	Opt.PenetrationDepthDeadZone.p = 1.25*ballRadius;
+	//Opt.PenetrationDepthDeadZone.p = 5*ballRadius;
 
 	//Opt.AddToDepthOfCircleOutline.if0(0);
 	//Opt.AddToDepthOfCircleOutline.if0(-1000); //display in front. or does that cut it off cuz behind camera?
@@ -204,7 +213,7 @@ var resetVars = ()=>{
 	
 	//Opt.BallCreateInterval.if0(.03);
 	//Opt.BallCreateInterval.p = 1;
-	Opt.BallCreateInterval.if0(.1);
+	Opt.BallCreateInterval.p = .1;
 
 };
 resetVars();
@@ -1214,7 +1223,8 @@ class CCPBallGrid {
 			}
 		}
 		
-		maxPoten = 0; //FIXME this turns off collisions between CCPBallGrid surface balls and rollballs, experimentally
+		//maxPoten = 0; //FIXME this turns off collisions between CCPBallGrid surface balls and rollballs, experimentally
+		maxPoten *= Opt.RepelRollallsAgainstCCPSurfaceBalls_mul;
 		
 		if(Opt.RepelBallsUsingPenetrationDepth_mul.p){
 			/* ---------- extra loss factor based on nearest empty slot ---------- */
