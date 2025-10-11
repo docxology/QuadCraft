@@ -174,7 +174,8 @@ Opt.DeleteBallsIfLowerThanY.if0(-50);
 
 //This in theory should fix the balls going inside CCPBallGrid shapes, crossing their surface.
 //Opt.RepelBallsUsingPenetrationDepth_mul.if0(1); //FIXME
-Opt.RepelBallsUsingPenetrationDepth_mul.if0(100); //FIXME
+//Opt.RepelBallsUsingPenetrationDepth_mul.if0(100); //FIXME
+Opt.RepelBallsUsingPenetrationDepth_mul.if0(2500); //FIXME
 
 
 var Err = str=>{
@@ -3052,6 +3053,7 @@ var doGameLogic = (now,dt)=>{
 	let rollballs = getAllRollBalls(); //list of Var which each have .X .Y and .Z Var's.
 	for(let rb of rollballs){
 		rb.IsHitOtherBall.p = 0; //for color, unset this but set it to 1 in forAllCollidingBallPairs if hits
+		rb.IsHitHardOtherBall.p = 0; //for debug, if it overlaps in position too much, turn it red to show physics error.
 		rb.IsHitCCP.p = 0; //for color, unset this but set it to 1 in forAllCollidingBallPairs if hits
 		rb.Y.dv += Opt.GravityY.p; //dv is change in velocity per time aka accel
 		let neutralSample = potenOfRollball(rb);
@@ -3103,6 +3105,11 @@ var potenOfRollballPair = (ballA, ballB, ballRadius = 1)=>{
 
 	const signedDistance = dist - 2*ballRadius; // negative if overlapping
 	const overlap = Math.min(0, signedDistance);
+	//if(true){//overlap > .01*ballRadius){ //2*ballRadius is max, so half overlapping is too far
+	if(overlap < -Opt.IsHitHardOtherBall_howManyRadiusIsTooMuchOverlap.p*ballRadius){ //2*ballRadius is max, so half overlapping is too far
+		ballA.IsHitHardOtherBall.p = 1;
+		ballB.IsHitHardOtherBall.p = 1;
+	}
 
 	return Opt.BallBounceForce.p * overlap * overlap; // quadratic penalty
 };
@@ -3111,6 +3118,9 @@ var potenOfRollballPair = (ballA, ballB, ballRadius = 1)=>{
 //Opt.PhysicsCyclesPerVideoFrame.if0(4);
 Opt.PhysicsCyclesPerVideoFrame.if0(10);
 //Opt.PhysicsCyclesPerVideoFrame.if0(50);
+
+//Opt.IsHitHardOtherBall_howManyRadiusIsTooMuchOverlap.if0(.01);
+Opt.IsHitHardOtherBall_howManyRadiusIsTooMuchOverlap.if0(1);
 
 function drawLineXYZ(aXYZ, bXYZ, stroke = '#00ffff'){
     const a = project(aXYZ),  b = project(bXYZ);
@@ -3194,10 +3204,14 @@ function draw(){ //todo rename this to nextGameState
 		
 		
 		//color = (rb.IsHitCCP.p || rb.IsHitOtherBall.p) ? 'white' : 'gray';
-		color = (rb.IsHitCCP.p || rb.IsHitOtherBall.p) ?
-			//makeColor(rb.Red.p*.5+.5*255,rb.Green.p*.5+.5*255,rb.Blue.p*.5+.5*255) : //if hitting, average with white
-			makeColor(rb.Red.p*.7,rb.Green.p*.7,rb.Blue.p*.7) : //if hitting, darken
-			makeColor(rb.Red.p,rb.Green.p,rb.Blue.p); //if not hitting
+		if(rb.IsHitHardOtherBall.p){ //turn it red to show error cuz 2 rollballs overlapping too much
+			color = '#ff0000'; //red
+		}else{ //not error, normal physics
+			color = (rb.IsHitCCP.p || rb.IsHitOtherBall.p) ?
+				//makeColor(rb.Red.p*.5+.5*255,rb.Green.p*.5+.5*255,rb.Blue.p*.5+.5*255) : //if hitting, average with white
+				makeColor(rb.Red.p*.7,rb.Green.p*.7,rb.Blue.p*.7) : //if hitting, darken
+				makeColor(rb.Red.p,rb.Green.p,rb.Blue.p); //if not hitting
+		}
 		
 		
 		
