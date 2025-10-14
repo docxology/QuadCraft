@@ -165,6 +165,10 @@ var resetVars = ()=>{
 	Ball = Room.Ball;
 	Opt = Room.Opt;
 	
+	//Do NOT use .if0 cuz it doesnt always replace it when load
+	//a new game level, cuz it was not 0. V.clear() may be buggy?
+	//Set .p to it instead.
+	
 	//only if its .p is 0 will it set this. in case was loaded from V/Var earlier.
 	//FIXME what if you wanted gravity to be 0/off?
 	//Opt.GravityY.if0(-2.3);
@@ -214,6 +218,17 @@ var resetVars = ()=>{
 	//Opt.BallCreateInterval.if0(.03);
 	//Opt.BallCreateInterval.p = 1;
 	Opt.BallCreateInterval.p = .1;
+	
+	//Opt.PhysicsCyclesPerVideoFrame.if0(1); //must be at least 1 and an integer
+	//Opt.PhysicsCyclesPerVideoFrame.if0(4);
+	Opt.PhysicsCyclesPerVideoFrame.p = 10;
+	//Opt.PhysicsCyclesPerVideoFrame.if0(50);
+
+	//Opt.IsHitHardOtherBall_howManyRadiusIsTooMuchOverlap.if0(.01);
+	//Opt.IsHitHardOtherBall_howManyRadiusIsTooMuchOverlap.if0(.2);
+	Opt.IsHitHardOtherBall_howManyRadiusIsTooMuchOverlap.p = .6;
+	//Opt.IsHitHardOtherBall_howManyRadiusIsTooMuchOverlap.if0(1);
+	//Opt.IsHitHardOtherBall_howManyRadiusIsTooMuchOverlap.if0(1.5); //FIXME why isnt this enuf? is IsHitHardOtherBall_howManyRadiusIsTooMuchOverlap buggy? 2 should be max possible overlap but at 1.5 I see them turning red with a slight touch.
 
 };
 resetVars();
@@ -1224,7 +1239,7 @@ class CCPBallGrid {
 		}
 		
 		//maxPoten = 0; //FIXME this turns off collisions between CCPBallGrid surface balls and rollballs, experimentally
-		maxPoten *= Opt.RepelRollallsAgainstCCPSurfaceBalls_mul;
+		maxPoten *= Opt.RepelRollallsAgainstCCPSurfaceBalls_mul.p;
 		
 		if(Opt.RepelBallsUsingPenetrationDepth_mul.p){
 			/* ---------- extra loss factor based on nearest empty slot ---------- */
@@ -3076,6 +3091,9 @@ var doGameLogic = (now,dt)=>{
 		]
 		let ball = newBallAtXYZ(newBallPositionXYZ, newBallVelocityXYZ);
 		timeCreateNextBall += Opt.BallCreateInterval.p;
+		if(timeCreateNextBall+Opt.BallCreateInterval.p < now){
+			timeCreateNextBall = now; //dont accumulate balls to create while paused or delayed such as during loading a new game level
+		}
 	}
 	let rollballs = getAllRollBalls(); //list of Var which each have .X .Y and .Z Var's.
 	for(let rb of rollballs){
@@ -3140,14 +3158,6 @@ var potenOfRollballPair = (ballA, ballB, ballRadius = 1)=>{
 
 	return Opt.BallBounceForce.p * overlap * overlap; // quadratic penalty
 };
-
-//Opt.PhysicsCyclesPerVideoFrame.if0(1); //must be at least 1 and an integer
-//Opt.PhysicsCyclesPerVideoFrame.if0(4);
-Opt.PhysicsCyclesPerVideoFrame.if0(10);
-//Opt.PhysicsCyclesPerVideoFrame.if0(50);
-
-//Opt.IsHitHardOtherBall_howManyRadiusIsTooMuchOverlap.if0(.01);
-Opt.IsHitHardOtherBall_howManyRadiusIsTooMuchOverlap.if0(1);
 
 function drawLineXYZ(aXYZ, bXYZ, stroke = '#00ffff'){
     const a = project(aXYZ),  b = project(bXYZ);
@@ -3466,12 +3476,15 @@ var LoadMap = map=>{
 	selq = Q(...map.selq);
 	if(map.camera){
 		({offsetX, offsetY, zoom, angleX, angleY} = map.camera);
+		viewChanged = true;
 	}
 	if(map.camPos){
 		camPos = [...(map.camPos)]; //copy
+		viewChanged = true;
 	}
 	if(map.camQ){
 		camQ = [...(map.camQ)]; //copy
+		viewChanged = true;
 	}
 
 	if(!map.grid) Err('No map.grid');
@@ -3532,6 +3545,9 @@ var openFileInputClicked = event=>{
 		LoadJson(json); // same as quickload
 	};
 	reader.readAsText(file);
+	
+	//allow the same file to be picked again. Otherwise if you pick the same file twice in a row it will ignore the second one.
+    event.target.value = ''; // clears input but UI name stays
 };
 
 
@@ -3576,7 +3592,8 @@ var newBallAtXYZ = (xyz,optionalVelocityXYZ)=>{
 	//ball.Blue.p = randInt(150, 200); //blue
 	ball.Blue.p = 255;
 	//ball.X.cv = ball.Y.cv = ball.Z.cv = .31; //base velocity decay. .kv adds to this and is where u add dynamic velocity decay.
-	ball.X.cv = ball.Y.cv = ball.Z.cv = 2.31;
+	//ball.X.cv = ball.Y.cv = ball.Z.cv = 2.31;
+	ball.X.cv = ball.Y.cv = ball.Z.cv = 5.31;
 	console.log('Created ball '+ball.path()); //path() is its V/Var tree id
 	return ball;
 };
