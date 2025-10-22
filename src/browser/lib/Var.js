@@ -196,6 +196,89 @@ var randInt = max=>((Math.random()*max)|0);
 //var DefaultEpsilon = window.DefaultEpsilon = 2**-7; //FIXME which scripts (of the 3 in this html) use this?
 var DefaultEpsilon = 2**-12; //FIXME is this small enuf? is it for float32 or float64?
 
+var timeOffset_ = performance.timing.navigationStart;
+
+//UTC seconds with fraction. More precise than Date.now()*.001. Chrome seems to have 4 digits after decimal point, and brave and firefox 3 digits.
+var time = ()=>((timeOffset_+performance.now())*.001);
+
+var timeIdPrev = 0;
+
+/*returns a float64 that is bigger than the last float64 returned by this and is as close to the current UTC time as possible.
+..
+Tested this on (Double.doubleToLongBits(1697766252.4079208)-Double.doubleToLongBits(1697766252.3960001)) in java which returned 49999.
+I generated those 2 doubles on browser console in brave by:
+x = TinyGlsl.time();
+1697766252.3960001
+for(let i=0; i<49999; i++) x = TinyGlsl.nextUpPositiveDouble(x)
+1697766252.4079208
+This works cuz all the positive finite doubles are sorted the same way as their raw long/int64 bits. The negatives come after that cuz high bit / sign bit is 1.
+Name these tid (Time ID), like put that in webgl/glsl and canvas objects to know what time created them so can try deleting them in that same order or reverse order???
+*/
+var TimeId = ()=>{
+	let now = time();
+	return timeIdPrev = Math.max(now, nextUpPositiveDouble(timeIdPrev));
+};
+
+//put a tid field (timeId) on the object if it doesnt already have one (0 doesnt count), then return the object.
+//Example: let floats = TinyGlsl.putTid(new Float32Array(100));
+var putTid = ob=>{
+	if(!ob.tid){
+		ob.tid = TimeId();
+	}
+	return ob;
+};
+
+//same as TinyGlsl.putTid(ob).tid but usually faster. Returns the timeId of the object, and creates one if it doesnt have it yet.
+var tid = ob=>(ob.tid || putTid(ob).tid);
+
+var tidComparator = (a,b)=>{
+	//cant subtract cuz might lose the difference to roundoff
+	let aTid = TinyGlsl.tid(a);
+	let bTid = TinyGlsl.tid(b);
+	if(aTid < bTid) return -1;
+	if(aTid > bTid) return 1;
+	return 0;
+};
+
+//a js {} to sort by valA.tid, valB.tid, etc.
+var tidComparatorForMapKeys = map=>{
+	return function(a,b){
+		return TinyGlsl.tidComparator(map[a],map[b]);
+	};
+};
+
+const twoIntsOverlappingADouble = new Int32Array(2);
+const doubleOverlappingTwoInts = new Float64Array(twoIntsOverlappingADouble.buffer);
+
+
+const low32BitsOfDouble = function(d){ //littleEndian
+	doubleOverlappingTwoInts[0] = d;
+	return twoIntsOverlappingADouble[0];
+};
+	
+const high32BitsOfDouble = function(d){ //littleEndian
+	doubleOverlappingTwoInts[0] = d;
+	return twoIntsOverlappingADouble[1];
+};
+
+const twoIntsToDouble = function(highInt, lowInt){
+	twoIntsOverlappingADouble[0] = lowInt;
+	twoIntsOverlappingADouble[1] = highInt;
+	return doubleOverlappingTwoInts[0];
+};
+
+//If its a positive double and not the max possible positive double, returns the smallest double thats bigger.
+//https://twitter.com/benrayfield/status/1715188907145343046
+//Fixed it so its rolling over from 1-epsilon to 1 to 1+epsilon right now.
+const nextUpPositiveDouble = function(d){ //littleEndian
+	doubleOverlappingTwoInts[0] = d;
+	twoIntsOverlappingADouble[0]++; //low 32 bits
+	if(!twoIntsOverlappingADouble[0]){ //if wraps around back to 0
+		twoIntsOverlappingADouble[1]++; //carry
+	}
+	return doubleOverlappingTwoInts[0];
+};
+
 //This should be a little more than the common epsilon of 1 for pixel coordinates (1 pixel over)
 //so it can jump a little past that. If its 1, it moves a little too slow. If 2 its noticably jumpy.
 //var DefaultGp = 1.5; //normal
@@ -587,6 +670,57 @@ Var.prototype.search = function(goal, optionalMaxResults){
 	return ret;
 };
 
+//get best child by .p andOr .t/timeUpdated.
+//
+//Used with Ptr$varname or Lit$varname, whose childs compete to be the 1 current value of it.
+//Similar to Ptrs$varname and Lits$varname but those have many (0 or more).
+// Returns the best (most up-to-date and existing) child Var.
+// Priority: highest .p (nonzero = exists), then highest .t (latest update).
+// Returns null if there are no children or if all have .p <= 0.
+//
+//Ok i put this in Var.js. now use it in index.html. Call NS.CCP.Lit$20_30.best()
+//to get null or the best/current value of a=20 s=30, and where NS.CCP.Lit$20_30.best()
+//might return NS.CCP.Lit$20_30._n20_n12_8_n19_12_18 for example.
+//
+//This is the GET copared to child.setBest().
+Var.prototype.best = function() {
+	let best = null;
+	let bestP = -Infinity;
+	let bestT = -Infinity;
+
+	for (const name in this.pu) {
+		const child = this.pu[name];
+		if (!child) continue;
+
+		if (child.p > bestP || (child.p === bestP && child.t > bestT)) {
+			best = child;
+			bestP = child.p;
+			bestT = child.t;
+		}
+	}
+
+	if (!best || best.p <= 0) return null;
+	return best;
+};
+
+// Marks this Var as the current best (active) child among its siblings (this.up is parent).
+// Clears all sibling .p values to 0, then sets this.p = 1 and updates this.t = time().
+//Causes this.up.best()===this if called right after that, unless .p andOr .t etc changes certain ways.
+Var.prototype.setBest = function(){
+	const parent = this.up;
+	if(!this.up) return; //root has no siblings
+	
+	// Deactivate all siblings
+	for (const name in parent.pu) {
+		const sib = parent.pu[name];
+		if (sib && sib !== this) sib.p = 0; //TODO u might want to delete it also but not from this setBest func. See .e (vs .p)
+	}
+
+	// Activate this one
+	this.p = 1;
+	this.t = TimeId();
+};
+
 //FIXME rename centerY and centerX in existing game content to Y and X, like game.Y and game.X TODO game.Y and game.X.
 //if its on the line, is not included. Has to be less than r distance. This is cuz sorts by a relative distance, and 0 must not be included.
 Var.prototype.searchZYXR = function(z, y, x, r, maxResults){
@@ -747,6 +881,7 @@ Var.prototype.pU = function(nameOrBig){
 	}
 	return ret;
 };
+
 
 Var.prototype.think = function(){
 	let brain = this.brain || (this.brain = eval(this.big || this.name));
@@ -974,7 +1109,7 @@ Var.prototype.fieldSetter = function(field){
 /*This makes (the next version of todo) the editor at the top left appear with input type=range sliders
 of the selected Gob, in the selectedGobVarsDiv_table code, similar to this:
 V.testnet.gob$Zxbv95B$dT3MVDu7Akt8PZNHAMeB4ZwNeats2TeDchR
-Var.name	                       .p                              	.pr	.ps	.cv
+Var.name						   .p							  	.pr	.ps	.cv
 Y	min=0 max=16777215
 74972.52934667701
 min=0 max=16777215

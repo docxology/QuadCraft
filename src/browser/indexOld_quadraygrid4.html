@@ -145,15 +145,15 @@ var Game = null; //const Game = V.QuadCraft;
 //(would be V.Testnet in the new way, cant start with lowercase letter).
 //It auto creates childs when you say http://V.Quadcraft.Whatever.You.Want .
 
-var NS = null; //var Room = Game.Room1; //var Room = null; //var Room = Game.Room1;
+var Room = null; //var Room = Game.Room1;
 //put balls here like Ball.B500.X.p is the x position
 //of V.Quadcraft.Room1.Ball.B500, and similarly .Y and .Z
 //and whatever other vars you want to put in a ball.
-var Ball = null; //var Ball = NS.Ball;
+var Ball = null; //var Ball = Room.Ball;
 
 //options go here. just write any Opt.AnyOption567.p or Opt.AnyOption567.v etc and it exists
 //and will get auto synced with the V/Var tree.
-var Opt = null; //var Opt = NS.Opt;
+var Opt = null; //var Opt = Room.Opt;
 
 const ballRadius = 1;
 
@@ -161,9 +161,9 @@ const ballRadius = 1;
 var resetVars = ()=>{
 	V.clear(); //built into Var.js
 	Game = V.QuadCraft;
-	NS = Game.Room1;
-	Ball = NS.Ball;
-	Opt = NS.Opt;
+	Room = Game.Room1;
+	Ball = Room.Ball;
+	Opt = Room.Opt;
 	
 	//Do NOT use .if0 cuz it doesnt always replace it when load
 	//a new game level, cuz it was not 0. V.clear() may be buggy?
@@ -219,9 +219,9 @@ var resetVars = ()=>{
 	//Opt.BallCreateInterval.p = 1;
 	Opt.BallCreateInterval.p = .1;
 	
-	Opt.PhysicsCyclesPerVideoFrame.p = 1; //Opt.PhysicsCyclesPerVideoFrame.if0(1); //must be at least 1 and an integer
+	//Opt.PhysicsCyclesPerVideoFrame.if0(1); //must be at least 1 and an integer
 	//Opt.PhysicsCyclesPerVideoFrame.if0(4);
-	//Opt.PhysicsCyclesPerVideoFrame.p = 10;
+	Opt.PhysicsCyclesPerVideoFrame.p = 10;
 	//Opt.PhysicsCyclesPerVideoFrame.if0(50);
 
 	//Opt.IsHitHardOtherBall_howManyRadiusIsTooMuchOverlap.if0(.01);
@@ -231,7 +231,7 @@ var resetVars = ()=>{
 	//Opt.IsHitHardOtherBall_howManyRadiusIsTooMuchOverlap.if0(1.5); //FIXME why isnt this enuf? is IsHitHardOtherBall_howManyRadiusIsTooMuchOverlap buggy? 2 should be max possible overlap but at 1.5 I see them turning red with a slight touch.
 
 };
-//delay til window.onload: resetVars();
+resetVars();
 
 
 var Err = str=>{
@@ -313,10 +313,9 @@ const aveColor = (hexA, hexB) => {
 	return makeColor(r, g, b);
 };
 
-//this goes in Var.js (which was from bens dagball code earlier)
-//const timeOffset_ = performance.timing.navigationStart;
+const timeOffset_ = performance.timing.navigationStart;
 //UTC seconds with fraction. More precise than Date.now()*.001. Chrome seems to have 4 digits after decimal point, and brave and firefox 3 digits.
-//const time = ()=>((timeOffset_+performance.now())*.001);
+const time = ()=>((timeOffset_+performance.now())*.001);
 
 //If made by Q(...) you can compare them using quadrayA===quadrayB or ==.
 class Quadray{
@@ -683,7 +682,7 @@ function evenFloor(t){
 //and value is a range of Directions.d which is also on that octahedron.
 //
 // One immutable run [k0,k1) along D in the (i,j) column
-//class CCPBallRange written by GPT5 2025-8-15. 2025-10-20 has been working for a while.
+//class CCPBallRange written by GPT5 2025-8-15. TODO test.
 class CCPBallRange { //TODO rename ijk to asd
 	constructor(i, j, k0, k1){			// k1 is exclusive
 		this.i	= i|0; this.j	= j|0;
@@ -884,7 +883,7 @@ class CCPBallGrid {
 		this.QA = Directions.a; // Q(0,1,-1,0)
 		this.QS = Directions.s; // Q(1,0,0,-1)
 		this.QD = Directions.d; // Q(0,1,0,-1)
-		//moving this into V/Var tree 2025-10-20+: this.cols = new Map();	// key "i,j" -> Array<CCPBallRange>
+		this.cols = new Map();	// key "i,j" -> Array<CCPBallRange>
 	}
 	
 	// add inside CCPBallGrid (e.g., right after constructor)
@@ -901,28 +900,14 @@ class CCPBallGrid {
 	surfaceQuadrays(useSurfaceCacheInRanges=false){
 		let retList = [];
 		if(useSurfaceCacheInRanges){ //fast here, but slower to edit. u pay the slow edit cost either way.
-			//theres no this.cols anymore, it was moved to V/Var tree 2025-10-20.
-			/*for (const list of this.cols.values()){
+			for (const list of this.cols.values()){
 				for (const r of list){
 					if (!r.surf || r.surf.size === 0) continue;
 					for (const q of r.surf) retList.push(q);
 				}
-			}*/
-			for (const litName in NS.CCP.pu){
-				const lit = NS.CCP.pu[litName];
-				if (!lit) continue;
-
-				const best = lit.best(); //newest value
-				if (!best || !best.ob) continue;
-
-				for (const r of best.ob) {
-					if (!r.surf || r.surf.length === 0) continue;
-					for (const q of r.surf) retList.push(q);
-				}
 			}
 		}else{ //brute force, can get slow
-			//theres no this.cols anymore, it was moved to V/Var tree 2025-10-20.
-			/*for(const [key, list] of this.cols.entries()){
+			for (const [key, list] of this.cols.entries()){
 				if (!list.length) continue;
 				const [iStr, jStr] = key.split(',');
 				const i = +iStr, j = +jStr;
@@ -930,33 +915,22 @@ class CCPBallGrid {
 				for (const r of list){ //r is a CCPBallRange
 					for (let k = r.k0; k < r.k1; k++){
 						// solid here; check 12 neighbors
+						/*let exposed = false;
+						for (let t=0; t<this.NBR.length; t++){
+							const di = i + this.NBR[t][0];
+							const dj = j + this.NBR[t][1];
+							const dk = k + this.NBR[t][2];
+							if (!this.isSolid(di, dj, dk)){ exposed = true; break; }
+						}
+						if(exposed){
+							retList.push(this.fromASD(i,j,k));
+						}*/
 						if(this.neighborCount(i,j,k)<12){
 							retList.push(this.fromASD(i,j,k));
 						}
 					}
 				}
-			}*/
-			for(const litName in NS.CCP.pu){
-				const lit = NS.CCP.pu[litName];
-				if (!lit) continue;
-
-				const best = lit.best();
-				if (!best || !best.ob || best.ob.length === 0) continue;
-
-				// Parse "Lit$34_20" → i=34, j=20
-				const [iStr, jStr] = litName.slice(4).split('_');
-				const i = +iStr, j = +jStr;
-
-				for (const r of best.ob) { // r is a CCPBallRange
-					for (let k = r.k0; k < r.k1; k++) {
-						// solid here; check 12 neighbors
-						if (this.neighborCount(i, j, k) < 12) {
-							retList.push(this.fromASD(i, j, k));
-						}
-					}
-				}
 			}
-
 		}
 		return retList; //quadrays
 	}
@@ -978,57 +952,14 @@ class CCPBallGrid {
 	}
 
 	// ---- sparse column storage helpers ----
+	//_key(i,j){ return ((i|0)+","+(j|0)); }
 	_key(i,j){
 		//snap to grid. [0,0,0] is the center of some ball (look for orange dot),
 		//so [-.4,-.1,.3] and [.4,.4,.4] should both get the same list.
-		//"34,20":[-20,-12,-8,-3,12,18],"35,19":[-20,-13,-7,-3,12,18],"36,18":[-20,-11,-9,-3,12,18],"37,17":[-20,-3,12,18].
-		//return (Math.round(i)+","+Math.round(j)); //'34,20' quadgrid4 version like in quadcraft_quadgrid4_1760462425.3488998.json
-		return 'Lit$'+Math.round(i)+"_"+Math.round(j); //TODO quadgrid5 version, like 'Lit$34_20'
+		return (Math.round(i)+","+Math.round(j));
 	}
-	//_get(i,j){ return this.cols.get(this._key(i,j)) || []; }
-	//_set(i,j,arr){ const k=this._key(i,j); arr.length? this.cols.set(k,arr) : this.cols.delete(k); }
-	_get(i, j){ //get list of CCPBallRange from V/Var tree, generating it if its in that tree but not in CCPBallRange form yet.
-		const lit = NS.CCP[this._key(i, j)];
-		//console.log('NS.CCP.allVars()='+NS.CCP.allVars()); //todo remove this test
-		//console.log('NS.CCP.best()='+NS.CCP.best()); //todo remove this test
-		const best = lit.best();
-
-		// If there’s no current valid child, just return empty list
-		if (!best) return [];
-
-		// If already cached in best.ob, reuse it
-		if (best.ob) return best.ob;
-
-		// Otherwise, decode from its .big string and cache into best.ob
-		return best.ob = twoIntsAndCcpNameToRanges(i, j, best.name || best.big); //list of CCPBallRange
-	}
-	_set(i, j, arr) {
-		const lit = NS.CCP[this._key(i, j)];
-
-		/*gpt wrote this. deletions are normally done by setting .p to 0 but thats incomplete,
-		and it could interfere with sharing such deletions, so just store it as an empty list value.
-		// If arr is empty, mark all children inactive (clear this column)
-		if (!arr || arr.length === 0) {
-			for (const name in lit.pu) {
-				const child = lit.pu[name];
-				if (child) child.p = 0;
-			}
-			lit.ob = null;
-			return;
-		}*/
-
-		// Encode the CCPBallRange list into the Var name form
-		const name = listOf_CCPBallRange_toCcpName(arr);
-
-		// Create or update the child Var for this column
-		const child = lit[name];
-		child.ob = arr; //would have been created that way by _get, but we can skip that
-
-		// Activate this one as the best (current) value
-		child.setBest();
-	}
-
-	
+	_get(i,j){ return this.cols.get(this._key(i,j)) || []; }
+	_set(i,j,arr){ const k=this._key(i,j); arr.length? this.cols.set(k,arr) : this.cols.delete(k); }
 
 	// lower_bound by k0
 	_lbK0(list, k){
@@ -1423,11 +1354,10 @@ class CCPBallGrid {
 	}
 	
 	clear(){
-		//this.cols doesnt exist anymore: this.cols.clear();
-		NS.CCP.clear(); //built into Var.js
+		this.cols.clear();
 	}
 	
-	//load 1 i_j list of state, alternating k0 k1 k0 k1...
+		//load 1 i_j list of state, alternating k0 k1 k0 k1...
 	loadIJ(i,j,kEnds){
 		const list=[];
 		for(let t=0;t<kEnds.length;t+=2){
@@ -1443,7 +1373,6 @@ class CCPBallGrid {
 		return out;					// [k0,k1,k0,k1,…]
 	}
 
-	/*Use NS.CCP instead
 	//after clear() or as diffs from whats already loaded, load what comes out of save().
 	load(map){
 		this.clear();
@@ -1451,9 +1380,9 @@ class CCPBallGrid {
 			const [i,j]=key.split(',').map(Number);
 			this.loadIJ(i,j,map[key]);
 		}
-	}*/
+	}
 
-	/*Use NS.CCP instead, which is in the Var tree, so dont need this func anymore
+
 	//get jsonable {} of this state, you can use with loadIJ
 	save(){
 		const obj=Object.create(null);	// { "i,j": [k0,k1,…], … }
@@ -1462,63 +1391,9 @@ class CCPBallGrid {
 			obj[key]=this.saveIJ(i,j);
 		}
 		return obj;
-	}*/
+	}
 
 }
-
-//for V/Var tree syntax since it cant have commas and dashes etc in an unescaped name (which causes it to use .big).
-//"grid":{"oct":[[0,0,0,0],[49,23,0,12],[53,22,0,17],[55,22,0,19],[5
-//"ccp":{"28,16":[-12,-7,-1,3,7,18],"27,16":[-12,-6,0,3,9,18],"27,15":[-11,-6,1,5,9,15],
-//
-// From list → encoded string
-// [-20, -12, 8, -19, 12, 18]  →  "_n20_n12_8_n19_12_18"
-var ccpListOfIntsToName = list=>("_"+list.map(n => (n < 0 ? "n" + Math.abs(n) : n)).join("_"));
-
-// From encoded string → numeric list
-// "_n20_n12_8_n19_12_18"  →  [-20, -12, 8, -19, 12, 18]
-var ccpNameToListOfInts = name=>{
-    if (typeof name !== "string" || name[0] !== "_") return [];
-    // drop first char, replace _→, and n→-, then wrap in [ ... ] and parse
-    const s = "[" + name.slice(1).replace(/_/g, ",").replace(/n/g, "-") + "]";
-    try {
-        return JSON.parse(s);
-    } catch {
-        console.warn("Bad CCP name:", name);
-        return [];
-    }
-};
-
-// Flatten list of CCPBallRange → list of ints
-// Example: [new CCPBallRange(a,s,-20,-12), new CCPBallRange(a,s,-8,-3)]
-//      → [-20, -12, -8, -3]
-var ccpRangesToIntList = ranges=>{
-    const ints = [];
-    if (!Array.isArray(ranges)) return ints;
-    for (const r of ranges) {
-        if (r && typeof r.k0 === "number" && typeof r.k1 === "number") {
-            ints.push(r.k0, r.k1);
-        }
-    }
-    return ints;
-};
-
-// Expand list of ints → list of CCPBallRange (using params a, s)
-// Example: (a,s,[-20,-12,-8,-3]) → [new CCPBallRange(a,s,-20,-12), new CCPBallRange(a,s,-8,-3)]
-var ccpIntListToRanges = (a, s, ints)=>{
-    const ranges = [];
-    if (!Array.isArray(ints)) return ranges;
-    for (let i = 0; i < ints.length - 1; i += 2) {
-        ranges.push(new CCPBallRange(a, s, ints[i], ints[i + 1]));
-    }
-    return ranges;
-};
-
-var listOf_CCPBallRange_toCcpName = listOf_CCPBallRange=>ccpListOfIntsToName(ccpRangesToIntList(listOf_CCPBallRange));
-
-var twoIntsAndCcpNameToRanges = (a, s, _name)=>ccpIntListToRanges(a,s,ccpNameToListOfInts(_name));
-
-
-
 
 /** list is from a CCPBallGrid, the list at a (A,S) primaryKey,
 varying D. param d here is scalar, not necessarily integer, but returns an integer
@@ -3295,13 +3170,6 @@ function drawLineXYZ(aXYZ, bXYZ, stroke = '#00ffff'){
 }
 
 function draw(){ //todo rename this to nextGameState
-
-	if(!Opt){
-		console.log('Not draw() yet cuz no Opt aka Var*.js has not loaded yet');
-		requestAnimationFrame(draw);
-		return;
-	}
-
 	//let dt = 1/60; //TODO measure and clamp it
 	let now = time();
 	let dt = Math.max(0, Math.min(now-timeOfLastDraw, maxDt));
@@ -3413,7 +3281,6 @@ function draw(){ //todo rename this to nextGameState
 	
 	let targ = targetQ(); //in front of camera, grid aligned. //FIXME make sure this doesnt fill Quadray dedup cuz never garbcol.
 	if(Dom('holdTestBallInFrontOfCam').checked){
-		if(!TestBall) TestBall = newBallAtXYZ([2,3,4]); //hold this one in front of camera to test collision detection
 		let targXYZ = targetQRaw().toCartesian(); //not grid aligned, moves smoothly with cam. //FIXME make sure this doesnt fill Quadray dedup cuz never garbcol.
 		TestBall.X.set(targXYZ[0]); //sets TestBall.X.p after TestBall.X.nextState.
 		//TODO TestBall.V.v? else it might keep going faster and faster but be reset to same position in front of cam.
@@ -3543,11 +3410,11 @@ var loadCheckboxes = map=>{
 			console.log('Loaded checkbox id='+id+' val='+val);
 			chk.checked = val;
 		}else{
-			console.error('No checkbox found id='+id);
+			console.err('No checkbox found id='+id);
 		}
 	}
 	for(let chk of checkboxesToSaveAndLoad()){
-		console.log('TODO loadCheckboxes chk='+chk);
+		
 	}
 };
 
@@ -3580,8 +3447,7 @@ var ClearShapes = ()=>{
 
 var StateMap = ()=>({
 	//TODO leave it as quadcraft_quadraygrid4_state or change to quadcraft_quadraygrid_state in saves on github too.
-	//type: 'quadcraft_quadraygrid4_state', //use older html that says quadraygrid4
-	type: 'quadcraft_quadraygrid5_state', //newer, uses V/Var system.
+	type: 'quadcraft_quadraygrid4_state',
 	selq: [selq.a, selq.b, selq.c, selq.d],
 	camera: { //used if !isCamQuat()
 		offsetX,
@@ -3596,16 +3462,14 @@ var StateMap = ()=>({
 	grid: gridToMap(grid),
 	//ccp is sparse {} of 2d key (Directions.a and Directions.s) to
 	//sparse list of start/end ranges where theres balls along Directions.d .
-	//ccp: ccp.save(),
+	ccp: ccp.save(),
 	chk: checkboxesToMap(checkboxesToSaveAndLoad()), //{checkboxId: true, otherCheckboxId: false}
-	selectBrushNames: selectedBrushNames(), //list of strings
 	selectBrushNames: selectedBrushNames(), //list of strings
 	V: V.toMap(), //Var tree
 });
 
 var LoadMap = map=>{
-	//if(map.type !== 'quadcraft_quadraygrid4_state') return; //use older index*.html for this, todo make a separate one saying quadraygrid4 and put those saves in separate dir.
-	if(map.type !== 'quadcraft_quadraygrid5_state') return; //in the V/Var system
+	if(map.type !== 'quadcraft_quadraygrid4_state') return;
 	
 	ClearShapes();
 
@@ -3647,9 +3511,9 @@ var LoadMap = map=>{
 		AddGameTri(t);
 	}*/
 	
-	/*if(map.ccp){
+	if(map.ccp){
 		ccp.load(map.ccp);
-	}*/
+	}
 	
 	if(map.textBoxToEval !== undefined){
 		Dom('textBoxToEval').value = map.textBoxToEval;
@@ -3734,7 +3598,7 @@ var newBallAtXYZ = (xyz,optionalVelocityXYZ)=>{
 	return ball;
 };
 
-var TestBall = null;
+var TestBall = newBallAtXYZ([2,3,4]); //hold this one in front of camera to test collision detection
 
 //all balls, childs of for example V.QuadCraft.Room1.Ball .
 //Includes all balls that can move/roll/bounce, unlike balls stuck on the CCP grid.
@@ -3759,7 +3623,6 @@ var onloadHappened = false;
 var onload = ()=>{
 	if(!onloadHappened){
 		onloadHappened = true;
-		resetVars();
 		populatePaintbrushSelect();
 		recomputeBrushFromSelect(); //build Brush at startup. Happens again when multiselect list of brushes is modified.
 		copyWorldStateToUiControls();
