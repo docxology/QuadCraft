@@ -313,9 +313,10 @@ const aveColor = (hexA, hexB) => {
 	return makeColor(r, g, b);
 };
 
-const timeOffset_ = performance.timing.navigationStart;
+//this goes in Var.js (which was from bens dagball code earlier)
+//const timeOffset_ = performance.timing.navigationStart;
 //UTC seconds with fraction. More precise than Date.now()*.001. Chrome seems to have 4 digits after decimal point, and brave and firefox 3 digits.
-const time = ()=>((timeOffset_+performance.now())*.001);
+//const time = ()=>((timeOffset_+performance.now())*.001);
 
 //If made by Q(...) you can compare them using quadrayA===quadrayB or ==.
 class Quadray{
