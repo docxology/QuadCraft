@@ -415,7 +415,7 @@ Var.prototype.getOb = function(){
 			//when near the Y X of the view area, so it should all fit together.
 			this.touch();
 			let text = this.text();
-			if(text.startsWith('(') || text.startsWith('gob$')){
+			if(text.startsWith('(') || text.startsWith('Gob$')){
 				let game = this.getGame(); //likely a sibling, and game.influence===this.getGameVar()
 				//text is a js lambda (brain) whose params if evaled should be Var objects, returns list of int voxels
 				//fails cuz text is not evaled, is still a string: return this.ob = new Gob(game, text);
@@ -550,7 +550,7 @@ var saveFile = (fileName, contentType, text)=>{
 //TODO also load gob if its that, aka its name starts with gob$ . Careful about remote code injection,
 //check it for infinite loops, spam redirects of window.location, etc.
 Var.prototype.eval = function(){
-	if(this.name.startsWith('gob$')){
+	if(this.name.startsWith('Gob$')){
 		//Todo();
 		console.log('Ignoring Var.eval() for gob cuz gob puts itself in game.gobs list and has been working as of 2025-2-17, path='+this.path());
 	}else if(isTileString(this.name)){
@@ -721,6 +721,20 @@ Var.prototype.setBest = function(){
 	this.t = TimeId();
 };
 
+/* Delete all child Vars whose .p==0, which would never be returned by .best().
+Most Var's dont use .p that way but some at particular patterns of places in the Var tree do,
+use .p of 0 to mean not exists aka delete, and use .p of 1 or any nonzero value to mean exists
+or the .p can be weight to multiply influence by. See Var.del().
+*/
+Var.prototype.delEmpties = function(){
+	for(const name of Object.keys(this.pu)){ //TODO do it without Object.keys but Var.del() might mod this.pu in a way that breaks it?
+		let child = this.pu[name];
+		if(!child.p){
+			child.del();
+		}
+	}
+};
+
 //FIXME rename centerY and centerX in existing game content to Y and X, like game.Y and game.X TODO game.Y and game.X.
 //if its on the line, is not included. Has to be less than r distance. This is cuz sorts by a relative distance, and 0 must not be included.
 Var.prototype.searchZYXR = function(z, y, x, r, maxResults){
@@ -808,7 +822,7 @@ Var.prototype.setSpring = function(ps, optionalPr){
 };
 
 //const hashIdLen = ('sha256$'.length+64); //64 hex chars. todo base58 or base64 or something. have code in Dagverse.js.
-const hashIdLen = ('gob$'.length+64); //64 hex chars. todo base58 or base64 or something. have code in Dagverse.js.
+const hashIdLen = ('Gob$'.length+64); //64 hex chars. todo base58 or base64 or something. have code in Dagverse.js.
 //
 //FIXME theres gob$hash and tile9007199254595405$hash and tile9007199254595405$literalIfSmall,
 //so should hashIdLen be renamed to minHashIdLen?
@@ -863,7 +877,7 @@ Var.prototype.pU = function(nameOrBig){
 			//Then 43 base64 digits of sha256 of the quadtree compressed content, which is normally a few hundred bytes.
 		}else{
 			//name = 'sha256$'+name; //no special prefixing
-			name = 'gob$'+name; //no special prefixing
+			name = 'Gob$'+name; //no special prefixing
 		}
 		//ret = this.pu[name] || new Var(this, name, nameOrBig, this.gob||null); //auto puts it in this.pu[string]
 		ret = this.pu[name] || new Var(this, name, nameOrBig, this.ob||null); //auto puts it in this.pu[string]

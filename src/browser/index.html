@@ -60,7 +60,7 @@ fillGridByFunc(selq, 5, q=>{
 			<input type=button value="7" onclick="quicksave('7');">
 			<input type=button value="8" onclick="quicksave('8');">
 			<input type=button value="9" onclick="quicksave('9');">
-			<input type=button value="Save (file) " onclick="console.log('save file clicked'); let filename = prompt('Filename?','quadcraft_quadgrid4_'+time()+'.json'); if(filename) saveFile(filename, 'application/json', StateJson());">
+			<input type=button value="Save (file) " onclick="console.log('save file clicked'); let filename = prompt('Filename?','quadcraft_quadgrid5_'+time()+'.json'); if(filename) saveFile(filename, 'application/json', StateJson());">
 			<br>
 		
 			<input type=button value="resetVars()" onclick="resetVars();">
@@ -80,6 +80,8 @@ fillGridByFunc(selq, 5, q=>{
 		<input type=button onclick="SimKeyPress('Shift');" value="Shift (toggle grid dots)">
 		<input type=button onclick="SimKeyPresses('a a a a d d d d q q q q e eee');" value="example octahedrons and tetrahedrons">
 		<input type=button value="ClearShapes" onclick="ClearShapes();"></input>
+		<input type=button value="delEmptiesCcp();" onclick="delEmptiesCcp();"></input>
+		<input type=button value="logCcp();" onclick="logCcp();"></input>
 		<br>
 		<input type="checkbox" id="chkQuaternionCamera" checked><label for="chkQuaternionCamera" title="2025-7-28+ upgrading the camera code to use camPos and camQ instead of zoom, angleX, etc. This should fix the distortion of 3d positions at some angles and positions and allow you to fly through it with a gamepad with 2 analog triggers and 2 analog joysticks, or mouse.">quaternion camera (gamepad or mouse)</label>
 		<input type="checkbox" id="isConePlaneIntersection" checked><label for="isConePlaneIntersection" title="use this graphics mode to paint an oval instead of circle so the balls touch eachother on screen if they're touching in 3d.">isConePlaneIntersection</label>
@@ -136,6 +138,13 @@ fillGridByFunc(selq, 5, q=>{
 <canvas id="canvas" style="display: block; width: 100vw; height: 100vh; cursor: grab"></canvas>
 
 <script>
+
+/*2025-10-22 I (ben) split it into browser/indexOld_quadraygrid4.html and browser/index.html (quadraygrid5),
+which uses browser/saves/quadraygrid4 vs browser/saves/quadraygrid5 (json files in those). This is cuz the old
+way of storing data did not use the V/Var system which Im using for sync in Tomcat, but you can still use those
+old save game files with the old html. I will not be updating that old one anymore.
+Use the old one for demos until the new one is working better.
+*/
 
 const atBoot_displayTopStuff = true;
 
@@ -983,12 +992,20 @@ class CCPBallGrid {
 		//so [-.4,-.1,.3] and [.4,.4,.4] should both get the same list.
 		//"34,20":[-20,-12,-8,-3,12,18],"35,19":[-20,-13,-7,-3,12,18],"36,18":[-20,-11,-9,-3,12,18],"37,17":[-20,-3,12,18].
 		//return (Math.round(i)+","+Math.round(j)); //'34,20' quadgrid4 version like in quadcraft_quadgrid4_1760462425.3488998.json
-		return 'Lit$'+Math.round(i)+"_"+Math.round(j); //TODO quadgrid5 version, like 'Lit$34_20'
+		//return 'Lit$'+Math.round(i)+"_"+Math.round(j); //TODO quadgrid5 version, like 'Lit$34_20'
+		//Use the same encoding function used for CCP range names
+		//Example: (-1, -6) → "Lit$_n1_n6"
+		return 'Lit$' + ccpListOfIntsToName([Math.round(i), Math.round(j)]);
 	}
+	
 	//_get(i,j){ return this.cols.get(this._key(i,j)) || []; }
 	//_set(i,j,arr){ const k=this._key(i,j); arr.length? this.cols.set(k,arr) : this.cols.delete(k); }
 	_get(i, j){ //get list of CCPBallRange from V/Var tree, generating it if its in that tree but not in CCPBallRange form yet.
-		const lit = NS.CCP[this._key(i, j)];
+		let key = this._key(i, j);
+		//const lit = NS.CCP[key];
+		const lit = NS.CCP.pu[key]; //undefined or the Var if it exists
+		if(!lit) return []; //Avoid creating alot of empty Var's
+		
 		//console.log('NS.CCP.allVars()='+NS.CCP.allVars()); //todo remove this test
 		//console.log('NS.CCP.best()='+NS.CCP.best()); //todo remove this test
 		const best = lit.best();
@@ -1002,7 +1019,8 @@ class CCPBallGrid {
 		// Otherwise, decode from its .big string and cache into best.ob
 		return best.ob = twoIntsAndCcpNameToRanges(i, j, best.name || best.big); //list of CCPBallRange
 	}
-	_set(i, j, arr) {
+	_set(i, j, arr){
+		let key = this._key(i, j);
 		const lit = NS.CCP[this._key(i, j)];
 
 		/*gpt wrote this. deletions are normally done by setting .p to 0 but thats incomplete,
@@ -3549,6 +3567,16 @@ var loadCheckboxes = map=>{
 	for(let chk of checkboxesToSaveAndLoad()){
 		console.log('TODO loadCheckboxes chk='+chk);
 	}
+};
+
+var delEmptiesCcp = ()=>{
+	for(let name in NS.CCP.pu){
+		NS.CCP.pu[name].delEmpties(); //Var*.js func, deletes those that wouldnt be selected by .best()
+	}
+};
+
+var logCcp = ()=>{
+	console.log('NS.CCP.toJson()=\n'+NS.CCP.toJson());
 };
 
 var checkboxesToMap = list=>{
