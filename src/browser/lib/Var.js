@@ -302,7 +302,7 @@ Var.prototype.del = function(){
 	if(!this.up){
 		Err('Already is root V/Var, cant del: '+this.path());
 	}
-	console.log('Deleting Var path='+this.path());
+	//console.log('Deleting Var path='+this.path());
 	delete this.up.pu[this.name];
 	//FIXME this.up still exists, so if this.abc.def.ghi still exists then ghi.up.up... will still find this and parents.
 };

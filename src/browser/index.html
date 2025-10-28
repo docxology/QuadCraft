@@ -238,6 +238,8 @@ var resetVars = ()=>{
 	Opt.IsHitHardOtherBall_howManyRadiusIsTooMuchOverlap.p = .6;
 	//Opt.IsHitHardOtherBall_howManyRadiusIsTooMuchOverlap.if0(1);
 	//Opt.IsHitHardOtherBall_howManyRadiusIsTooMuchOverlap.if0(1.5); //FIXME why isnt this enuf? is IsHitHardOtherBall_howManyRadiusIsTooMuchOverlap buggy? 2 should be max possible overlap but at 1.5 I see them turning red with a slight touch.
+	
+	Opt.LogCreateAndDeleteBalls.p = 0; //0 no 1 yes
 
 };
 //delay til window.onload: resetVars();
@@ -925,8 +927,12 @@ class CCPBallGrid {
 				if (!best || !best.ob) continue;
 
 				for (const r of best.ob) {
-					if (!r.surf || r.surf.length === 0) continue;
-					for (const q of r.surf) retList.push(q);
+					if (!r.surf || (r.surf.size===0)){
+						continue;
+					}
+					for(const q of r.surf){
+						retList.push(q);
+					}
 				}
 			}
 		}else{ //brute force, can get slow
@@ -1017,7 +1023,12 @@ class CCPBallGrid {
 		if (best.ob) return best.ob;
 
 		// Otherwise, decode from its .big string and cache into best.ob
-		return best.ob = twoIntsAndCcpNameToRanges(i, j, best.name || best.big); //list of CCPBallRange
+		best.ob = twoIntsAndCcpNameToRanges(i, j, best.name || best.big); //list of CCPBallRange
+		// 🧩 rebuild .surf sets right away so surfaceQuadrays() can use them
+		for (const r of best.ob) {
+			r.rebuildSurface(this);
+		}
+		return best.ob;
 	}
 	_set(i, j, arr){
 		let key = this._key(i, j);
@@ -1044,6 +1055,16 @@ class CCPBallGrid {
 
 		// Activate this one as the best (current) value
 		child.setBest();
+		child.up.delEmpties(); //other than child which is child.up.best()
+		/*
+		Too much empties 2025-10-28:
+		I started over in an empty world. clicked a tool. painted 1 time with it. This "_0_10":{"p":1,"v":0,"t":1761685096.4121} is the one that correctly remains, is the only one with p:1. the others were the partial steps toward it. CCP":{ "p":0,"v":0,"pu":{"Lit$_11_11":{"p":0,"v":0,"pu":{"_0_1":{"p":0,"v":0,"t":1761685096.4108},"_0_1_1_2":{"p":0,"v":0,"t":1761685096.411},"_0_2":{"p":0,"v":0,"t":1761685096.4110003},"_0_2_2_3":{"p":0,"v":0,"t":1761685096.4111001},"_0_3":{"p":0,"v":0,"t":1761685096.4111004},"_0_3_3_4":{"p":0,"v":0,"t":1761685096.4112},"_0_4":{"p":0,"v":0,"t":1761685096.4113002},"_0_4_4_5":{"p":0,"v":0,"t":1761685096.4113004},"_0_5":{"p":0,"v":0,"t":1761685096.4113007},"_0_5_5_6":{"p":0,"v":0,"t":1761685096.4113998},"_0_6":{"p":0,"v":0,"t":1761685096.4114},"_0_6_6_7":{"p":0,"v":0,"t":1761685096.4116},"_0_7":{"p":0,"v":0,"t":1761685096.4116004},"_0_7_7_8":{"p":0,"v":0,"t":1761685096.4116006},"_0_8":{"p":0,"v":0,"t":1761685096.4117},"_0_8_8_9":{"p":0,"v":0,"t":1761685096.4119},"_0_9":{"p":0,"v":0,"t":1761685096.4119003},"_0_9_9_10":{"p":0,"v":0,"t":1761685096.412},"_0_10":{"p":1,"v":0,"t":1761685096.4121}}}} }
+		
+		but after delEmpties() (for CCP in general) it correctly was this:
+		"CCP":{"p":0,"v":0,"pu":{"Lit$_11_11":{"p":0,"v":0,"pu":{"_0_10":{"p":1,"v":0,"t":1761685691.0044003}}}}}
+		
+		3index.html:3589 NS.CCP.toJson()= {"p":0,"v":0,"pu":{"Lit$_11_11":{"p":0,"v":0,"pu":{"_0_10":{"p":1,"v":0}}}}} NS.CCP._get(11,11) VM1826:1 Uncaught TypeError: NS.CCP._get is not a function at <anonymous>:1:8 (anonymous) @ VM1826:1Understand this error ccp._get(11,11) [CCPBallRange]0: CCPBallRange {i: 11, j: 11, k0: 0, k1: 10, surf: Set(0)}length: 1[[Prototype]]: Array(0)
+		*/
 	}
 
 	
@@ -3278,7 +3299,7 @@ var doGameLogic = (now,dt)=>{
 	}
 	for(let rb of rollballs){
 		if(rb.Y.p <= Opt.DeleteBallsIfLowerThanY.p){
-			console.log('Deleting ball '+rb.path()+' cuz rb.Y.p ('+
+			if(Opt.LogCreateAndDeleteBalls.p) console.log('Deleting ball '+rb.path()+' cuz rb.Y.p ('+
 				rb.Y.p+') <= Opt.DeleteBallsIfLowerThanY.p ('+Opt.DeleteBallsIfLowerThanY.p+')');
 			rb.del(); //delete this ball. TODO?: In some Var.js code that does the same as rb.set(0) or rb.p=0;
 		}
@@ -3494,7 +3515,7 @@ function draw(){ //todo rename this to nextGameState
 	
 	paintXYZColor([0,0,0],'orange'); //orange dot at origin (0,0,0) painted over everything else
 	
-	console.log('countQuadraysInDedupMap()='+countQuadraysInDedupMap());
+	//console.log('countQuadraysInDedupMap()='+countQuadraysInDedupMap());
 	
 	requestAnimationFrame(draw);
 }
@@ -3758,7 +3779,7 @@ var newBallAtXYZ = (xyz,optionalVelocityXYZ)=>{
 	//ball.X.cv = ball.Y.cv = ball.Z.cv = .31; //base velocity decay. .kv adds to this and is where u add dynamic velocity decay.
 	//ball.X.cv = ball.Y.cv = ball.Z.cv = 2.31;
 	ball.X.cv = ball.Y.cv = ball.Z.cv = 5.31;
-	console.log('Created ball '+ball.path()); //path() is its V/Var tree id
+	if(Opt.LogCreateAndDeleteBalls.p) console.log('Created ball '+ball.path()); //path() is its V/Var tree id
 	return ball;
 };
 
