@@ -64,6 +64,7 @@ fillGridByFunc(selq, 5, q=>{
 			<br>
 		
 			<input type=button value="resetVars()" onclick="resetVars();">
+			<input type=button value="ccp.rebuild" onclick="ccp.rebuildSurface();">
 			&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
 			<input type=button value="QuickLoad (cookie) 1" onclick="quickload('1');">
 			<input type=button value="2" onclick="quickload('2');">
@@ -227,6 +228,7 @@ var resetVars = ()=>{
 	//Opt.BallCreateInterval.if0(.03);
 	//Opt.BallCreateInterval.p = 1;
 	Opt.BallCreateInterval.p = .1;
+	//Opt.BallCreateInterval.p = .4;
 	
 	Opt.PhysicsCyclesPerVideoFrame.p = 1; //Opt.PhysicsCyclesPerVideoFrame.if0(1); //must be at least 1 and an integer
 	//Opt.PhysicsCyclesPerVideoFrame.if0(4);
@@ -701,7 +703,8 @@ class CCPBallRange { //TODO rename ijk to asd
 		this.k0 = k0|0; this.k1 = k1|0;
 		if (this.k1 < this.k0) [this.k0, this.k1] = [this.k1, this.k0];
 		this.surf = new Set(); //cache of balls that should be in CCPBallGrid.surfaceQuadrays
-		Object.freeze(this);
+		this.countRebuilds = 0;
+		//Object.freeze(this);
 	}
 	
 	get size(){
@@ -742,6 +745,8 @@ class CCPBallRange { //TODO rename ijk to asd
 	
 	//call whenever neighbours may have changed
 	rebuildSurface(ccp){
+		this.countRebuilds++;
+		console.log('rebuildSurface this='+this+' countRebuilds='+this.countRebuilds);
 		const {i,j} = this;
 		this.surf.clear();
 		for(let k=this.k0;k<this.k1;k++){
@@ -911,7 +916,8 @@ class CCPBallGrid {
 	//get list of quadrays on the surface, excluding those with neighborCount 12.
 	surfaceQuadrays(useSurfaceCacheInRanges=false){
 		let retList = [];
-		if(useSurfaceCacheInRanges){ //fast here, but slower to edit. u pay the slow edit cost either way.
+		//FIXME remove false && which locks useSurfaceCacheInRanges to false
+		if(false && useSurfaceCacheInRanges){ //fast here, but slower to edit. u pay the slow edit cost either way.
 			//theres no this.cols anymore, it was moved to V/Var tree 2025-10-20.
 			/*for (const list of this.cols.values()){
 				for (const r of list){
@@ -952,14 +958,15 @@ class CCPBallGrid {
 				}
 			}*/
 			for(const litName in NS.CCP.pu){
+				//FIXME this is display
 				const lit = NS.CCP.pu[litName];
 				if (!lit) continue;
 
 				const best = lit.best();
 				if (!best || !best.ob || best.ob.length === 0) continue;
 
-				// Parse "Lit$34_20" → i=34, j=20
-				const [iStr, jStr] = litName.slice(4).split('_');
+				// Parse "Lit$_34_n20" → i=34, j=-20
+				const [iStr, jStr] = litName.slice(5).replaceAll('n','-').split('_');
 				const i = +iStr, j = +jStr;
 
 				for (const r of best.ob) { // r is a CCPBallRange
@@ -1007,6 +1014,7 @@ class CCPBallGrid {
 	//_get(i,j){ return this.cols.get(this._key(i,j)) || []; }
 	//_set(i,j,arr){ const k=this._key(i,j); arr.length? this.cols.set(k,arr) : this.cols.delete(k); }
 	_get(i, j){ //get list of CCPBallRange from V/Var tree, generating it if its in that tree but not in CCPBallRange form yet.
+		//console.log('_get start');
 		let key = this._key(i, j);
 		//const lit = NS.CCP[key];
 		const lit = NS.CCP.pu[key]; //undefined or the Var if it exists
@@ -1026,8 +1034,10 @@ class CCPBallGrid {
 		best.ob = twoIntsAndCcpNameToRanges(i, j, best.name || best.big); //list of CCPBallRange
 		// 🧩 rebuild .surf sets right away so surfaceQuadrays() can use them
 		for (const r of best.ob) {
+			console.log('_get i'+i+' j'+j+' rebuildSurface');
 			r.rebuildSurface(this);
 		}
+		//console.log('_get end');
 		return best.ob;
 	}
 	_set(i, j, arr){
@@ -1067,7 +1077,23 @@ class CCPBallGrid {
 		*/
 	}
 
-	
+	//only for if it gets out of sync, like in LoadMap.
+	rebuildSurface(){
+		console.log('ccp.rebuildSurface()');
+		for(const litKey in NS.CCP.pu){
+			//without this loop (todo not working yet 2025-11-5-955a),
+			//it waits for a rollball to touch near a connected volume
+			//(by 12 adjacent balls, its reachable) before displaying, after quickload etc.
+			// "Lit$_34_20"  →  i = 34 ,  j = 20
+			// "Lit$_34_n20"  →  i = 34 ,  j = -20
+			// "Lit$_n34_n20"  →  i = -34 ,  j = -20
+			const [iStr, jStr] = litKey.slice(5).replaceAll('n','-').split('_');
+			let i = +iStr;
+			let j = +jStr;
+			console.log('map.V loading litKey['+litKey+'] i'+i+' j'+j+' about to ccp._get');
+			ccp._get(i, j);     // _get() builds & rebuilds surfaces once
+		}
+	}
 
 	// lower_bound by k0
 	_lbK0(list, k){
@@ -1453,12 +1479,17 @@ class CCPBallGrid {
 	}
 	
 	_updateSurfaceAround(i,j){
+		console.log('_updateSurfaceAround start i'+i+' j'+j);
 		for(let di=-1; di<=1; di++){
 			for(let dj=-1; dj<=1; dj++){
 				const list = this._get(i+di, j+dj);
-				for(const r of list) r.rebuildSurface(this);
+				for(const r of list){
+					console.log('_updateSurfaceAround i'+i+' j'+j+' rebuildSurface');
+					r.rebuildSurface(this);
+				}
 			}
 		}
+		console.log('_updateSurfaceAround end i'+i+' j'+j);
 	}
 	
 	clear(){
@@ -3334,12 +3365,18 @@ function drawLineXYZ(aXYZ, bXYZ, stroke = '#00ffff'){
 }
 
 function draw(){ //todo rename this to nextGameState
+	if(isLoadingMap){
+		console.log('Skip draw() cuz isLoadingMap');
+		return;
+	}
 
 	if(!Opt){
 		console.log('Not draw() yet cuz no Opt aka Var*.js has not loaded yet');
 		requestAnimationFrame(draw);
 		return;
 	}
+	
+	console.log('draw(), Object.keys(NS.CCP.pu).length='+Object.keys(NS.CCP.pu).length);
 
 	//let dt = 1/60; //TODO measure and clamp it
 	let now = time();
@@ -3652,72 +3689,82 @@ var StateMap = ()=>({
 	V: V.toMap(), //Var tree
 });
 
+var isLoadingMap = false;
+
 var LoadMap = map=>{
-	//if(map.type !== 'quadcraft_quadraygrid4_state') return; //use older index*.html for this, todo make a separate one saying quadraygrid4 and put those saves in separate dir.
-	if(map.type !== 'quadcraft_quadraygrid5_state') return; //in the V/Var system
-	
-	ClearShapes();
+	try{
+		isLoadingMap = true;
+		console.log('START LoadMap');
+		//if(map.type !== 'quadcraft_quadraygrid4_state') return; //use older index*.html for this, todo make a separate one saying quadraygrid4 and put those saves in separate dir.
+		if(map.type !== 'quadcraft_quadraygrid5_state') return; //in the V/Var system
+		
+		ClearShapes();
 
-	selq = Q(...map.selq);
-	if(map.camera){
-		({offsetX, offsetY, zoom, angleX, angleY} = map.camera);
-		viewChanged = true;
-	}
-	if(map.camPos){
-		camPos = [...(map.camPos)]; //copy
-		viewChanged = true;
-	}
-	if(map.camQ){
-		camQ = [...(map.camQ)]; //copy
-		viewChanged = true;
-	}
+		selq = Q(...map.selq);
+		if(map.camera){
+			({offsetX, offsetY, zoom, angleX, angleY} = map.camera);
+			viewChanged = true;
+		}
+		if(map.camPos){
+			camPos = [...(map.camPos)]; //copy
+			viewChanged = true;
+		}
+		if(map.camQ){
+			camQ = [...(map.camQ)]; //copy
+			viewChanged = true;
+		}
 
-	if(!map.grid) Err('No map.grid');
-	//Example: "grid":{"oct":[[1,2,0,1],[2,4,0,2],[3,6,0,3],[4,8,0,4],[4,9,0,3],[4,10,0,2],[4,11,0,1],[4,12,0,0],[4,11,1,0],[4,10,2,0],[4,9,3,0],[4,8,4,0],[3,6,3,0]],"tetZ":[[1,2,0,1],[2,4,0,2],[3,6,0,3],[4,8,0,4],[4,9,0,3],[4,10,0,2],[4,11,0,1],[4,12,0,0],[4,11,1,0],[4,10,2,0],[4,9,3,0],[4,8,4,0],[3,6,3,0]],"tetC":[[1,2,0,1],[2,4,0,2],[3,6,0,3],[4,8,0,4],[4,9,0,3],[4,10,0,2],[4,11,0,1],[4,12,0,0],[4,11,1,0],[4,10,2,0],[4,9,3,0],[4,8,4,0],[3,6,3,0]]
-	for(let abcd of map.grid.oct){
-		let quadray = Q(...abcd);
-		toggleOctAtQuadray(quadray);
-	}
-	for(let abcd of map.grid.tetZ){
-		let quadray = Q(...abcd);
-		toggleTetZAtQuadray(quadray);
-	}
-	for(let abcd of map.grid.tetC){
-		let quadray = Q(...abcd);
-		toggleTetCAtQuadray(quadray);
-	}
-	/*gameTris = {};
-	for(let tri of map.gameTris){
-		let e = Q(...tri.e);
-		let f = Q(...tri.f);
-		let g = Q(...tri.g);
-		let t = T(e, f, g);
-		t.color = tri.color;
-		AddGameTri(t);
-	}*/
-	
-	/*if(map.ccp){
-		ccp.load(map.ccp);
-	}*/
-	
-	if(map.textBoxToEval !== undefined){
-		Dom('textBoxToEval').value = map.textBoxToEval;
-	}
-	
-	if(map.chk){
-		loadCheckboxes(map.chk);
-	}
-	if(map.selectBrushNames){ //list of strings
-		selectBrushNames(map.selectBrushNames);
-	}
-	
-	if(map.V){
-		resetVars();
-		V.loadMap(map.V);
-	}
+		if(!map.grid) Err('No map.grid');
+		//Example: "grid":{"oct":[[1,2,0,1],[2,4,0,2],[3,6,0,3],[4,8,0,4],[4,9,0,3],[4,10,0,2],[4,11,0,1],[4,12,0,0],[4,11,1,0],[4,10,2,0],[4,9,3,0],[4,8,4,0],[3,6,3,0]],"tetZ":[[1,2,0,1],[2,4,0,2],[3,6,0,3],[4,8,0,4],[4,9,0,3],[4,10,0,2],[4,11,0,1],[4,12,0,0],[4,11,1,0],[4,10,2,0],[4,9,3,0],[4,8,4,0],[3,6,3,0]],"tetC":[[1,2,0,1],[2,4,0,2],[3,6,0,3],[4,8,0,4],[4,9,0,3],[4,10,0,2],[4,11,0,1],[4,12,0,0],[4,11,1,0],[4,10,2,0],[4,9,3,0],[4,8,4,0],[3,6,3,0]]
+		for(let abcd of map.grid.oct){
+			let quadray = Q(...abcd);
+			toggleOctAtQuadray(quadray);
+		}
+		for(let abcd of map.grid.tetZ){
+			let quadray = Q(...abcd);
+			toggleTetZAtQuadray(quadray);
+		}
+		for(let abcd of map.grid.tetC){
+			let quadray = Q(...abcd);
+			toggleTetCAtQuadray(quadray);
+		}
+		/*gameTris = {};
+		for(let tri of map.gameTris){
+			let e = Q(...tri.e);
+			let f = Q(...tri.f);
+			let g = Q(...tri.g);
+			let t = T(e, f, g);
+			t.color = tri.color;
+			AddGameTri(t);
+		}*/
+		
+		/*if(map.ccp){
+			ccp.load(map.ccp);
+		}*/
+		
+		if(map.textBoxToEval !== undefined){
+			Dom('textBoxToEval').value = map.textBoxToEval;
+		}
+		
+		if(map.chk){
+			loadCheckboxes(map.chk);
+		}
+		if(map.selectBrushNames){ //list of strings
+			selectBrushNames(map.selectBrushNames);
+		}
+		
+		if(map.V){
+			resetVars();
+			V.loadMap(map.V);
+			ccp.rebuildSurface();
+		}
 
-	copyWorldStateToUiControls();
-	gridChanged = true;
+		copyWorldStateToUiControls();
+		gridChanged = true;
+	}finally{
+		isLoadingMap = false;
+		console.log('END LoadMap');
+	}
 };
 
 var openFileInputClicked = event=>{
