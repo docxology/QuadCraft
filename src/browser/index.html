@@ -50,7 +50,7 @@ fillGridByFunc(selq, 5, q=>{
 		<input type=button onclick="let jsCode = Dom('textBoxToEval').value; console.log('evalling: '+jsCode); let ret = eval(jsCode); console.log('Returned: '+ret);" value="eval text box (see errors on browser console)"></input>
 	</td><td>
 		<div id=saveLoadDiv>
-			<input type=button value="Delete QuickSaves" onclick="deleteCookies();" title="delete cookies, including those saved by Quicksave (cookie) 1 to 9.">
+			<input type=button value="TomcatSave" onclick="tomcatSave();">
 			<input type=button value="QuickSave (cookie) 1" onclick="quicksave('1');">
 			<input type=button value="2" onclick="quicksave('2');">
 			<input type=button value="3" onclick="quicksave('3');">
@@ -62,10 +62,8 @@ fillGridByFunc(selq, 5, q=>{
 			<input type=button value="9" onclick="quicksave('9');">
 			<input type=button value="Save (file) " onclick="console.log('save file clicked'); let filename = prompt('Filename?','quadcraft_quadgrid5_'+time()+'.json'); if(filename) saveFile(filename, 'application/json', StateJson());">
 			<br>
-		
-			<input type=button value="resetVars()" onclick="resetVars();">
-			<input type=button value="ccp.rebuild" onclick="ccp.rebuildSurface();">
-			&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+			
+			<input type=button value="TomcatLoad" onclick="tomcatLoad();">
 			<input type=button value="QuickLoad (cookie) 1" onclick="quickload('1');">
 			<input type=button value="2" onclick="quickload('2');">
 			<input type=button value="3" onclick="quickload('3');">
@@ -76,6 +74,12 @@ fillGridByFunc(selq, 5, q=>{
 			<input type=button value="8" onclick="quickload('8');">
 			<input type=button value="9" onclick="quickload('9');">
 			<input id=openFileInput type=file value="Open (file)" onchange="openFileInputClicked(event);">
+			<br>
+			
+			<hr>
+			<input type=button value="resetVars()" onclick="resetVars();">
+			<input type=button value="ccp.rebuild" onclick="ccp.rebuildSurface();">
+			<input type=button value="Delete QuickSaves" onclick="deleteCookies();" title="delete cookies, including those saved by Quicksave (cookie) 1 to 9.">
 			
 		</div>
 		<input type=button onclick="SimKeyPress('Shift');" value="Shift (toggle grid dots)">
@@ -3691,6 +3695,16 @@ var StateMap = ()=>({
 
 var isLoadingMap = false;
 
+var afterUpdateVarTree = ()=>{
+	ccp.rebuildSurface();
+};
+
+var loadVMapOnly = vMap=>{
+	resetVars();
+	V.loadMap(vMap);
+	afterUpdateVarTree();
+};
+
 var LoadMap = map=>{
 	try{
 		isLoadingMap = true;
@@ -3754,9 +3768,7 @@ var LoadMap = map=>{
 		}
 		
 		if(map.V){
-			resetVars();
-			V.loadMap(map.V);
-			ccp.rebuildSurface();
+			loadVMapOnly(map.V);
 		}
 
 		copyWorldStateToUiControls();
@@ -4142,6 +4154,59 @@ var forAllCollidingBallPairs = (onBallPair, ballRadius=1)=>{
 		}
 	}
 };
+
+//send json to tomcat, async, then get json from tomcat by returnHere(jsonFromTomcat).
+//Requires tomcat/webapps/QuadCraft/QuadCraftAjax.jsp
+//be beside tomcat/webapps/QuadCraft/index.html which is this html
+//and tomcat/bin/startup.bat (or startup.sh on linux may be similar on mac) be run.
+var quadCraftAjax = (json, returnHere)=>{
+	fetch("QuadCraftAjax.jsp", {
+		method: "POST",
+		headers: {
+			"Content-Type": "text/plain"
+		},
+		body: json   // already a string?
+	})
+	.then(r => r.text())        // get raw response string
+	.then(t => returnHere(t));  // hand raw text through
+};
+
+var QuadcraftWholeJsonState = ()=>{
+	return '{"V":'+State()+'}';
+};
+
+var QuadcraftWholeJsonLoad = wholeFromTomcat=>{
+	JSON.parse(wholeFromTomcat).V;
+	//LoadMap(JSON.parse(wholeFromTomcat).V); //just get value of V
+	loadVMapOnly(JSON.parse(wholeFromTomcat).V); //just get value of V
+};
+
+//save whole game state to only 1 save slot in the shared/networked tomcat.
+//It will stream V/Var tree live sparsely later, but this is a basic start.
+var tomcatSave = function(){
+	let vrStateStr = QuadcraftWholeJsonState();          // full V-tree JSON string
+	quadCraftAjax(vrStateStr, function(vrResp){
+		console.log("TomcatSave finished, not loading response cuz its save not load, returnHere:", vrResp);
+	});
+};
+
+//load whole game state to only 1 save slot in the shared/networked tomcat.
+//It will stream V/Var tree live sparsely later, but this is a basic start.
+var tomcatLoad = function(){
+	console.log("TomcatLoad requesting...");
+
+	// load request = empty {} so JSP returns {"V": ...}
+	quadCraftAjax("{}", function(resp){
+		console.log("TomcatLoad returnHere:", resp);
+
+		// DO NOT PARSE IT.
+		// DO NOT touch the string.
+		// JUST pass directly into Load(json).
+		console.log("TomcatLoad calling Load(resp)");
+		QuadcraftWholeJsonLoad(resp);
+	});
+};
+
 
 window.addEventListener("gamepadconnected", e => {
 	console.log("CONNECTED:", e.gamepad);
