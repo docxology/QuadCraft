@@ -1,5 +1,6 @@
 /** Ben F Rayfield offers this benrayfield.* software opensource MIT license
-C# Life3d/OccamsJson ported to Java (no true/false/null) by Ben F Rayfield, both opensource MIT license.
+C# Life3d/OccamsJson ported to Java (no true/false/null) by Ben F Rayfield, both opensource MIT license,
+plus he adds Apache2 2025-11-26.
 */
 package immutable.occamsjsonds;
 import java.util.ArrayList;
