@@ -1,0 +1,1 @@
+put QuadCraft/src/browser/index.html here to load it from http://localhost:8080/QuadCraft or http://localhost:8080/QuadCraft/index.html or https://localhost:8080/QuadCraft (if you set up https) etc. Same as ajax uses http://localhost:8080/QuadCraft/QuadCraftAjax.jsp with http post.

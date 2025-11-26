@@ -4172,7 +4172,7 @@ var quadCraftAjax = (json, returnHere)=>{
 };
 
 var QuadcraftWholeJsonState = ()=>{
-	return '{"V":'+State()+'}';
+	return '{"action":"writeAll", "V":'+State()+'}';
 };
 
 var QuadcraftWholeJsonLoad = wholeFromTomcat=>{
@@ -4196,7 +4196,7 @@ var tomcatLoad = function(){
 	console.log("TomcatLoad requesting...");
 
 	// load request = empty {} so JSP returns {"V": ...}
-	quadCraftAjax("{}", function(resp){
+	quadCraftAjax('{"action":"readAll"}', function(resp){
 		console.log("TomcatLoad returnHere:", resp);
 
 		// DO NOT PARSE IT.
