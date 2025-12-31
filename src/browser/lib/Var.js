@@ -1,5 +1,7 @@
-//Var*.js, opensource/Apache2 (versions before Bellsack256/2025-8-3 are MIT) by Ben F Rayfield
+//Var*.js, opensource/Apache2 (versions before Bellsack256/2025-8-3 are MIT) by Ben F Rayfield.
+//This version was copied from Bellsack 418 (a script tag containing Var*.js) 2025-12-31 then slightly modified.
 
+console.error('TODO O1_ O2_ O3_ O4_ (objects)... P_ Ps_ (Ptrs) L_ Ls_ (Lits) by ORing, to compute Var.po as true or false');
 //copied (then maybe modified) from VarTree_002.html 2025-7-5.
 //Var class was copied 2025-4-16 from blobMonstersGame_2025-3-27.html then modified TODO...
 //
@@ -21,6 +23,22 @@
 //change so the pics come to life.
 //
 const Var = function(optionalParentVar, optionalName, optionalBig, optionalGob){
+	/*TODO[[[explained in https://chatgpt.com/g/g-p-67e3e1532ca08191983aad7a25c9c520-bellsack/c/691b4fcb-b89c-8327-85b6-ee2d9b5cd5ab 2025-11-17
+	1 . Prefix vocabulary
+	prefix	“look-back” distance d	semantics of .p
+	O_	1	simple existence
+	OO_	2	simple existence
+	OOO_	3	simple existence
+	OOOO_	4	simple existence
+	(extendable)	d = # of O’s	
+	P_ Ps_	1	exclusive / multi pointer
+	L_ Ls_	1	exclusive / multi literal
+	]]]*/
+	//someVar.po (p object) is true if someVar.p!=0 means the object defined by someVar exists,
+	//which normally includes someVar.X.p someVar.Y.p somevar.Z.p maybe someVar.ManaRefillRate.p etc.
+	this.po = Math.random()<.5; //FIXME
+
+	//FIXME remove optionalGob or set ob to it. BUT for security we should generate .ob from this.big||this.name.
 
 	//fixme remove Var.brain cuz Var.getOb().brain would be that if ob is a Gob,
 	//and remove Var.vars cuz thats now Var.pu aka the opposite spelling of Var.up.
@@ -29,7 +47,7 @@ const Var = function(optionalParentVar, optionalName, optionalBig, optionalGob){
 	
 	//If this.name is a hash id (or might be prefixed with something? todo), then its the hash of this.big which is probably a string of json (see Dagverse json norming, in dagball, TODO).
 	//This must be verifiable. Dont just make up a name and make up a big that cant prove that its name is the hash of that.
-	this.big = optionalBig || null;
+	this.big = optionalBig || null; //can be a string or a list of strings to join by '\n' as lines.
 	this.t = 0; //not used as of 2025-2-20 even though some code copies it, maybe later? TODO actual current time //TODO? this.t = utc time as float64 so has at least microsecond precision for 100+ more years.
 	
 	//TODO? this.ch = [] child vars list (gob.vars if this is gob.influence), if this is a .influence var
@@ -39,7 +57,8 @@ const Var = function(optionalParentVar, optionalName, optionalBig, optionalGob){
 	//TODO? this.pk = primaryKey of this Var. or should that be per scalar instead of per Var?
 	//should pk depend on namespace? be concat to that? or what? pk certainly should not depend on t/time.
 	this.name = optionalName || 'v'+(++generatedNameCounter);
-	this.cache = {}; //holds constY and constX if this wraps a tile
+	this.cache = {}; //holds constY and constX if this wraps a tile (Blob Monsters Game, not used in Bellsack as of 2025-11-13 but leave the cache field here anyways for general use. So far its been used as {} of string to number).
+	/*too specific to one game (Blob Monsters Game). Var*.js is supposed to be more general.
 	if(this.name.startsWith('tile')){
 		if(isTileString(this.name)){
 			let square = tileStringToSquare(this.name);
@@ -54,27 +73,31 @@ const Var = function(optionalParentVar, optionalName, optionalBig, optionalGob){
 			//this.cache.constY = yOfTopLeftCorner;
 			//this.cache.constX = yOfTopLeftCorner;
 		}
-	}
+	}*/
 
 	/*Should Var also have a namespace (game.ns) so can make up new vectors without affecting the current game? ... TODO something like this?... /namespaceABC/game/distToPoten0 /namespaceABC/game/distToPoten1023 /namespaceABC/monster567sHashId/centerY /namespaceABC/monster567sHashId/centerX /namespaceABC/monster567sHashId/heightToWidthRatio, and each of those refers to a Var. That could be its primaryKey. /namespaceABC/monster567sHashId would also be a Var and is the .influence of that gob, and thatGob.vars would be its childs including /namespaceABC/monster567sHashId/heightToWidthRatio which is a Var.
 	*/
 	this.up = optionalParentVar || null;
-	if(!this.up && this.name != 'V'){ //FIXME remove this. The V global var is root of all Vars, but someone might rename it something else, who knows. This is a test to find those not in the tree at all 2024-11-21.
+	if(!this.up && this.name != 'V' && this.name != 'v'/*FIXME V vs v*/){ //FIXME remove this. The V global var is root of all Vars, but someone might rename it something else, who knows. This is a test to find those not in the tree at all 2024-11-21.
 		throw new Error('Var not in the tree: '+this.path());
 	}
 	//path height. V is height 0. V.testnet aka namespace is height 1. and so on.
 	//Gobs normally go at height 2. Gob fields height 3.
 	this.h = this.up ? this.up.h+1 : 0;
 	
-	if(this.name=='Y' && this.h==2){
+	/*if(this.name=='Y' && this.h==2){
 		throw new Error('Var named '+this.name+' as child in namespace. should be 1 deeper.');
-	}
+	}*/
 	
 	//pu is opposite of up aka down.
 	//TODO make a {} whose Object.getPrototypeOf is custom built so any field that doesnt exist automatically creates
 	//a Var instance as that child with that name and this Var as its parent and its .p of 0 and .v of 0 and other defaults.
 	this.pu = {}; //mape of childVar.name to childVar.//this.down = {}; //mape of childVar.name to childVar.
 	
+	//2025-9-4+ going to use this as similar to someVar.ob=eval(someVar.big.join('\n'))
+	//but u gotta take off the Js$ prefix to eval js like that, and theres also Glsl$ and Sak$ where
+	//Sak$ is a mix of glsl and js and Var.
+	//
 	//2025-2-6+ will probably keep Var.ob as it can be Gob or Game instance
 	//(like V.testnet.game.getOb() is a Game and sets V.testnet.game.ob and returns from that on next call of getOb()),
 	//maybe other types later too. If you just type V.someOtherNamespace567.game.getOb() that should also make a Game instance.
@@ -83,6 +106,19 @@ const Var = function(optionalParentVar, optionalName, optionalBig, optionalGob){
 	//The root (V) Var, and a namespace Var (like V/blobMonstersGameDefaultNamespace), dont have a Gob.
 	//Its 1 layer deeper (theGobVar itself instead of gob.instance), and inside that is gob.vars.
 	this.ob = null; //Gob or Game instance, whose parent Var is the same such as V.testnet: this.gob = optionalGob || null;
+	
+	//when first used, becomes a Map (not {}) whose keys are objects such as Lamgl.Tensor and values are Var's,
+	//as an optimization to be like this.pu for childs. Its childs whose .big would be the string contents of the object,
+	//like a Lamgl.Tensor would be 'Tsr$...sh/sizes and binary data in my kind of base64.
+	//FIXME if joining with \n that would break it so .big joining that way gotta redesign.'.
+	//The optimization is you dont have to hash the Lamgl.Tensor contents to store it in a child var by putting it
+	//in for example. v.Bellsack.Room5.Ptr$AIWeightsVar.obs where if it were hashed it might go in
+	//v.Bellsack.Room5.Ptr$AIWeightsVar.Tsr$345345somehash345345345
+	//and v.Bellsack.Room5.Ptr$AIWeightsVar.Tsr$345345somehash345345345.big == 'Tsr$...binary data in that Lamgl.Tensor'.
+	//Ptr$ means its childs are used as a stochasticVector (sums to 1 if the Ptr exists) of its possible values,
+	//and in that case Ptr$AIWeightsVar is the name of the var and the tensor is its value.
+	//You might also put json here using Json${...} (then the object would be the js {} form, or G$somestring etc.
+	this.obs = null;
 	
 	this.p = 0; //position
 	this.v = 0; //velocity
@@ -165,24 +201,311 @@ const Var = function(optionalParentVar, optionalName, optionalBig, optionalGob){
 		return this[fieldName]!==undefined ? this[fieldName] : this.pU(fieldName); //creates fieldName
 	};*/
 	
+	//spring at-rest has one of its ends here (meaniung this.p is attracted to it by positive ps,
+	//and you should probably not have negative ps cuz it will repel this.p toward positive or
+	//negative infinity unless you have other physics forces preventing that).
 	//has no effect if ps==0. position taRget, like in dagball.Ed having a target ave and strength as a parabola
 	this.pr = 0;
-	//strength of p toward pr, as pr and ps define a parabola of poten
+	//spring strength. strength of p toward pr, as pr and ps define a parabola of poten
 	this.ps = 0;
+	
 	this.cv = 0; //base kv. its cv+kv, not just kv, but kv is set by code dynamicly, and cv is set in the Var.
+	
+	//Set of functions like (ancestorVar,selfVar,map)=>{...code...} called when .p or .v changed or sometimes called
+	//when nothing changed (just make sure not to miss when it does change, firing too much when it hasnt changed is ok).
+	//anyVar.listen(ExampleEventListener) then .makeDirty() schedules it for anyVar.fireEvents()
+	//and later you might anyVar.unlisten(ExampleEventListener).
+	//This is null until first .listen(listener) call which creates this Set
+	//(of functions of 3 params: ancestorOrSelfVar, selfVar, map).
+	//Most Vars never get any listeners. fieldEditor (checkboxes, slidebars, wrapping Var)
+	//and sync across network will be main uses of this event system, but as of 2025-11-13-750pET the new event system isnt working yet.
+	this.listeners = null;
+	
+	//For efficiency, the Var event system does not create heap objects
+	//such as listener({Var:theVar}). It just uses listener(ancestorOrTheVar,theVar,mapThatsNormallyEmpty).
+	//
+	//linked list pointer. Head is VarVM.dirtHead. Ends at null.
+	//Undefined means not in the list. Null means this is the last node in the list.
+	//A Var is dirty if .v!=0 or .dp or .dv or .kv or .mn or .mx etc have been modified.
+	//You dont modify .p or .v directly. You wait for .nextState(dt) to be called doue to
+	//the Var will be in the dirty list and it happens in the main program loop lamglLoopBody
+	//once per cycle (TODO cuz 2025-11-13 its calling nextState only on specific Var's that it
+	//knows are game objects, not in this event system of 2 linked lists).
+	this.dirtNext = undefined; //not in the VarVM.dirtHead linked list
+	this.tempNext = undefined; //like dirtyNext but a second linked list at VarVM.tempHead.
+	
+	//this is how u make wires, connect groups of Var's to eachother.
+	//TODO this will be maybe a string, that tells which EdJoint (like in dagball)
+	//this Var is joined to other Vars thru, that their .p and .v are held equal to other .p and .v,
+	//and physics forces (gr, poten, etc) are summed (not averaged) across edjoint.
+	//This can be reflected as a stochasticVector of Ptr$ej or maybe Ej$, Var childs,
+	//but this is where it snaps to a particular edjoint or null for none.
+	this.ej = null;
+	
+	
+	this.path_ = null; //cache of this.path(), lazyEvaled
 };
 
-Var.opt = {
+//experimental 2025-12-21, to deal with that position accelerates by -accelMul*gradient(lossFunc,position),
+//so -mass*accelMul*gradient(lossFunc,position) cancels out to -gradient(lossFunc,position),
+//or something like that, but in practice its still 2025-12-21 accel by -accelMul*gradient(lossFunc,position).
+//FIXME
+Var.prototype.mass = function(){
+	return 1/this.accelMul;
+};
+
+//kinetic energy of this Var. Sum these to get kinetic energy of whole world state.
+//FIXME
+Var.prototype.kinen = function(){
+	return .5*this.mass()*(this.v**2);
+};
+
+Var.prototype.opt = { //must be named opt instead of Opt cuz Opt would be a child, and this is for Var internals.
 	//oneBitPerDimGradient: true, //test. should make balls ignore magnitude of gradient per dimension and use opt.oneBitPerDimGradientVal vs -opt.oneBitPerDimGradientVal instead
 	//oneBitPerDimGradient: false, //normal
 	//oneBitPerDimGradientVal: 20,
 	//oneBitPerDimGradientVal: 1,
 };
 
-//Returns a new child, that doesnt  exist (or isnt loaded, someone else in same namespace might have made it).
+const VarVM = Var.prototype.vm = new function(){}; //put things shared by all Var's here.
+VarVM.dirtHead = null; //head of linkedlist of dirty/modified Var's that need theVar.nextState(dt) called even if dt is 0.
+//the second list used during processing VarVM.dirtyHead, in case Var.listeners cause Var's to be dirty.
+//FIXME If listeners cause Var's to become dirty aVar.makeDirty() during someOtherVar.nextState(dt), then
+//it could break that it does not depend on order of Var's which nextState is called. Its supposed to be in batches,
+//and the batch is now 2025-11-13 done in lamglLoopBody but TODO do the batch in VarVM.nextState(dt)
+//which should sparsely only update Var's whose .p or .v could possibly be changed by calling nextState,
+//so for example if .v is 0 and nothing else has changed, .p position would not change nomatter the dt,
+//and .v wouldnt change either, so even if you have millions of Var objects it wont run most of those except as needed.
+//This sparse running can in theory, by Var.listeners, move that sparse attention (set of Var's to update) on its own
+//like some kind of automata but by whatever game rules players create from inside the game using the level editor.
+VarVM.tempHead = null;
+
+//null or the Var at VarVM.dirtHead linked list head disconnected from the linked list.
+VarVM.popDirt = function(){
+	if(VarVM.dirtHead){
+		let vr = VarVM.dirtHead;
+		VarVM.dirtHead = vr.dirtNext;
+		vr.dirtNext = undefined; //undefined means not in list. null means end of list.
+		return vr;
+	}else{
+		return null;
+	}
+};
+
+VarVM.popTemp = function(){
+	if(VarVM.tempHead){
+		let vr = VarVM.tempHead;
+		VarVM.tempHead = vr.tempNext;
+		vr.tempNext = undefined; //undefined means not in list. null means end of list.
+		return vr;
+	}else{
+		return null;
+	}
+};
+
+VarVM.pushDirt = function(vr){
+	vr.dirtNext = VarVM.dirtHead; //may be null, which means end of list. undefined means this node is not in the list.
+	VarVM.dirtHead = vr;
+	return vr;
+};
+
+VarVM.pushTemp = function(vr){
+	vr.tempNext = VarVM.tempHead; //may be null, which means end of list. undefined means this node is not in the list.
+	VarVM.tempHead = vr;
+	return vr;
+};
+
+VarVM.nextState = function(dt){
+	while(this.dirtHead){ //move dirty list to temp list, reversed order but order should not matter.
+		this.pushTemp(this.popDirt());
+	}
+	let vr = VarVM.tempHead;
+	//TODO should there be a separate list of events BEFORE the nextState change, which would go here?
+	while(vr){ //loop over VarVM.tempHead linked list
+		//vr.nextState(dt) may fill VarVM.dirtHead linked list of Var's that become dirty, and we need to
+		//be careful not to make the effects of Var.nextState(dt) depend on the order of Vars thats called on.
+		//Will nextState call listeners, or should those all be batched after the updates? To be safe lets do that
+		//in one more batch. 2 while loops instead of 1, so the first must not empty the list
+		vr.nextState(dt);
+		vr = vr.tempNext;
+	}
+	//AFTER the nextState change.
+	while(vr = this.popTemp()){ //loop over VarVM.tempHead linked list while emptying it
+		//after eachDirtyVar.nextState(dt) is called for every Var that it could have had an effect in,
+		//do all the events, so they all see the same 
+		vr.fireEvents();
+	}
+	//FIXME on some interval or maybe pick a random up to 10 dom nodes that
+	//a Var.fieldEditor (makes checkbox, number box, slider, etc) existed in the dom tree
+	//but does not exist anymore, so do theVar.unlisten(listener)
+	//where listener.putInDom(domNode) made the editor UI that was deleted. Clean up unused object.
+};
+
+//no prototype so theres no .toString() .prototype etc in it. Useful for sandboxing.
+var newVeryEmptyMap = ()=>{
+	let map = {};
+	Object.setPrototypeOf(map,null);
+	return map;
+};
+
+const EmptySimpleMap = Object.freeze(newVeryEmptyMap());
+
+//Any function (of Var param) added by this.listen(vr=>{ console.log('listened to '+vr.path()+'.p='+vr.p); }),
+//then fireEvents calls each of those on (fixme it should say "(anc,me,EmptySimpleMap)" where anc means
+//ancestor this.up.up.up or self aka this. ancestor or self. me param right after that is where
+//the Var event happened, such as a change of its .p or .v),
+//this Var. That sentence was too long, fixme. The event system does not create heap objects, but listeners may.
+Var.prototype.fireEvents = function(){
+	if(this.listeners){ //Set of function
+		for(let listener of this.listeners){
+			//listener(ancestorOrSelfVar,selfVar,{}) so possible future expansion of the event system to get events
+			//for changes in childs of childs... nomatter how deep, costing only height
+			//(number of someVar.up.up.up... before reaching v/V the root Var),
+			//but for now 2025-11-13 I'm just doing ancestorOrSelfVar===selfVar and not firing events of parent of parent..
+			listener(this,this,EmptySimpleMap); //calling it this way avoids heap allocation such as {Var:this}.
+		}
+	}
+};
+
+const ExampleVarListener = (ancestorOrSelfVar,selfVar,map)=>{
+	console.log('ExampleVarListener event ancestorOrSelfVar='+ancestorOrSelfVar+' selfVar='+selfVar+' map='+JSON.stringify(map));
+};
+//do this in startBellsack V.listen(ExampleVarListener); //when root changes look for that on browser console. Root doesnt normally change.
+
+//Like addEventListener. listener(ancestorOrSomeVar,someVar,{..optional details but is not used as of 2025-11-13..}).
+//Search for "listener(ancestorOrSelfVar,selfVar,{}) so possible future expansion of the event system to get events"
+//for more comments about it. Gets events of Var.fireEvents() which occurs when you VarVM.nextState(dt).
+//There is no event for the creation or deletion of childs cuz mathly its a vector with value p=0 v=0 everywhere not specified,
+//but in some 
+Var.prototype.listen = function(listener){
+	console.log(this.path()+'.listen('+listener+')');
+	if(!this.listeners){ //Set of function
+		this.listeners = new Set();
+		//TODO if all listeners are removed for some time from this Var, get rid of the Set to save memory?
+		//Most Var's wont have any listeners so its probably not a problem.
+	}
+	this.listeners.add(listener);
+};
+
+//opposite of Var.listen(listener)
+//Test this by deleting the top panel containing ns.Opt.IsGraphicsDebug checkbox
+//and verify ns.Opt.IsGraphicsDebug.listeners doesnt contain its listener anymore
+//but did before the deletion. Successful test 2025-11-16-930aET.
+Var.prototype.unlisten = function(listener){
+	console.log(this.path()+'.unlisten('+listener+')');
+	if(this.listeners){ //Set of function
+		this.listeners.delete(listener);
+	}
+};
+
+Var.prototype.unlistenAll = function(){
+	if(this.listeners){ //Set of function
+		this.listeners.clear();
+	}
+};
+
+/* 225-11-13-820pET
+Var*.js in Bellsack now has an event/listener system. Its still a many dimensional vector system for game states. If you change the .p position or .v velocity the usual ways (theVar.dp dv kv mn mx etc) then call theVar.makeDirty() it schedules the Var for events.
+
+anc/ancestor is not used yet. me is the Var the event happened in. map is {} so its basiclly just the Var itself with no event details.
+
+When I turn this event system on with the IsNewEventSystemY2025M11 checkbox, I noticed it bypassed my "only ball physics" checkbox and the walls/terrain started moving on its own, as if "only ball physics" was unchecked, so I knew the events were working.
+
+http://V.Bellsack.Hello.World.listen((anc,me,map)=>{ console.log('me='+me.path()+' p='+me.p); });
+                                             
+Bellsack353.html:2354 v['FIXMEESCAPE_Bellsack']['FIXMEESCAPE_Hello']['FIXMEESCAPE_World'].listen((anc,me,map)=>{ console.log('me='+me.path()+' p='+me.p); })
+undefined
+http://V.Bellsack.Hello.World.set(2)
+                                             
+Var {big: null, t: 0, name: 'World', cache: {…}, up: Var, …}
+VM1364:1 me=v['FIXMEESCAPE_Bellsack']['FIXMEESCAPE_Hello']['FIXMEESCAPE_World'] p=2
+http://V.Bellsack.Hello.World.dp += 20
+                                             
+20
+http://V.Bellsack.Hello.World.makeDirty()
+                                             
+Var {big: null, t: 0, name: 'World', cache: {…}, up: Var, …}
+VM1364:1 me=v['FIXMEESCAPE_Bellsack']['FIXMEESCAPE_Hello']['FIXMEESCAPE_World'] p=2.3333333333333335
+
+
+Lambda Rick 🏴‍☠️/acc
+@benrayfield
+·
+13s
+The event system in theory works the same nomatter the order of events in 1 video frame of the game. They get batched together and sum into temp vars then are merged.
+Lambda Rick 🏴‍☠️/acc
+@benrayfield
+·
+14m
+It does not create heap objects for events so it can in theory handle many millions of events per second.
+*/
+
+//idempotent, adds this Var to VarVM.dirtHead linked list
+//unless its already in that or VarVM.tempHead list as marked by this.dirtNext!==undefined.
+Var.prototype.makeDirty = function(){
+	/*if(this.dirtNext === this){ //not already queued
+		this.dirtNext = VarVM.dirtHead; //push-front
+		VarVM.dirtHead = this;
+	}*/
+	if(!this.isDirtyByList()){
+		//not in dirty list or temp list. temp list only exists during VarVM.nextState(dt). This check makes it idempotent.
+		VarVM.pushDirt(this);
+	}
+	return this; //for chaining
+};
+
+//make it dirty only if it actually changed
+Var.makeDirtyIf = function(){
+	if(this.isDirtyByContent()){
+		this.makeDirty(); //causes this.isDirtyByList() to be true if u called it
+	}
+};
+
+//true if its been marked as dirty by makeDirty.
+Var.prototype.isDirtyByList = function(){
+	return this.dirtNext!==undefined || this.tempNext!==undefined;
+};
+
+//true if is actually dirty by content, which can occur
+//after changing many .dp .dv .kv etc fields before calling makeDirty.
+//nextState(dt) can change this. So can any code that adds to .dp .dv etc then calls makeDirty.
+//Dirty means it needs nextState(dt), so if it has nonzero velocity thats true,
+//same as if certain other fields are nonzero or do not equal certain constants etc.
+//This does not check .pr .ps (spring holding .p in a parabola shaped
+//energy well) or Edjoints/Lit_ej/Ej_/Lit$ej/Ej$.
+Var.prototype.isDirtyByContent = function(){
+	return this.v || this.dp || this.dv || (this.kv!=this.cv) || (this.mn!=-Infinity) || (this.mx!=Infinity);
+};
+
+
+Var.prototype.potenNearPairs = function(funcOf2VarParams){
+	return potenNearPairs(this.ns(), this.Cx.p, this.Cy.p, this.Cz.p, this.Cr.p, this.Cc.p, funcOf2VarParams);
+};
+
+Var.prototype.diffeqNearPairs = function(funcOf2VarParams){
+	return diffeqNearPairs(this.ns(), this.Cx.p, this.Cy.p, this.Cz.p, this.Cr.p, this.Cc.p, funcOf2VarParams);
+};
+
+//like diffeqNearPairs but only returns a float.
+//ns is namespace aka room such as v.Bellsack.Room5
+var potenNearPairs = (ns,cx,cy,cz,cr,cc,funcOf2VarParams)=>{
+	Err('TODO');
+};
+
+//returns a Map of Var to vec4 (todo fix that design it would be slow) OR mods the Var's in the 2 params of funcOf2VarParams
+//such as bellCurve.X.dp bellCurve.X.dv bellCurve.X.mx etc.
+//FIXME make them funcs on their own not built into a Var? or have both?
+//cx cy cz are sphere center. cr is its radius. within that, vars whose Cx Cy Cz are both inside that sphere,
+//are found and further filtered by they have to be within cc center-to-center-distance from eachother.
+var diffeqNearPairs = (ns,cx,cy,cz,cr,cc,funcOf2VarParams)=>{
+	//TODO also need ability to filter them by Odos$ or whatever paths and child.child.child Lone.Lone.Abc etc.
+	Err('TODO Sak, and move Sak to Var*.js or stop hardcoding it in Var*.js, as its currently in Bellsack*.js, all in script tags not separate files but u can separate files');
+};
+
+//Returns a new child, that doesnt	exist (or isnt loaded, someone else in same namespace might have made it).
 //is random but you might want autoinc or something like that. TODO?
 Var.prototype.new = function(optionalPrefix, optionalSuffix){
-	let prefix = optionalPrefix||'V';
+	let prefix = optionalPrefix||'v'; //renaming V to v, as root. //let prefix = optionalPrefix||'V';
 	let suffix = optionalSuffix||'';
 	let name;
 	do{
@@ -193,6 +516,7 @@ Var.prototype.new = function(optionalPrefix, optionalSuffix){
 
 var randInt = max=>((Math.random()*max)|0);
 
+//FIXME make this smaller
 //var DefaultEpsilon = window.DefaultEpsilon = 2**-7; //FIXME which scripts (of the 3 in this html) use this?
 var DefaultEpsilon = 2**-12; //FIXME is this small enuf? is it for float32 or float64?
 
@@ -202,50 +526,6 @@ var timeOffset_ = performance.timing.navigationStart;
 var time = ()=>((timeOffset_+performance.now())*.001);
 
 var timeIdPrev = 0;
-
-/*returns a float64 that is bigger than the last float64 returned by this and is as close to the current UTC time as possible.
-..
-Tested this on (Double.doubleToLongBits(1697766252.4079208)-Double.doubleToLongBits(1697766252.3960001)) in java which returned 49999.
-I generated those 2 doubles on browser console in brave by:
-x = TinyGlsl.time();
-1697766252.3960001
-for(let i=0; i<49999; i++) x = TinyGlsl.nextUpPositiveDouble(x)
-1697766252.4079208
-This works cuz all the positive finite doubles are sorted the same way as their raw long/int64 bits. The negatives come after that cuz high bit / sign bit is 1.
-Name these tid (Time ID), like put that in webgl/glsl and canvas objects to know what time created them so can try deleting them in that same order or reverse order???
-*/
-var TimeId = ()=>{
-	let now = time();
-	return timeIdPrev = Math.max(now, nextUpPositiveDouble(timeIdPrev));
-};
-
-//put a tid field (timeId) on the object if it doesnt already have one (0 doesnt count), then return the object.
-//Example: let floats = TinyGlsl.putTid(new Float32Array(100));
-var putTid = ob=>{
-	if(!ob.tid){
-		ob.tid = TimeId();
-	}
-	return ob;
-};
-
-//same as TinyGlsl.putTid(ob).tid but usually faster. Returns the timeId of the object, and creates one if it doesnt have it yet.
-var tid = ob=>(ob.tid || putTid(ob).tid);
-
-var tidComparator = (a,b)=>{
-	//cant subtract cuz might lose the difference to roundoff
-	let aTid = TinyGlsl.tid(a);
-	let bTid = TinyGlsl.tid(b);
-	if(aTid < bTid) return -1;
-	if(aTid > bTid) return 1;
-	return 0;
-};
-
-//a js {} to sort by valA.tid, valB.tid, etc.
-var tidComparatorForMapKeys = map=>{
-	return function(a,b){
-		return TinyGlsl.tidComparator(map[a],map[b]);
-	};
-};
 
 const twoIntsOverlappingADouble = new Int32Array(2);
 const doubleOverlappingTwoInts = new Float64Array(twoIntsOverlappingADouble.buffer);
@@ -279,6 +559,53 @@ const nextUpPositiveDouble = function(d){ //littleEndian
 	return doubleOverlappingTwoInts[0];
 };
 
+/*returns a float64 that is bigger than the last float64 returned by this and is as close to the current UTC time as possible.
+..
+Tested this on (Double.doubleToLongBits(1697766252.4079208)-Double.doubleToLongBits(1697766252.3960001)) in java which returned 49999.
+I generated those 2 doubles on browser console in brave by:
+x = TinyGlsl.time();
+1697766252.3960001
+for(let i=0; i<49999; i++) x = TinyGlsl.nextUpPositiveDouble(x)
+1697766252.4079208
+This works cuz all the positive finite doubles are sorted the same way as their raw long/int64 bits. The negatives come after that cuz high bit / sign bit is 1.
+Name these tid (Time ID), like put that in webgl/glsl and canvas objects to know what time created them so can try deleting them in that same order or reverse order???
+*/
+var TimeId = ()=>{
+	let now = time();
+	return timeIdPrev = Math.max(now, nextUpPositiveDouble(timeIdPrev));
+};
+
+//does not call system clock. just increments by nextUpPositiveDouble. Is always bigger than the last call of TimeId() and the last call of FastTimeId().
+var FastTimeId = ()=>(timeIdPrev = nextUpPositiveDouble(timeIdPrev));
+
+//put a tid field (timeId) on the object if it doesnt already have one (0 doesnt count), then return the object.
+//Example: let floats = TinyGlsl.putTid(new Float32Array(100));
+var putTid = ob=>{
+	if(!ob.tid){
+		ob.tid = TimeId();
+	}
+	return ob;
+};
+
+//same as TinyGlsl.putTid(ob).tid but usually faster. Returns the timeId of the object, and creates one if it doesnt have it yet.
+var tid = ob=>(ob.tid || putTid(ob).tid);
+
+var tidComparator = (a,b)=>{
+	//cant subtract cuz might lose the difference to roundoff
+	let aTid = TinyGlsl.tid(a); //FIXME Lamgl replaced TinyGlsl
+	let bTid = TinyGlsl.tid(b);
+	if(aTid < bTid) return -1;
+	if(aTid > bTid) return 1;
+	return 0;
+};
+
+//a js {} to sort by valA.tid, valB.tid, etc.
+var tidComparatorForMapKeys = map=>{
+	return function(a,b){
+		return TinyGlsl.tidComparator(map[a],map[b]);
+	};
+};
+
 //This should be a little more than the common epsilon of 1 for pixel coordinates (1 pixel over)
 //so it can jump a little past that. If its 1, it moves a little too slow. If 2 its noticably jumpy.
 //var DefaultGp = 1.5; //normal
@@ -292,6 +619,7 @@ var DefaultGp = 0;
 //var DefaultGp = 5.5;
 //var DefaultGp = 15.5;
 
+console.error('TODO merge Var.prototype.touch into Var.prototype.makeDirty but dont call TimeId() that often cuz system clock could be the bottleneck in modding vars in that case. Instead only call TimeId() in lamglLoopBody once and call ...');
 Var.prototype.touch = function(){
 	this.t = TimeId(); //a unique time, increments by at least 1 ULP.
 	return this; //for chaining calls
@@ -302,7 +630,7 @@ Var.prototype.del = function(){
 	if(!this.up){
 		Err('Already is root V/Var, cant del: '+this.path());
 	}
-	//console.log('Deleting Var path='+this.path());
+	console.log('Deleting Var path='+this.path());
 	delete this.up.pu[this.name];
 	//FIXME this.up still exists, so if this.abc.def.ghi still exists then ghi.up.up... will still find this and parents.
 };
@@ -321,10 +649,12 @@ Var.prototype.copyLocalFrom = function(copyMe){
 
 Var.prototype.Mn = function(val){
 	this.mn = Math.max(this.min,val);
+	return this.makeDirty();
 };
 
 Var.prototype.Mx = function(val){
 	this.mx = Math.min(val, this.mx);
+	return this.makeDirty();
 };
 
 //does both Mn and Mx. Same as setting this.p (after this.nextState(dt)) but if others have set this.mn or this.mx
@@ -335,6 +665,7 @@ Var.prototype.Mx = function(val){
 Var.prototype.set = function(val){
 	this.mn = Math.max(this.mn,val);
 	this.mx = Math.min(val, this.mx);
+	return this.makeDirty();
 };
 
 //get namespace
@@ -357,17 +688,19 @@ Var.prototype.getGame = function(){
 
 //added 2025-7-5, not tested
 Var.prototype.z = function(){
-	return this.cache.constZ!==undefined ? this.cache.constZ : (this.pu.Z || this.Z).p;
+	//return this.cache.constZ!==undefined ? this.cache.constZ : (this.pu.Z || this.Z).p;
+	return this.Z.p; //the Proxy is prototype of prototype of each Var so is only touched when childs dont exist
 };
 
 Var.prototype.y = function(){
 	//Var.constY and .constX are created if isTileString(Var.name)
 	//return (this.constY!==undefined) ? (this.constY) : ((this.pu.Y || this.Y).p);
-	return this.cache.constY!==undefined ? this.cache.constY : (this.pu.Y || this.Y).p;
+	return this.Y.p; //the Proxy is prototype of prototype of each Var so is only touched when childs dont exist
 };
 
 Var.prototype.x = function(){
-	return this.cache.constX!==undefined ? this.cache.constX : (this.pu.X || this.X).p;
+	//return this.cache.constX!==undefined ? this.cache.constX : (this.pu.X || this.X).p;
+	return this.X.p; //the Proxy is prototype of prototype of each Var so is only touched when childs dont exist
 };
 
 //used on Var.name or Var.big of a tile, like tile1971585409951104$tsLwEmG1RXpu2SgiNDErGbSemnRdoj2eTL1FNBOjstF
@@ -400,12 +733,32 @@ var tileStringToX = s=>SquareX(tileStringToSquare(s));
 //is either the sha256 of the .big form or is the bytes for a Quad, so check if its the Var.name vs Var.big.
 var tileStringToBytes = s=>base64ToBytes(s.substring(s.indexOf('$')+1));
 
+//this.big can be a [] list of strings that get joined by \n, normally 1 line each,
+//or a single string, or null/undefined to just use .name.
+//.name is derived from .big if it exists. someVar.name == ('PrefixOfBigIncludingTheFirst$'+sha256(someVar.bigSt())),
+//or if .bigSt() contains no '$' then it just puts some default prefix.
+//it used to be gob$ (in Blob Monsters Game) but i think '$' is an ok prefix by itself.
+Var.prototype.bigSt = function(){
+	if(this.big === undefined || this.big == null){ //todo pick one, dont do undefined and null
+		return this.name; //or ''? or null?
+	}else if(typeof(this.big)=='string'){
+		return this.big;
+	}else{
+		return this.big.join('\n');
+	}
+}
 
 //lazy create ob (Gob or Game, depending on var path ends with .game or not, todo multiple views/games).
 Var.prototype.getOb = function(){
 	if(this.ob){
 		return this.ob;
 	}else{
+		let bigSt = this.bigSt();
+		console.err('//FIXME cant have Sak (which is created in Bellsack*.js (maybe will rename to Sak*.js?) in this Var*.js. reorganize.');
+		if(bigSt.startsWith('Sak$')){
+			return this.ob = Sak.trySakEval(bigSt);
+		}
+		/*
 		if(this.h == 2){
 			//raise this.t which is a unique (in this browser tab, not across network) UTC time (TimeId())
 			//When multiple QuadTiles are at the same square,
@@ -415,7 +768,7 @@ Var.prototype.getOb = function(){
 			//when near the Y X of the view area, so it should all fit together.
 			this.touch();
 			let text = this.text();
-			if(text.startsWith('(') || text.startsWith('Gob$')){
+			if(text.startsWith('(') || text.startsWith('gob$')){
 				let game = this.getGame(); //likely a sibling, and game.influence===this.getGameVar()
 				//text is a js lambda (brain) whose params if evaled should be Var objects, returns list of int voxels
 				//fails cuz text is not evaled, is still a string: return this.ob = new Gob(game, text);
@@ -436,6 +789,7 @@ Var.prototype.getOb = function(){
 		}else{
 			throw new Error('this.h/height is '+this.h+' but Gob and Game go at height 2 (right after namespace at height 1)');
 		}
+		*/
 	}
 };
 
@@ -455,6 +809,9 @@ Var.prototype.getOb = function(){
 //Another way to limit that risk is to use wikibinator203 instead of javascript as the model of gob.brain code
 //which is likely to be a far future upgrade.
 Var.prototype.loadMap = function(map, optional_isAutoEval){
+
+	//FIXME if its flatPu theres no map.pu
+
 	this.p = map.p || 0; //position
 	this.v = map.v || 0; //velocity
 	if(map.pu){ //childs of any names
@@ -483,16 +840,26 @@ Var.prototype.loadJson = function(json, optional_isAutoEval){
 	this.loadMap(JSON.parse(json), optional_isAutoEval);
 };
 
-Var.prototype.clear = function(map){
+/*Var.prototype.clear = function(map){
+	this.nextState(0);
+	this.pu = {}; //empty this.pu
+};*/
+//Var.prototype.clear = function(map){ //FIXME why does Var.clear take a map param? Shouldnt it be theVar.clear() no param?
+Var.prototype.clear = function(){
+	if(this.dirtNext !== undefined){
+		console.log('WARNING: The new (2025-11-13) Var event system has '+this+' in VarVM.dirtHead linked list, so Var.clear() it at that time might cause bugs? Just after VarVM.nextState(dt) is probably the best time to delete it. Or maybe it should be marked for clearing during VarVM.nextState(dt)? FIXME need to remove this from the VarVM.dirtHead list or VarVM.tempHead list. Since those are singly linked lists, we cant efficiently remove that here, have to wait for VarVM.nextState(dt) which does that but also that may put some Vars back into the dirty list by listeners of other Vars modifying some Vars then calling theVar.makeDirty() to say ijt did that or calling funcs which internally call makeDirty.');
+	}
+	//FIXME? calling nextState
 	this.nextState(0);
 	for(let key in this.pu){
 		delete this[key]; //cuz is duplicated in this[childName] and this.pu[childName]
 	}
 	this.pu = {}; //empty this.pu
+	this.listeners = null; //delete the Set of functions if exists
 };
 
-Var.prototype.toJson = function(excludeBig){
-	return JSON.stringify(this.toMap(excludeBig));
+Var.prototype.toJson = function(excludeBig_or_optionsMap){
+	return JSON.stringify(this.toMap(excludeBig_or_optionsMap));
 };
 
 Var.prototype.toJSON = function(){ //for if this is used in JSON.stringify(someVar) it auto calls someVar.toJSON()
@@ -543,14 +910,16 @@ var saveFile = (fileName, contentType, text)=>{
 };
 
 
-
+//This existed in Blob Monsters Game before Bellsack but seems too specific to one game,
+//so commenting out its contents. Maybe later this should be a place to hook in plugins.
+//
 //If this is a Tile, like tile1971585409951104$tsLwEmG1RXpu2SgiNDErGbSemnRdoj2eTL1FNBOjstF,
 //then loads it into game.wal (BigTile) and game.board (64 megapixel array of nearest 8k x 8k square
 //to game.Y.p game.X.p 2d coordinate where viewing, so careful not to load tile where it would wrap around that as its farther away.
 //TODO also load gob if its that, aka its name starts with gob$ . Careful about remote code injection,
 //check it for infinite loops, spam redirects of window.location, etc.
 Var.prototype.eval = function(){
-	if(this.name.startsWith('Gob$')){
+	/*if(this.name.startsWith('gob$')){
 		//Todo();
 		console.log('Ignoring Var.eval() for gob cuz gob puts itself in game.gobs list and has been working as of 2025-2-17, path='+this.path());
 	}else if(isTileString(this.name)){
@@ -558,7 +927,8 @@ Var.prototype.eval = function(){
 		game.wal.tile(quadTile.square).writeSparse(quadTile.quad); //idempotent and fast if that same quad is already there
 	}else{
 		console.warn('TODO how to load Var='+this.path());
-	}
+	}*/
+	console.warn('Ignoring attempted Var.eval of '+this.path());
 };
 
 /*//path height. V is height 0. V.testnet aka namespace is height 1. and so on.
@@ -567,7 +937,11 @@ Var.prototype.h = function(){
 	return this.up ? (this.up.pathHeight()+1) : 0;
 };*/
 
-Var.prototype.toMap = function(excludeBig){
+Var.prototype.toMap = function(excludeBig_or_optionsMap){
+	//TODO make it just be options map
+	let options = typeof(excludeBig_or_optionsMap)=='boolean' ? {excludeBig: excludeBig_or_optionsMap} : (excludeBig_or_optionsMap || {});
+	let wasFromRoot = options.fromRoot;
+	if(wasFromRoot) options.fromRoot = false;
 	let ret = {
 		p: this.p,
 		v: this.v,
@@ -586,18 +960,37 @@ Var.prototype.toMap = function(excludeBig){
 	if(this.cv){
 		ret.cv = this.cv; //base velocity decay, which kv is reset to in Var.nextState(dt)
 	}
-	if(this.big && !excludeBig){
+	if(this.big && !options.excludeBig){
 		ret.big = this.big;
 	}
 	for(let childName in this.pu){
-		let pu = ret.pu || (ret.pu = {});
-		pu[childName] = this.pu[childName].toMap(excludeBig);
+		//flatPu makes the json about half as deep. Childs start with capital letter,
+		//built ins like p v toString start lowercase.
+		let pu = options.flatPu ? ret : (ret.pu || (ret.pu = {}));
+		pu[childName] = this.pu[childName].toMap(options); //not options.fromRoot
+	}
+	if(wasFromRoot){
+		options.fromRoot = wasFromRoot; //dont modify except during recursion
+		let findRoot = this;
+		while(findRoot.up){
+			ret = {[findRoot.name]: ret};
+			findRoot = findRoot.up;
+		}
 	}
 	return ret;
 };
 
 Var.prototype.text = function(){
-	return this.big || this.name;
+	//return this.big || this.name;
+	if(this.big){
+		if(typeof(this.big)=='string'){
+			return this.big;
+		}else{
+			return this.big.join('\n'); //this.big is list of lines. TODO always norm \r\n or \r by itself to \n
+		}
+	}else{
+		return this.name;
+	}
 };
 
 const DefaultMaxResults = 2**16;
@@ -821,12 +1214,13 @@ Var.prototype.setSpring = function(ps, optionalPr){
 	this.pr = pr;
 };
 
+//FIXME hashIdLen is not constant cuz they dont all have the same prefix.
+
 //const hashIdLen = ('sha256$'.length+64); //64 hex chars. todo base58 or base64 or something. have code in Dagverse.js.
 const hashIdLen = ('Gob$'.length+64); //64 hex chars. todo base58 or base64 or something. have code in Dagverse.js.
 //
 //FIXME theres gob$hash and tile9007199254595405$hash and tile9007199254595405$literalIfSmall,
 //so should hashIdLen be renamed to minHashIdLen?
-
 
 //TODO what should this limit be?
 //If its longer	than this, auto hashes it and uses the hash (prefixed by what, in case it starts with a digit etc?)
@@ -836,15 +1230,57 @@ const MaxLiteralNameLen = hashIdLen-1;
 
 const isLowercase = c=>(c >= 'a' && c <= 'z');
 
+//Can the string be a Var literal path part? If not it goes in theVar.big and theVar.name is hash of that,
+//with the prefix up to and including the first $ prefixing the hash, and if it has no $ it uses Gob$ .
+//It is if first char is capital letter, its a valid js var name, and is short enuf.
+var isVarLit = nameOrBig=>(
+	nameOrBig.length <= MaxLiteralNameLen && /^[A-Z_$][a-zA-Z0-9_$]*$/.test(nameOrBig));
+
+const MaxVarPathLen = 512; //including paths in paths, see isVarPath
+
+/* A path part can contain another path as long as it starts with "v." or "ns." (such as v.Bellsack.Room5).
+Does NOT check if the path exists, only its string syntax.
+isVarPath('ns.Shapes.Sak$354hashofbell34234')
+true
+isVarPath('ns.Shapes.Sak$354hashofbell342 34')
+false
+isVarPath("ns.Odos.RatSnake5.Ghosts.DryBone20.Waves.Catapult9.Ptrs$fn['ns.Shapes.Sak$354hashofbell34234']")
+true
+isVarPath("ns.Odos.RatSnake5.Ghosts.DryBone20.Waves.Catapult9.Ptrs$fn['ns.Shapes.Sak$354hasho fbell34234']")
+false
+
+FIXME:
+ns.Odos.Lone.Ghosts.Lone.Waves.WavyBell200.Ptrs$fn['v.Bellsack.Room1.Shape.Sak$NUrpaxxk7jDslEyguqyMLn4YUqCAC8gOIXmsf2DbzHB'].path()
+'V.Bellsack.Room1.Odos.Lone.Ghosts.Lone.Waves.WavyBell200.Ptrs$fn.v.Bellsack.Room1.Shape.Sak$NUrpaxxk7jDslEyguqyMLn4YUqCAC8gOIXmsf2DbzHB'
+should have made v.Bellsack.Room1.Shape.Sak$NUrpaxxk7jDslEyguqyMLn4YUqCAC8gOIXmsf2DbzHB display inline.
+*/
+var isVarPath = s => {
+    if (s.length > MaxVarPathLen) return false;
+    if (!(s.startsWith('ns.') || s.startsWith('v.'))) return false;
+
+    // quick reject any whitespace
+    if (/\s/.test(s)) return false;
+
+    // reject any unescaped single-quote inside bracketed segments
+    let inQuote = false, esc = false;
+    for (let i = 0; i < s.length; i++){
+        const c = s[i];
+        if (esc)      { esc = false; continue; }
+        if (c === '\\'){ esc = true;  continue; }
+        if (c === '\''){ inQuote = !inQuote; continue; }
+    }
+    return !inQuote && !esc;   // balanced quotes & no trailing escape
+};
+
 //get or create child Var
 Var.prototype.pU = function(nameOrBig){
-	if(isLowercase(nameOrBig[0])){
-		Err('Child Vars cant start with lowercase letter, such as toString p v or you gave: '+nameOrBig);
-	}
 	let ret;
-	if(nameOrBig.length <= MaxLiteralNameLen && /^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(nameOrBig)){ //TODO make this condition be a func
+	if(isVarLit(nameOrBig) || isVarPath(nameOrBig)){ //isVarLit already verifies isLowercase(nameOrBig[0])
 		ret = this.pu[nameOrBig] || new Var(this, nameOrBig, null, this.ob||null); //auto puts it in this.pu[string]
 	}else{
+		if(isLowercase(nameOrBig[0])){
+			Err('This often happens when you try to add a new function or field to the Var class at runtime. Put it in Var.prototype or in the Var constructor this.theField = null; or = undefined; so the Proxy (prototype of prototype of each Var instance) is not touched. One prototype deep is where you put class functions. Child Vars cant start with lowercase letter, such as toString p v or you gave: '+nameOrBig);
+		}
 		//let hash = hashStringToHex(nameOrBig);
 		let name = hashStringToBase64(nameOrBig); //todo dont hash if its small enuf to be a literal id (dont use .big)
 		/*if(nameOrBig.startsWith('mutid$')){ //FIXME 2025-1-9 removed the mutid$ prefix of tiles, so am not using it for anything.
@@ -854,6 +1290,10 @@ Var.prototype.pU = function(nameOrBig){
 			}else Err('no second $ found in mutid$...');
 		*/
 		//TODO this is likely blobMonstersGame Gob code not relevant to bellsack:
+		
+		
+		/*too specific to Blob Monsters Game. TODO make plugin system for Var.eval() etc.
+		
 		if(nameOrBig.startsWith('tile')){ //like tile1971583262467328$ then base64 of its Quad bytes, if small, else then base64 of hash of that.
 			if(isValidVarName(nameOrBig) && nameOrBig.length < 64){
 				//considering size of tile1971583262467328$ (size 21) and 43 digits of sha256 base64 (21+43==64),
@@ -878,11 +1318,20 @@ Var.prototype.pU = function(nameOrBig){
 		}else{
 			//name = 'sha256$'+name; //no special prefixing
 			name = 'Gob$'+name; //no special prefixing
+		}*/
+		
+		let i = nameOrBig.indexOf('$');
+		if(i == -1){
+			name = 'Gob$'+name; //default prefix
+		}else{
+			//use same prefix from nameOrBig whatevers up to and including the first $ if exists 
+			name = nameOrBig.substring(0,i+1)+name;
 		}
+		
 		//ret = this.pu[name] || new Var(this, name, nameOrBig, this.gob||null); //auto puts it in this.pu[string]
 		ret = this.pu[name] || new Var(this, name, nameOrBig, this.ob||null); //auto puts it in this.pu[string]
 	}
-	//TODO this is likely blobMonstersGame Gob code not relevant to bellsack:
+	/*TODO this is likely blobMonstersGame Gob code not relevant to bellsack:
 	if(ret.big && ret.big.startsWith('(')){ //likely a js function string
 		let listOfLists = getParamNames(ret.big);
 		if(listOfLists.length){
@@ -892,16 +1341,16 @@ Var.prototype.pU = function(nameOrBig){
 				ret.vars.push(ret.pU(paramName));
 			}
 		}
-	}
+	}*/
 	return ret;
 };
 
-
+/*specific to Blob Monsters Game, shoulnt be part of Var*.js:
 Var.prototype.think = function(){
 	let brain = this.brain || (this.brain = eval(this.big || this.name));
 	//no this is done in Gob.think: this.extraThink(); //do game.gravY.p etc.
 	return brain(...(this.vars)); //list or Int32Array of int voxels. See YXC IY IX YXRGB etc funcs for int voxels.
-};
+};*/
 
 const varProxyHandler = {
 	/*get(target, prop, receiver){ //works 2025-7-4
@@ -1021,13 +1470,58 @@ Var.prototype.valueOf = function(){ //the position, this.p, though calling this.
 	return this.p;
 };
 
-Var.prototype.path = function(){
-	return this.up ? this.up.path()+'.'+this.name : this.name;
+var singleQuoteEscape = str=>{ //FIXME this has been appearing in anyVar.path() cuz of the syntax change, now is 2025-11-13
+	return "'FIXMEESCAPE_"+str+"'";
+};
+
+//if doAbbrev, then if the path is the current ns (such as v.Bellsack.Room5) returns 'ns', else full path.
+Var.prototype.path = function(doAbbrev){
+	if(!this.path_){
+		//return this.up ? this.up.path()+'.'+this.name : this.name;
+		if(!this.up){
+			this.path_ = this.name; //likely is 'v' the root, or previously (before 2025-10-30) was 'V'.
+		}else if(doAbbrev && (this == ns)){
+			this.path_ = 'ns';
+		}else{
+			let upPath = this.up.path(doAbbrev);
+			if(isVarPath(this.name)){
+				this.path_ = upPath+'.'+this.name;
+			}else{
+				this.path_ = upPath+'['+singleQuoteEscape(this.name)+']';
+			}
+		}
+	}
+	return this.path_;
 };
 
 Var.prototype.toString = function(){
 	return this.path();//return this.up ? this.up.toString()+'.'+this.name : this.name;
 	//return '{type:"vox_var",p:'+this.p+',v:'+this.v+',kv:'+this.kv+',dp:'+this.dp+',dv:'+this.dv+',mn:'+this.mn+',mx:'+this.mx+'}';
+};
+
+console.error('TODO this VarVM.next should be called instead of lamglLoopBody andOr VarGradientGL etc calling nextState on specificly the Vars it modified (ball states, bell5 states, etc), and do move opt={} into ns.Opt. The rule is, as in Var.makeDirty(), a Var is dirty if it has nonzero .v or has been modified, and nextState should be called on ALL Vars that are dirty. If it remains dirty after nextState(dt), such as its velocity has not yet run down by velocityDecay/kv/cv then it becomes dirty again and that happens again next cycle too. We wont have to directly call Var.touch() or the other 2 like it. VarVM.next Var.makeDirty Var.set .');
+VarVM.next = function(dt){
+	let list =  VarVM.dirtHead;				// capture current queue
+	VarVM.dirtHead = null;					// new dirties start next list
+
+	while(list){
+		const d = list;						// current Var
+		list     = d.dirtNext;				// advance before we overwrite
+		d.dirtNext = d;						// self-ref ⇒ clean / inactive
+
+		/* 1 ─ heavy integrator (only place .p / .v change) */
+		d.nextState(dt);					// may change d.v
+
+		/* 2 ─ notify observers once */
+		if(d.listeners){
+			for(const fn of d.listeners) try{ fn(d); } catch(e){ console.error(e); }
+		}
+
+		/* 3 ─ still moving? schedule itself for next frame */
+		if(d.v !== 0){						// uses the public API
+			d.makeDirty();					// will be processed next VarVM.next
+		}
+	}
 };
 
 Var.prototype.nextState = function(dt){
@@ -1045,13 +1539,13 @@ Var.prototype.nextState = function(dt){
 		
 		//this.v = 0; //FIXME
 		//let nextP = this.p + dt*(this.v+this.dp);
-		if(this.ps){ //spring strength is nonzero. TODSO fix blobMonstersGame it has if(this.pr) should be ps.
+		if(this.ps){ //spring strength is nonzero. TODO fix blobMonstersGame it has if(this.pr) should be ps.
 			//this.gr += TODO something about this.pr and this.ps as parabola.
 			//let positionDiff = this.pr-this.p; //FIXME is this backward? accel negative gradient
-			let positionDiff = this.p-this.pr; //FIXME is this backward? accel negative gradient
-			let partOfGradientFromParabola = positionDiff*this.ps; //TODO divide by 2 like potentialenergy of stack of z tall mass is z*z/2. ???
+			let positionDiff = this.p-this.pr;
+			let partOfGradientFromParabola = positionDiff*this.ps; //TODO divide by 2 like potentialenergy of stack of z tall mass is z*z/2. ??? todo check calculus and would it break old game content.
 			//let partOfGradientFromParabola = positionDiff/2*this.ps; //TODO verify this /2 is correct (vs /4 or *2 or sqrt2, etc, or just leave it as is): divide by 2 like potentialenergy of stack of z tall mass is z*z/2. ???
-			this.gr += partOfGradientFromParabola;
+			this.gr += partOfGradientFromParabola; //FIXME? this could be done as loss/poten/potentialEnergy instead of gr/gradient, but that would make it depend on perturbing multiple world states which might involve this Var in things outside this Var, so gr/gradient is maybe the best way to do it.
 			//this.poten += this.ps*positionDiff*positionDiff;
 		}
 		/*if(Var.opt.oneBitPerDimGradient){ //FIXME this is outside the Var script, is part of Bellsack script, so shouldnt be here.
@@ -1083,6 +1577,8 @@ Var.prototype.nextState = function(dt){
 	this.mn = -Infinity;
 	this.mx = Infinity;
 	//leave this.pr and this.ps (spring) as they are, which are inputs only, not moved by gradient.
+	
+	//If you change this.dp dv kv mn mx etc, call this.makeDirty() to schedule it for events as in aVar.listen(listener).
 };
 
 //getParamNames((a/*2 3 4*/, b/*5 6*/, c)=>(a+b)) returns [['a',2,3,4],['b',5,6],['c']].
@@ -1108,14 +1604,16 @@ Var.prototype.setOb = function(gobOrGame){
 
 
 
-//Example fields 'p' 'v' 'kv'. someVar.fieldGetter('p')() returns someVar.p
+//Example fields 'p' 'v' 'kv' 'dp' 'dv' 'mn' 'mx'. someVar.fieldGetter('p')() returns someVar.p
 Var.prototype.fieldGetter = function(field){
 	const thisVar = this;
 	return ()=>(thisVar[field]);
 };
 
-//Example fields 'p' 'v' 'kv'. someVar.fieldSetter('p')(someVar.fieldGetter('p')+1) increments someVar.p
+//Example fields 'p' 'v' 'kv' 'dp' 'dv' 'mn' 'mx'.
+//someVar.fieldSetter('p')(someVar.fieldGetter('p')()+1) increments someVar.p
 Var.prototype.fieldSetter = function(field){
+	//FIXME throw if field starts with a capital letter cuz thats child
 	const thisVar = this;
 	return val=>(thisVar[field] = val);
 };
@@ -1123,7 +1621,7 @@ Var.prototype.fieldSetter = function(field){
 /*This makes (the next version of todo) the editor at the top left appear with input type=range sliders
 of the selected Gob, in the selectedGobVarsDiv_table code, similar to this:
 V.testnet.gob$Zxbv95B$dT3MVDu7Akt8PZNHAMeB4ZwNeats2TeDchR
-Var.name						   .p							  	.pr	.ps	.cv
+Var.name												 .p																.pr	.ps	.cv
 Y	min=0 max=16777215
 74972.52934667701
 min=0 max=16777215
@@ -1168,9 +1666,56 @@ Var.prototype.fieldEditor = function(field, isForMenu){
 			mul = 100; //FIXME?
 			hardMin = -1000;
 			hardMax = 1000;
+		}else if(this.name=='DisplayErrorsOnSurfaceInBrightGreenIfAbsMoreThan'){
+			//FIXME stop hard-coding these slider ranges. find a standard place to put it outside Var*.js
+			add = 0; //FIXME?
+			mul = .002; //FIXME?
+			hardMin = 0;
+			hardMax = .02;
+		}else if(this.name=='AddToDensityForTesting'){
+			//FIXME stop hard-coding these slider ranges. find a standard place to put it outside Var*.js
+			add = 0; //FIXME?
+			mul = .01; //FIXME?
+			hardMin = -.1;
+			hardMax = .1;
+		}else if(this.name=='SignedDistanceNewtonIterations'){
+			//FIXME stop hard-coding these slider ranges. find a standard place to put it outside Var*.js
+			add = 0; //FIXME?
+			mul = 40; //FIXME?
+			hardMin = 2;
+			hardMax = 256;
+		}else if(this.name=='SignedDistanceSpeed'){
+			//FIXME stop hard-coding these slider ranges. find a standard place to put it outside Var*.js
+			add = 0; //FIXME?
+			mul = .2; //FIXME?
+			hardMin = 0;
+			hardMax = 1;
+		}else if(this.name=='DensityOfSlightAttractToVec3_mul'){
+			//FIXME stop hard-coding these slider ranges. find a standard place to put it outside Var*.js
+			add = 0; //FIXME?
+			mul = .15; //FIXME?
+			hardMin = 0;
+			hardMax = .5;
+		}else if(this.name=='Display3dLocalMinsOfGradientMagLessThan'){
+			//FIXME stop hard-coding these slider ranges. find a standard place to put it outside Var*.js
+			add = 0; //FIXME?
+			mul = .05; //FIXME?
+			hardMin = 0;
+			hardMax = .2;
+		}else if(this.name=='MultiprobeSortDensityMul'){
+			//FIXME stop hard-coding these slider ranges. find a standard place to put it outside Var*.js
+			add = 0; //FIXME?
+			mul = 50; //FIXME?
+			hardMin = 0;
+			hardMax = 1000;
 		}else{
-			if((field.startsWith('is') || field.startsWith('do')) && (this.p===0 || this.p===1)){
+			/*//TODO should i remove is and do since those start with lowercase?
+			//Var childs must start Capital, but its not just for childs.
+			if((field.startsWith('is')||field.startsWith('Is') || field.startsWith('do')||field.startsWith('Do')) && (this.p===0 || this.p===1)){
 				return new CheckboxVarEditor(this); //like for V.testnet.game.doRps
+			}*/
+			if((this.name.startsWith('Is') || this.name.startsWith('Do')) && (this.p===0 || this.p===1)){
+				return new CheckboxVarEditor(this); //like for v.Bellsack.Room5.Opt.IsGraphicsDebug.p
 			}
 			//add = this.p;
 			add = 0; //FIXME?
@@ -1225,10 +1770,11 @@ Var.prototype.fieldEditor = function(field, isForMenu){
 	}
 	//FIXME its not using hardMin or hardMax
 	let getter = this.fieldGetter(field);
-	let setter = this.fieldSetter(field,isForMenu);
+	let setter = this.fieldSetter(field,isForMenu); //FIXME does fieldSetter even take 2 params?
 	const numEditor = new NumEditor(getter, setter);
 	const sigmoidNumEditor = new SigmoidNumEditor(numEditor, add, mul);
 	sigmoidNumEditor.labelPrefix = this.name; //not this.path() that would be too long, but TODO make the dom display that on hover in a title
+	//FIXME throws "Have no dom" if do this early. Doing in SigmoidNumEditor.prototype.putInDom = function(dom) instead. sigmoidNumEditor.updateDom(); //cuz changed labelPrefix. Dont wait for user to change the slider (input type=range). Update it now.
 	/*let extraSetterEvent = ()=>{
 		//sigmoidNumEditor.
 	};
@@ -1248,9 +1794,15 @@ Var.prototype.fieldEditor = function(field, isForMenu){
 };
 
 //returns a list of them which normally goes in VarEditors which is a list of lists of editors
+//which exists in Blob Monsters Game 2025-11-13 but not in Bellsack. might bring in that code
+//to display a 2d grid of these editors of some list of Vars you select or search for.
 Var.prototype.fieldEditors = function(){
 	return [
+		//FIXME theres no "game.isDisplayFullVarNamesInTable" in bellsack. but dont want to
+		//break compatibility. check if it exists anyways, but dont assume the 'game' var
+		//even exists. we would do that as ns.Opt.NameOfOption.p in bellsack.
 		this.fieldEditor(game.isDisplayFullVarNamesInTable.p ? 'path' : 'name'),
+		
 		this.fieldEditor('v',false), //false not isForMenu, cuz is for the 2d grid on the bottom right controlled by "vars" checkbox.
 		this.fieldEditor('p',false),
 		this.fieldEditor('pr',false),
@@ -1275,11 +1827,20 @@ var NumEditor = function(get, set){
 
 //wrapMe is a NumEditor such as wrapping a raw Var.ps or Var.p or Var.kv
 var SigmoidNumEditor = function(wrapMe, optionalAdd, optionalMul, optionalMin, optionalMax){
+	//FIXME put in event to unlisten in Var, and set slider state, similar to
+	//how CheckboxVarEditor did it, cuz I changed ns.Opt.SignedDistanceNewtonIterations .
 	this.add = optionalAdd || 0;
 	this.mul = optionalMul || 1;
 	this.min = optionalMin || (-(2**30));
 	this.max = optionalMax || (2**30);
 	this.wrapMe = wrapMe;
+};
+
+const sigmoid = x=>(1/(1+Math.exp(-x)));
+
+const inverseSigmoid = x=>{
+	x = Math.max(0, Math.min(x, 1)); //so outside that range its -Infinity or Infinity, instead of NaN
+	return Math.log(x/(1-x));
 };
 
 SigmoidNumEditor.prototype.get = function(){
@@ -1321,6 +1882,10 @@ SigmoidNumEditor.prototype.updateDom = function(){
 var NextIdNum = 1000;
 
 SigmoidNumEditor.prototype.putInDom = function(dom){
+	if(this.dom){
+		this.dom.innerHTML = ''; //clear previous
+		this.dom = null;
+	}
 	const thisEditor = this;
 	this.idPrefix = 'sigmoidNumEditor_'+(NextIdNum++);
 	let s = '';
@@ -1367,6 +1932,7 @@ SigmoidNumEditor.prototype.putInDom = function(dom){
 	});
 	
 	this.dom = dom;
+	this.updateDom();
 };
 
 //like SigmoidNumEditor but made for viewing its string Var.name. Goes in VarEditors (list of lists of editor).
@@ -1392,6 +1958,79 @@ var CheckboxVarEditor = function(theVar, optionalText){
 	this.text = optionalText || theVar.name;
 };
 
+/*var onDomDeleted = (domNode,callback)=>{
+	if(!domNode.isConnected){
+		callback();
+		return;
+	}
+	//Choose a stable ancestor to observe
+	let parent = domNode.parentNode || document;
+
+	const obs = new MutationObserver(()=>{
+		// If the node is no longer connected, it has left the DOM tree
+		if(!domNode.isConnected){
+			obs.disconnect();
+			console.log('onDomDeleted calling callback='+callback);
+			callback();
+		}
+	});
+
+	obs.observe(parent, {
+		childList: true,
+		subtree: true
+	});
+	//FIXME when to this.bo.unlisten(varListener)? js doesnt have garbage collection (of this editor) listener.
+	//Could check inside varListener (when the event happens) is dom/this.bo in the dom tree, and if not, then remove the listener.
+	//That could happen cuz of dom.innerHTML = ''; called externally.
+	/*TODO try this from gpt5.1
+	function onRemovedFromDomTree(domNode, callback){
+		// If it's already gone, fire immediately
+		if(!domNode.isConnected){
+			callback();
+			return;
+		}
+
+		// Choose a stable ancestor to observe
+		let parent = domNode.parentNode || document;
+
+		const obs = new MutationObserver(()=>{
+			// If the node is no longer connected, it has left the DOM tree
+			if(!domNode.isConnected){
+				obs.disconnect();
+				callback();
+			}
+		});
+
+		obs.observe(parent, {
+			childList: true,
+			subtree: true
+		});
+	}*
+};*/
+
+var addOnDomDeleted = function(node,callback){ //adds event listener
+	if(!node)return;
+	if(!node.isConnected){
+		callback();
+		return;
+	}
+	if(!addOnDomDeleted.list){
+		addOnDomDeleted.list=[];
+		addOnDomDeleted.obs=new MutationObserver(()=>{
+			let a=addOnDomDeleted.list;
+			for(let i=a.length-1;i>=0;--i){
+				let o=a[i];
+				if(!o.node.isConnected){
+					a.splice(i,1);
+					o.callback();
+				}
+			}
+		});
+		addOnDomDeleted.obs.observe(document,{childList:true,subtree:true});
+	}
+	addOnDomDeleted.list.push({node,callback});
+};
+
 CheckboxVarEditor.prototype.putInDom = function(dom){
 	const thisEditor = this;
 	this.idPrefix = 'checkboxVarEditor_'+(NextIdNum++);
@@ -1400,10 +2039,20 @@ CheckboxVarEditor.prototype.putInDom = function(dom){
 	dom.innerHTML = s;
 	this.dom = dom;
 	const chk = document.getElementById(this.idPrefix+'_chk');
-	chk.addEventListener('input', function(){
+	let domListener = function(){
 		thisEditor.bo.p = chk.checked ? 1 : 0;
 		console.log('CheckboxVarEditor '+thisEditor.bo.path()+'.p = '+thisEditor.bo.p);
-	});
+	};
+	chk.addEventListener('input', domListener);
+	let varListener = (anc,me,map)=>{ //this.bo is the Var edited. This code runs when the Var changes or sometimes when it didnt change.
+		console.log('CheckboxVarEditor listener, me='+me.path()+' me.p='+me.p);
+		//happens on its own when checkbox changes checked/unchecked: domListener();
+		chk.checked = !!me.p; //p is 0 for unchecked, 1 for checked. other values like .3 or -19 count as checked.
+	};
+	this.bo.listen(varListener);
+	addOnDomDeleted(chk, function(){
+		thisEditor.bo.unlisten(varListener);
+	}); //in case dom.innerHTML = '';
 };
 
 CheckboxVarEditor.prototype.updateDom = function(){
@@ -1745,4 +2394,13 @@ var bytesAndRangeToHex = function(bytes,from,toExcl){
 //
 //V is the root Var of the tree of Vars. Each Var is a time-series of .p/position and .v/velocity and .t/time. gob.influence like dagball.Circ.influence
 //and dagball.Ball.influence is a Var that if its .p/value is 1 it exists and if 0 does not exist, in that namespace.
-const V = window.V = new Var(null, 'V'); //var Var = function(optionalParentVar, optionalName, optionalBig, optionalGob)
+//const V = window.V = new Var(null, 'V'); //var Var = function(optionalParentVar, optionalName, optionalBig, optionalGob)
+
+const V = window.V = new Var(null, 'v'); //2025-10-30 renaming V to v as root. See 'ns.' and 'v.' prefixes in Var.prototype.path() and isVarLit and isVarPath.
+console.log('Var.js, window.V.path() = '+window.V.path());
+
+//FIXME 2025-9-5+ rename V to v (lowercase) in case a variable in Sak language is named "V", but those starting with a capital letter,
+//as usual in the Var tree, are child Var's, and others (what about those that dont start with a letter at all?)
+//are builtins like toString, length, p, v, mn, dp, dv, kv, etc.
+//verlapping someVar.v, v meaning the root Var instance, never follows "." so is unambiguous in code strings.
+//Just dont use local var "v" since its a keyword in Sak language. Might find a way not to clutter global namespace so much.
