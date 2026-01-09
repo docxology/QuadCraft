@@ -948,9 +948,9 @@ Var.prototype.toMap = function(excludeBig_or_optionsMap){
 		//name: this.name,
 		//pu: {},
 	};
-	if(this.t){
+	//always: if(this.t){
 		ret.t = this.t; //UTC time updated. not all code will use this. but each Var is a time-series of 2 numbers: position and velocity.
-	}
+	//}
 	if(this.pr){
 		ret.pr = this.pr; //target position to spring toward
 	}

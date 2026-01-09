@@ -1,4 +1,4 @@
-<%@ page import="java.util.*,immutable.occamsjsonds.*" %><%!
+<%@ page import="java.util.*,java.util.function.Predicate,immutable.occamsjsonds.*" %><%!
 	static String wholeState = "{\"QuadCraft\":{\"p\":0, \"v\":0}}";
 	
 	//one copy of parts of the V/Var tree.
@@ -9,7 +9,7 @@
 	//if theres just a few players so dont worry about it for now.
 	//Also, immutable may make threading easier
 	//since you can many-read but one-write.
-	static NavigableMap V = JsonDS.emptyMap;
+	static NavigableMap V = JsonDS.map("p",0., "v",0., "t",10000.); //root of V tree
 	
 	static boolean testedOccamsJsonDS = false;
 	
@@ -40,6 +40,7 @@
 		}
 		System.out.println("action="+action);
 		String o;
+		boolean isReadWriteSparse = false;
 		switch(action){
 			case "ok": //ignore this, just a message something succeeded, normally received from browser
 				o = "{\"action\":\"ok\"}";
@@ -54,12 +55,117 @@
 			break; case "sparseVSync":
 				//the new code
 				o = "{\"action\":\"sparseVSync\", \"comment\":\"TODO sparseVSync...\"}"; //FIXME
+			break; case "readWriteSparse":
+				isReadWriteSparse = true;
+				if(((NavigableMap)ob).get("minTime")==null){
+					throw new Error("No minTime in action=isReadWriteSparse");
+				}
+				//continue to writeSparse and then readSparse
+			case "writeSparse":
+				//o = "{\"action\":\"writeSparse\", \"comment\":\"TODO writeSparse...\"}"; //FIXME
+				Object incoming = ((NavigableMap)ob).get("V");
+				if(incoming == null){
+					throw new Error("No map.V but action is writeSparse");
+				}
+				V = mergeMaps(V,(NavigableMap)incoming); //update shared state on sever that multiple remote browsers sync with or parts of
+				if(!isReadWriteSparse){
+					o = "{\"action\":\"ok\"}";
+					break;
+				}//else continue to readSparse
+			case "readSparse": //maybe should be called readNewerThan (or readEqualTimeOrNewerThan).
+				Object minTimeOb = ((NavigableMap)ob).get("minTime");
+				if(minTimeOb == null){
+					throw new Error("No minTime but action is "+action);
+				}
+				double minTime = (Double)minTimeOb;
+				NavigableMap mapOut = partsOfVTreeByMinTime(V,minTime);
+				mapOut = JsonDS.map("action", "writeSparse", "V", mapOut, "comment", "This is the answer to a readSparse (action="+action+"), that should write into browser's V/Var tree.");
+				o = obToJson(mapOut);
 			break;default:
 				throw new Error("Unknown action="+action);
 		}
 		System.out.println("stringInStringOut\nIN: "+i+"\nOUT: "+o);
 		return o;
 	}
+	
+	static NavigableMap partsOfVTreeByMinTime(NavigableMap fromNode, double minTime){
+		Predicate<NavigableMap> keep = (NavigableMap node)->(minTime<=((Double)node.get("t")));
+		return partsOfVTree(fromNode, keep);
+	}
+
+	/** Copies every node that satisfies keep.test(node) or
+	that has at least one descendant that does. minT <= node.t
+	*/
+	static NavigableMap partsOfVTree(NavigableMap node, Predicate<NavigableMap> keep){
+		return filterBranch(node,keep);
+	}
+
+	static NavigableMap filterBranch(NavigableMap node,Predicate<NavigableMap> keep){
+		if(node==null)return null;
+		boolean include=keep.test(node);
+		NavigableMap pu=(NavigableMap)node.get("pu");
+		NavigableMap newPu=null;
+		if(pu!=null){
+			for(Object k:pu.keySet()){
+				NavigableMap kept=filterBranch((NavigableMap)pu.get(k),keep);
+				if(kept!=null){
+					if(newPu==null)newPu=new TreeMap(JsonDS.mapKeyComparator);
+					newPu.put(k,kept);
+				}
+			}
+			if(newPu!=null)include=true;
+		}
+		if(!include)return null;
+		NavigableMap out=new TreeMap(JsonDS.mapKeyComparator);
+		for(Object k:node.keySet()){
+			if(k.equals("pu"))continue;
+			out.put(k,node.get(k));
+		}
+		if(newPu!=null)out.put("pu",Collections.unmodifiableNavigableMap(newPu));
+		return Collections.unmodifiableNavigableMap(out);
+	}
+	
+	static NavigableMap mergeMaps(NavigableMap a,NavigableMap b){
+		Double ta=(Double)a.get("t");
+		Double tb=(Double)b.get("t");
+		if(ta==null||tb==null){
+			if(ta==null) System.out.println("no t in: ta="+obToJson(a));
+			if(tb==null) System.out.println("no t in: tb="+obToJson(b));
+			throw new RuntimeException("Every node must have .t");
+			/*This could be caused by t being 0 as in this code in Var*.js 2026-1-9: if(this.t){
+				ret.t = this.t; //UTC time updated. not all code will use this. but each Var is a time-series of 2 numbers: position and velocity.
+			}*/
+		}
+		boolean bNewer=tb>ta;
+		NavigableMap newer=bNewer?b:a;
+
+		TreeMap out=new TreeMap(JsonDS.mapKeyComparator);
+		for(Object k:newer.keySet()){
+			if(k.equals("t")||k.equals("pu")) continue;
+			out.put(k,newer.get(k));			//local scalars once
+		}
+		out.put("t",bNewer?tb:ta);				//write .t once
+
+		NavigableMap pa=(NavigableMap)a.get("pu");
+		NavigableMap pb=(NavigableMap)b.get("pu");
+		if(pa!=null||pb!=null){
+			TreeSet keys=new TreeSet(JsonDS.mapKeyComparator);
+			if(pa!=null) keys.addAll(pa.keySet());
+			if(pb!=null) keys.addAll(pb.keySet());
+
+			TreeMap pu=new TreeMap(JsonDS.mapKeyComparator);
+			for(Object k:keys){
+				NavigableMap ca=pa==null?null:(NavigableMap)pa.get(k);
+				NavigableMap cb=pb==null?null:(NavigableMap)pb.get(k);
+				pu.put(k,ca==null?cb:(cb==null?ca:mergeMaps(ca,cb)));
+			}
+			out.put("pu",Collections.unmodifiableNavigableMap(pu));
+		}
+		return Collections.unmodifiableNavigableMap(out);
+	}
+
+
+
 %><%
 	String body = request.getReader().lines().reduce("", (a,b)->(a+b));
 	if(body == null || body.trim().equals("")){

@@ -49,8 +49,9 @@ fillGridByFunc(selq, 5, q=>{
 </textarea><br>
 		<input type=button onclick="let jsCode = Dom('textBoxToEval').value; console.log('evalling: '+jsCode); let ret = eval(jsCode); console.log('Returned: '+ret);" value="eval text box (see errors on browser console)"></input>
 	</td><td>
+		<input type=button value="TomcatSparseSaveAndLoad" onclick="tomcatSparseSaveAndLoad();">
 		<div id=saveLoadDiv>
-			<input type=button value="TomcatSave" onclick="tomcatSave();">
+			<input type=button value="TomcatSaveA" onclick="tomcatSave();">
 			<input type=button value="QuickSave (cookie) 1" onclick="quicksave('1');">
 			<input type=button value="2" onclick="quicksave('2');">
 			<input type=button value="3" onclick="quicksave('3');">
@@ -63,7 +64,7 @@ fillGridByFunc(selq, 5, q=>{
 			<input type=button value="Save (file) " onclick="console.log('save file clicked'); let filename = prompt('Filename?','quadcraft_quadgrid5_'+time()+'.json'); if(filename) saveFile(filename, 'application/json', StateJson());">
 			<br>
 			
-			<input type=button value="TomcatLoad" onclick="tomcatLoad();">
+			<input type=button value="TomcatLoadA" onclick="tomcatLoad();">
 			<input type=button value="QuickLoad (cookie) 1" onclick="quickload('1');">
 			<input type=button value="2" onclick="quickload('2');">
 			<input type=button value="3" onclick="quickload('3');">
@@ -4175,18 +4176,36 @@ var QuadcraftWholeJsonState = ()=>{
 	return '{"action":"writeAll", "V":'+State()+'}';
 };
 
+var QuadcraftSparseJsonState = ()=>{
+	//FIXME only get partial state not the whole thing, do similar thing with Var.t as did in the JSP in tomcat, but do it here in html/js.
+	//minTime is for reading from tomcat, but before that you can write any times you want it keeps newest. TODO rename it to minReadTime.
+	let minTime = 1234; //near year 1970, include everything
+	return '{"action":"readWriteSparse", "minTime": '+minTime+', "V":'+State()+'}';
+};
+
 var QuadcraftWholeJsonLoad = wholeFromTomcat=>{
 	JSON.parse(wholeFromTomcat).V;
 	//LoadMap(JSON.parse(wholeFromTomcat).V); //just get value of V
 	loadVMapOnly(JSON.parse(wholeFromTomcat).V); //just get value of V
 };
 
+//simple, not for live gaming, 1 save slot in whole tomcat server that goes in wholeState JSP var.
 //save whole game state to only 1 save slot in the shared/networked tomcat.
 //It will stream V/Var tree live sparsely later, but this is a basic start.
 var tomcatSave = function(){
 	let vrStateStr = QuadcraftWholeJsonState();          // full V-tree JSON string
 	quadCraftAjax(vrStateStr, function(vrResp){
 		console.log("TomcatSave finished, not loading response cuz its save not load, returnHere:", vrResp);
+	});
+};
+
+//the more advanced way (than tomcatSave) that does live multiplayer gaming.
+var tomcatSparseSaveAndLoad = function(){
+	let vrStateStr = QuadcraftSparseJsonState();
+	console.log('START tomcatSparseSaveAndLoad, saving: '+vrStateStr);
+	quadCraftAjax(vrStateStr, function(vrResp){
+		console.log("tomcatSparseSaveAndLoad finished, got response:", vrResp);
+		//TODO load that response
 	});
 };
 
