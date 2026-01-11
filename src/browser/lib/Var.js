@@ -48,7 +48,6 @@ const Var = function(optionalParentVar, optionalName, optionalBig, optionalGob){
 	//If this.name is a hash id (or might be prefixed with something? todo), then its the hash of this.big which is probably a string of json (see Dagverse json norming, in dagball, TODO).
 	//This must be verifiable. Dont just make up a name and make up a big that cant prove that its name is the hash of that.
 	this.big = optionalBig || null; //can be a string or a list of strings to join by '\n' as lines.
-	this.t = 0; //not used as of 2025-2-20 even though some code copies it, maybe later? TODO actual current time //TODO? this.t = utc time as float64 so has at least microsecond precision for 100+ more years.
 	
 	//TODO? this.ch = [] child vars list (gob.vars if this is gob.influence), if this is a .influence var
 	//that is 1 for this thing exists and 0 for does not exist.
@@ -122,6 +121,13 @@ const Var = function(optionalParentVar, optionalName, optionalBig, optionalGob){
 	
 	this.p = 0; //position
 	this.v = 0; //velocity
+	
+	this.t = 0; //2025-1-9 starting to use it experimentally... not used as of 2025-2-20 even though some code copies it, maybe later? TODO actual current time //TODO? this.t = utc time as float64 so has at least microsecond precision for 100+ more years.
+	
+	//.p is often set directly. so it would tend to be unreliable cuz caller will forget to do that. Lets go with .tp and .tv meaning the last values of p and v when t was updated, and just poll it
+	this.tp = this.p+1; //value of this.p last time this.t was updated. not copied to/from tomcat, is only for updating .t
+	this.tv = this.v+1; //value of this.v last time this.t was updated. not copied to/from tomcat, is only for updating .t
+	
 	this.kv = 0; //velocity continuous decay per second, using this.v *= Math.exp(-dt*this.kv)
 	this.dp = 0; //diffeq, extra change of p per second See pinballBumper in dagball.
 	this.dv = 0; //diffeq, extra change of v per second. See pinballBumper in dagball.
@@ -625,6 +631,23 @@ Var.prototype.touch = function(){
 	return this; //for chaining calls
 };
 
+//if p or v changed since t was last updated (not counting if it already changed back, a rare case) then update this.t,
+//and set tp and tv to the current values.
+Var.prototype.touchIfTpv = function(){
+	if((this.p != this.tp) || (this.v != this.tv)){
+		this.tp = this.p;
+		this.tv = this.v;
+		this.t = TimeId(); //a unique time, increments by at least 1 ULP.
+	}
+};
+
+Var.prototype.touchIfTpvRecursive = function(){
+	this.touchIfTpv();
+	for(let name in this.pu){
+		this.pu[name].touchIfTpvRecursive();
+	}
+};
+
 //delete me from the local V/Var tree
 Var.prototype.del = function(){
 	if(!this.up){
@@ -642,6 +665,9 @@ Var.prototype.del = function(){
 Var.prototype.copyLocalFrom = function(copyMe){
 	this.p = copyMe.p;
 	this.v = copyMe.v;
+	this.t = copyMe.t;
+	this.tp = copyMe.tp; //not copied to/from tomcat, is only for updating .t
+	this.tv = copyMe.tv; //not copied to/from tomcat, is only for updating .t
 	this.pr = copyMe.pr;
 	this.ps = copyMe.ps;
 	this.cv = copyMe.cv;
@@ -808,13 +834,22 @@ Var.prototype.getOb = function(){
 //To limit the risk of that, it should use game.tryEval(string) but as of 2025-2-17 it just evals nearly everything.
 //Another way to limit that risk is to use wikibinator203 instead of javascript as the model of gob.brain code
 //which is likely to be a far future upgrade.
-Var.prototype.loadMap = function(map, optional_isAutoEval){
+Var.prototype.loadMap = function(map, opt={}){ //opt can contain isAutoEval=true andOr keepNewest=true (compare by .t) or neither.
 
 	//FIXME if its flatPu theres no map.pu
 
-	this.p = map.p || 0; //position
-	this.v = map.v || 0; //velocity
-	if(map.pu){ //childs of any names
+	let replaceSelf = !opt.keepNewest || ((map.t!==undefined) && (this.t < map.t));
+	if(replaceSelf){
+		this.p = map.p || 0; //position
+		this.v = map.v || 0; //velocity
+		this.t = Math.max(this.t, map.t); //in case !opt.keepNewest, dont want to put in a lower t from map.
+		if(map.gp!== undefined) this.gp = map.gp;
+		if(map.pr!== undefined) this.pr = map.pr; //spring at-rest length
+		if(map.ps!== undefined) this.ps = map.ps; //spring strength, or 0 to not use spring
+		if(map.cv!== undefined) this.cv = map.cv; //base velocity decay
+		//FIXME copy .big here? .name is supposed to be derived from it deterministicly if it exists, and since this (Var) already exists, it should already have that and it cant change. "childVar = this[big];" in the code below does that. so it should work.
+	}
+	if(map.pu){ //childs of any names. This is the !flatPu way.
 		for(let id in map.pu){
 			let childMap = map.pu[id];
 			//let childVar = this[id]; //reuses if exist, else creates using varProxyHandler as Var is a js Proxy object.
@@ -827,17 +862,17 @@ Var.prototype.loadMap = function(map, optional_isAutoEval){
 					//you could just do this[id] but that wouldnt create this[id].big which id is derived from.
 				}
 			}
-			childVar.loadMap(childMap, optional_isAutoEval);
+			childVar.loadMap(childMap, opt);
 		}
 	}
-	if(optional_isAutoEval){
-		console.log('Var.eval() cuz optional_isAutoEval='+optional_isAutoEval+', '+this.path());
+	if(opt.isAutoEval){
+		console.log('Var.eval() cuz opt.isAutoEval='+opt.isAutoEval+', '+this.path());
 		this.eval();
 	}
 };
 
-Var.prototype.loadJson = function(json, optional_isAutoEval){
-	this.loadMap(JSON.parse(json), optional_isAutoEval);
+Var.prototype.loadJson = function(json, opt={}){
+	this.loadMap(JSON.parse(json), opt);
 };
 
 /*Var.prototype.clear = function(map){
@@ -867,11 +902,20 @@ Var.prototype.toJSON = function(){ //for if this is used in JSON.stringify(someV
 };
 
 var Load = json=>{
-	let isAutoEval = true;
-	V.loadJson(json, isAutoEval);
+	V.loadJson(json, {isAutoEval: true});
 };
 
-var State = excludeBig=>V.toJson(excludeBig);
+//TODO do StateSearch using excludeBig_or_optionsMap as being a {} options map, and put the query in there.
+var State = excludeBig_or_optionsMap=>V.toJson(excludeBig_or_optionsMap);
+
+/*
+//like State(excludeBig) except calls query(vr)=> true or false, and if its true then includes vr (a Var).
+//Recurses either way, and includes parents of parents... all the way up, of every Var included.
+//This could get slow if the V tree is big so should only be used for small games and experiments. Scale up later.
+var StateSearch = (query,excludeBig)=>V.toJson({excludeBig: !!excludeBig, });
+	let options = typeof(excludeBig_or_optionsMap)=='boolean' ? {excludeBig: excludeBig_or_optionsMap} : (excludeBig_or_optionsMap || {});
+	throw new Error('TODO');
+};*/
 
 /*todo var Save = name=>{
 	if(name === undefined){
@@ -937,11 +981,38 @@ Var.prototype.h = function(){
 	return this.up ? (this.up.pathHeight()+1) : 0;
 };*/
 
+//will return null only if there is no data to include, such as if excludeBig_or_optionsMap.query is vr=>false.
 Var.prototype.toMap = function(excludeBig_or_optionsMap){
 	//TODO make it just be options map
 	let options = typeof(excludeBig_or_optionsMap)=='boolean' ? {excludeBig: excludeBig_or_optionsMap} : (excludeBig_or_optionsMap || {});
+	let query = options.query || (vr=>true); //defaults to include all Var's, unless excluded by some other option.
+	/*dont do it as string, give as js func: if(typeof(query)=='string'){
+		console.log('Var.toMap js eval: '+query); //in case the function is given as a string.
+		query = eval(query);
+	}*/
 	let wasFromRoot = options.fromRoot;
 	if(wasFromRoot) options.fromRoot = false;
+	
+	let includeThisBranch = false; //only if query(vr) is true for this branch of any descendant. They return null when they dont.
+	if(query(this)){
+		includeThisBranch = true;
+	}
+	let addChildsLater = {};
+	for(let childName in this.pu){ //get childs to add later. Just want to know if it found anything to add so we can skip the whole thing if not.
+		//flatPu makes the json about half as deep. Childs start with capital letter,
+		//built ins like p v toString start lowercase.
+		//let pu = options.flatPu ? ret : (ret.pu || (ret.pu = {}));
+		//pu[childName] = this.pu[childName].toMap(options); //not options.fromRoot
+		let mapOrNull = this.pu[childName].toMap(options); //not options.fromRoot
+		if(mapOrNull){
+			addChildsLater[childName] = mapOrNull;
+			includeThisBranch = true;
+		}//else was filtered out by query(this.pu[childName]) AND filtered out by every child of child... recursively, found nothing to add, so returned null.
+	}
+	if(!includeThisBranch){
+		return null; //nothing to include here or in descendants, tell parent
+	}
+	
 	let ret = {
 		p: this.p,
 		v: this.v,
@@ -963,11 +1034,9 @@ Var.prototype.toMap = function(excludeBig_or_optionsMap){
 	if(this.big && !options.excludeBig){
 		ret.big = this.big;
 	}
-	for(let childName in this.pu){
-		//flatPu makes the json about half as deep. Childs start with capital letter,
-		//built ins like p v toString start lowercase.
+	for(let childName in addChildsLater){ //add the childs found earlier, after p v t etc.
 		let pu = options.flatPu ? ret : (ret.pu || (ret.pu = {}));
-		pu[childName] = this.pu[childName].toMap(options); //not options.fromRoot
+		pu[childName] = addChildsLater[childName];
 	}
 	if(wasFromRoot){
 		options.fromRoot = wasFromRoot; //dont modify except during recursion
