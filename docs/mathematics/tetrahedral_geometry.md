@@ -247,13 +247,32 @@ graph TD
 
 ### Barycentric Coordinates
 
-Barycentric coordinates are used for determining if a point is inside a tetrahedron:
+Barycentric coordinates provide a coordinate system relative to the vertices of a simplex (in this case, a tetrahedron). For a tetrahedron with vertices $\mathbf{v}_1, \mathbf{v}_2, \mathbf{v}_3, \mathbf{v}_4$, any point $\mathbf{p}$ can be uniquely expressed as:
+
+$$ \mathbf{p} = \lambda_1 \mathbf{v}_1 + \lambda_2 \mathbf{v}_2 + \lambda_3 \mathbf{v}_3 + \lambda_4 \mathbf{v}_4 $$
+
+Subject to the constraint:
+$$ \sum_{i=1}^{4} \lambda_i = 1 $$
+
+#### Point Containment
+
+A point $\mathbf{p}$ lies inside the tetrahedron if and only if all barycentric coordinates are non-negative:
+$$ 0 \le \lambda_i \le 1 \quad \forall i \in \{1, 2, 3, 4\} $$
+
+#### Calculation via Volume Ratios
+
+Geometric computation often uses volume ratios (Cramer's rule application):
+$$ \lambda_i = \frac{\text{Vol}(\mathbf{p}, \mathbf{v}_{j}, \mathbf{v}_{k}, \mathbf{v}_{l})}{\text{Vol}(\mathbf{v}_i, \mathbf{v}_{j}, \mathbf{v}_{k}, \mathbf{v}_{l})} $$
+Where $\text{Vol}(A,B,C,D)$ is the signed volume of the tetrahedron formed by those points. Use the scalar triple product for efficient calculation.
 
 ```mermaid
 graph LR
-    subgraph "Barycentric Coordinates"
-        P["Point (x,y,z)"] --> B["Barycentric (u,v,w,t)"]
-        B --> Test["Test: u,v,w,t ≥ 0 and u+v+w+t=1"]
+    subgraph "Barycentric Logic"
+        P["Point P"] --> Calc["Calculate λ₁, λ₂, λ₃, λ₄"]
+        Calc --> CheckSum["Check Σλ = 1 (Implicit)"]
+        Calc --> CheckPos["Check λᵢ ≥ 0"]
+        CheckPos -->|True| Inside["Inside Tetrahedron"]
+        CheckPos -->|False| Outside["Outside Tetrahedron"]
     end
 ```
 
@@ -261,4 +280,4 @@ graph LR
 
 The tetrahedral geometry in QuadCraft provides a unique foundation for a voxel game. While more complex than traditional cubic voxels, tetrahedra offer interesting geometric properties and allow for more natural representation of certain structures.
 
-The mathematical foundation of the tetrahedral system, combined with the Quadray coordinate system, creates a coherent and elegant framework for the game's world. 
+The mathematical foundation of the tetrahedral system, combined with the Quadray coordinate system, creates a coherent and elegant framework for the game's world.

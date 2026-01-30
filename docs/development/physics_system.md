@@ -1,5 +1,8 @@
 # QuadCraft Physics System
 
+> [!IMPORTANT]
+> **Design Specification Status**: This document outlines the *architectural design* and *planned implementation* of the C++ Physics System. As of the current version, the core C++ physics engine (`src/core/physics`) is in active development. Current collision handling may rely on simplified logic or client-side JavaScript implementations. This guide serves as the canonical reference for the specific algorithms and class structures to be implemented.
+
 This document details the physics system in QuadCraft, focusing on how collision detection and physical interactions are implemented in a tetrahedral world.
 
 ## Physics System Overview
@@ -942,4 +945,4 @@ graph TD
 
 ## Conclusion
 
-The QuadCraft physics system provides a robust foundation for physical interactions in tetrahedral space. Through specialized algorithms for collision detection and response, the system enables realistic and consistent physical behavior despite the unique challenges of tetrahedral geometry. The integration with other game systems allows for complex interactions, while optimization techniques ensure good performance even with many dynamic objects. 
+The QuadCraft physics system provides a robust foundation for physical interactions in tetrahedral space. Through specialized algorithms for collision detection and response, the system enables realistic and consistent physical behavior despite the unique challenges of tetrahedral geometry. The integration with other game systems allows for complex interactions, while optimization techniques ensure good performance even with many dynamic objects.

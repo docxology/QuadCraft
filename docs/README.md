@@ -5,48 +5,49 @@ Welcome to the QuadCraft documentation. This comprehensive documentation suite c
 ```mermaid
 flowchart TD
     subgraph Core
-        README["README.md"]
+        README["docs/README.md"]
         Architecture["architecture.md"]
+        QuadrayCoords["quadray_coordinates.md"]
     end
 
     subgraph Mathematics
-        QuadrayCoordinates["mathematics/quadray_coordinates.md"]
-        TetrahedralGeometry["mathematics/tetrahedral_geometry.md"]
+        QuadrayCoordinates["quadray_coordinates.md"]
+        TetrahedralGeometry["tetrahedral_geometry.md"]
     end
 
-    subgraph "Game Design"
-        GameplayOverview["game_design/gameplay_overview.md"]
-        WorldGeneration["game_design/world_generation.md"]
-        BlockSystem["game_design/block_system.md"]
-        ControlsNavigation["game_design/controls_and_navigation.md"]
+    subgraph GameDesign["Game Design"]
+        GameplayOverview["gameplay_overview.md"]
+        WorldGeneration["world_generation.md"]
+        BlockSystem["block_system.md"]
+        ControlsNavigation["controls_and_navigation.md"]
     end
 
-    subgraph "User Interface"
-        UIDesign["ui/user_interface.md"]
+    subgraph UI["User Interface"]
+        UserInterface["user_interface.md"]
+        InterfaceDesign["interface_design.md"]
     end
 
-    subgraph Development
-        TechnicalArchitecture["development/architecture.md"]
+    subgraph Development["Development (15 docs)"]
+        CoreSystems["Core Systems"]
+        JSImplementation["JavaScript"]
+        AdvancedFeatures["Advanced Features"]
+        MultiplayerModding["Multiplayer & Modding"]
     end
 
-    README --> Core
+    subgraph Reference
+        Glossary["glossary.md"]
+    end
+
+    subgraph Other["Technical Papers"]
+        Papers["4 research papers"]
+    end
+
     README --> Mathematics
-    README --> GameDesign["Game Design"]
-    README --> UserInterface["User Interface"]
+    README --> GameDesign
+    README --> UI
     README --> Development
-
-    GameDesign --> GameplayOverview
-    GameDesign --> WorldGeneration
-    GameDesign --> BlockSystem
-    GameDesign --> ControlsNavigation
-
-    UserInterface --> UIDesign
-
-    Mathematics --> QuadrayCoordinates
-    Mathematics --> TetrahedralGeometry
-
-    Development --> TechnicalArchitecture
-    Development --> JavaScriptImplementation
+    README --> Reference
+    README --> Other
 ```
 
 ## Documentation Contents
@@ -66,6 +67,7 @@ flowchart TD
 - [World Generation](game_design/world_generation.md) - Procedural generation of tetrahedral worlds, biomes, and structures.
 - [Block System](game_design/block_system.md) - The tetrahedral block system that forms the foundation of QuadCraft.
 - [Controls and Navigation](game_design/controls_and_navigation.md) - Player controls and navigation in tetrahedral space.
+- [Advanced Building Techniques](game_design/advanced_building_techniques.md) - Guide to structural principles and creative patterns.
 
 ### User Interface
 
@@ -73,15 +75,43 @@ flowchart TD
 
 ### Development
 
-- [Technical Architecture](development/architecture.md) - Detailed technical architecture, systems, and implementation details.
-- **JavaScript Implementation Guide** (`docs/development/javascript_implementation_guide.md`) - Complete guide to the browser-based JavaScript implementation (`QuadrayGrid4.html`).
-- **Cone-Plane Intersection Rendering** (`docs/development/cone_plane_intersection_rendering.md`) - Advanced mathematical rendering technique for accurate sphere visualization.
-- **CCP Ball Grid System** (`docs/development/ccp_ball_grid_system.md`) - Close-Centered Packing optimization for efficient ball management.
-- **Gamepad Integration Guide** (`docs/development/gamepad_integration_guide.md`) - Comprehensive controller support with advanced features.
-- **Paintbrush System** (`docs/development/paintbrush_system.md`) - Customizable pattern painting system with real-time code evaluation.
-- **JavaScript Performance Optimization** (`docs/development/javascript_performance_optimization.md`) - Browser-specific optimization techniques.
-- **Real-time Code Evaluation** (`docs/development/realtime_code_evaluation.md`) - Dynamic JavaScript execution system.
-- **Quaternion Camera System** (`docs/development/quaternion_camera_system.md`) - Advanced 3D camera with smooth rotation and movement.
+#### Implemented Systems
+
+| Document | Description | Status |
+|---|---|---|
+| [**Chunk System**](development/chunk_system.md) | Tetrahedral chunk architecture. | ✅ Implemented |
+| [**Coordinate System**](mathematics/quadray_coordinates.md) | 4D Quadray math & implementation. | ✅ Implemented |
+| [**Tetrahedral Geometry**](mathematics/tetrahedral_geometry.md) | Geometric properties & barycentrics. | ✅ Implemented |
+| [**API Reference**](development/api_reference.md) | Core C++ API documentation. | ✅ Active |
+| [**JavaScript Implementation**](development/javascript_implementation.md) | JS-based prototyping logic. | ✅ Active |
+
+#### Design Specifications (Planned/In-Progress)
+
+| Document | Description | Status |
+|---|---|---|
+| [**Physics System**](development/physics_system.md) | Planned C++ physics architecture. | 🚧 Design Spec |
+| [**Entity System**](development/entity_system.md) | Planned ECS architecture. | 🚧 Design Spec |
+| [**Multiplayer System**](development/multiplayer_system.md) | Network architecture design. | 🚧 Design Spec |
+| [**Modding Guide**](development/modding_guide.md) | Planned modding API structure. | 🚧 Design Spec |
+
+#### Development Guides
+
+| Document | Description |
+|---|---|
+| [**Setup Guide**](development/setup_guide.md) | Development environment setup. |
+| [**Asset Creation**](development/asset_creation_guide.md) | Creating assets for QuadCraft. |
+| [**Performance Optimization**](development/javascript_performance_optimization.md) | JS performance techniques. |
+| [**Cone Plane Intersection**](development/cone_plane_intersection_rendering.md) | Specific rendering detail. |
+| [**Gamepad Integration**](development/gamepad_integration_guide.md) | Input handling guide. |
+| [**CCP Ball Grid**](development/ccp_ball_grid_system.md) | Specific grid system detail. |
+
+### Reference
+
+- [Glossary](reference/glossary.md) - Terminology and definitions
+
+### Technical Papers
+
+See [other/](other/) for in-depth technical papers and analysis documents.
 
 ## How to Use This Documentation
 
@@ -113,20 +143,6 @@ The QuadCraft documentation is an evolving resource. To contribute:
 
 When contributing, please maintain the existing style and format of the documentation.
 
-## Future Documentation
-
-The following documentation sections are planned for future development:
-
-- Modding Guide
-- Performance Optimization
-- Multiplayer Systems
-- Asset Creation Guide
-- Advanced Building Techniques
-- **JavaScript Implementation Guide** (for QuadrayGrid4.html and similar implementations)
-- **Cone-Plane Intersection Rendering** (documenting the advanced rendering techniques)
-- **Gamepad Integration Guide** (documenting controller support and quaternion camera)
-- **CCP Ball Grid System** (documenting the Close-Centered Packing optimization)
-
 ## License
 
-This documentation is provided under the same license as the QuadCraft project. See the project repository for license details. 
+This documentation is provided under the same license as the QuadCraft project. See the project repository for license details.

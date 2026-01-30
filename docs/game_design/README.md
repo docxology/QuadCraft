@@ -10,6 +10,7 @@ Gameplay mechanics and design documentation for QuadCraft.
 | [world_generation.md](world_generation.md) | Procedural terrain and structures |
 | [block_system.md](block_system.md) | Tetrahedral block system |
 | [controls_and_navigation.md](controls_and_navigation.md) | Player controls |
+| [advanced_building_techniques.md](advanced_building_techniques.md) | Advanced building guide |
 
 ## Quick Overview
 

@@ -22,22 +22,33 @@ graph TD
 
 ### Basis Vectors
 
-The four basis vectors of the Quadray system can be represented in Cartesian coordinates as follows:
+The Quadray system is defined by four basis vectors pointing from the center of a regular tetrahedron to its vertices.
 
-1. **a-axis**: (1, 1, 1) / √3
-2. **b-axis**: (-1, -1, 1) / √3
-3. **c-axis**: (-1, 1, -1) / √3
-4. **d-axis**: (1, -1, -1) / √3
+**Theoretical Unit Vectors** (Length = 1):
 
-These four vectors point from the center of a regular tetrahedron to its four vertices.
+1. **a**: $(1, 1, 1) / \sqrt{3}$
+2. **b**: $(-1, -1, 1) / \sqrt{3}$
+3. **c**: $(-1, 1, -1) / \sqrt{3}$
+4. **d**: $(1, -1, -1) / \sqrt{3}$
+
+**Computational Basis Vectors** (Used in Code):
+In the QuadCraft codebase (`src/core/coordinate/Quadray.h`), the basis vectors are scaled by $1/\sqrt{2} \approx 0.7071$. This results in vectors with magnitude $\sqrt{1.5} \approx 1.225$.
+
+1. **a**: $(1, 1, 1) / \sqrt{2}$
+2. **b**: $(-1, -1, 1) / \sqrt{2}$
+3. **c**: $(-1, 1, -1) / \sqrt{2}$
+4. **d**: $(1, -1, -1) / \sqrt{2}$
+
+> [!NOTE]
+> This computational scaling ensures that a unit step in Quadray space (e.g., from `(0,0,0,0)` to `(1,0,0,0)`) results in a Cartesian displacement of length $\sqrt{1.5}$ and a Tetrahedral edge length of 2.0.
 
 ```mermaid
 graph LR
-    subgraph Basis Vectors in Cartesian Space
-        A["a: (1,1,1)/√3"]
-        B["b: (-1,-1,1)/√3"]
-        C["c: (-1,1,-1)/√3"]
-        D["d: (1,-1,-1)/√3"]
+    subgraph "Computational Basis Vectors"
+        A["a: (1,1,1)/√2"]
+        B["b: (-1,-1,1)/√2"]
+        C["c: (-1,1,-1)/√2"]
+        D["d: (1,-1,-1)/√2"]
     end
 ```
 
@@ -46,6 +57,20 @@ graph LR
 1. **Redundancy**: A point in 3D space can be represented by multiple equivalent quadray coordinates.
 2. **Normalization**: To address this redundancy, we use zero-minimum normalization, ensuring at least one coordinate is zero.
 3. **Tetrahedral Symmetry**: The system naturally represents tetrahedral structures and symmetries.
+
+### Algebraic Formulation
+
+The conversion from Quadray $(q_a, q_b, q_c, q_d)$ to Cartesian $(x, y, z)$ can be expressed as a linear combination of the computational basis vectors:
+
+$$
+\vec{v} = q_a \vec{a} + q_b \vec{b} + q_c \vec{c} + q_d \vec{d}
+$$
+
+Substituting the basis vector values:
+
+$$
+\begin{bmatrix} x \\ y \\ z \end{bmatrix} = \frac{1}{\sqrt{2}} \begin{bmatrix} 1 & -1 & -1 & 1 \\ 1 & -1 & 1 & -1 \\ 1 & 1 & -1 & -1 \end{bmatrix} \begin{bmatrix} q_a \\ q_b \\ q_c \\ q_d \end{bmatrix}
+$$
 
 ## Conversion Between Coordinate Systems
 
@@ -130,6 +155,35 @@ Quadray normalized() const {
     return Quadray(a - minVal, b - minVal, c - minVal, d - minVal);
 }
 ```
+
+## Computational Implementation Details
+
+### Hashing Strategy
+
+Efficient storage of sparse tetrahedral data requires a robust hashing strategy. Since `Quadray` coordinates are floating-point values, standard equality checks are risky. The system uses **canonical integer mapping** via zero-minimum normalization before hashing.
+
+Detailed in `src/core/world/TetraChunk.h`:
+
+1. **Normalize**: $q' = \text{normalized}(q)$
+2. **Quantize**: Map floating point components to discrete quantization buckets (if necessary) or hash directly if using integer-aligned grid points.
+3. **Combine**: Use a bitwise XOR combination of component hashes.
+
+```cpp
+struct QuadrayHash {
+    std::size_t operator()(const Quadray& q) const {
+        Quadray normalized = q.normalized();
+        // ... hash combination of a, b, c, d ...
+        return h1 ^ (h2 << 1) ^ (h3 << 2) ^ (h4 << 3);
+    }
+};
+```
+
+### Equality Checks
+
+Equality implies geometric equivalence:
+$$q_1 \equiv q_2 \iff \text{normalized}(q_1) \approx \text{normalized}(q_2)$$
+
+This is critical for `unordered_map` lookups in `TetraChunk`.
 
 ## Distance Calculation
 
@@ -225,6 +279,10 @@ constexpr float S3 = 1.0606601717798212f; // sqrt(9/8)
 
 This constant represents the ratio between the volumes of equivalent shapes in Cartesian and Quadray systems.
 
+$$ S_3 = \sqrt{\frac{9}{8}} \approx 1.06066 $$
+
+It arises from the volume ratio of a unit tetrahedron relative to specific cubic packings. In the QuadCraft engine, `S3` is essential for normalizing density and mass calculations when converting between absolute game units and tetrahedral grid units.
+
 ## Advantages of Quadray Coordinates
 
 1. **Natural Representation of Tetrahedral Space**: The four basis vectors align perfectly with tetrahedral geometry.
@@ -234,4 +292,4 @@ This constant represents the ratio between the volumes of equivalent shapes in C
 
 ## Conclusion
 
-The Quadray coordinate system provides an elegant mathematical foundation for the tetrahedral voxel system in QuadCraft. By using this system, the game can represent tetrahedral structures more naturally than would be possible with traditional Cartesian coordinates. 
+The Quadray coordinate system provides an elegant mathematical foundation for the tetrahedral voxel system in QuadCraft. By using this system, the game can represent tetrahedral structures more naturally than would be possible with traditional Cartesian coordinates.

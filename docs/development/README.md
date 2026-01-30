@@ -7,7 +7,7 @@ Technical implementation guides for QuadCraft developers.
 ### Core Systems
 
 | Document | Description |
-|----------|-------------|
+| --- | --- |
 | [architecture.md](architecture.md) | System architecture overview |
 | [chunk_system.md](chunk_system.md) | Chunk-based world management |
 | [entity_system.md](entity_system.md) | Entity component system |
@@ -16,7 +16,7 @@ Technical implementation guides for QuadCraft developers.
 ### JavaScript Implementation
 
 | Document | Description |
-|----------|-------------|
+| --- | --- |
 | [javascript_implementation.md](javascript_implementation.md) | Browser JS implementation guide |
 | [javascript_performance_optimization.md](javascript_performance_optimization.md) | Performance tuning |
 | [realtime_code_evaluation.md](realtime_code_evaluation.md) | Dynamic code execution |
@@ -24,7 +24,7 @@ Technical implementation guides for QuadCraft developers.
 ### Advanced Features
 
 | Document | Description |
-|----------|-------------|
+| --- | --- |
 | [cone_plane_intersection_rendering.md](cone_plane_intersection_rendering.md) | Advanced sphere rendering |
 | [ccp_ball_grid_system.md](ccp_ball_grid_system.md) | Close-Centered Packing |
 | [paintbrush_system.md](paintbrush_system.md) | Pattern painting tools |
@@ -32,19 +32,21 @@ Technical implementation guides for QuadCraft developers.
 ### Input & Controls
 
 | Document | Description |
-|----------|-------------|
+| --- | --- |
 | [gamepad_integration_guide.md](gamepad_integration_guide.md) | Controller support |
 | [quaternion_camera_system.md](quaternion_camera_system.md) | Camera controls |
 
 ### Multiplayer & Modding
 
 | Document | Description |
-|----------|-------------|
+| --- | --- |
 | [multiplayer_system.md](multiplayer_system.md) | Multiplayer architecture |
 | [modding_guide.md](modding_guide.md) | Creating mods |
+| [asset_creation_guide.md](asset_creation_guide.md) | Asset creation guide |
+| [api_reference.md](api_reference.md) | API reference |
 
 ### Setup
 
 | Document | Description |
-|----------|-------------|
+| --- | --- |
 | [setup_guide.md](setup_guide.md) | Development environment setup |

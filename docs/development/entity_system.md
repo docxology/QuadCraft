@@ -1,5 +1,8 @@
 # QuadCraft Entity System
 
+> [!IMPORTANT]
+> **Design Specification Status**: This document outlines the *architectural design* and *planned implementation* of the C++ Entity System. As of the current version, the core C++ entity classes (`src/core/entity/Entity.h`, `Component.h`, etc.) are in active development. The only existing entity-related class is `Camera.h`. This guide serves as the canonical reference for the specific component-based architecture to be implemented.
+
 This document details the entity system in QuadCraft, covering the technical architecture, component design, and implementation of entities in tetrahedral space.
 
 ## Entity System Overview
@@ -93,6 +96,7 @@ classDiagram
 ```
 
 The architecture follows these principles:
+
 - **Component-Based Design**: Entities are composed of modular components
 - **System Processors**: Systems process entities with specific component sets
 - **Data-Oriented Approach**: Focus on data layout and efficient memory access
@@ -135,6 +139,7 @@ graph TD
 ```
 
 Each entity type has unique characteristics:
+
 - **Player Entity**: The user-controlled entity with input handling, inventory, and camera
 - **Living Entities**: Mobile entities with health, AI, and interaction behaviors
 - **Item Entities**: Physical representations of items in the world
@@ -170,6 +175,7 @@ classDiagram
 ```
 
 Key features:
+
 - **Dual Coordinate Support**: Stores both Cartesian and Quadray coordinates when needed
 - **Transformation Matrix**: Cached transformation matrix for rendering
 - **Hierarchical Support**: Optional parent-child relationships between entities
@@ -216,6 +222,7 @@ classDiagram
 ```
 
 Key features:
+
 - **Force-Based Physics**: Support for forces, impulses, and constraints
 - **Collision Detection**: Specialized collision for tetrahedral shapes
 - **Material Properties**: Physical properties like friction and restitution
@@ -254,6 +261,7 @@ classDiagram
 ```
 
 Key features:
+
 - **Model Management**: Association with 3D models
 - **Material System**: Support for different textures and shaders
 - **Animation Support**: Skeletal animations and tweening
@@ -295,6 +303,7 @@ classDiagram
 ```
 
 Key features:
+
 - **Health Management**: Tracking and modifying health values
 - **Damage System**: Processing incoming damage with type considerations
 - **Status Effects**: Temporary effects like poison, regeneration, etc.
@@ -341,6 +350,7 @@ classDiagram
 ```
 
 Key features:
+
 - **Behavior Trees**: Modular, extensible AI behavior definition
 - **Pathfinding**: Navigation through tetrahedral space
 - **State Management**: Tracking and transitioning between AI states
@@ -382,6 +392,7 @@ classDiagram
 ```
 
 Key features:
+
 - **Item Management**: Adding, removing, and querying items
 - **Stack Handling**: Combining and splitting stacks of items
 - **Item Properties**: Tracking durability and custom properties
@@ -423,6 +434,7 @@ classDiagram
 ```
 
 Key features:
+
 - **Dual Representation**: Maintains both Quadray and Cartesian coordinates
 - **Tetrahedral Rotation**: Specialized rotation representation for tetrahedral space
 - **Coordinate Conversion**: Automatic conversion between coordinate systems
@@ -459,6 +471,7 @@ classDiagram
 ```
 
 Key features:
+
 - **Quadray Physics**: Physics calculations using Quadray coordinates
 - **Tetrahedral Colliders**: Collision shapes defined in tetrahedral space
 - **Boundary Handling**: Special handling for crossing tetrahedron boundaries
@@ -494,6 +507,7 @@ classDiagram
 ```
 
 Key features:
+
 - **Tetrahedral Pathfinding**: Finding paths through tetrahedral space
 - **Dynamic Graph Updates**: Updating the navigation graph as the world changes
 - **Path Optimization**: Smoothing and optimizing paths for natural movement
@@ -525,6 +539,7 @@ classDiagram
 ```
 
 Key features:
+
 - **Fixed Timestep**: Physics simulation with fixed time steps for stability
 - **Collision Detection**: Broad and narrow phase collision detection
 - **Constraint Solving**: Resolving physical constraints
@@ -560,6 +575,7 @@ classDiagram
 ```
 
 Key features:
+
 - **Frustum Culling**: Culling entities outside the camera frustum
 - **Render Queue**: Sorting and batching render commands for efficiency
 - **Shadow Mapping**: Generating shadows for entities
@@ -585,6 +601,7 @@ classDiagram
 ```
 
 Key features:
+
 - **Behavior Processing**: Executing entity behavior trees
 - **Pathfinding**: Finding and following paths through the world
 - **Group Behavior**: Coordinating behavior between multiple entities
@@ -623,6 +640,7 @@ classDiagram
 ```
 
 Key features:
+
 - **Interaction Detection**: Detecting when entities can interact
 - **Interaction Processing**: Handling ongoing interactions
 - **Event Dispatching**: Notifying entities of interaction events
@@ -648,6 +666,7 @@ stateDiagram-v2
 ```
 
 The entity lifecycle includes:
+
 1. **Creation**: Entity is created and registered with the EntityManager
 2. **Initialization**: Components are added and initialized
 3. **Activation**: Entity becomes active in the world
@@ -687,6 +706,7 @@ classDiagram
 ```
 
 The serialization system supports:
+
 - **Entity Serialization**: Converting entities to a storable format
 - **Component Serialization**: Saving and loading component state
 - **World Saving**: Saving all entities in a world or chunk
@@ -732,6 +752,7 @@ classDiagram
 ```
 
 The event system enables:
+
 - **Component Communication**: Components communicating without direct references
 - **Entity Interaction**: Entities interacting through standard events
 - **System Notifications**: Systems being notified of entity state changes
@@ -772,6 +793,7 @@ classDiagram
 ```
 
 The template system provides:
+
 - **Prefab Definition**: Defining reusable entity configurations
 - **Property Overrides**: Overriding specific properties during instantiation
 - **Template Library**: Managing a library of entity templates
@@ -809,6 +831,7 @@ graph TD
 ```
 
 The system addresses these challenges through:
+
 - **Dual Coordinate Representation**: Using both Cartesian and Quadray coordinates
 - **Specialized Collision**: Tetrahedral collision detection algorithms
 - **Adaptive Rendering**: Rendering techniques adapted for tetrahedral entities
@@ -846,6 +869,7 @@ graph TD
 ```
 
 Key optimization techniques:
+
 - **Spatial Partitioning**: Dividing space for efficient entity queries
 - **Object Pooling**: Reusing entity instances to reduce allocation overhead
 - **Data-Oriented Design**: Optimizing memory layout for better cache usage
@@ -890,6 +914,7 @@ classDiagram
 ```
 
 The scripting system allows for:
+
 - **Custom Behaviors**: Defining entity behaviors in scripts
 - **Event Handling**: Responding to game events in scripts
 - **Component Access**: Accessing and modifying components from scripts
@@ -997,4 +1022,4 @@ droppedItem->activate();
 
 ## Conclusion
 
-The QuadCraft entity system provides a flexible, component-based architecture for managing all dynamic objects in the game world. By adapting to the unique challenges of tetrahedral space, the entity system enables complex, interactive behaviors while maintaining performance and extensibility. The combination of a robust core architecture with tetrahedral-specific extensions allows for the creation of uniquely immersive gameplay experiences that showcase the mathematical elegance of the tetrahedral world. 
+The QuadCraft entity system provides a flexible, component-based architecture for managing all dynamic objects in the game world. By adapting to the unique challenges of tetrahedral space, the entity system enables complex, interactive behaviors while maintaining performance and extensibility. The combination of a robust core architecture with tetrahedral-specific extensions allows for the creation of uniquely immersive gameplay experiences that showcase the mathematical elegance of the tetrahedral world.

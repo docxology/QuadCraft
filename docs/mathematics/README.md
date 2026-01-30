@@ -33,7 +33,7 @@ Space-filling with three shape types:
 
 **Quadray to Cartesian:**
 
-```
+```text
 x = (a - b - c + d) / √2
 y = (a - b + c - d) / √2
 z = (a + b - c - d) / √2
@@ -41,7 +41,7 @@ z = (a + b - c - d) / √2
 
 **Cartesian to Quadray:**
 
-```
+```text
 a = (max(0,x) + max(0,y) + max(0,z)) / √2
 b = (max(0,-x) + max(0,-y) + max(0,z)) / √2
 c = (max(0,-x) + max(0,y) + max(0,-z)) / √2
