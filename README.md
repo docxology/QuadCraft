@@ -18,7 +18,7 @@ QuadCraft is an experimental voxel game that uses tetrahedral elements (instead 
 
 ### Pic
 
-<img src=https://raw.githubusercontent.com/docxology/QuadCraft/refs/heads/main/src/js/experiments/QuadrayGrid_2025-5-26-307pET.png><br>
+<img src=<https://raw.githubusercontent.com/docxology/QuadCraft/refs/heads/main/src/js/experiments/QuadrayGrid_2025-5-26-307pET.png>><br>
 Those experiments are in js/experiments/QuadrayGrid2.html
 
 ## Technical Description
@@ -73,6 +73,7 @@ If CMake can't find the required libraries, make sure they are properly installe
 ## Controls
 
 ### Movement Controls (Drone-like)
+
 - **Arrow Keys**: Fly in the corresponding direction (always active)
 - **Page Up/Down**: Move vertically up/down (always active)
 - **W, A, S, D**: Alternative movement keys (only when mouse is captured)
@@ -80,25 +81,30 @@ If CMake can't find the required libraries, make sure they are properly installe
 - **Left Shift**: Alternative down movement (only when mouse is captured)
 
 ### Camera Controls
+
 - **Mouse**: Look around (only when mouse is captured)
 - **Mouse Wheel**: Zoom in/out
 
 ### Block Interaction
+
 - **Left Mouse Button**: Remove block (or capture mouse if not captured)
 - **Right Mouse Button**: Place block
 
 ### Interface Controls
+
 - **Tab**: Toggle mouse capture mode
 - **Escape**: Release mouse if captured, or exit game if mouse is free
 - **F1**: Toggle wireframe mode
 - **F2**: Toggle quadray coordinate overlay
 
 **Mouse Interaction**:
+
 - Click in the window to capture the mouse and enable full camera control
 - Press Escape or Tab to release the mouse and regain normal cursor control
 - When the mouse is free, you can still use arrow keys and Page Up/Down for drone-like movement
 
 **Flying Tips**:
+
 - Use arrow keys for precise drone-like movement
 - Combine with Page Up/Down for full 3D navigation
 - The camera will always point in the direction you're looking
@@ -119,7 +125,7 @@ flowchart LR
 
 Folder structure:
 
-```
+```text
 QuadCraft/
 ├── src/
 │   ├── core/                    # Core engine components
@@ -175,6 +181,7 @@ Unlike Minecraft's cubic voxels, QuadCraft uses tetrahedral voxels which allow f
 ### Quadray Coordinate Visualization
 
 The F2 key toggles a visualization overlay that displays the four basis vectors of the quadray coordinate system:
+
 - A axis (red): Direction of (1,0,0,0) in quadray coordinates
 - B axis (green): Direction of (0,1,0,0) in quadray coordinates
 - C axis (blue): Direction of (0,0,1,0) in quadray coordinates
@@ -194,4 +201,4 @@ This project is licensed under the Apache 2.0 License - see the LICENSE file for
 
 - Based on research from "Mutable Game Environments Built on a Tetrahedral Mesh"
 - Inspired by Minecraft and other voxel-based games
-- Quadray coordinate system based on work by R. Buckminster Fuller and Kirby Urner 
+- Quadray coordinate system based on work by R. Buckminster Fuller and Kirby Urner
