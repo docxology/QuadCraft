@@ -26,7 +26,7 @@ The result is a game that looks like 3D chess when you see it on screen, but the
 
 Now let's talk about Quadrays—the heart of this coordinate system. This is where it gets really interesting.
 
-Quadray coordinates were developed as an alternative to the traditional Cartesian x-y-z system we use every day. In Cartesian coordinates, you have three axes that meet at right angles. Simple, familiar, works great for boxes and buildings.
+Quadray coordinates were developed as a Synergetic alternative to the traditional Cartesian x-y-z system we use every day. In Cartesian coordinates, you have three axes that meet at right angles. Simple, familiar, works great for boxes and buildings.
 
 But nature doesn't always think in right angles. Buckminster Fuller, the famous architect and systems theorist, noticed this. He developed something called the Isotropic Vector Matrix, or IVM—a space-filling arrangement of tetrahedra and octahedra that represents how atoms actually pack together. It's based on 60-degree angles instead of 90.
 
@@ -54,7 +54,7 @@ When I make a move, the system shows me the coordinate transition—where the pi
 
 *[Demonstrate each piece as you explain]*
 
-The pieces you know and love all make the transition to 4D space, but their movement adapts to the tetrahedral geometry.
+The pieces you know and love all make the transition to 4D space, and their movement adapts to the tetrahedral geometry.
 
 The King moves one step in any single basis direction—just like regular chess, but now there are four main directions instead of eight.
 
