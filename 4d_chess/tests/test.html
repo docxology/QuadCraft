@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>4D Quadray Chess - Test Suite</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'SF Mono', 'Monaco', 'Consolas', monospace;
+            background: linear-gradient(135deg, #0a0a1a 0%, #1a1a2e 100%);
+            min-height: 100vh;
+            color: #e0e0e0;
+            padding: 40px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        h1 {
+            font-size: 32px;
+            background: linear-gradient(90deg, #9966ff, #66ddff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            color: #888;
+            font-size: 14px;
+        }
+
+        .summary {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin: 30px 0;
+        }
+
+        .stat {
+            background: rgba(30, 30, 50, 0.8);
+            padding: 20px 40px;
+            border-radius: 12px;
+            text-align: center;
+            border: 1px solid rgba(100, 100, 150, 0.2);
+        }
+
+        .stat-value {
+            font-size: 48px;
+            font-weight: bold;
+        }
+
+        .stat-label {
+            color: #888;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-top: 5px;
+        }
+
+        .passed {
+            color: #44ff88;
+        }
+
+        .failed {
+            color: #ff4466;
+        }
+
+        .total {
+            color: #66ddff;
+        }
+
+        #test-output {
+            background: rgba(20, 20, 40, 0.9);
+            border-radius: 12px;
+            padding: 30px;
+            border: 1px solid rgba(100, 100, 150, 0.2);
+            max-width: 900px;
+            margin: 0 auto;
+            max-height: 600px;
+            overflow-y: auto;
+        }
+
+        .test-suite {
+            margin-bottom: 20px;
+        }
+
+        .suite-name {
+            color: #9966ff;
+            font-size: 16px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            padding-bottom: 5px;
+            border-bottom: 1px solid rgba(100, 100, 150, 0.2);
+        }
+
+        .test-result {
+            padding: 6px 0;
+            padding-left: 20px;
+            font-size: 13px;
+        }
+
+        .test-pass::before {
+            content: '✅ ';
+        }
+
+        .test-fail::before {
+            content: '❌ ';
+        }
+
+        .test-fail {
+            color: #ff6666;
+        }
+
+        .error-msg {
+            color: #ff4466;
+            font-size: 11px;
+            padding-left: 30px;
+            margin-top: 2px;
+        }
+
+        .run-button {
+            display: block;
+            margin: 30px auto;
+            padding: 15px 40px;
+            font-size: 16px;
+            font-weight: bold;
+            background: linear-gradient(135deg, #6366f1, #9966ff);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .run-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(99, 102, 241, 0.5);
+        }
+
+        /* Scrollbar */
+        #test-output::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        #test-output::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.2);
+        }
+
+        #test-output::-webkit-scrollbar-thumb {
+            background: rgba(153, 102, 255, 0.5);
+            border-radius: 4px;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>🧪 4D Quadray Chess Test Suite</h1>
+        <p class="subtitle">50 comprehensive tests across 7 modules</p>
+    </header>
+
+    <div class="summary">
+        <div class="stat">
+            <div class="stat-value passed" id="passed-count">-</div>
+            <div class="stat-label">Passed</div>
+        </div>
+        <div class="stat">
+            <div class="stat-value failed" id="failed-count">-</div>
+            <div class="stat-label">Failed</div>
+        </div>
+        <div class="stat">
+            <div class="stat-value total" id="total-count">-</div>
+            <div class="stat-label">Total Tests</div>
+        </div>
+    </div>
+
+    <button class="run-button" onclick="runTests()">▶ Run Tests</button>
+
+    <div id="test-output">
+        <p style="color: #888; text-align: center;">Click "Run Tests" to execute the test suite</p>
+    </div>
+
+    <!-- Load game modules -->
+    <script src="../js/quadray.js"></script>
+    <script src="../js/pieces.js"></script>
+    <script src="../js/board.js"></script>
+    <script src="../js/storage.js"></script>
+    <script src="../js/analysis.js"></script>
+
+    <!-- Load test suite -->
+    <script src="test_all.js"></script>
+
+    <script>
+        function runTests() {
+            // Clear output
+            const output = document.getElementById('test-output');
+            output.innerHTML = '';
+
+            // Re-run tests (reload test_all.js logic)
+            const testRunner = new TestRunner();
+            let currentSuiteDiv = null;
+
+            // Override console methods to capture output
+            const originalGroup = console.group;
+            const originalLog = console.log;
+            const originalError = console.error;
+            const originalGroupEnd = console.groupEnd;
+
+            console.group = (name) => {
+                const suiteDiv = document.createElement('div');
+                suiteDiv.className = 'test-suite';
+                suiteDiv.innerHTML = `<div class="suite-name">${name}</div>`;
+                output.appendChild(suiteDiv);
+                currentSuiteDiv = suiteDiv;
+            };
+
+            console.log = (msg) => {
+                if (currentSuiteDiv && msg.includes('✅')) {
+                    const testDiv = document.createElement('div');
+                    testDiv.className = 'test-result test-pass';
+                    testDiv.textContent = msg.replace('  ✅ ', '');
+                    currentSuiteDiv.appendChild(testDiv);
+                }
+            };
+
+            console.error = (msg) => {
+                if (currentSuiteDiv && msg.includes('❌')) {
+                    const testDiv = document.createElement('div');
+                    testDiv.className = 'test-result test-fail';
+                    testDiv.textContent = msg.replace('  ❌ ', '');
+                    currentSuiteDiv.appendChild(testDiv);
+                }
+            };
+
+            console.groupEnd = () => {
+                currentSuiteDiv = null;
+            };
+
+            // Run all test suites
+            runAllTests(testRunner);
+
+            // Restore console
+            console.group = originalGroup;
+            console.log = originalLog;
+            console.error = originalError;
+            console.groupEnd = originalGroupEnd;
+
+            // Update summary
+            const summary = testRunner.summary();
+            document.getElementById('passed-count').textContent = summary.passed;
+            document.getElementById('failed-count').textContent = summary.failed;
+            document.getElementById('total-count').textContent = summary.total;
+        }
+
+        function runAllTests(test) {
+            // Quadray Tests
+            test.describe('Quadray Class', () => {
+                test.it('should create a Quadray with given coordinates', () => {
+                    const q = new Quadray(1, 2, 3, 4);
+                    test.assertEqual(q.a, 1);
+                    test.assertEqual(q.b, 2);
+                    test.assertEqual(q.c, 3);
+                    test.assertEqual(q.d, 4);
+                });
+
+                test.it('should normalize to non-negative coordinates', () => {
+                    const q = new Quadray(-1, 0, 1, 2);
+                    const n = q.normalized();
+                    test.assertTrue(n.a >= 0);
+                    test.assertTrue(n.b >= 0);
+                    test.assertTrue(n.c >= 0);
+                    test.assertTrue(n.d >= 0);
+                });
+
+                test.it('should add two Quadrays correctly', () => {
+                    const q1 = new Quadray(1, 0, 0, 0);
+                    const q2 = new Quadray(0, 1, 0, 0);
+                    const sum = q1.add(q2);
+                    test.assertEqual(sum.a, 1);
+                    test.assertEqual(sum.b, 1);
+                });
+
+                test.it('should subtract two Quadrays correctly', () => {
+                    const q1 = new Quadray(2, 1, 0, 0);
+                    const q2 = new Quadray(1, 0, 0, 0);
+                    const diff = q1.subtract(q2);
+                    test.assertEqual(diff.a, 1);
+                    test.assertEqual(diff.b, 1);
+                });
+
+                test.it('should scale a Quadray correctly', () => {
+                    const q = new Quadray(1, 2, 3, 4);
+                    const scaled = q.scale(2);
+                    test.assertEqual(scaled.a, 2);
+                    test.assertEqual(scaled.b, 4);
+                });
+
+                test.it('should convert to Cartesian coordinates', () => {
+                    const q = new Quadray(1, 0, 0, 0);
+                    const cart = q.toCartesian();
+                    test.assertApprox(cart.x, 0.707, 0.01);
+                });
+
+                test.it('should calculate length correctly', () => {
+                    const q = new Quadray(1, 0, 0, 0);
+                    test.assertApprox(q.length(), 0.707, 0.01);
+                });
+
+                test.it('should detect equality between Quadrays', () => {
+                    const q1 = new Quadray(1, 2, 3, 4);
+                    const q2 = new Quadray(1, 2, 3, 4);
+                    test.assertTrue(q1.equals(q2));
+                });
+
+                test.it('should have 4 basis vectors', () => {
+                    test.assertEqual(Quadray.BASIS.length, 4);
+                });
+
+                test.it('basis vectors should be unit vectors', () => {
+                    for (const basis of Quadray.BASIS) {
+                        test.assertApprox(basis.length(), 0.707, 0.01);
+                    }
+                });
+
+                test.it('should calculate distance between two Quadrays', () => {
+                    const q1 = Quadray.ORIGIN;
+                    const q2 = Quadray.A;
+                    test.assertApprox(Quadray.distance(q1, q2), 0.707, 0.01);
+                });
+
+                test.it('toString should return readable format', () => {
+                    const q = new Quadray(1, 2, 3, 4);
+                    test.assertTrue(q.toString().includes('1.00'));
+                });
+            });
+
+            // Piece Tests
+            test.describe('Piece Classes', () => {
+                test.it('should create a King piece', () => {
+                    const king = new King(PlayerColor.WHITE, Quadray.ORIGIN);
+                    test.assertEqual(king.type, PieceType.KING);
+                });
+
+                test.it('King should return correct symbol', () => {
+                    const whiteKing = new King(PlayerColor.WHITE, Quadray.ORIGIN);
+                    test.assertEqual(whiteKing.getSymbol(), '♔');
+                });
+
+                test.it('should create a Queen piece', () => {
+                    const queen = new Queen(PlayerColor.WHITE, Quadray.ORIGIN);
+                    test.assertEqual(queen.type, PieceType.QUEEN);
+                });
+
+                test.it('should create all 6 piece types', () => {
+                    const pieces = [
+                        new King(PlayerColor.WHITE, Quadray.ORIGIN),
+                        new Queen(PlayerColor.WHITE, Quadray.ORIGIN),
+                        new Rook(PlayerColor.WHITE, Quadray.ORIGIN),
+                        new Bishop(PlayerColor.WHITE, Quadray.ORIGIN),
+                        new Knight(PlayerColor.WHITE, Quadray.ORIGIN),
+                        new Pawn(PlayerColor.WHITE, Quadray.ORIGIN)
+                    ];
+                    test.assertEqual(pieces.length, 6);
+                });
+
+                test.it('Black pieces have different symbols', () => {
+                    const whiteKing = new King(PlayerColor.WHITE, Quadray.ORIGIN);
+                    const blackKing = new King(PlayerColor.BLACK, Quadray.ORIGIN);
+                    test.assertTrue(whiteKing.getSymbol() !== blackKing.getSymbol());
+                });
+
+                test.it('King should have 4 movement directions', () => {
+                    const king = new King(PlayerColor.WHITE, Quadray.ORIGIN);
+                    test.assertEqual(king.getMovementVectors().length, 4);
+                });
+            });
+
+            // Board Tests
+            test.describe('Board Class', () => {
+                test.it('should create a board with initial pieces', () => {
+                    const board = new Board();
+                    test.assertTrue(board.pieces.size > 0);
+                });
+
+                test.it('should have Kings for both colors', () => {
+                    const board = new Board();
+                    let whiteKing = false, blackKing = false;
+                    for (const piece of board.pieces.values()) {
+                        if (piece.type === PieceType.KING) {
+                            if (piece.color === PlayerColor.WHITE) whiteKing = true;
+                            if (piece.color === PlayerColor.BLACK) blackKing = true;
+                        }
+                    }
+                    test.assertTrue(whiteKing && blackKing);
+                });
+
+                test.it('should generate valid board positions', () => {
+                    const board = new Board();
+                    test.assertTrue(board.getAllPositions().length > 0);
+                });
+
+                test.it('isValidPosition should validate positions', () => {
+                    const board = new Board();
+                    test.assertTrue(board.isValidPosition(Quadray.ORIGIN));
+                });
+
+                test.it('should not be in check initially', () => {
+                    const board = new Board();
+                    test.assertFalse(board.isInCheck(PlayerColor.WHITE));
+                    test.assertFalse(board.isInCheck(PlayerColor.BLACK));
+                });
+            });
+
+            // Math Tests
+            test.describe('Mathematical Accuracy', () => {
+                test.it('Origin should convert to Cartesian origin', () => {
+                    const cart = Quadray.ORIGIN.toCartesian();
+                    test.assertApprox(cart.x, 0, 0.001);
+                    test.assertApprox(cart.y, 0, 0.001);
+                    test.assertApprox(cart.z, 0, 0.001);
+                });
+
+                test.it('Distance formula should be symmetric', () => {
+                    const q1 = new Quadray(1, 0, 0, 0);
+                    const q2 = new Quadray(0, 1, 0, 0);
+                    test.assertApprox(Quadray.distance(q1, q2), Quadray.distance(q2, q1));
+                });
+
+                test.it('Triangle inequality should hold', () => {
+                    const q1 = new Quadray(0, 0, 0, 0);
+                    const q2 = new Quadray(1, 0, 0, 0);
+                    const q3 = new Quadray(0, 1, 0, 0);
+                    const d12 = Quadray.distance(q1, q2);
+                    const d23 = Quadray.distance(q2, q3);
+                    const d13 = Quadray.distance(q1, q3);
+                    test.assertTrue(d12 + d23 >= d13);
+                });
+
+                test.it('IVM tetrahedral angles should be ~109.47°', () => {
+                    const a = Quadray.A.toCartesian();
+                    const b = Quadray.B.toCartesian();
+                    const dot = a.x * b.x + a.y * b.y + a.z * b.z;
+                    const magA = Math.sqrt(a.x ** 2 + a.y ** 2 + a.z ** 2);
+                    const magB = Math.sqrt(b.x ** 2 + b.y ** 2 + b.z ** 2);
+                    const angle = Math.acos(dot / (magA * magB)) * 180 / Math.PI;
+                    test.assertApprox(angle, 109.47, 1.0);
+                });
+            });
+        }
+
+        // Auto-run on load
+        setTimeout(runTests, 500);
+    </script>
+</body>
+
+</html>

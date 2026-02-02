@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>4D Quadray Chess | Isotropic Vector Matrix</title>
+    <style>
+        /* ═══════════════════════════════════════════════════════════════════
+           4D QUADRAY CHESS - STUNNING DARK MODE INTERFACE
+           ═══════════════════════════════════════════════════════════════════ */
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #0a0a1a 0%, #1a1a2e 50%, #0a0a1a 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            color: #e0e0e0;
+            overflow-x: hidden;
+            overflow-y: auto;
+        }
+
+        /* ═══════════════════════════════════════════════════════════════════
+           HEADER
+           ═══════════════════════════════════════════════════════════════════ */
+
+        header {
+            width: 100%;
+            padding: 20px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(10, 10, 26, 0.8);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(100, 100, 150, 0.2);
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .logo-icon {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, #6366f1 0%, #9966ff 100%);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4);
+        }
+
+        .logo h1 {
+            font-size: 24px;
+            font-weight: 700;
+            background: linear-gradient(90deg, #fff 0%, #9966ff 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .logo span {
+            font-size: 12px;
+            color: #888;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+        }
+
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #6366f1 0%, #9966ff 100%);
+            color: white;
+            box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(99, 102, 241, 0.5);
+        }
+
+        .btn-secondary {
+            background: rgba(100, 100, 150, 0.2);
+            color: #ccc;
+            border: 1px solid rgba(100, 100, 150, 0.3);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(100, 100, 150, 0.4);
+        }
+
+        /* ═══════════════════════════════════════════════════════════════════
+           MAIN GAME AREA
+           ═══════════════════════════════════════════════════════════════════ */
+
+        main {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            padding: 20px 30px 40px;
+            gap: 30px;
+        }
+
+        .game-container {
+            position: relative;
+            flex-shrink: 0;
+        }
+
+        #gameCanvas {
+            border-radius: 20px;
+            box-shadow:
+                0 0 0 1px rgba(100, 100, 150, 0.2),
+                0 20px 60px rgba(0, 0, 0, 0.5),
+                inset 0 0 100px rgba(99, 102, 241, 0.05);
+            /* Prevent browser scroll/zoom gestures from interfering */
+            touch-action: none;
+        }
+
+        /* ═══════════════════════════════════════════════════════════════════
+           SIDEBAR INFO PANEL
+           ═══════════════════════════════════════════════════════════════════ */
+
+        .sidebar {
+            width: 280px;
+            background: rgba(20, 20, 40, 0.8);
+            backdrop-filter: blur(10px);
+            border-radius: 16px;
+            padding: 24px;
+            border: 1px solid rgba(100, 100, 150, 0.2);
+        }
+
+        .sidebar h2 {
+            font-size: 18px;
+            margin-bottom: 20px;
+            color: #9966ff;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .sidebar h2::before {
+            content: '';
+            width: 4px;
+            height: 20px;
+            background: linear-gradient(180deg, #9966ff 0%, #6366f1 100%);
+            border-radius: 2px;
+        }
+
+        .info-card {
+            background: rgba(30, 30, 50, 0.6);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+
+        .info-card h3 {
+            font-size: 14px;
+            color: #888;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .info-card p {
+            font-size: 13px;
+            line-height: 1.6;
+            color: #bbb;
+        }
+
+        .movement-table {
+            width: 100%;
+            font-size: 12px;
+        }
+
+        .movement-table td {
+            padding: 8px 4px;
+            border-bottom: 1px solid rgba(100, 100, 150, 0.1);
+        }
+
+        .movement-table td:first-child {
+            font-size: 20px;
+        }
+
+        .axis-legend {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 10px;
+        }
+
+        .axis-badge {
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .axis-a {
+            background: rgba(255, 100, 100, 0.2);
+            color: #ff6666;
+        }
+
+        .axis-b {
+            background: rgba(100, 255, 100, 0.2);
+            color: #66ff66;
+        }
+
+        .axis-c {
+            background: rgba(100, 100, 255, 0.2);
+            color: #6666ff;
+        }
+
+        .axis-d {
+            background: rgba(255, 255, 100, 0.2);
+            color: #ffff66;
+        }
+
+        /* ═══════════════════════════════════════════════════════════════════
+           FOOTER
+           ═══════════════════════════════════════════════════════════════════ */
+
+        footer {
+            width: 100%;
+            padding: 15px 40px;
+            text-align: center;
+            color: #555;
+            font-size: 12px;
+            background: rgba(10, 10, 26, 0.8);
+            border-top: 1px solid rgba(100, 100, 150, 0.2);
+        }
+
+        footer a {
+            color: #9966ff;
+            text-decoration: none;
+        }
+
+        /* ═══════════════════════════════════════════════════════════════════
+           ANIMATIONS
+           ═══════════════════════════════════════════════════════════════════ */
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 0.8;
+            }
+
+            50% {
+                opacity: 1;
+            }
+        }
+
+        @keyframes glow {
+
+            0%,
+            100% {
+                box-shadow: 0 0 20px rgba(99, 102, 241, 0.3);
+            }
+
+            50% {
+                box-shadow: 0 0 40px rgba(99, 102, 241, 0.5);
+            }
+        }
+
+        .logo-icon {
+            animation: glow 3s ease-in-out infinite;
+        }
+
+        /* Move History Entries */
+        .move-entry {
+            padding: 6px 0;
+            border-bottom: 1px solid rgba(100, 100, 150, 0.15);
+            margin-bottom: 4px;
+        }
+
+        .move-coords {
+            color: #9966ff;
+            font-size: 11px;
+        }
+
+        .move-distance {
+            color: #ffaa44;
+            font-size: 10px;
+            margin-top: 2px;
+        }
+
+        .move-capture {
+            color: #ff6666;
+            font-size: 10px;
+            margin-top: 2px;
+        }
+
+        /* Scrollbar styling */
+        #move-history-content::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        #move-history-content::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 2px;
+        }
+
+        #move-history-content::-webkit-scrollbar-thumb {
+            background: rgba(153, 102, 255, 0.5);
+            border-radius: 2px;
+        }
+
+        /* Move buttons styling */
+        .move-btn {
+            padding: 12px 8px;
+            border: 2px solid rgba(100, 100, 150, 0.3);
+            border-radius: 8px;
+            background: rgba(30, 30, 50, 0.6);
+            color: #666;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: not-allowed;
+            transition: all 0.2s ease;
+        }
+
+        .move-btn:not(:disabled) {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.3) 0%, rgba(153, 102, 255, 0.3) 100%);
+            border-color: rgba(153, 102, 255, 0.5);
+            color: #fff;
+            cursor: pointer;
+            box-shadow: 0 2px 10px rgba(99, 102, 241, 0.2);
+        }
+
+        .move-btn:not(:disabled):hover {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.5) 0%, rgba(153, 102, 255, 0.5) 100%);
+            border-color: rgba(153, 102, 255, 0.8);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4);
+        }
+
+        .move-btn:not(:disabled):active {
+            transform: translateY(0);
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <div class="logo">
+            <div class="logo-icon">♛</div>
+            <div>
+                <h1>4D Quadray Chess</h1>
+                <span>Isotropic Vector Matrix</span>
+            </div>
+        </div>
+        <div class="controls">
+            <button class="btn-secondary" onclick="game.randomMove()" title="Space/M key">🎲 Random</button>
+            <button class="btn-secondary" id="autoplay-btn" onclick="game.toggleAutoPlay()" title="A key">▶
+                Auto</button>
+            <button class="btn-secondary" onclick="game.exportGame()" title="S key">💾 Save</button>
+            <button class="btn-secondary" onclick="game.importGame()" title="L key">📂 Load</button>
+            <button class="btn-secondary" onclick="game.resetGame()" title="R key">↺ Reset</button>
+            <button class="btn-primary" onclick="showHelp()">? Help</button>
+        </div>
+    </header>
+
+    <main>
+        <div class="game-container">
+            <canvas id="gameCanvas" width="1000" height="750"></canvas>
+        </div>
+
+        <aside class="sidebar">
+            <h2>How to Play</h2>
+
+            <div class="info-card">
+                <h3>Controls</h3>
+                <p>
+                    <strong>Click</strong> a piece to select it.<br>
+                    <strong>Click</strong> or <strong>1-9</strong> to choose a move.<br>
+                    <strong>Drag</strong> to rotate the view.<br>
+                    <strong>Scroll</strong> or <strong>+/-</strong> to zoom.<br>
+                    <strong>Space/M</strong> random move.<br>
+                    <strong>A</strong> toggle auto-play.<br>
+                    <strong>S</strong> save game. <strong>L</strong> load game.<br>
+                    <strong>R</strong> to reset the game.
+                </p>
+            </div>
+
+            <div class="info-card">
+                <h3>Quadray Axes</h3>
+                <p>Pieces move along 4 tetrahedral directions:</p>
+                <div class="axis-legend">
+                    <span class="axis-badge axis-a">a</span>
+                    <span class="axis-badge axis-b">b</span>
+                    <span class="axis-badge axis-c">c</span>
+                    <span class="axis-badge axis-d">d</span>
+                </div>
+            </div>
+
+            <div class="info-card">
+                <h3>Piece Movement</h3>
+                <table class="movement-table">
+                    <tr>
+                        <td>♔</td>
+                        <td>King: 1 step in any direction</td>
+                    </tr>
+                    <tr>
+                        <td>♕</td>
+                        <td>Queen: Rook + Bishop combined</td>
+                    </tr>
+                    <tr>
+                        <td>♖</td>
+                        <td>Rook: Slide along one axis</td>
+                    </tr>
+                    <tr>
+                        <td>♗</td>
+                        <td>Bishop: Diagonal (2 axes)</td>
+                    </tr>
+                    <tr>
+                        <td>♘</td>
+                        <td>Knight: L-shape (2+1)</td>
+                    </tr>
+                    <tr>
+                        <td>♙</td>
+                        <td>Pawn: Forward, diagonal capture</td>
+                    </tr>
+                </table>
+            </div>
+
+            <div class="info-card" id="move-history">
+                <h3>📐 Move History (Quadray)</h3>
+                <div id="move-history-content"
+                    style="font-family: monospace; font-size: 11px; color: #9966ff; max-height: 120px; overflow-y: auto;">
+                    <p style="color: #666; font-style: italic;">Make a move to see coordinates...</p>
+                </div>
+            </div>
+
+            <div class="info-card" id="move-buttons-panel">
+                <h3>🎯 Available Moves</h3>
+                <div id="move-buttons"
+                    style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 12px;">
+                    <button class="move-btn" id="move-btn-1" onclick="game.selectMoveByNumber(1)" disabled>1</button>
+                    <button class="move-btn" id="move-btn-2" onclick="game.selectMoveByNumber(2)" disabled>2</button>
+                    <button class="move-btn" id="move-btn-3" onclick="game.selectMoveByNumber(3)" disabled>3</button>
+                    <button class="move-btn" id="move-btn-4" onclick="game.selectMoveByNumber(4)" disabled>4</button>
+                    <button class="move-btn" id="move-btn-5" onclick="game.selectMoveByNumber(5)" disabled>5</button>
+                    <button class="move-btn" id="move-btn-6" onclick="game.selectMoveByNumber(6)" disabled>6</button>
+                    <button class="move-btn" id="move-btn-7" onclick="game.selectMoveByNumber(7)" disabled>7</button>
+                    <button class="move-btn" id="move-btn-8" onclick="game.selectMoveByNumber(8)" disabled>8</button>
+                    <button class="move-btn" id="move-btn-9" onclick="game.selectMoveByNumber(9)" disabled>9</button>
+                </div>
+                <p id="move-hint" style="margin-top: 10px; font-size: 11px; color: #666; font-style: italic;">
+                    Select a piece to see moves
+                </p>
+            </div>
+
+            <div class="info-card"
+                style="background: rgba(100, 70, 200, 0.1); border: 1px solid rgba(153, 102, 255, 0.3);">
+                <h3 style="color: #9966ff;">Math Formulas</h3>
+                <p style="font-family: monospace; font-size: 10px; color: #aaa; line-height: 1.8;">
+                    <strong style="color: #66ddff;">Quadray → Cartesian:</strong><br>
+                    x = (a - b - c + d) / √2<br>
+                    y = (a - b + c - d) / √2<br>
+                    z = (a + b - c - d) / √2<br><br>
+                    <strong style="color: #ffaa44;">Distance:</strong><br>
+                    D = √((a² + b² + c² + d²) / 2)
+                </p>
+                <button class="btn-primary" onclick="runMathVerification()" style="margin-top: 12px; width: 100%;">
+                    🔬 Verify Math
+                </button>
+            </div>
+
+            <div class="info-card" id="verification-panel"
+                style="display: none; background: rgba(30, 50, 30, 0.6); border: 1px solid rgba(100, 200, 100, 0.3);">
+                <h3 style="color: #66ff66;">🔬 Geometry Verification</h3>
+                <div id="verification-results"
+                    style="font-family: monospace; font-size: 11px; color: #aaa; max-height: 200px; overflow-y: auto;">
+                </div>
+            </div>
+        </aside>
+    </main>
+
+    <footer>
+        4D Quadray Chess — Part of the <a href="../">QuadCraft</a> Project |
+        Using Isotropic Vector Matrix (IVM) Tetrahedral Geometry
+    </footer>
+
+    <!-- Game Scripts -->
+    <script src="js/quadray.js"></script>
+    <script src="js/pieces.js"></script>
+    <script src="js/board.js"></script>
+    <script src="js/renderer.js"></script>
+    <script src="js/storage.js"></script>
+    <script src="js/analysis.js"></script>
+    <script src="js/game.js"></script>
+    <script>
+        // Initialize game
+        const canvas = document.getElementById('gameCanvas');
+        const game = new Game(canvas);
+
+        function showHelp() {
+            alert(
+                '4D QUADRAY CHESS\n\n' +
+                'This chess variant uses 4D Quadray coordinates based on the\n' +
+                'Isotropic Vector Matrix (IVM) - a tetrahedral spatial structure.\n\n' +
+                'The four axes (a, b, c, d) emanate from the center of a\n' +
+                'regular tetrahedron to its vertices.\n\n' +
+                'The King can move exactly 1 unit in any of the 4 directions.\n' +
+                'Enjoy exploring 4D chess!'
+            );
+        }
+
+        function runMathVerification() {
+            const panel = document.getElementById('verification-panel');
+            const resultsDiv = document.getElementById('verification-results');
+
+            // Show the panel
+            panel.style.display = 'block';
+
+            // Run verification
+            const results = verifyGeometricIdentities();
+
+            // Build HTML output
+            let html = '';
+
+            for (const check of results.checks) {
+                const icon = check.passed ? '✅' : '❌';
+                const color = check.passed ? '#66ff66' : '#ff6666';
+                html += `<div style="margin-bottom: 10px; padding: 8px; background: rgba(0,0,0,0.2); border-radius: 6px;">`;
+                html += `<strong style="color: ${color};">${icon} ${check.name}</strong><br>`;
+                html += `<span style="color: #888; font-size: 10px;">${check.description}</span><br>`;
+                if (typeof check.actual === 'object') {
+                    html += `<span style="color: #66ddff;">Result: ${JSON.stringify(check.actual)}</span>`;
+                } else {
+                    html += `<span style="color: #66ddff;">Result: ${check.actual}</span>`;
+                }
+                html += `</div>`;
+            }
+
+            // Final summary
+            const summaryColor = results.allPassed ? '#66ff66' : '#ff6666';
+            const summaryIcon = results.allPassed ? '✅' : '❌';
+            html += `<div style="margin-top: 12px; padding: 10px; background: rgba(${results.allPassed ? '0,100,0' : '100,0,0'},0.3); border-radius: 8px; text-align: center;">`;
+            html += `<strong style="color: ${summaryColor}; font-size: 14px;">${summaryIcon} ${results.allPassed ? 'ALL CHECKS PASSED' : 'SOME CHECKS FAILED'}</strong>`;
+            html += `</div>`;
+
+            resultsDiv.innerHTML = html;
+
+            // Update panel border color based on result
+            panel.style.borderColor = results.allPassed ? 'rgba(100, 200, 100, 0.5)' : 'rgba(200, 100, 100, 0.5)';
+            panel.style.background = results.allPassed ? 'rgba(30, 50, 30, 0.6)' : 'rgba(50, 30, 30, 0.6)';
+        }
+
+        console.log('4D Quadray Chess initialized!');
+        console.log('Quadray basis vectors:', Quadray.BASIS.map(b => b.toString()));
+
+        // Run verification on startup (logged to console)
+        console.log('Running geometric verification on startup...');
+        verifyGeometricIdentities();
+    </script>
+</body>
+
+</html>

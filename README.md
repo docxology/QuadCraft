@@ -16,6 +16,13 @@ QuadCraft is an experimental voxel game that uses tetrahedral elements (instead 
 - **Quadray Visualization**: Toggle overlay to visualize the four-dimensional quadray coordinate system
 - **Wireframe Mode**: Enable wireframe rendering to better understand tetrahedral shapes
 
+### Subprojects
+
+| Project | Description | Status |
+|---------|-------------|--------|
+| 🎮 [4D Chess](4d_chess/) | 4D chess using Quadray coordinates | ✅ Complete |
+| 🌍 QuadCraft Core | Tetrahedral voxel engine | 🚧 In Progress |
+
 ### Pic
 
 <img src=<https://raw.githubusercontent.com/docxology/QuadCraft/refs/heads/main/src/js/experiments/QuadrayGrid_2025-5-26-307pET.png>><br>
@@ -127,20 +134,33 @@ Folder structure:
 
 ```text
 QuadCraft/
-├── src/
+├── src/                         # QuadCraft (IVM Minecraft) source code
 │   ├── core/                    # Core engine components
-│   │   ├── coordinate/          # Coordinate systems
+│   │   ├── coordinate/          # Quadray coordinate systems
 │   │   ├── world/               # World generation
 │   │   ├── physics/             # Physics engine
 │   │   └── entity/              # Entity management
 │   ├── render/                  # Rendering pipeline
-│   │   ├── mesh/                # Mesh generation
+│   │   ├── mesh/                # Tetrahedral mesh generation
 │   │   ├── shader/              # Shader programs
 │   │   └── texture/             # Texture management
-│   ├── ui/                      # User interface
-│   └── game/                    # Game-specific logic
-├── assets/                      # Game assets
-└── docs/                        # Documentation
+│   ├── browser/                 # Browser-based experiments
+│   ├── js/                      # JavaScript experiments
+│   ├── server/                  # Server components
+│   ├── game/                    # Game-specific logic
+│   └── main.cpp                 # C++ entry point
+├── docs/                        # Overall project documentation
+│   ├── architecture.md          # System architecture
+│   ├── quadray_coordinates.md   # Quadray math reference
+│   ├── development/             # Development guides
+│   ├── game_design/             # Game design documents
+│   ├── mathematics/             # Mathematical foundations
+│   └── reference/               # Reference materials
+├── 4d_chess/                    # 4D Chess subproject (complete)
+│   ├── js/                      # 7 JavaScript modules
+│   ├── docs/                    # 10 documentation files
+│   └── tests/                   # 83 passing tests
+└── assets/                      # Game assets
 ```
 
 ## Implementation Details
