@@ -922,6 +922,177 @@ test.describe('Geometric Verification Functions', () => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
+// FPVRENDERER TESTS
+// ═══════════════════════════════════════════════════════════════════════════
+
+// Note: FPVRenderer tests check coordinate math and state management.
+// Full rendering tests require a canvas (browser-only).
+
+test.describe('FPVRenderer Module', () => {
+
+    // Test helper: create mock canvas for Node.js testing
+    const createMockCanvas = () => ({
+        width: 240,
+        height: 180,
+        getContext: () => ({
+            fillRect: () => { },
+            beginPath: () => { },
+            arc: () => { },
+            fill: () => { },
+            stroke: () => { },
+            fillText: () => { },
+            moveTo: () => { },
+            lineTo: () => { },
+            createRadialGradient: () => ({
+                addColorStop: () => { }
+            }),
+            globalAlpha: 1,
+            fillStyle: '',
+            strokeStyle: '',
+            lineWidth: 1,
+            font: '',
+            textAlign: '',
+            textBaseline: ''
+        })
+    });
+
+    test.it('FPVRenderer should instantiate with canvas and board', () => {
+        // Skip in Node.js if FPVRenderer not available
+        if (typeof FPVRenderer === 'undefined') {
+            console.log('  ⏭️  Skipping FPVRenderer test (Node.js environment)');
+            return;
+        }
+        const mockCanvas = createMockCanvas();
+        const board = new Board(4);
+        const fpv = new FPVRenderer(mockCanvas, board);
+        test.assertTrue(fpv !== null, 'FPVRenderer should instantiate');
+        test.assertEqual(fpv.piece, null, 'Initial piece should be null');
+    });
+
+    test.it('FPVRenderer.setPiece should update current piece', () => {
+        if (typeof FPVRenderer === 'undefined') {
+            console.log('  ⏭️  Skipping FPVRenderer test (Node.js environment)');
+            return;
+        }
+        const mockCanvas = createMockCanvas();
+        const board = new Board(4);
+        const fpv = new FPVRenderer(mockCanvas, board);
+        const king = createPiece(PieceType.KING, PlayerColor.WHITE, new Quadray(1, 0, 0, 0));
+
+        fpv.setPiece(king);
+        test.assertEqual(fpv.piece, king, 'Piece should be set');
+
+        fpv.setPiece(null);
+        test.assertEqual(fpv.piece, null, 'Piece should be cleared');
+    });
+
+    test.it('FPVRenderer.setValidMoves should update move list', () => {
+        if (typeof FPVRenderer === 'undefined') {
+            console.log('  ⏭️  Skipping FPVRenderer test (Node.js environment)');
+            return;
+        }
+        const mockCanvas = createMockCanvas();
+        const board = new Board(4);
+        const fpv = new FPVRenderer(mockCanvas, board);
+
+        const moves = [new Quadray(1, 0, 0, 0), new Quadray(0, 1, 0, 0)];
+        fpv.setValidMoves(moves);
+        test.assertEqual(fpv.validMoves.length, 2, 'Should have 2 valid moves');
+
+        fpv.setValidMoves([]);
+        test.assertEqual(fpv.validMoves.length, 0, 'Moves should be cleared');
+    });
+
+    test.it('FPVRenderer.projectFromPiece should return centered coords when no piece', () => {
+        if (typeof FPVRenderer === 'undefined') {
+            console.log('  ⏭️  Skipping FPVRenderer test (Node.js environment)');
+            return;
+        }
+        const mockCanvas = createMockCanvas();
+        const board = new Board(4);
+        const fpv = new FPVRenderer(mockCanvas, board);
+
+        const result = fpv.projectFromPiece(new Quadray(0, 0, 0, 0));
+        test.assertEqual(result.x, 120, 'X should be canvas center');
+        test.assertEqual(result.y, 90, 'Y should be canvas center');
+        test.assertEqual(result.distance, 0, 'Distance should be 0');
+    });
+
+    test.it('FPVRenderer.projectFromPiece should calculate relative position', () => {
+        if (typeof FPVRenderer === 'undefined') {
+            console.log('  ⏭️  Skipping FPVRenderer test (Node.js environment)');
+            return;
+        }
+        const mockCanvas = createMockCanvas();
+        const board = new Board(4);
+        const fpv = new FPVRenderer(mockCanvas, board);
+
+        const piece = createPiece(PieceType.KING, PlayerColor.WHITE, new Quadray(1, 0, 0, 0));
+        fpv.setPiece(piece);
+
+        // Project origin from piece's perspective
+        const result = fpv.projectFromPiece(Quadray.ORIGIN);
+        test.assertTrue(result.distance > 0, 'Distance from piece to origin should be positive');
+    });
+
+    test.it('FPVRenderer should have correct color configuration', () => {
+        if (typeof FPVRenderer === 'undefined') {
+            console.log('  ⏭️  Skipping FPVRenderer test (Node.js environment)');
+            return;
+        }
+        const mockCanvas = createMockCanvas();
+        const board = new Board(4);
+        const fpv = new FPVRenderer(mockCanvas, board);
+
+        test.assertTrue('background' in fpv.colors, 'Should have background color');
+        test.assertTrue('validMove' in fpv.colors, 'Should have validMove color');
+        test.assertTrue('enemyPiece' in fpv.colors, 'Should have enemyPiece color');
+        test.assertTrue('friendlyPiece' in fpv.colors, 'Should have friendlyPiece color');
+    });
+
+    test.it('FPVRenderer.render should not throw when no piece selected', () => {
+        if (typeof FPVRenderer === 'undefined') {
+            console.log('  ⏭️  Skipping FPVRenderer test (Node.js environment)');
+            return;
+        }
+        const mockCanvas = createMockCanvas();
+        const board = new Board(4);
+        const fpv = new FPVRenderer(mockCanvas, board);
+
+        // Should not throw
+        let threw = false;
+        try {
+            fpv.render();
+        } catch (e) {
+            threw = true;
+        }
+        test.assertFalse(threw, 'render() should not throw when piece is null');
+    });
+
+    test.it('FPVRenderer.render should not throw when piece selected', () => {
+        if (typeof FPVRenderer === 'undefined') {
+            console.log('  ⏭️  Skipping FPVRenderer test (Node.js environment)');
+            return;
+        }
+        const mockCanvas = createMockCanvas();
+        const board = new Board(4);
+        const fpv = new FPVRenderer(mockCanvas, board);
+
+        const king = createPiece(PieceType.KING, PlayerColor.WHITE, new Quadray(1, 0, 0, 0));
+        fpv.setPiece(king);
+        fpv.setValidMoves([new Quadray(2, 0, 0, 0)]);
+
+        let threw = false;
+        try {
+            fpv.render();
+        } catch (e) {
+            threw = true;
+        }
+        test.assertFalse(threw, 'render() should not throw with piece selected');
+    });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
 // RUN ALL TESTS
 // ═══════════════════════════════════════════════════════════════════════════
 

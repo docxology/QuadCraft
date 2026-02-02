@@ -386,6 +386,16 @@
     <main>
         <div class="game-container">
             <canvas id="gameCanvas" width="1000" height="750"></canvas>
+
+            <!-- First-Person View Panel (same size as main canvas, below it) -->
+            <div id="fpv-panel"
+                style="margin-top: 20px; background: rgba(5, 5, 16, 0.9); border: 1px solid rgba(100, 150, 255, 0.3); border-radius: 20px; padding: 15px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);">
+                <h3 style="color: #66ddff; margin-bottom: 10px; font-size: 16px;">👁️ First-Person Piece View <span
+                        style="font-size: 12px; color: #555; font-weight: normal;">(drag to look around, scroll to
+                        zoom)</span></h3>
+                <canvas id="fpvCanvas" width="1000" height="750"
+                    style="width: 100%; border-radius: 12px; cursor: default; box-shadow: 0 0 0 1px rgba(100, 100, 150, 0.2), inset 0 0 100px rgba(99, 102, 241, 0.05);"></canvas>
+            </div>
         </div>
 
         <aside class="sidebar">
@@ -445,6 +455,8 @@
                     </tr>
                 </table>
             </div>
+
+
 
             <div class="info-card" id="move-history">
                 <h3>📐 Move History (Quadray)</h3>
@@ -509,13 +521,15 @@
     <script src="js/pieces.js"></script>
     <script src="js/board.js"></script>
     <script src="js/renderer.js"></script>
+    <script src="js/fpvRenderer.js"></script>
     <script src="js/storage.js"></script>
     <script src="js/analysis.js"></script>
     <script src="js/game.js"></script>
     <script>
         // Initialize game
         const canvas = document.getElementById('gameCanvas');
-        const game = new Game(canvas);
+        const fpvCanvas = document.getElementById('fpvCanvas');
+        const game = new Game(canvas, fpvCanvas);
 
         function showHelp() {
             alert(

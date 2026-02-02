@@ -24,12 +24,16 @@ const DEFAULT_CONFIG = {
 
 class Game {
     /**
-     * @param {HTMLCanvasElement} canvas
+     * @param {HTMLCanvasElement} canvas - Main game canvas
+     * @param {HTMLCanvasElement} fpvCanvas - First-person view canvas (optional)
      */
-    constructor(canvas) {
+    constructor(canvas, fpvCanvas = null) {
         this.board = new Board(4);
         this.renderer = new Renderer(canvas, this.board);
         this.canvas = canvas;
+
+        // First-person view renderer (optional)
+        this.fpvRenderer = fpvCanvas ? new FPVRenderer(fpvCanvas, this.board) : null;
 
         this.currentPlayer = PlayerColor.WHITE;
         this.selectedPiece = null;
@@ -220,6 +224,12 @@ class Game {
         this.renderer.selectedPiece = piece;
         this.renderer.validMoves = piece.getValidMoves(this.board);
 
+        // Update FPV renderer
+        if (this.fpvRenderer) {
+            this.fpvRenderer.setPiece(piece);
+            this.fpvRenderer.setValidMoves(this.renderer.validMoves);
+        }
+
         console.log(`Selected ${piece.color} ${piece.type} at ${piece.position.toString()}`);
         console.log(`Valid moves: ${this.renderer.validMoves.length}`);
 
@@ -234,6 +244,13 @@ class Game {
         this.selectedPiece = null;
         this.renderer.selectedPiece = null;
         this.renderer.validMoves = [];
+
+        // Clear FPV renderer
+        if (this.fpvRenderer) {
+            this.fpvRenderer.setPiece(null);
+            this.fpvRenderer.setValidMoves([]);
+        }
+
         this.updateMoveButtons();
     }
 
@@ -389,6 +406,12 @@ class Game {
         this.board = new Board(4);
         this.board.setupInitialPosition();
         this.renderer.board = this.board;
+
+        // Sync FPV renderer with new board
+        if (this.fpvRenderer) {
+            this.fpvRenderer.board = this.board;
+        }
+
         this.currentPlayer = PlayerColor.WHITE;
         this.selectedPiece = null;
         this.gameOver = false;
@@ -403,6 +426,12 @@ class Game {
     startGameLoop() {
         const loop = () => {
             this.renderer.render(this.currentPlayer);
+
+            // Render FPV if available
+            if (this.fpvRenderer) {
+                this.fpvRenderer.render();
+            }
+
             requestAnimationFrame(loop);
         };
         loop();
