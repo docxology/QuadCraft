@@ -4,6 +4,9 @@
 
 This document describes the implementation of the quadray coordinate system in QuadCraft. Quadray coordinates are a tetrahedral-based coordinate system that provide an alternative to traditional Cartesian coordinates for representing positions in 3D space.
 
+> [!NOTE]
+> For the **detailed mathematical treatment** with basis vector derivations, hashing strategy, and worked examples, see [mathematics/quadray_coordinates.md](mathematics/quadray_coordinates.md). For IVM volume ratios and Synergetics concepts, see [mathematics/ivm_synergetics.md](mathematics/ivm_synergetics.md).
+
 ## Mathematical Foundation
 
 Quadray coordinates utilize four basis vectors emanating from the center of a regular tetrahedron to its vertices. These vectors are typically denoted as (1,0,0,0), (0,1,0,0), (0,0,1,0), and (0,0,0,1).
@@ -161,8 +164,30 @@ The S3 constant (approximately 1.06066 or precisely √(9/8)) is used for volume
 constexpr float S3 = 1.0606601717798212f; // sqrt(9/8)
 ```
 
-This constant represents the volumetric ratio between equivalent shapes measured in the two coordinate systems.
+This constant represents the volumetric ratio between equivalent shapes measured in the two coordinate systems. See [IVM & Synergetics](mathematics/ivm_synergetics.md) for the full derivation and the concentric hierarchy of volumes.
+
+## IVM & Synergetics Connection
+
+Quadray coordinates are intimately connected to R. Buckminster Fuller's **Isotropic Vector Matrix (IVM)** and the **Synergetics** system of mensuration:
+
+- The IVM is a space frame of alternating tetrahedra and octahedra — exactly the grid QuadCraft uses
+- In Synergetics, the **tetrahedron** (not the cube) is the unit of volume: `tetravolume = 1`
+- Key volume ratios used across all 12 QuadCraft games:
+
+| Shape | Tetravolumes | Relationship |
+|-------|-------------|-------------|
+| Tetrahedron | 1 | Unit volume |
+| Cube | 3 | Edge = 1 |
+| Octahedron | 4 | Dual of cube |
+| Rhombic Dodecahedron | 6 | Domain of a sphere |
+| Cuboctahedron (VE) | 20 | 12 vertices = IVM nodes |
+
+These ratios are implemented in `games/4d_generic/js/quadray.js` as `IVM.VOLUME_RATIOS` and validated by the Synergetics test suite.
+
+## Usage Across Games
+
+All 12 standalone games in `games/` carry their own copy of `quadray.js`, which implements the coordinate conversions described above. Games like **4D Doom** and **4D Tower Defense** additionally use IVM cell parity (tetra vs. octa) for gameplay mechanics.
 
 ## Conclusion
 
-The implementation of quadray coordinates in QuadCraft provides a solid foundation for the tetrahedral-based voxel system. The coordinate conversion methods, normalization techniques, and distance calculations enable efficient operations in tetrahedral space, supporting the unique geometric features of the game. 
+The implementation of quadray coordinates in QuadCraft provides a solid foundation for the tetrahedral-based voxel system. The coordinate conversion methods, normalization techniques, and distance calculations enable efficient operations in tetrahedral space, supporting the unique geometric features of the game and all 12 browser games built on this foundation.

@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>4D Asteroids — QuadCraft</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../4d_generic/hud-style.css">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+    <header>
+        <h1>4D Asteroids</h1><span class="badge">Quadray</span><span class="badge badge-synergetics">Synergetics</span>
+    </header>
+    <div class="game-area">
+        <canvas id="gameCanvas" width="740" height="560"></canvas>
+        <div class="sidebar">
+            <div class="panel">
+                <h3>Score</h3>
+                <div class="stat" id="scoreLabel">0</div>
+            </div>
+            <div class="panel">
+                <h3>Lives</h3>
+                <div class="stat" id="livesLabel">♦♦♦</div>
+            </div>
+            <div class="panel">
+                <h3>Controls</h3>
+                <ul>
+                    <li>WASD — thrust XZ</li>
+                    <li>Q/E — thrust YW</li>
+                    <li>Space — fire</li>
+                    <li>P — pause</li>
+                    <li>R — reset</li>
+                    <li>Shift+drag — rotate view</li>
+                </ul>
+            </div>
+            <div class="panel">
+                <h3>Synergetics</h3>
+                <div class="synergetics-info">
+                    <div class="synergetics-row"><span>Ship
+                            Position</span><span id="syShipPos" class="synergetics-value">--</span>
+                    </div>
+                    <div class="synergetics-row"><span>Field
+                            Tetravolume</span><span id="syFieldTV" class="synergetics-value">--</span>
+                    </div>
+                    <div class="synergetics-row"><span>Asteroid
+                            Spread</span><span id="sySpread" class="synergetics-value">--</span></div>
+                    <div class="synergetics-row"><span>Nearest
+                            Asteroid</span><span id="syNearest" class="synergetics-value">--</span>
+                    </div>
+                </div>
+            </div>
+            <div class="panel">
+                <h3>Math</h3>
+                <p class="math-info">
+                    Q(a,b,c,d) → xyz:<br>x=(a-b-c+d)/√2<br>y=(a-b+c-d)/√2<br>z=(a+b-c-d)/√2<br>
+                    V_tetra = V_xyz × S3<br>S3 = √(9/8) ≈ 1.0607<br>T:O:C = 1:4:20 TV
+                </p>
+                <button id="verifyBtn" class="btn-verify">Verify Math</button>
+                <div id="verifyResult" class="verify-result"></div>
+            </div>
+            <button id="resetBtn">↻ New Game</button>
+        </div>
+    </div>
+
+    <div class="hud" id="hud">4D Asteroids — WASD to thrust, Space to fire</div>
+
+    <!-- Shared QuadCraft Modules (all 12) -->
+    <script src="../4d_generic/quadray.js"></script>
+    <script src="../4d_generic/camera.js"></script>
+    <script src="../4d_generic/projection.js"></script>
+    <script src="../4d_generic/zoom.js"></script>
+    <script src="../4d_generic/synergetics.js"></script>
+    <script src="../4d_generic/game_loop.js"></script>
+    <script src="../4d_generic/input_controller.js"></script>
+    <script src="../4d_generic/grid_utils.js"></script>
+    <script src="../4d_generic/base_renderer.js"></script>
+    <script src="../4d_generic/base_game.js"></script>
+    <script src="../4d_generic/hud.js"></script>
+    <script src="../4d_generic/score_manager.js"></script>
+
+    <!-- Game-specific modules -->
+    <script src="js/asteroids_board.js"></script>
+    <script src="js/asteroids_renderer.js"></script>
+    <script src="js/asteroids_game.js"></script>
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const hudEl = document.getElementById('hud');
+        const game = new AsteroidsGame(canvas, hudEl);
+        game.init();
+
+        document.getElementById('resetBtn').addEventListener('click', () => game.reset());
+
+        // Update sidebar panels periodically
+        setInterval(() => {
+            const b = game.board;
+            const meta = b.getMetadata();
+
+            document.getElementById('scoreLabel').textContent = game.scoring.score;
+            document.getElementById('livesLabel').textContent = '♦'.repeat(game.scoring.lives);
+
+            const ship = b.entities.find(e => e.type === 'ship' && e.alive);
+            const asteroids = b.entities.filter(e => e.type === 'asteroid' && e.alive);
+
+            if (ship) {
+                const sq = ship.toQuadray();
+                document.getElementById('syShipPos').textContent =
+                    `(${sq.a.toFixed(1)},${sq.b.toFixed(1)},${sq.c.toFixed(1)},${sq.d.toFixed(1)})`;
+                if (asteroids.length > 0) {
+                    let nearest = Infinity;
+                    for (const a of asteroids) {
+                        nearest = Math.min(nearest, Quadray.distance(sq, a.toQuadray()));
+                    }
+                    document.getElementById('syNearest').textContent = nearest.toFixed(2);
+                }
+            }
+
+            document.getElementById('syFieldTV').textContent =
+                (asteroids.length * (SYNERGETICS?.S3 ?? 1.0607)).toFixed(1);
+
+            if (asteroids.length >= 2) {
+                let total = 0, count = 0;
+                for (let i = 0; i < Math.min(asteroids.length, 20); i++) {
+                    for (let j = i + 1; j < Math.min(asteroids.length, 20); j++) {
+                        total += Quadray.distance(asteroids[i].toQuadray(), asteroids[j].toQuadray());
+                        count++;
+                    }
+                }
+                document.getElementById('sySpread').textContent =
+                    count > 0 ? (total / count).toFixed(2) : '--';
+            }
+        }, 200);
+
+        document.getElementById('verifyBtn').addEventListener('click', () => {
+            const r = verifyGeometricIdentities();
+            document.getElementById('verifyResult').innerHTML =
+                r.checks.map(c => `${c.passed ? '✅' : '❌'} ${c.name}`).join('<br>');
+            document.getElementById('verifyResult').style.color =
+                r.allPassed ? '#44ff44' : '#ff4444';
+        });
+    </script>
+</body>
+
+</html>

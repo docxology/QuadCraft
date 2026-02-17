@@ -1,49 +1,58 @@
 # Game Design Documentation
 
-Gameplay mechanics and design documentation for QuadCraft.
+Gameplay mechanics, world generation, block system, and controls documentation for QuadCraft.
 
 ## Contents
 
 | Document | Description |
-|----------|-------------|
-| [gameplay_overview.md](gameplay_overview.md) | Core gameplay mechanics and modes |
-| [world_generation.md](world_generation.md) | Procedural terrain and structures |
-| [block_system.md](block_system.md) | Tetrahedral block system |
-| [controls_and_navigation.md](controls_and_navigation.md) | Player controls |
-| [advanced_building_techniques.md](advanced_building_techniques.md) | Advanced building guide |
+| --- | --- |
+| [gameplay_overview.md](gameplay_overview.md) | Core gameplay mechanics, modes, and player experience |
+| [world_generation.md](world_generation.md) | Procedural terrain, biomes, and structure generation |
+| [block_system.md](block_system.md) | Tetrahedral block types, placement, and material properties |
+| [controls_and_navigation.md](controls_and_navigation.md) | Keyboard/mouse controls, camera movement |
+| [advanced_building_techniques.md](advanced_building_techniques.md) | Structural principles, patterns, and building tips |
 
-## Quick Overview
+## Design in Practice: The 12 Games
 
-### Gameplay
+These design principles come to life in the 12 standalone browser games. Each applies tetrahedral geometry differently:
 
-QuadCraft offers a unique voxel experience using tetrahedral geometry:
+| Design Concept | Exemplified By |
+| -------------- | -------------- |
+| Block placement/removal | ⛏️ 4D Minecraft |
+| Tetrahedral movement | 🚀 4D Asteroids, 🐜 4D SimAnt |
+| Turn-based strategy in 4D | ♟️ 4D Chess, 🏁 4D Checkers, ⚫ 4D Reversi |
+| Resource economy | 🏝️ 4D Catan, 🏰 4D Tower Defense |
+| FPS combat mechanics | 👹 4D Doom |
+| Cellular automata | 🧬 4D Life |
+| Pattern matching | 🀄 4D Mahjong |
+| Dice-driven movement | 🎲 4D Backgammon |
 
-- Explore procedurally generated worlds
-- Build with tetrahedral blocks
-- Navigate using quadray coordinates
+See [Games Overview](../games.md) for the full portfolio, launch instructions, and architecture.
 
-### World Generation
+## Quick Reference
 
-Worlds are procedurally generated with:
+### Core Controls
 
-- Mountains and valleys
-- Caves and underground features
-- Ore deposits
-- Water bodies
+| Key | Action |
+| --- | ------ |
+| WASD | Movement |
+| Mouse | Look around |
+| Left Click | Remove block |
+| Right Click | Place block |
+| 1-9 | Select block type |
+| F1 | Toggle debug info |
+| F2 | Toggle quadray grid |
+| Esc | Menu |
 
-### Block System
+### Block Types
 
-Three shape types fill 3D space:
+| Type | Shape | Properties |
+| ---- | ----- | ---------- |
+| Type Z | Upward tetrahedron | Standard orientation |
+| Type C | Downward tetrahedron | Inverted orientation |
 
-- Octahedrons
-- Tetrahedrons Type Z
-- Tetrahedrons Type C
+## Cross-References
 
-### Controls
-
-12-direction navigation system:
-
-- Forward: A, S, D, F, G, H
-- Backward: Q, W, E, R, T, Y
-
-Plus camera controls, shape placement, and UI interactions.
+- [Architecture](../architecture.md) — system design overview
+- [Mathematics](../mathematics/README.md) — coordinate system and geometry
+- [Games Portfolio](../games.md) — live implementations of these designs

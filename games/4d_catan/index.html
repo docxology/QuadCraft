@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <title>4D Catan -- QuadCraft</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../4d_generic/hud-style.css">
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0
+        }
+
+        :root {
+            --bg: #0a1520;
+            --surface: #0f1a2a;
+            --border: #1a3050;
+            --text: #d0e0f0;
+            --accent: #FFD54F
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Outfit', system-ui, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh
+        }
+
+        header {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            padding: 18px;
+            background: linear-gradient(135deg, var(--surface), #081018);
+            border-bottom: 1px solid var(--border)
+        }
+
+        header h1 {
+            font-size: 22px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #FFD54F, #FFA726);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent
+        }
+
+        .badge {
+            font-size: 11px;
+            padding: 3px 8px;
+            border-radius: 6px;
+            background: var(--accent);
+            color: #000;
+            font-weight: 600
+        }
+
+        .game-area {
+            display: flex;
+            gap: 20px;
+            padding: 24px;
+            max-width: 1200px;
+            width: 100%;
+            flex-wrap: wrap;
+            justify-content: center
+        }
+
+        canvas {
+            border-radius: 12px;
+            border: 1px solid var(--border)
+        }
+
+        .sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            min-width: 260px;
+            max-width: 320px
+        }
+
+        .panel {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 12px 14px
+        }
+
+        .panel h3 {
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #668;
+            margin-bottom: 8px
+        }
+
+        .stat {
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--accent)
+        }
+
+        button {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            color: var(--text);
+            padding: 8px 14px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 13px;
+            font-weight: 600;
+            transition: all 0.15s
+        }
+
+        button:hover:not(:disabled) {
+            background: var(--accent);
+            color: #000
+        }
+
+        button:disabled {
+            opacity: 0.35;
+            cursor: not-allowed
+        }
+
+        .btn-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: 6px
+        }
+
+        .btn-primary {
+            background: #1a5a2a;
+            border-color: #2a8a3a
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            background: #2a8a3a
+        }
+
+        .btn-danger {
+            background: #5a1a1a;
+            border-color: #8a2a2a
+        }
+
+        .btn-danger:hover:not(:disabled) {
+            background: #8a2a2a
+        }
+
+        .btn-trade {
+            background: #1a3a5a;
+            border-color: #2a5a8a
+        }
+
+        .btn-trade:hover:not(:disabled) {
+            background: #2a5a8a
+        }
+
+        .score-line {
+            font-size: 13px;
+            line-height: 1.6;
+            color: #99aabb
+        }
+
+        .score-line strong {
+            color: var(--accent)
+        }
+
+        #logArea {
+            font-family: monospace;
+            font-size: 11px;
+            color: #889;
+            white-space: pre-wrap;
+            max-height: 100px;
+            overflow-y: auto;
+            line-height: 1.5
+        }
+
+        .card-btn {
+            font-size: 11px;
+            padding: 4px 8px;
+            margin: 2px;
+            background: #2a1a4a;
+            border-color: #4a2a8a
+        }
+
+        .card-btn:hover {
+            background: #6a3aaa;
+            color: #fff
+        }
+
+        .dice-display {
+            font-size: 20px;
+            font-weight: 700;
+            color: #fff;
+            text-align: center;
+            padding: 4px
+        }
+
+        .ai-status {
+            font-size: 12px;
+            color: #4488ff;
+            line-height: 1.5
+        }
+
+        .trade-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 4px;
+            margin-top: 6px
+        }
+
+        .trade-grid select {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            color: var(--text);
+            padding: 4px;
+            border-radius: 4px;
+            font-family: inherit;
+            font-size: 12px
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>4D Catan</h1><span class="badge">Quadray</span><span class="badge" style="background:#664422">Synergetics</span>
+    </header>
+    <div class="game-area">
+        <canvas id="gameCanvas" width="740" height="560"></canvas>
+        <div class="sidebar">
+            <!-- Turn & Dice -->
+            <div class="panel">
+                <h3>Turn</h3>
+                <div class="stat" id="turnLabel">Red | Phase: ROLL</div>
+                <div class="dice-display" id="diceDisplay">? + ? = ?</div>
+                <div class="btn-row">
+                    <button id="rollBtn" class="btn-primary" onclick="game.rollDice()">Roll Dice</button>
+                    <button id="endTurnBtn" class="btn-danger" onclick="game.endTurn()" disabled>End Turn</button>
+                </div>
+            </div>
+
+            <!-- Resources -->
+            <div class="panel">
+                <h3>Your Resources</h3>
+                <div class="stat" id="resLabel">-</div>
+            </div>
+
+            <!-- Build -->
+            <div class="panel">
+                <h3>Build</h3>
+                <div class="btn-row">
+                    <button onclick="game.startBuild('settlement')" title="1 Wood + 1 Brick + 1 Wheat + 1 Sheep">Settlement</button>
+                    <button onclick="game.startBuild('road')" title="1 Wood + 1 Brick">Road</button>
+                    <button onclick="game.startBuild('city')" title="3 Ore + 2 Wheat">City</button>
+                    <button onclick="game.buyDevCard()" title="1 Ore + 1 Wheat + 1 Sheep">Dev Card</button>
+                </div>
+                <div style="font-size:11px;color:#556;margin-top:6px">
+                    Costs: Road=W+B | Settle=W+B+Wh+S | City=3O+2Wh | Card=O+Wh+S
+                </div>
+            </div>
+
+            <!-- Trade -->
+            <div class="panel">
+                <h3>Bank Trade (4:1)</h3>
+                <div class="trade-grid">
+                    <select id="tradeGive">
+                        <option value="wood">Give: Wood</option>
+                        <option value="brick">Give: Brick</option>
+                        <option value="wheat">Give: Wheat</option>
+                        <option value="sheep">Give: Sheep</option>
+                        <option value="ore">Give: Ore</option>
+                    </select>
+                    <select id="tradeReceive">
+                        <option value="wood">Get: Wood</option>
+                        <option value="brick">Get: Brick</option>
+                        <option value="wheat">Get: Wheat</option>
+                        <option value="sheep">Get: Sheep</option>
+                        <option value="ore">Get: Ore</option>
+                    </select>
+                </div>
+                <div class="btn-row">
+                    <button class="btn-trade" onclick="game.bankTrade(document.getElementById('tradeGive').value, document.getElementById('tradeReceive').value)">Trade</button>
+                </div>
+            </div>
+
+            <!-- Dev Cards -->
+            <div class="panel">
+                <h3>Dev Cards <span id="deckCount" style="color:#668;font-size:11px">25 cards left</span></h3>
+                <div id="cardsHand"><span style="color:#668">No cards</span></div>
+            </div>
+
+            <!-- Score -->
+            <div class="panel">
+                <h3>Score (You - Red)</h3>
+                <div class="score-line" id="scoreBreakdown">
+                    Settlements: 0 (0VP)<br>
+                    Cities: 0 (0VP)<br>
+                    Longest Road: No<br>
+                    Largest Army: No<br>
+                    VP Cards: 0<br>
+                    <strong>Total: 0 VP</strong>
+                </div>
+            </div>
+
+            <!-- AI Status -->
+            <div class="panel">
+                <h3>Opponent (Blue - AI)</h3>
+                <div class="ai-status" id="aiStatus">VP: 0 | Knights: 0 | Roads: 0 | Settlements: 0</div>
+            </div>
+
+            <!-- Game Log -->
+            <div class="panel">
+                <h3>Log</h3>
+                <div id="logArea">Game started. Roll dice to begin.</div>
+            </div>
+
+            <div class="panel">
+                <h3>Synergetics</h3>
+                <div class="score-line" style="font-size:12px;line-height:1.8">
+                    <div style="display:flex;justify-content:space-between"><span>Island TV</span><span id="syTV" style="font-weight:700;color:var(--accent)">--</span></div>
+                    <div style="display:flex;justify-content:space-between"><span>Settlement Spread</span><span id="sySpread" style="font-weight:700;color:var(--accent)">--</span></div>
+                    <div style="display:flex;justify-content:space-between"><span>Road Network TV</span><span id="syRoadTV" style="font-weight:700;color:var(--accent)">--</span></div>
+                    <div style="display:flex;justify-content:space-between"><span>Center of Mass</span><span id="syCom" style="font-weight:700;color:var(--accent)">--</span></div>
+                </div>
+            </div>
+            <div class="panel">
+                <h3>Math</h3>
+                <p style="font-family:monospace;font-size:11px;color:#668;line-height:1.8">
+                    Q(a,b,c,d) &rarr; xyz:<br>x=(a-b-c+d)/&radic;2<br>y=(a-b+c-d)/&radic;2<br>z=(a+b-c-d)/&radic;2<br>
+                    V_tetra = V_xyz &times; S3<br>S3 = &radic;(9/8) &asymp; 1.0607<br>T:O:C = 1:4:20 TV
+                </p>
+                <button id="verifyBtn" style="margin-top:8px;width:100%">Verify Math</button>
+                <div id="verifyResult" style="font-size:11px;color:#668;margin-top:6px"></div>
+            </div>
+
+            <button id="resetBtn">New Game</button>
+        </div>
+    </div>
+
+    <div class="hud" id="hud" style="margin-top:10px;font-family:monospace;font-size:0.85rem;color:#94a3b8;text-align:center;padding:10px 20px;background:rgba(15,23,42,0.6);border:1px solid rgba(255,255,255,0.06);border-radius:8px;min-width:400px;transition:color 0.3s ease;">Red | Phase: ROLL | Click Roll Dice to begin</div>
+
+    <!-- Scripts: dependencies first, then modules, then game controller -->
+    <!-- Shared QuadCraft Modules (ALL 12) -->
+    <script src="../4d_generic/quadray.js"></script>
+    <script src="../4d_generic/camera.js"></script>
+    <script src="../4d_generic/projection.js"></script>
+    <script src="../4d_generic/zoom.js"></script>
+    <script src="../4d_generic/synergetics.js"></script>
+    <script src="../4d_generic/game_loop.js"></script>
+    <script src="../4d_generic/input_controller.js"></script>
+    <script src="../4d_generic/grid_utils.js"></script>
+    <script src="../4d_generic/base_renderer.js"></script>
+    <script src="../4d_generic/base_game.js"></script>
+    <script src="../4d_generic/hud.js"></script>
+    <script src="../4d_generic/score_manager.js"></script>
+
+    <!-- Game-specific modules -->
+    <script src="js/catan_board.js"></script>
+    <script src="js/catan_cards.js"></script>
+    <script src="js/catan_trading.js"></script>
+    <script src="js/catan_robber.js"></script>
+    <script src="js/catan_renderer.js"></script>
+    <script src="js/catan_ai.js"></script>
+    <script src="js/catan_game.js"></script>
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const hudEl = document.getElementById('hud');
+        const game = new CatanGame(canvas, hudEl);
+        game.init();
+        game.updateUI();
+
+        document.getElementById('resetBtn').addEventListener('click', () => game.reset());
+
+        // Update sidebar synergetics panels periodically
+        function updateSynergetics() {
+            const b = game.board, p = b.players[0];
+            document.getElementById('syTV').textContent = (b.tiles.length * SYNERGETICS.S3).toFixed(1);
+            if (p.settlements.length >= 2) {
+                let total = 0, count = 0;
+                for (let i = 0; i < p.settlements.length; i++) {
+                    for (let j = i + 1; j < p.settlements.length; j++) {
+                        const q1 = new Quadray(p.settlements[i].a, p.settlements[i].b, p.settlements[i].c||0, p.settlements[i].d||0);
+                        const q2 = new Quadray(p.settlements[j].a, p.settlements[j].b, p.settlements[j].c||0, p.settlements[j].d||0);
+                        total += Quadray.distance(q1, q2); count++;
+                    }
+                }
+                document.getElementById('sySpread').textContent = (total / count).toFixed(2);
+            }
+            let roadTV = 0;
+            for (const rd of p.roads) {
+                const q1 = new Quadray(rd.from.a, rd.from.b, rd.from.c||0, rd.from.d||0);
+                const q2 = new Quadray(rd.to.a, rd.to.b, rd.to.c||0, rd.to.d||0);
+                roadTV += Quadray.distance(q1, q2) * SYNERGETICS.S3;
+            }
+            document.getElementById('syRoadTV').textContent = roadTV.toFixed(1);
+            let sa = 0, sb = 0, sc = 0, sd = 0;
+            for (const t of b.tiles) { sa += t.pos.a; sb += t.pos.b; sc += (t.pos.c||0); sd += (t.pos.d||0); }
+            const n = b.tiles.length;
+            document.getElementById('syCom').textContent = `(${(sa/n).toFixed(1)},${(sb/n).toFixed(1)},${(sc/n).toFixed(1)},${(sd/n).toFixed(1)})`;
+        }
+        // Use setInterval instead of rAF to match connect_four pattern
+        setInterval(updateSynergetics, 200);
+
+        document.getElementById('verifyBtn').addEventListener('click', () => {
+            const r = verifyGeometricIdentities();
+            document.getElementById('verifyResult').innerHTML = r.checks.map(c => `${c.passed ? '&#10003;' : '&#10007;'} ${c.name}`).join('<br>');
+            document.getElementById('verifyResult').style.color = r.allPassed ? '#44ff44' : '#ff4444';
+        });
+    </script>
+</body>
+
+</html>

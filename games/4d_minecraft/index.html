@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <title>4D Minecraft — QuadCraft</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0
+        }
+
+        :root {
+            --bg: #1a1a3e;
+            --surface: #12122a;
+            --border: #2a2a55;
+            --text: #d0d8ff;
+            --accent: #4CAF50
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Outfit', system-ui, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh
+        }
+
+        header {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            padding: 18px;
+            background: linear-gradient(135deg, var(--surface), #0a0a20);
+            border-bottom: 1px solid var(--border)
+        }
+
+        header h1 {
+            font-size: 22px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #4CAF50, #8BC34A);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent
+        }
+
+        .badge {
+            font-size: 11px;
+            padding: 3px 8px;
+            border-radius: 6px;
+            background: var(--accent);
+            color: #fff;
+            font-weight: 600
+        }
+
+        .game-area {
+            display: flex;
+            gap: 20px;
+            padding: 24px;
+            max-width: 1200px;
+            width: 100%;
+            flex-wrap: wrap;
+            justify-content: center
+        }
+
+        canvas {
+            border-radius: 12px;
+            border: 1px solid var(--border)
+        }
+
+        .sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            min-width: 240px;
+            max-width: 280px
+        }
+
+        .panel {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 16px
+        }
+
+        .panel h3 {
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #668;
+            margin-bottom: 10px
+        }
+
+        .stat {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--accent)
+        }
+
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 13px;
+            margin-bottom: 4px;
+            color: #99a
+        }
+
+        .stat-row .val {
+            color: var(--text);
+            font-weight: 600;
+            font-family: monospace
+        }
+
+        button {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            color: var(--text);
+            padding: 10px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 14px;
+            font-weight: 600
+        }
+
+        button:hover {
+            background: var(--accent)
+        }
+
+        ul {
+            list-style: none;
+            padding: 0
+        }
+
+        li {
+            padding-left: 18px;
+            position: relative;
+            margin-bottom: 4px;
+            font-size: 13px;
+            color: #668
+        }
+
+        li::before {
+            content: '\25B8';
+            position: absolute;
+            left: 0;
+            color: var(--accent)
+        }
+
+        .formula {
+            font-family: monospace;
+            font-size: 12px;
+            color: #88a;
+            margin-bottom: 3px
+        }
+
+        .verify-result {
+            font-size: 12px;
+            margin-bottom: 3px;
+            font-family: monospace
+        }
+
+        .verify-pass {
+            color: #4CAF50
+        }
+
+        .verify-fail {
+            color: #f44336
+        }
+
+        #verifyResults {
+            display: none
+        }
+
+        .volume-table {
+            font-family: monospace;
+            font-size: 12px;
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 6px
+        }
+
+        .volume-table td {
+            padding: 2px 6px;
+            border-bottom: 1px solid var(--border)
+        }
+
+        .volume-table td:last-child {
+            text-align: right;
+            color: var(--accent);
+            font-weight: 600
+        }
+
+        .hud {
+            margin-top: 10px;
+            font-family: 'Outfit', monospace;
+            font-size: 0.85rem;
+            color: #94a3b8;
+            text-align: center;
+            padding: 8px 16px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+            max-width: 740px;
+            width: 100%;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>4D Minecraft</h1><span class="badge">Quadray</span><span class="badge"
+            style="background:#1565C0">Synergetics</span>
+    </header>
+    <div class="game-area">
+        <canvas id="gameCanvas" width="740" height="560"></canvas>
+        <div class="sidebar">
+            <!-- Block & World -->
+            <div class="panel">
+                <h3>Block</h3>
+                <div class="stat" id="blockLabel">Stone</div>
+            </div>
+            <div class="panel">
+                <h3>World</h3>
+                <div class="stat" id="countLabel">0 blocks</div>
+            </div>
+
+            <!-- Synergetics Panel -->
+            <div class="panel">
+                <h3>Synergetics</h3>
+                <div class="stat-row"><span>Tetravolumes</span><span class="val" id="tetravolLabel">—</span></div>
+                <div class="stat-row"><span>IVM Fill</span><span class="val" id="ivmFillLabel">—</span></div>
+                <div class="stat-row"><span>Density</span><span class="val" id="densityLabel">—</span></div>
+                <div class="stat-row"><span>Center of Mass</span><span class="val" id="comLabel">—</span></div>
+                <div class="stat-row"><span>Bounding Tetravol</span><span class="val"
+                        id="boundingLabel">—</span></div>
+                <div class="stat-row"><span>IVM Integer Grid</span><span class="val" id="ivmIntLabel">—</span></div>
+            </div>
+
+            <!-- Geometry Panel -->
+            <div class="panel">
+                <h3>Geometry</h3>
+                <div class="stat-row"><span>Components</span><span class="val" id="componentsLabel">—</span></div>
+                <div class="stat-row"><span>Shared Faces</span><span class="val" id="sharedLabel">—</span></div>
+                <div class="stat-row"><span>Exposed Faces</span><span class="val" id="exposedLabel">—</span></div>
+                <div class="stat-row"><span>Avg Coord #</span><span class="val" id="coordLabel">—</span></div>
+                <div class="stat-row"><span>Dist (min/avg/max)</span><span class="val"
+                        id="distLabel">—</span></div>
+                <div class="stat-row"><span>Polyhedra</span><span class="val" id="polyLabel">—</span></div>
+            </div>
+
+            <!-- Math Formulas Panel -->
+            <div class="panel">
+                <h3>Math Formulas</h3>
+                <div class="formula">Q(a,b,c,d) -> xyz:</div>
+                <div class="formula">&nbsp; x = (a-b-c+d)/&radic;2</div>
+                <div class="formula">&nbsp; y = (a-b+c-d)/&radic;2</div>
+                <div class="formula">&nbsp; z = (a+b-c-d)/&radic;2</div>
+                <div class="formula" style="margin-top:6px">V_tetra = V_xyz * S3</div>
+                <div class="formula">S3 = &radic;(9/8) = 1.0607</div>
+                <table class="volume-table">
+                    <tr>
+                        <td>Tetrahedron</td>
+                        <td>1 TV</td>
+                    </tr>
+                    <tr>
+                        <td>Octahedron</td>
+                        <td>4 TV</td>
+                    </tr>
+                    <tr>
+                        <td>Cuboctahedron</td>
+                        <td>20 TV</td>
+                    </tr>
+                </table>
+                <button id="verifyBtn" style="margin-top:10px;width:100%">Verify Math</button>
+            </div>
+
+            <!-- Verification Results (hidden by default) -->
+            <div class="panel" id="verifyResults">
+                <h3>Verification Results</h3>
+                <div id="verifyList"></div>
+            </div>
+
+            <!-- Controls -->
+            <div class="panel">
+                <h3>Controls</h3>
+                <ul>
+                    <li>1-8 select block type</li>
+                    <li>Click to place along +C axis</li>
+                    <li>Alt+click to remove</li>
+                    <li>Shift+drag to rotate</li>
+                </ul>
+            </div>
+            <button id="resetBtn">&circlearrowleft; New World</button>
+        </div>
+    </div>
+
+    <div class="hud" id="hud">Stone | 0 blocks | Placed: 0</div>
+
+    <!-- Shared QuadCraft Modules -->
+    <script src="../4d_generic/quadray.js"></script>
+    <script src="../4d_generic/camera.js"></script>
+    <script src="../4d_generic/projection.js"></script>
+    <script src="../4d_generic/zoom.js"></script>
+    <script src="../4d_generic/synergetics.js"></script>
+    <script src="../4d_generic/game_loop.js"></script>
+    <script src="../4d_generic/input_controller.js"></script>
+    <script src="../4d_generic/grid_utils.js"></script>
+    <script src="../4d_generic/base_renderer.js"></script>
+    <script src="../4d_generic/base_game.js"></script>
+    <script src="../4d_generic/hud.js"></script>
+    <script src="../4d_generic/score_manager.js"></script>
+    <script src="js/minecraft_board.js"></script>
+    <script src="js/minecraft_analysis.js"></script>
+    <script src="js/minecraft_renderer.js"></script>
+    <script src="js/minecraft_game.js"></script>
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const hudEl = document.getElementById('hud');
+        const game = new MinecraftGame(canvas, hudEl);
+        game.init();
+        document.getElementById('resetBtn').addEventListener('click', () => game.newWorld());
+
+        // Verify Math button
+        document.getElementById('verifyBtn').addEventListener('click', () => {
+            const results = verifyGeometricIdentities(game.board);
+            const panel = document.getElementById('verifyResults');
+            const list = document.getElementById('verifyList');
+            list.innerHTML = '';
+            for (const check of results.checks) {
+                const div = document.createElement('div');
+                div.className = 'verify-result ' + (check.passed ? 'verify-pass' : 'verify-fail');
+                div.textContent = (check.passed ? '\u2705 ' : '\u274C ') + check.name;
+                list.appendChild(div);
+            }
+            const totalChecks = results.checks.length;
+            const summary = document.createElement('div');
+            summary.className = 'verify-result ' + (results.allPassed ? 'verify-pass' : 'verify-fail');
+            summary.style.marginTop = '6px';
+            summary.style.fontWeight = '700';
+            summary.textContent = results.allPassed ? `\u2705 ALL ${totalChecks} CHECKS PASSED` : '\u274C SOME CHECKS FAILED';
+            list.appendChild(summary);
+            panel.style.display = 'block';
+        });
+
+        // HUD update loop — populate sidebar panels from game.analysis
+        (function hud() {
+            document.getElementById('blockLabel').textContent = BLOCK_NAMES[game.board.selectedBlock];
+            document.getElementById('countLabel').textContent = `${game.board.blocks.size} blocks`;
+
+            const a = game.analysis;
+            if (a) {
+                // Synergetics panel
+                document.getElementById('tetravolLabel').textContent = a.tetravolume.totalTetravolumes.toFixed(1);
+                document.getElementById('ivmFillLabel').textContent = (a.ivmGrid.fillRatio * 100).toFixed(1) + '%';
+                document.getElementById('densityLabel').textContent = a.density ? (a.density.density * 100).toFixed(1) + '%' : '—';
+                if (a.centerOfMass) {
+                    const q = a.centerOfMass.quadray;
+                    document.getElementById('comLabel').textContent = `(${q.a.toFixed(1)},${q.b.toFixed(1)},${q.c.toFixed(1)},${q.d.toFixed(1)})`;
+                }
+                document.getElementById('boundingLabel').textContent = a.boundingTetra ? a.boundingTetra.boundingTetravolumes.toFixed(1) : '—';
+
+                // IVM Integer Grid check
+                let allInt = true;
+                for (const [key] of game.board.blocks) {
+                    const parts = key.split(',');
+                    for (const p of parts) {
+                        if (!Number.isInteger(Number(p))) { allInt = false; break; }
+                    }
+                    if (!allInt) break;
+                }
+                document.getElementById('ivmIntLabel').textContent = game.board.blocks.size > 0 ? (allInt ? '\u2713' : '\u2717') : '\u2014';
+                document.getElementById('ivmIntLabel').style.color = allInt ? '#4CAF50' : '#f44336';
+
+                // Geometry panel
+                document.getElementById('componentsLabel').textContent = a.census.components;
+                document.getElementById('sharedLabel').textContent = a.census.sharedFaces;
+                document.getElementById('exposedLabel').textContent = a.census.exposedFaces;
+                document.getElementById('coordLabel').textContent = a.coordination.average.toFixed(1);
+                if (a.distances) {
+                    document.getElementById('distLabel').textContent = `${a.distances.min.toFixed(1)}/${a.distances.mean.toFixed(1)}/${a.distances.max.toFixed(1)}`;
+                }
+                const p = a.polyhedra;
+                if (p.tetrahedra > 0 || p.octahedra > 0 || p.cuboctahedra > 0) {
+                    document.getElementById('polyLabel').textContent = `T:${p.tetrahedra} O:${p.octahedra} C:${p.cuboctahedra}`;
+                    document.getElementById('polyLabel').style.color = '#FFD700';
+                } else {
+                    document.getElementById('polyLabel').textContent = 'none';
+                    document.getElementById('polyLabel').style.color = '';
+                }
+            }
+            requestAnimationFrame(hud);
+        })();
+    </script>
+</body>
+
+</html>

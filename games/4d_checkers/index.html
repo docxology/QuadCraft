@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description"
+        content="4D Checkers game using Quadray tetrahedral coordinates — play checkers in four-dimensional space.">
+    <title>4D Quadray Checkers — QuadCraft</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../4d_generic/hud-style.css">
+    <style>
+        :root {
+            --red: #ff4455;
+            --red-glow: rgba(255, 68, 85, 0.3);
+            --blue: #4466ff;
+            --blue-glow: rgba(68, 102, 255, 0.3);
+        }
+
+        .turn-indicator {
+            font-size: 20px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .turn-indicator .dot {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+
+        .dot.red {
+            background: var(--red);
+            box-shadow: 0 0 10px var(--red-glow);
+        }
+
+        .dot.black {
+            background: var(--blue);
+            box-shadow: 0 0 10px var(--blue-glow);
+        }
+
+        .score {
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .score span {
+            font-weight: 600;
+        }
+
+        .score .red {
+            color: var(--red);
+        }
+
+        .score .black {
+            color: var(--blue);
+        }
+
+        .instructions li {
+            font-size: 13px;
+            color: var(--text-dim);
+            margin-bottom: 6px;
+            list-style: none;
+            padding-left: 18px;
+            position: relative;
+        }
+
+        .instructions li::before {
+            content: '\25B8';
+            position: absolute;
+            left: 0;
+            color: var(--accent);
+        }
+
+        .hud {
+            margin-top: 10px;
+            font-family: 'Outfit', monospace;
+            font-size: 0.85rem;
+            color: #94a3b8;
+            text-align: center;
+            padding: 10px 20px;
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 8px;
+            min-width: 400px;
+            transition: color 0.3s ease;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>4D Quadray Checkers</h1>
+        <span class="badge">Quadray</span>
+        <span class="badge" style="background:#664422">Synergetics</span>
+    </header>
+
+    <div class="game-area">
+        <canvas id="gameCanvas" width="740" height="560"></canvas>
+
+        <div class="sidebar">
+            <div class="panel">
+                <h3>Current Turn</h3>
+                <div class="turn-indicator" id="turnLabel">
+                    <span class="dot red"></span> Red
+                </div>
+            </div>
+
+            <div class="panel">
+                <h3>Pieces</h3>
+                <div class="score">
+                    <span class="red" id="redCount">Red: 7</span>
+                    <span class="black" id="blackCount">Black: 7</span>
+                </div>
+            </div>
+
+            <div class="panel">
+                <h3>How to Play</h3>
+                <ul class="instructions">
+                    <li>Click a piece to select it</li>
+                    <li>Green dots = valid moves</li>
+                    <li>Red halos = captures</li>
+                    <li>Drag to rotate view</li>
+                    <li>Reach the far edge to crown a King</li>
+                </ul>
+            </div>
+
+            <div class="panel">
+                <h3>Shortcuts</h3>
+                <p style="font-size:12px;color:var(--text-dim);line-height:1.8">
+                    <kbd style="background:var(--surface2);padding:2px 6px;border-radius:4px;font-family:monospace">N</kbd> New game &nbsp;
+                    <kbd style="background:var(--surface2);padding:2px 6px;border-radius:4px;font-family:monospace">R</kbd> Reset &nbsp;
+                    <kbd style="background:var(--surface2);padding:2px 6px;border-radius:4px;font-family:monospace">P</kbd> Pause &nbsp;
+                    <kbd style="background:var(--surface2);padding:2px 6px;border-radius:4px;font-family:monospace">M</kbd> Random move
+                </p>
+            </div>
+
+            <button id="resetBtn">New Game</button>
+            <button id="randomBtn">Random Move</button>
+
+            <div class="panel">
+                <h3>About</h3>
+                <p>
+                    Checkers played in 4D using
+                    <a href="https://en.wikipedia.org/wiki/Quadray_coordinates" style="color:var(--accent)">Quadray</a>
+                    tetrahedral coordinates. Pieces move diagonally (changing two coordinates) and
+                    jump to capture.
+                </p>
+            </div>
+
+            <div class="panel">
+                <h3>Synergetics</h3>
+                <div class="stat-row"><span>Pieces on Grid</span><span class="val" id="syPieces">--</span></div>
+                <div class="stat-row"><span>Avg Q-Distance</span><span class="val" id="syAvgDist">--</span></div>
+                <div class="stat-row"><span>Board Tetravolume</span><span class="val" id="syTV">--</span></div>
+                <div class="stat-row"><span>IVM Grid Size</span><span class="val" id="syGrid">--</span></div>
+            </div>
+            <div class="panel">
+                <h3>Math</h3>
+                <p style="font-family:monospace;font-size:11px;color:var(--text-dim);line-height:1.8">
+                    Q(a,b,c,d) &rarr; xyz:<br>
+                    x=(a-b-c+d)/&radic;2<br>y=(a-b+c-d)/&radic;2<br>z=(a+b-c-d)/&radic;2<br>
+                    V_tetra = V_xyz &times; S3<br>S3 = &radic;(9/8) &approx; 1.0607<br>
+                    T:O:C = 1:4:20 TV
+                </p>
+                <button id="verifyBtn" style="margin-top:8px;width:100%">Verify Math</button>
+                <div id="verifyResult" style="font-size:11px;color:var(--text-dim);margin-top:6px"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="hud" id="hud">Red's turn | Click a piece to select</div>
+
+    <!-- Shared QuadCraft Modules -->
+    <script src="../4d_generic/quadray.js"></script>
+    <script src="../4d_generic/camera.js"></script>
+    <script src="../4d_generic/projection.js"></script>
+    <script src="../4d_generic/zoom.js"></script>
+    <script src="../4d_generic/synergetics.js"></script>
+    <script src="../4d_generic/game_loop.js"></script>
+    <script src="../4d_generic/input_controller.js"></script>
+    <script src="../4d_generic/grid_utils.js"></script>
+    <script src="../4d_generic/base_renderer.js"></script>
+    <script src="../4d_generic/base_game.js"></script>
+    <script src="../4d_generic/hud.js"></script>
+    <script src="../4d_generic/score_manager.js"></script>
+
+    <!-- Game-specific modules -->
+    <script src="js/checkers_board.js"></script>
+    <script src="js/checkers_renderer.js"></script>
+    <script src="js/checkers_game.js"></script>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const hudEl = document.getElementById('hud');
+        const game = new CheckersGame(canvas, hudEl);
+        game.init();
+
+        // Wire sidebar buttons
+        document.getElementById('resetBtn').addEventListener('click', () => game.newGame());
+        document.getElementById('randomBtn').addEventListener('click', () => game.randomMove());
+
+        // Update sidebar panels periodically
+        setInterval(() => {
+            const meta = game.board.getMetadata();
+
+            // Turn indicator
+            const turnEl = document.getElementById('turnLabel');
+            const isRed = game.currentPlayer === 'red';
+            turnEl.innerHTML = `<span class="dot ${isRed ? 'red' : 'black'}"></span> ${isRed ? 'Red' : 'Black'}`;
+
+            // Piece counts
+            document.getElementById('redCount').textContent = `Red: ${meta.redCount}`;
+            document.getElementById('blackCount').textContent = `Black: ${meta.blackCount}`;
+
+            // Synergetics panel
+            const pieces = Array.from(game.board.pieces.values());
+            document.getElementById('syPieces').textContent = pieces.length;
+            if (pieces.length >= 2) {
+                let totalDist = 0, count = 0;
+                for (let i = 0; i < pieces.length; i++) {
+                    for (let j = i + 1; j < pieces.length; j++) {
+                        totalDist += Quadray.distance(pieces[i].position, pieces[j].position);
+                        count++;
+                    }
+                }
+                document.getElementById('syAvgDist').textContent = (totalDist / count).toFixed(2);
+            }
+            const size = game.board.size;
+            const gridTV = Math.pow(size, 3) * SYNERGETICS.S3;
+            document.getElementById('syTV').textContent = gridTV.toFixed(1);
+            document.getElementById('syGrid').textContent = `${size}\u00d7${size}\u00d7${size}\u00d7${size}`;
+        }, 200);
+
+        // Verify math button
+        document.getElementById('verifyBtn').addEventListener('click', () => {
+            const r = verifyGeometricIdentities();
+            const el = document.getElementById('verifyResult');
+            el.innerHTML = r.checks.map(c => `${c.passed ? '\u2705' : '\u274c'} ${c.name}`).join('<br>');
+            el.style.color = r.allPassed ? '#44ff44' : '#ff4444';
+        });
+
+        console.log('[4D Checkers] UI ready — using BaseGame loop');
+    </script>
+</body>
+
+</html>

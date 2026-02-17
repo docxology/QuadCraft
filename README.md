@@ -20,7 +20,7 @@ QuadCraft is an experimental voxel game that uses tetrahedral elements (instead 
 
 | Project | Description | Status |
 |---------|-------------|--------|
-| 🎮 [4D Chess](4d_chess/) | 4D chess using Quadray coordinates | ✅ Complete |
+| 🎮 [4D Chess](games/4d_chess/) | 4D chess using Quadray coordinates | ✅ Complete |
 | 🌍 QuadCraft Core | Tetrahedral voxel engine | 🚧 In Progress |
 
 ### Pic

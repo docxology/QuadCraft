@@ -77,7 +77,7 @@ graph TD
 Clone the QuadCraft repository:
 
 ```bash
-git clone https://github.com/your-username/QuadCraft.git
+git clone https://github.com/docxology/QuadCraft.git
 cd QuadCraft
 git submodule update --init --recursive
 ```
@@ -209,6 +209,26 @@ After building, the executable will be in the build directory (or a subdirectory
 
 For Windows with Visual Studio, you can run directly from the IDE with F5 or the Debug menu.
 
+### Running Browser Games
+
+The 12 standalone browser games require no build step:
+
+```bash
+# Open any game directly
+open games/4d_chess/index.html
+
+# Or use a local HTTP server via shell scripts
+cd games
+./run_chess.sh              # Opens on port 8100
+
+# Or use the Python launcher
+python3 games/run_games.py --game chess    # Single game
+python3 games/run_games.py --all           # All 12 games
+python3 games/run_games.py --test          # Run all unit tests
+```
+
+See [games/README.md](../../games/README.md) for full launch options and port assignments.
+
 ## Development Workflow
 
 ### Code Style
@@ -240,6 +260,7 @@ private:
 ### Making Changes
 
 1. Create a feature branch for your changes:
+
    ```bash
    git checkout -b feature/your-feature-name
    ```
@@ -247,12 +268,14 @@ private:
 2. Make your changes
 
 3. Run tests to ensure everything works:
+
    ```bash
    cd build
    ctest
    ```
 
 4. Commit your changes with descriptive messages:
+
    ```bash
    git commit -m "Add feature: description of your changes"
    ```
@@ -274,6 +297,7 @@ The documentation uses Markdown files with Mermaid diagrams. To view the documen
 
 1. **Using VS Code**: Install the "Markdown Preview Enhanced" extension
 2. **Using a browser**: Use a Markdown viewer that supports Mermaid, or convert to HTML:
+
    ```bash
    # Install a Markdown to HTML converter
    npm install -g marked
@@ -331,12 +355,14 @@ cmake .. -DQUADCRAFT_ENABLE_SANITIZERS=ON
 #### Visual Studio Code
 
 Recommended extensions:
+
 - C/C++ (ms-vscode.cpptools)
 - CMake Tools (ms-vscode.cmake-tools)
 - CMake (twxs.cmake)
 - Markdown Preview Enhanced
 
 Settings (`.vscode/settings.json`):
+
 ```json
 {
     "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools",
@@ -379,4 +405,4 @@ We welcome contributions to QuadCraft! Please see the [CONTRIBUTING.md](../../CO
 
 ## License
 
-QuadCraft is licensed under [your license here]. See the [LICENSE](../../LICENSE) file for details. 
+QuadCraft is licensed under the Apache 2.0 License. See the [LICENSE](../../LICENSE) file for details.

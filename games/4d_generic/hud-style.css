@@ -1,0 +1,157 @@
+/**
+ * hud-style.css - Shared QuadCraft HUD and sidebar styles
+ *
+ * Games link this and override --accent color only.
+ * Base dark theme with panel, stat, button, and sidebar layout.
+ */
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+    --bg: #0a0a12;
+    --surface: #14141f;
+    --surface2: #1c1c2e;
+    --border: #2a2a44;
+    --text: #e0e0f0;
+    --text-dim: #8888aa;
+    --accent: #7c5cfc;
+}
+
+body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Outfit', system-ui, sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 100vh;
+}
+
+header {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 18px 24px;
+    background: linear-gradient(135deg, var(--surface), var(--surface2));
+    border-bottom: 1px solid var(--border);
+}
+
+header h1 {
+    font-size: 22px;
+    font-weight: 700;
+    background: linear-gradient(135deg, var(--accent), #fff);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.badge {
+    font-size: 11px;
+    padding: 3px 8px;
+    border-radius: 6px;
+    background: var(--accent);
+    color: #fff;
+    font-weight: 600;
+}
+
+.game-area {
+    display: flex;
+    gap: 20px;
+    padding: 24px;
+    max-width: 1100px;
+    width: 100%;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+canvas {
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    box-shadow: 0 4px 30px rgba(0,0,0,0.5);
+    cursor: crosshair;
+}
+
+.sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    min-width: 220px;
+}
+
+.panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+}
+
+.panel h3 {
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text-dim);
+    margin-bottom: 10px;
+}
+
+.panel p, .panel li {
+    font-size: 13px;
+    color: var(--text-dim);
+    line-height: 1.6;
+}
+
+.stat {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--accent);
+}
+
+.stat-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 13px;
+    margin-bottom: 4px;
+    color: var(--text-dim);
+}
+
+.stat-row .val {
+    color: var(--text);
+    font-weight: 600;
+    font-family: monospace;
+}
+
+button {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 10px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    transition: background 0.2s, border-color 0.2s;
+}
+
+button:hover {
+    background: var(--accent);
+    border-color: var(--accent);
+}
+
+ul { list-style: none; padding: 0; }
+
+li {
+    padding-left: 18px;
+    position: relative;
+    margin-bottom: 4px;
+    font-size: 13px;
+    color: var(--text-dim);
+}
+
+li::before {
+    content: '\25B8';
+    position: absolute;
+    left: 0;
+    color: var(--accent);
+}

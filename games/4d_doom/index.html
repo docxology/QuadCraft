@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>4D DOOM — Quadray FPS</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #000;
+            overflow: hidden;
+            font-family: 'Courier New', monospace;
+            color: #ccc;
+        }
+
+        canvas {
+            display: block;
+            width: 100vw;
+            height: 100vh;
+            image-rendering: pixelated;
+            cursor: crosshair;
+        }
+
+        /* ── Animated background ── */
+        #instructions::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background:
+                linear-gradient(135deg, rgba(100, 40, 200, 0.08) 0%, transparent 50%),
+                linear-gradient(225deg, rgba(0, 200, 180, 0.06) 0%, transparent 50%);
+            z-index: -1;
+            animation: bgShift 8s ease-in-out infinite alternate;
+        }
+
+        @keyframes bgShift {
+            0% {
+                opacity: 0.5;
+            }
+
+            100% {
+                opacity: 1;
+            }
+        }
+
+        /* ── Scanning line effect ── */
+        #instructions::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: repeating-linear-gradient(0deg,
+                    transparent,
+                    transparent 2px,
+                    rgba(0, 255, 204, 0.015) 2px,
+                    rgba(0, 255, 204, 0.015) 4px);
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        #instructions {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(4, 6, 16, 0.92);
+            border: 1px solid rgba(0, 255, 204, 0.3);
+            border-radius: 12px;
+            padding: 44px 54px;
+            text-align: center;
+            z-index: 10;
+            max-width: 520px;
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            box-shadow:
+                0 0 60px rgba(0, 200, 180, 0.08),
+                0 0 120px rgba(100, 40, 200, 0.04),
+                inset 0 0 40px rgba(0, 0, 0, 0.3);
+        }
+
+        #instructions h1 {
+            font-family: 'Orbitron', sans-serif;
+            font-weight: 900;
+            font-size: 52px;
+            background: linear-gradient(135deg, #ff2244 0%, #ff6644 40%, #ffcc00 100%);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 6px;
+            letter-spacing: 6px;
+            filter: drop-shadow(0 0 20px rgba(255, 34, 68, 0.4));
+        }
+
+        #instructions .subtitle {
+            font-family: 'Orbitron', sans-serif;
+            font-weight: 400;
+            color: rgba(0, 255, 204, 0.6);
+            font-size: 11px;
+            letter-spacing: 4px;
+            margin-bottom: 28px;
+            text-transform: uppercase;
+        }
+
+        #instructions table {
+            margin: 0 auto 24px;
+            border-collapse: collapse;
+        }
+
+        #instructions td {
+            padding: 5px 14px;
+            font-size: 13px;
+        }
+
+        #instructions td:first-child {
+            font-family: 'Orbitron', sans-serif;
+            font-weight: 700;
+            font-size: 12px;
+            color: #ffcc00;
+            text-align: right;
+            letter-spacing: 1px;
+        }
+
+        #instructions td:last-child {
+            text-align: left;
+            color: rgba(200, 210, 220, 0.7);
+            font-size: 12px;
+        }
+
+        #instructions .start-btn {
+            display: inline-block;
+            margin-top: 18px;
+            padding: 14px 40px;
+            background: linear-gradient(135deg, #cc0022 0%, #ff2244 50%, #cc0022 100%);
+            color: #fff;
+            font-size: 18px;
+            font-family: 'Orbitron', sans-serif;
+            font-weight: 700;
+            letter-spacing: 4px;
+            border: 1px solid rgba(255, 100, 100, 0.3);
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 0 20px rgba(255, 34, 68, 0.2);
+            position: relative;
+            z-index: 2;
+        }
+
+        #instructions .start-btn:hover {
+            background: linear-gradient(135deg, #dd1133 0%, #ff4466 50%, #dd1133 100%);
+            box-shadow: 0 0 40px rgba(255, 34, 68, 0.4);
+            transform: scale(1.02);
+        }
+
+        #instructions .start-btn:active {
+            transform: scale(0.98);
+        }
+
+        /* ── Decorative corner triangles ── */
+        .corner-tri {
+            position: absolute;
+            width: 0;
+            height: 0;
+            opacity: 0.15;
+        }
+
+        .corner-tri.tl {
+            top: 0;
+            left: 0;
+            border-top: 30px solid rgba(0, 255, 204, 0.5);
+            border-right: 30px solid transparent;
+        }
+
+        .corner-tri.tr {
+            top: 0;
+            right: 0;
+            border-top: 30px solid rgba(170, 68, 255, 0.5);
+            border-left: 30px solid transparent;
+        }
+
+        .corner-tri.bl {
+            bottom: 0;
+            left: 0;
+            border-bottom: 30px solid rgba(255, 136, 68, 0.5);
+            border-right: 30px solid transparent;
+        }
+
+        .corner-tri.br {
+            bottom: 0;
+            right: 0;
+            border-bottom: 30px solid rgba(0, 255, 170, 0.5);
+            border-left: 30px solid transparent;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .version-tag {
+            font-size: 9px;
+            color: rgba(0, 255, 204, 0.25);
+            margin-top: 14px;
+            letter-spacing: 2px;
+            font-family: 'Orbitron', sans-serif;
+        }
+    </style>
+</head>
+
+<body>
+    <canvas id="gameCanvas"></canvas>
+
+    <div id="instructions">
+        <div class="corner-tri tl"></div>
+        <div class="corner-tri tr"></div>
+        <div class="corner-tri bl"></div>
+        <div class="corner-tri br"></div>
+        <h1>4D DOOM</h1>
+        <div class="subtitle">Quadray Hyperdimensional FPS Engine</div>
+        <table>
+            <tr>
+                <td>WASD</td>
+                <td>Move / Strafe</td>
+            </tr>
+            <tr>
+                <td>Mouse</td>
+                <td>Look Around</td>
+            </tr>
+            <tr>
+                <td>Click</td>
+                <td>Shoot</td>
+            </tr>
+            <tr>
+                <td>Q / E</td>
+                <td>Keyboard Turn</td>
+            </tr>
+            <tr>
+                <td>Z / X</td>
+                <td>Hyper-Strafe (D-axis)</td>
+            </tr>
+            <tr>
+                <td>Space / Shift</td>
+                <td>Elevate (C-axis)</td>
+            </tr>
+            <tr>
+                <td>1 / 2 / 3</td>
+                <td>Switch Weapon</td>
+            </tr>
+            <tr>
+                <td>G</td>
+                <td>Toggle Grid Mode</td>
+            </tr>
+            <tr>
+                <td>R</td>
+                <td>Respawn (when dead)</td>
+            </tr>
+        </table>
+        <button class="start-btn" id="startBtn">RIP AND TEAR</button>
+        <div class="version-tag">SYNERGETICS ENGINE v3.0</div>
+    </div>
+
+    <script type="module">
+        import { DoomGame } from './js/doom_main.js';
+
+        const canvas = document.getElementById('gameCanvas');
+        const instructions = document.getElementById('instructions');
+        const startBtn = document.getElementById('startBtn');
+
+        function resize() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            if (window.game && window.game.renderer) {
+                window.game.renderer.resize(canvas.width, canvas.height);
+            }
+        }
+        window.addEventListener('resize', resize);
+        resize();
+
+        startBtn.addEventListener('click', () => {
+            instructions.classList.add('hidden');
+            canvas.requestPointerLock();
+            if (!window.game) {
+                window.game = new DoomGame(canvas);
+            }
+        });
+
+        // Also allow clicking canvas to start
+        canvas.addEventListener('click', () => {
+            if (!window.game) {
+                instructions.classList.add('hidden');
+                window.game = new DoomGame(canvas);
+            }
+        });
+
+        // Pointer lock change handling
+        document.addEventListener('pointerlockchange', () => {
+            if (!document.pointerLockElement && window.game && window.game.player.alive) {
+                // Don't show instructions, just let them click to re-lock
+            }
+        });
+    </script>
+</body>
+
+</html>

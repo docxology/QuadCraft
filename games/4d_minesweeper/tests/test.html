@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>4D Minesweeper Tests</title>
+    <style>
+        body { font-family: monospace; background: #1a1a2e; color: #e0e0e0; padding: 20px; }
+        .pass { color: #4caf50; }
+        .fail { color: #f44336; }
+        h1 { color: #60a5fa; }
+        pre { white-space: pre-wrap; }
+    </style>
+</head>
+<body>
+    <h1>4D Minesweeper — Browser Tests</h1>
+    <pre id="output"></pre>
+
+    <!-- Shared modules from 4d_generic (all 12) -->
+    <script src="../../4d_generic/quadray.js"></script>
+    <script src="../../4d_generic/camera.js"></script>
+    <script src="../../4d_generic/projection.js"></script>
+    <script src="../../4d_generic/zoom.js"></script>
+    <script src="../../4d_generic/synergetics.js"></script>
+    <script src="../../4d_generic/game_loop.js"></script>
+    <script src="../../4d_generic/input_controller.js"></script>
+    <script src="../../4d_generic/grid_utils.js"></script>
+    <script src="../../4d_generic/base_renderer.js"></script>
+    <script src="../../4d_generic/base_game.js"></script>
+    <script src="../../4d_generic/hud.js"></script>
+    <script src="../../4d_generic/score_manager.js"></script>
+
+    <!-- Game modules -->
+    <script src="../js/minesweeper_board.js"></script>
+    <script src="../js/minesweeper_renderer.js"></script>
+    <script src="../js/minesweeper_game.js"></script>
+
+    <script>
+        const out = document.getElementById('output');
+        let passed = 0, failed = 0;
+        function assert(name, cond) {
+            if (cond) { passed++; out.innerHTML += `<span class="pass">  PASS ${name}</span>\n`; }
+            else { failed++; out.innerHTML += `<span class="fail">  FAIL ${name}</span>\n`; }
+        }
+
+        // 1. Board creation
+        const board = new MinesweeperBoard(4);
+        assert('Board created with size 4', board.size === 4);
+        assert('Board starts with score 0', board.score === 0);
+        assert('Board starts at level 1', board.level === 1);
+        assert('Board is not game over', board.gameOver === false);
+        assert('Total cells = 4^4 = 256', board.totalCells === 256);
+
+        // 2. getCell returns 'hidden' for unrevealed
+        const pos = new Quadray(1, 0, 0, 0);
+        assert('getCell returns hidden for unrevealed cell', board.getCell(pos) === 'hidden');
+
+        // 3. setCell stores value (scaffold compat)
+        board.setCell(pos, 'test');
+        assert('setCell stores in _extraData', board._extraData[board.key(1, 0, 0, 0)] === 'test');
+
+        // 4. key/parseKey delegation to GridUtils
+        assert('key delegates to GridUtils', board.key(1, 2, 3, 0) === GridUtils.key(1, 2, 3, 0));
+        const parsed = board.parseKey('1,2,3,0');
+        assert('parseKey returns array', Array.isArray(parsed) && parsed[0] === 1 && parsed[3] === 0);
+
+        // 5. inBounds delegates to GridUtils
+        assert('inBounds true for valid', board.inBounds(0, 0, 0, 0));
+        assert('inBounds false for out-of-range', !board.inBounds(-1, 0, 0, 0));
+
+        // 6. Synergetics metadata
+        assert('volumeRatios has tetra', board.volumeRatios.tetra === 1);
+        assert('cellVolumeUnit defined', typeof board.cellVolumeUnit === 'number');
+        assert('s3Constant defined', typeof board.s3Constant === 'number');
+
+        // 7. getMetadata
+        const meta = board.getMetadata();
+        assert('getMetadata has totalCells', meta.totalCells === 256);
+        assert('getMetadata has volumeRatios', meta.volumeRatios.tetra === 1);
+        assert('getMetadata has score', meta.score === 0);
+
+        // 8. IVM neighbors
+        const ivmNeighbors = board.getIVMNeighbors(new Quadray(1, 1, 1, 1));
+        assert('getIVMNeighbors returns 8 axis-aligned neighbors', ivmNeighbors.length === 8);
+
+        // 9. Distance methods
+        const q1 = new Quadray(0, 0, 0, 0);
+        const q2 = new Quadray(1, 0, 0, 0);
+        assert('manhattanDistance works', board.manhattanDistance(q1, q2) === 1);
+        assert('euclideanDistance works', board.euclideanDistance(q1, q2) === 1);
+        assert('quadrayDistance works', typeof board.quadrayDistance(q1, q2) === 'number');
+
+        // 10. Reset
+        board.reset();
+        assert('Reset clears score', board.score === 0);
+        assert('Reset restores firstClick', board.firstClick === true);
+
+        out.innerHTML += `\n=== Results: ${passed} passed, ${failed} failed ===`;
+    </script>
+</body>
+</html>

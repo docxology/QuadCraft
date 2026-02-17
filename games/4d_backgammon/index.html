@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>4D Backgammon — QuadCraft</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../4d_generic/hud-style.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <header>
+        <h1>4D Backgammon</h1><span class="badge">Quadray</span><span class="badge"
+            style="background:#664422">Synergetics</span>
+    </header>
+    <div class="game-area">
+        <canvas id="gameCanvas" width="740" height="560"></canvas>
+        <div class="sidebar">
+            <div class="panel">
+                <h3>Turn</h3>
+                <div class="stat" id="turnLabel">White</div>
+            </div>
+            <div class="panel">
+                <h3>Dice</h3>
+                <div class="stat" id="diceLabel">Click to roll</div>
+            </div>
+            <div class="panel">
+                <h3>How to Play</h3>
+                <ul>
+                    <li>Click board to roll dice</li>
+                    <li>Click point to move</li>
+                    <li>Bear off all 15 to win</li>
+                    <li>Shift+drag to rotate</li>
+                    <li><kbd>P</kbd> Pause / <kbd>R</kbd> Reset</li>
+                    <li><kbd>N</kbd> New Game</li>
+                </ul>
+            </div>
+            <div class="panel">
+                <h3>Quadray Lanes</h3>
+                <p style="font-size:13px; color:#886; line-height:1.6">
+                    24 points mapped to 4 tetrahedral axes:<br>
+                    <span style="color:#ff4444">Lane A (1-6)</span>: +A axis<br>
+                    <span style="color:#44ff44">Lane B (7-12)</span>: +B axis<br>
+                    <span style="color:#4488ff">Lane C (13-18)</span>: +C axis<br>
+                    <span style="color:#ffff44">Lane D (19-24)</span>: +D axis<br>
+                    Movement wraps: A-B-C-D-Off
+                </p>
+            </div>
+            <div class="panel">
+                <h3>Synergetics</h3>
+                <div style="font-size:13px;color:#886;line-height:1.8">
+                    <div style="display:flex;justify-content:space-between;margin-bottom:4px"><span>Stone
+                            Spread</span><span id="sySpread" style="font-weight:700;color:var(--accent)">--</span></div>
+                    <div style="display:flex;justify-content:space-between;margin-bottom:4px"><span>Lane
+                            Balance</span><span id="syBalance" style="font-weight:700;color:var(--accent)">--</span>
+                    </div>
+                    <div style="display:flex;justify-content:space-between;margin-bottom:4px"><span>Path
+                            Tetravolume</span><span id="syTV" style="font-weight:700;color:var(--accent)">--</span>
+                    </div>
+                </div>
+            </div>
+            <div class="panel">
+                <h3>Math</h3>
+                <p style="font-family:monospace;font-size:11px;color:#886;line-height:1.8">
+                    Q(a,b,c,d) -> xyz:<br>
+                    x=(a-b-c+d)/sqrt2<br>y=(a-b+c-d)/sqrt2<br>z=(a+b-c-d)/sqrt2<br>
+                    V_tetra = V_xyz * S3<br>S3 = sqrt(9/8) = 1.0607<br>
+                    T:O:C = 1:4:20 TV
+                </p>
+                <button id="verifyBtn" style="margin-top:8px;width:100%">Verify Math</button>
+                <div id="verifyResult" style="font-size:11px;color:#886;margin-top:6px"></div>
+            </div>
+            <button id="resetBtn">New Game</button>
+        </div>
+    </div>
+
+    <!-- HUD bar (managed by HUD module via BaseGame) -->
+    <div class="hud" id="hud">White's turn | Click to roll dice</div>
+
+    <!-- Shared QuadCraft Modules (all 12) -->
+    <script src="../4d_generic/quadray.js"></script>
+    <script src="../4d_generic/camera.js"></script>
+    <script src="../4d_generic/projection.js"></script>
+    <script src="../4d_generic/zoom.js"></script>
+    <script src="../4d_generic/synergetics.js"></script>
+    <script src="../4d_generic/game_loop.js"></script>
+    <script src="../4d_generic/input_controller.js"></script>
+    <script src="../4d_generic/grid_utils.js"></script>
+    <script src="../4d_generic/base_renderer.js"></script>
+    <script src="../4d_generic/base_game.js"></script>
+    <script src="../4d_generic/hud.js"></script>
+    <script src="../4d_generic/score_manager.js"></script>
+
+    <!-- Game-specific modules -->
+    <script src="js/backgammon_board.js"></script>
+    <script src="js/backgammon_renderer.js"></script>
+    <script src="js/backgammon_game.js"></script>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const hudEl = document.getElementById('hud');
+        const game = new BackgammonGame(canvas, hudEl);
+        game.init();
+
+        document.getElementById('resetBtn').addEventListener('click', () => game.newGame());
+
+        // Update sidebar info panels periodically
+        setInterval(() => {
+            const b = game.board;
+            const meta = b.getMetadata();
+
+            document.getElementById('turnLabel').textContent =
+                `${b.currentPlayer === 'white' ? 'White' : 'Black'}`;
+            document.getElementById('diceLabel').textContent =
+                b.dice[0] ? `${b.dice.join(' ')}` : 'Click to roll';
+
+            // Synergetics
+            const occupied = [];
+            for (let i = 0; i < 24; i++) {
+                if (b.points[i].length > 0) occupied.push(b.pointToQuadray(i));
+            }
+            if (occupied.length >= 2) {
+                let total = 0, count = 0;
+                for (let i = 0; i < occupied.length; i++) {
+                    for (let j = i + 1; j < occupied.length; j++) {
+                        total += Quadray.distance(occupied[i], occupied[j]);
+                        count++;
+                    }
+                }
+                document.getElementById('sySpread').textContent = (total / count).toFixed(2);
+            }
+            const lanes = [0, 0, 0, 0];
+            for (let i = 0; i < 24; i++) lanes[b.getLane(i)] += b.points[i].length;
+            document.getElementById('syBalance').textContent =
+                `A:${lanes[0]} B:${lanes[1]} C:${lanes[2]} D:${lanes[3]}`;
+            const tv = (lanes[0] + lanes[1] + lanes[2] + lanes[3]) * (SYNERGETICS?.S3 ?? 1.0607);
+            document.getElementById('syTV').textContent = tv.toFixed(1) + ' TV';
+        }, 200);
+
+        document.getElementById('verifyBtn').addEventListener('click', () => {
+            const r = verifyGeometricIdentities();
+            const el = document.getElementById('verifyResult');
+            el.innerHTML = r.checks.map(c => `${c.passed ? 'PASS' : 'FAIL'} ${c.name}`).join('<br>');
+            el.style.color = r.allPassed ? '#44ff44' : '#ff4444';
+        });
+    </script>
+</body>
+
+</html>

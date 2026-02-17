@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="4D Conway's Game of Life on a Quadray tetrahedral lattice">
+    <title>4D Conway's Life — QuadCraft</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../4d_generic/hud-style.css">
+    <style>
+        :root { --accent: #00ffb4; }
+
+        .badge-synergetics { background: #006644; color: #fff; }
+        .synergetics-info { font-size: 13px; color: var(--text-dim); line-height: 1.8; }
+        .synergetics-row { display: flex; justify-content: space-between; margin-bottom: 4px; }
+        .synergetics-value { font-weight: 700; color: var(--accent); }
+        .math-info { font-family: monospace; font-size: 11px; color: var(--text-dim); line-height: 1.8; }
+        .btn-verify { margin-top: 8px; width: 100%; }
+        .verify-result { font-size: 11px; color: var(--text-dim); margin-top: 6px; }
+        .controls { display: flex; gap: 6px; flex-wrap: wrap; }
+
+        .hud {
+            margin-top: 10px;
+            font-family: 'Outfit', monospace;
+            font-size: 0.85rem;
+            color: #94a3b8;
+            text-align: center;
+            padding: 10px 20px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            position: relative;
+            z-index: 1;
+            min-width: 400px;
+            transition: color 0.3s ease;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>4D Conway's Game of Life</h1>
+        <span class="badge">Quadray</span>
+        <span class="badge badge-synergetics">Synergetics</span>
+    </header>
+    <div class="game-area">
+        <canvas id="gameCanvas" width="740" height="560"></canvas>
+        <div class="sidebar">
+            <div class="panel">
+                <h3>Generation</h3>
+                <div class="stat" id="genLabel">0</div>
+            </div>
+            <div class="panel">
+                <h3>Living Cells</h3>
+                <div class="stat" id="cellLabel">0</div>
+            </div>
+            <div class="panel">
+                <h3>Controls</h3>
+                <div class="controls">
+                    <button id="playBtn">Play</button>
+                    <button id="stepBtn">Step</button>
+                    <button id="resetBtn">Reseed</button>
+                </div>
+                <ul style="margin-top: 10px;">
+                    <li>Space / P — play / pause</li>
+                    <li>S — single step</li>
+                    <li>R — random reseed</li>
+                    <li>Up/Down — speed</li>
+                    <li>Shift+drag — rotate</li>
+                </ul>
+            </div>
+            <div class="panel">
+                <h3>Synergetics</h3>
+                <div class="synergetics-info">
+                    <div class="synergetics-row"><span>Population TV</span><span id="syTV" class="synergetics-value">--</span></div>
+                    <div class="synergetics-row"><span>IVM Fill %</span><span id="syFill" class="synergetics-value">--</span></div>
+                    <div class="synergetics-row"><span>Center of Mass</span><span id="syCom" class="synergetics-value">--</span></div>
+                    <div class="synergetics-row"><span>Density</span><span id="syDensity" class="synergetics-value">--</span></div>
+                </div>
+            </div>
+            <div class="panel">
+                <h3>Math</h3>
+                <p class="math-info">
+                    Q(a,b,c,d) -> xyz:<br>x=(a-b-c+d)/sqrt2<br>y=(a-b+c-d)/sqrt2<br>z=(a+b-c-d)/sqrt2<br>
+                    V_tetra = V_xyz * S3<br>S3 = sqrt(9/8) ~ 1.0607<br>T:O:C = 1:4:20 TV
+                </p>
+                <button id="verifyBtn" class="btn-verify">Verify Math</button>
+                <div id="verifyResult" class="verify-result"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="hud" id="hud">4D Life | Generation 0 | Press Space to start</div>
+
+    <!-- All 12 Shared QuadCraft Modules -->
+    <script src="../4d_generic/quadray.js"></script>
+    <script src="../4d_generic/camera.js"></script>
+    <script src="../4d_generic/projection.js"></script>
+    <script src="../4d_generic/zoom.js"></script>
+    <script src="../4d_generic/synergetics.js"></script>
+    <script src="../4d_generic/game_loop.js"></script>
+    <script src="../4d_generic/input_controller.js"></script>
+    <script src="../4d_generic/grid_utils.js"></script>
+    <script src="../4d_generic/base_renderer.js"></script>
+    <script src="../4d_generic/base_game.js"></script>
+    <script src="../4d_generic/hud.js"></script>
+    <script src="../4d_generic/score_manager.js"></script>
+
+    <!-- Game-specific modules -->
+    <script src="js/life_board.js"></script>
+    <script src="js/life_renderer.js"></script>
+    <script src="js/life_game.js"></script>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const hudEl = document.getElementById('hud');
+        const game = new LifeGame(canvas, hudEl);
+        game.init();
+
+        // Button bindings
+        document.getElementById('playBtn').addEventListener('click', () => game.togglePause());
+        document.getElementById('stepBtn').addEventListener('click', () => game.singleStep());
+        document.getElementById('resetBtn').addEventListener('click', () => game.reset());
+
+        // Update sidebar stats periodically
+        setInterval(() => {
+            const meta = game.board.getMetadata();
+            document.getElementById('genLabel').textContent = meta.generation;
+            document.getElementById('cellLabel').textContent = meta.livingCells;
+            document.getElementById('playBtn').textContent = game.loop.paused ? 'Play' : 'Pause';
+
+            // Synergetics panel
+            document.getElementById('syTV').textContent = meta.populationTV.toFixed(1);
+            const totalCells = Math.pow(game.board.size, 4);
+            document.getElementById('syFill').textContent = (meta.livingCells / totalCells * 100).toFixed(1) + '%';
+            document.getElementById('syDensity').textContent = meta.livingCells > 0
+                ? (meta.livingCells / totalCells * 100).toFixed(2) + '%' : '--';
+
+            // Center of mass
+            if (meta.livingCells > 0) {
+                const com = meta.centerOfMass;
+                document.getElementById('syCom').textContent =
+                    `(${com.a.toFixed(1)},${com.b.toFixed(1)},${com.c.toFixed(1)},${com.d.toFixed(1)})`;
+            } else {
+                document.getElementById('syCom').textContent = '--';
+            }
+        }, 200);
+
+        // Verify math button
+        document.getElementById('verifyBtn').addEventListener('click', () => {
+            if (typeof verifyGeometricIdentities === 'function') {
+                const r = verifyGeometricIdentities();
+                document.getElementById('verifyResult').innerHTML =
+                    r.checks.map(c => `${c.passed ? 'PASS' : 'FAIL'} ${c.name}`).join('<br>');
+                document.getElementById('verifyResult').style.color = r.allPassed ? '#44ff44' : '#ff4444';
+            }
+        });
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="4D Reversi — flanking game in four-dimensional Quadray space">
+    <title>4D Quadray Reversi — QuadCraft</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../4d_generic/hud-style.css">
+    <style>
+        .turn {
+            font-size: 20px;
+            font-weight: 700
+        }
+
+        .score {
+            display: flex;
+            justify-content: space-between;
+            font-weight: 600
+        }
+
+        .hud {
+            margin-top: 10px;
+            font-family: 'Outfit', monospace;
+            font-size: 0.85rem;
+            color: #94a3b8;
+            text-align: center;
+            padding: 10px 20px;
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 8px;
+            min-width: 400px;
+            transition: color 0.3s ease;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>4D Quadray Reversi</h1><span class="badge">Quadray</span><span class="badge" style="background:#664422">Synergetics</span>
+    </header>
+    <div class="game-area">
+        <canvas id="gameCanvas" width="740" height="560"></canvas>
+        <div class="sidebar">
+            <div class="panel">
+                <h3>Turn</h3>
+                <div class="turn" id="turnLabel">Black</div>
+            </div>
+            <div class="panel">
+                <h3>Score</h3>
+                <div class="score"><span id="bCount">Black: 2</span><span id="wCount">White: 2</span></div>
+            </div>
+            <div class="panel">
+                <h3>How to Play</h3>
+                <ul>
+                    <li>Click green spots to place</li>
+                    <li>Flank opponent discs to flip</li>
+                    <li>Shift+drag to rotate</li>
+                    <li>Most discs wins</li>
+                </ul>
+            </div>
+            <button id="resetBtn">New Game</button>
+            <button id="randomBtn">Random Move</button>
+
+            <div class="panel">
+                <h3>Synergetics</h3>
+                <div class="stat-row"><span>Disc Count</span><span class="val" id="syDiscs">--</span></div>
+                <div class="stat-row"><span>IVM Fill %</span><span class="val" id="syFill">--</span></div>
+                <div class="stat-row"><span>Avg Same-Color Dist</span><span class="val" id="syAvgDist">--</span></div>
+                <div class="stat-row"><span>Board Tetravolume</span><span class="val" id="syTV">--</span></div>
+            </div>
+            <div class="panel">
+                <h3>IVM Geometry</h3>
+                <div class="stat-row"><span>Cell Vol</span><span class="val" id="infoCellVol">--</span></div>
+                <div class="stat-row"><span>S3</span><span class="val" id="infoS3">--</span></div>
+                <div class="stat-row"><span>Tetra</span><span class="val" id="infoTetra">0</span></div>
+                <div class="stat-row"><span>Octa</span><span class="val" id="infoOcta">0</span></div>
+                <div class="stat-row"><span>T:O:C</span><span class="val" id="infoRatios">1:4:20</span></div>
+                <div class="stat-row"><span>Moves</span><span class="val" id="infoMoves">0</span></div>
+            </div>
+            <div class="panel">
+                <h3>Shortcuts</h3>
+                <p>
+                    <b>N</b> New game &nbsp; <b>R</b> Reset &nbsp; <b>P</b> Pause<br>
+                    <b>M</b> Random move &nbsp; <b>Shift</b>+drag Rotate
+                </p>
+            </div>
+            <div class="panel">
+                <h3>Math</h3>
+                <p style="font-family:monospace;font-size:11px;line-height:1.8">
+                    Q(a,b,c,d) &rarr; xyz:<br>
+                    x=(a-b-c+d)/&radic;2<br>y=(a-b+c-d)/&radic;2<br>z=(a+b-c-d)/&radic;2<br>
+                    V_tetra = V_xyz &times; S3<br>S3 = &radic;(9/8) &asymp; 1.0607<br>
+                    T:O:C = 1:4:20 TV
+                </p>
+                <button id="verifyBtn" style="margin-top:8px;width:100%">Verify Math</button>
+                <div id="verifyResult" style="font-size:11px;margin-top:6px"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="hud" id="hud">Black's turn | Click green spots to place a disc</div>
+
+    <!-- Shared QuadCraft Modules -->
+    <script src="../4d_generic/quadray.js"></script>
+    <script src="../4d_generic/camera.js"></script>
+    <script src="../4d_generic/projection.js"></script>
+    <script src="../4d_generic/zoom.js"></script>
+    <script src="../4d_generic/synergetics.js"></script>
+    <script src="../4d_generic/game_loop.js"></script>
+    <script src="../4d_generic/input_controller.js"></script>
+    <script src="../4d_generic/grid_utils.js"></script>
+    <script src="../4d_generic/base_renderer.js"></script>
+    <script src="../4d_generic/base_game.js"></script>
+    <script src="../4d_generic/hud.js"></script>
+    <script src="../4d_generic/score_manager.js"></script>
+
+    <!-- Game-specific modules -->
+    <script src="js/reversi_board.js"></script>
+    <script src="js/reversi_renderer.js"></script>
+    <script src="js/reversi_game.js"></script>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const hudEl = document.getElementById('hud');
+        const game = new ReversiGame(canvas, hudEl);
+        game.init();
+
+        // Wire up buttons
+        document.getElementById('resetBtn').addEventListener('click', () => game.newGame());
+        document.getElementById('randomBtn').addEventListener('click', () => game.randomMove());
+
+        // Update sidebar info panels periodically
+        setInterval(() => {
+            const meta = game.board.getMetadata();
+
+            // Turn label
+            const isBlack = game.board.currentPlayer === 'black';
+            document.getElementById('turnLabel').textContent = isBlack ? 'Black' : 'White';
+
+            // Score counts
+            document.getElementById('bCount').textContent = `Black: ${meta.blackCount}`;
+            document.getElementById('wCount').textContent = `White: ${meta.whiteCount}`;
+
+            // IVM Geometry panel
+            document.getElementById('infoCellVol').textContent = game.board.cellVolumeUnit.toFixed(3);
+            document.getElementById('infoS3').textContent = game.board.s3Constant.toFixed(4);
+            document.getElementById('infoTetra').textContent = meta.tetraCount;
+            document.getElementById('infoOcta').textContent = meta.octaCount;
+            document.getElementById('infoRatios').textContent =
+                `${meta.volumeRatios.tetra}:${meta.volumeRatios.octa}:${meta.volumeRatios.cubo}`;
+            document.getElementById('infoMoves').textContent = meta.moveCount;
+
+            // Synergetics panel
+            const discCount = game.board.grid.size;
+            const totalPositions = meta.totalSlots;
+            document.getElementById('syDiscs').textContent = discCount;
+            document.getElementById('syFill').textContent = totalPositions > 0
+                ? ((discCount / totalPositions) * 100).toFixed(1) + '%' : '--';
+
+            // Avg same-color distance using Quadray.distance
+            const byColor = { black: [], white: [] };
+            for (const [key, color] of game.board.grid.entries()) {
+                const coords = GridUtils.parseKey(key);
+                byColor[color].push(new Quadray(coords.a, coords.b, coords.c, coords.d));
+            }
+            let totalDist = 0, count = 0;
+            for (const col of ['black', 'white']) {
+                const arr = byColor[col];
+                for (let i = 0; i < arr.length; i++) {
+                    for (let j = i + 1; j < arr.length; j++) {
+                        totalDist += Quadray.distance(arr[i], arr[j]);
+                        count++;
+                    }
+                }
+            }
+            document.getElementById('syAvgDist').textContent = count > 0 ? (totalDist / count).toFixed(2) : '--';
+
+            const gridTV = Math.pow(game.board.size, 3) * SYNERGETICS.S3;
+            document.getElementById('syTV').textContent = gridTV.toFixed(1);
+        }, 200);
+
+        // Math verification button
+        document.getElementById('verifyBtn').addEventListener('click', () => {
+            const r = verifyGeometricIdentities();
+            const el = document.getElementById('verifyResult');
+            el.innerHTML = r.checks.map(c => `${c.passed ? '\u2705' : '\u274c'} ${c.name}`).join('<br>');
+            el.style.color = r.allPassed ? '#44ff44' : '#ff4444';
+        });
+    </script>
+</body>
+
+</html>

@@ -45,8 +45,9 @@ Technical implementation guides for QuadCraft developers.
 | [asset_creation_guide.md](asset_creation_guide.md) | Asset creation guide |
 | [api_reference.md](api_reference.md) | API reference |
 
-### Setup
+### Setup & Testing
 
 | Document | Description |
 | --- | --- |
 | [setup_guide.md](setup_guide.md) | Development environment setup |
+| [testing_guide.md](testing_guide.md) | Test infrastructure (C++ engine & JS games) |

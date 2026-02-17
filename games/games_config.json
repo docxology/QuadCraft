@@ -1,0 +1,28 @@
+{
+    "games": [
+        "chess",
+        "checkers",
+        "reversi",
+        "life",
+        "asteroids",
+        "simant",
+        "backgammon",
+        "minecraft",
+        "catan",
+        "tower_defense",
+        "doom",
+        "mahjong",
+        "tetris",
+        "snake",
+        "pong",
+        "breakout",
+        "pacman",
+        "space_invaders",
+        "frogger",
+        "bomberman",
+        "connect_four",
+        "minesweeper"
+    ],
+    "base_port": 8100,
+    "open_browser": true
+}

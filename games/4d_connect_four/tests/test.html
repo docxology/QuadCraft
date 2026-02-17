@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>4D Connect Four — Browser Tests</title>
+    <style>
+        body {
+            font-family: 'JetBrains Mono', monospace;
+            background: #0f172a;
+            color: #e0e0e0;
+            padding: 24px;
+        }
+
+        .pass {
+            color: #4ade80;
+        }
+
+        .fail {
+            color: #f87171;
+        }
+
+        h1 {
+            background: linear-gradient(90deg, #60a5fa, #a78bfa, #f472b6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 16px;
+        }
+
+        pre {
+            white-space: pre-wrap;
+            line-height: 1.6;
+        }
+
+        .section {
+            color: #64748b;
+            font-weight: bold;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>🔴 4D Connect Four — Browser Tests</h1>
+    <pre id="output"></pre>
+
+    <!-- Shared modules -->
+    <script src="../../4d_generic/quadray.js"></script>
+    <script src="../../4d_generic/synergetics.js"></script>
+    <script src="../../4d_generic/grid_utils.js"></script>
+    <script src="../../4d_generic/projection.js"></script>
+    <script src="../../4d_generic/camera.js"></script>
+    <script src="../../4d_generic/zoom.js"></script>
+    <script src="../../4d_generic/game_loop.js"></script>
+    <script src="../../4d_generic/input_controller.js"></script>
+    <script src="../../4d_generic/base_renderer.js"></script>
+    <script src="../../4d_generic/base_game.js"></script>
+    <script src="../../4d_generic/hud.js"></script>
+    <script src="../../4d_generic/score_manager.js"></script>
+
+    <!-- Game-specific -->
+    <script src="../js/connect_four_board.js"></script>
+    <script src="../js/connect_four_renderer.js"></script>
+    <script src="../js/connect_four_game.js"></script>
+
+    <script>
+        const out = document.getElementById('output');
+        let passed = 0, failed = 0, total = 0;
+
+        function log(html) { out.innerHTML += html + '\n'; }
+        function section(name) { log(`<span class="section">\n— ${name} —</span>`); }
+        function assert(name, cond) {
+            total++;
+            if (cond) { passed++; log(`<span class="pass">  ✅ ${name}</span>`); }
+            else { failed++; log(`<span class="fail">  ❌ ${name}</span>`); }
+        }
+
+        // 1. Board Creation
+        section('Board Creation');
+        const board = new ConnectFourBoard(6, 5, 3, 3);
+        assert('Board created', board.height === 6 && board.width === 5);
+        assert('Grid is a Map', board.grid instanceof Map);
+        assert('Player 1 starts', board.currentPlayer === 1);
+        assert('WIN_DIRECTIONS are Quadrays', ConnectFourBoard.WIN_DIRECTIONS[0] instanceof Quadray);
+
+        // 2. Drop & Quadray storage
+        section('Gravity Drop & Quadray Storage');
+        const { result, quadray, cellType } = board.dropPiece(2, 1, 1);
+        assert('Drop placed', result === 'placed');
+        assert('Landing is Quadray', quadray instanceof Quadray);
+        assert('Grid uses toKey', board.grid.has(quadray.toKey()));
+        assert('cellType set', cellType === 'tetra' || cellType === 'octa');
+
+        // 3. Cell Parity
+        section('Cell Parity');
+        assert('cellType(0,0,0,0) = tetra', Quadray.cellType(0, 0, 0, 0) === 'tetra');
+        assert('cellType(1,0,0,0) = octa', Quadray.cellType(1, 0, 0, 0) === 'octa');
+
+        // 4. Distances
+        section('Distance Metrics');
+        const q1 = new Quadray(0, 0, 0, 0);
+        const q2 = new Quadray(2, 1, 0, 0);
+        assert('Manhattan = 3', board.manhattanDistance(q1, q2) === 3);
+        assert('Euclidean > 0', board.euclideanDistance(q1, q2) > 0);
+        assert('Quadray.distance > 0', board.quadrayDistance(q1, q2) > 0);
+
+        // 5. Neighbors
+        section('Neighbor Lookups');
+        const neighbors = board.getNeighbors(new Quadray(2, 2, 1, 1));
+        assert('Center has 8 neighbors', neighbors.length === 8);
+        const cornerNeighbors = board.getNeighbors(new Quadray(0, 0, 0, 0));
+        assert('Corner has fewer neighbors', cornerNeighbors.length < 8);
+
+        // 6. Synergetics
+        section('Synergetics Constants');
+        assert('TETRA_VOL=1', SYNERGETICS.TETRA_VOL === 1);
+        assert('OCTA_VOL=4', SYNERGETICS.OCTA_VOL === 4);
+        assert('CUBO_VOL=20', SYNERGETICS.CUBO_VOL === 20);
+        assert('Board exposes volumeRatios', board.volumeRatios.tetra === 1);
+
+        // 7. Geometric Identities
+        section('Geometric Identities');
+        const geo = verifyGeometricIdentities();
+        assert(`All ${geo.checks.length} geometric checks pass`, geo.allPassed);
+
+        // 8. Round-Trip
+        section('Round-Trip Conversion');
+        const rt = verifyRoundTrip(new Quadray(1, 0, 0, 0));
+        assert('Round-trip A: error < 0.01', rt.passed);
+
+        // 9. Win Detection
+        section('Win Detection');
+        const board3 = new ConnectFourBoard(6, 5, 3, 3);
+        for (let i = 0; i < 3; i++) {
+            board3.dropPiece(2, 1, 1); // P1
+            board3.dropPiece(3, 1, 1); // P2
+        }
+        const { result: wr } = board3.dropPiece(2, 1, 1);
+        assert('Vertical win', wr === 'win');
+        assert('Win line has Quadrays', board3.winLine[0] instanceof Quadray);
+
+        // 10. Reset
+        section('Reset');
+        board3.reset();
+        assert('Reset clears grid (Map.size=0)', board3.grid.size === 0);
+        assert('Reset clears moveHistory', board3.moveHistory.length === 0);
+
+        log(`\n=== Results: ${passed} passed, ${failed} failed (${total} total) ===`);
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <title>4D Mahjong — QuadCraft</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../4d_generic/hud-style.css">
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0
+        }
+
+        :root {
+            --bg: #0a0a14;
+            --surface: #12121e;
+            --border: #22223a;
+            --text: #e0d8c8;
+            --accent: #d4c088
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Outfit', system-ui, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh
+        }
+
+        header {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            padding: 18px;
+            background: linear-gradient(135deg, var(--surface), #08080e);
+            border-bottom: 1px solid var(--border)
+        }
+
+        header h1 {
+            font-size: 22px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #d4c088, #aa9060);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent
+        }
+
+        .badge {
+            font-size: 11px;
+            padding: 3px 8px;
+            border-radius: 6px;
+            background: var(--accent);
+            color: #000;
+            font-weight: 600
+        }
+
+        .game-area {
+            display: flex;
+            gap: 20px;
+            padding: 24px;
+            max-width: 1100px;
+            width: 100%;
+            flex-wrap: wrap;
+            justify-content: center
+        }
+
+        canvas {
+            border-radius: 12px;
+            border: 1px solid var(--border)
+        }
+
+        .sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            min-width: 220px
+        }
+
+        .panel {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 16px
+        }
+
+        .panel h3 {
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #887;
+            margin-bottom: 10px
+        }
+
+        .stat {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--accent)
+        }
+
+        button {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            color: var(--text);
+            padding: 10px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 14px;
+            font-weight: 600
+        }
+
+        button:hover {
+            background: var(--accent);
+            color: #000
+        }
+
+        ul {
+            list-style: none;
+            padding: 0
+        }
+
+        li {
+            padding-left: 18px;
+            position: relative;
+            margin-bottom: 4px;
+            font-size: 13px;
+            color: #887
+        }
+
+        li::before {
+            content: '▸';
+            position: absolute;
+            left: 0;
+            color: var(--accent)
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>4D Mahjong</h1><span class="badge">Quadray</span><span class="badge" style="background:#664422">Synergetics</span>
+    </header>
+    <div class="game-area"><canvas id="gameCanvas" width="740" height="560"></canvas>
+        <div class="sidebar">
+            <div class="panel">
+                <h3>Tiles Remaining</h3>
+                <div class="stat" id="tileLabel">144</div>
+            </div>
+            <div class="panel">
+                <h3>Score</h3>
+                <div class="stat" id="scoreLabel">0</div>
+            </div>
+            <div class="panel">
+                <h3>Synergetics</h3>
+                <div style="font-size:13px;color:#887;line-height:1.8">
+                    <div style="display:flex;justify-content:space-between;margin-bottom:4px"><span>Stack TV</span><span id="syTV" style="font-weight:700;color:var(--accent)">--</span></div>
+                    <div style="display:flex;justify-content:space-between;margin-bottom:4px"><span>Layer Fill</span><span id="syFill" style="font-weight:700;color:var(--accent)">--</span></div>
+                    <div style="display:flex;justify-content:space-between;margin-bottom:4px"><span>Selected Coords</span><span id="sySelected" style="font-weight:700;color:var(--accent)">--</span></div>
+                    <div style="display:flex;justify-content:space-between;margin-bottom:4px"><span>Stack Density</span><span id="syDensity" style="font-weight:700;color:var(--accent)">--</span></div>
+                </div>
+            </div>
+            <div class="panel">
+                <h3>Math</h3>
+                <p style="font-family:monospace;font-size:11px;color:#887;line-height:1.8">
+                    Q(a,b,c,d) &rarr; xyz:<br>x=(a-b-c+d)/&radic;2<br>y=(a-b+c-d)/&radic;2<br>z=(a+b-c-d)/&radic;2<br>
+                    V_tetra = V_xyz &times; S3<br>S3 = &radic;(9/8) &asymp; 1.0607<br>T:O:C = 1:4:20 TV
+                </p>
+                <button id="verifyBtn" style="margin-top:8px;width:100%">Verify Math</button>
+                <div id="verifyResult" style="font-size:11px;color:#887;margin-top:6px"></div>
+            </div>
+            <div class="panel">
+                <h3>How to Play</h3>
+                <ul>
+                    <li>Click exposed tiles</li>
+                    <li>Match identical pairs</li>
+                    <li>Clear all tiles to win</li>
+                    <li>H for hint, R to reshuffle</li>
+                    <li>Shift+drag to rotate</li>
+                    <li>Scroll to zoom</li>
+                </ul>
+            </div>
+            <button id="resetBtn">&#8635; New Game</button>
+        </div>
+    </div>
+
+    <div class="hud" id="hud">Click exposed tiles to match pairs</div>
+
+    <!-- Shared QuadCraft Modules (all 12) -->
+    <script src="../4d_generic/quadray.js"></script>
+    <script src="../4d_generic/camera.js"></script>
+    <script src="../4d_generic/projection.js"></script>
+    <script src="../4d_generic/zoom.js"></script>
+    <script src="../4d_generic/synergetics.js"></script>
+    <script src="../4d_generic/game_loop.js"></script>
+    <script src="../4d_generic/input_controller.js"></script>
+    <script src="../4d_generic/grid_utils.js"></script>
+    <script src="../4d_generic/base_renderer.js"></script>
+    <script src="../4d_generic/base_game.js"></script>
+    <script src="../4d_generic/hud.js"></script>
+    <script src="../4d_generic/score_manager.js"></script>
+
+    <!-- Game-specific modules -->
+    <script src="js/mahjong_board.js"></script>
+    <script src="js/mahjong_renderer.js"></script>
+    <script src="js/mahjong_game.js"></script>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const hudEl = document.getElementById('hud');
+        const game = new MahjongGame(canvas, hudEl);
+        game.init();
+
+        document.getElementById('resetBtn').addEventListener('click', () => game.reset());
+
+        // Update sidebar info panels periodically
+        setInterval(() => {
+            document.getElementById('tileLabel').textContent = game.board.remainingTiles();
+            document.getElementById('scoreLabel').textContent = game.board.score;
+
+            const b = game.board;
+            const remaining = b.tiles.filter(t => !t.matched);
+            document.getElementById('syTV').textContent = (remaining.length * SYNERGETICS.S3).toFixed(1);
+            const layers = [0, 0, 0, 0];
+            for (const t of remaining) layers[t.layer] = (layers[t.layer] || 0) + 1;
+            document.getElementById('syFill').textContent = `L0:${layers[0]} L1:${layers[1]} L2:${layers[2]} L3:${layers[3]}`;
+            if (b.selected) {
+                const tp = b.selected.pos;
+                document.getElementById('sySelected').textContent = `(${tp.a},${tp.b},${tp.c},${tp.d})`;
+            } else {
+                document.getElementById('sySelected').textContent = '--';
+            }
+            document.getElementById('syDensity').textContent = (remaining.length / 144 * 100).toFixed(0) + '%';
+        }, 200);
+
+        document.getElementById('verifyBtn').addEventListener('click', () => {
+            const r = verifyGeometricIdentities();
+            document.getElementById('verifyResult').innerHTML = r.checks.map(c => `${c.passed ? '&#10003;' : '&#10007;'} ${c.name}`).join('<br>');
+            document.getElementById('verifyResult').style.color = r.allPassed ? '#44ff44' : '#ff4444';
+        });
+    </script>
+</body>
+
+</html>

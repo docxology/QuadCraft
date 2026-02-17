@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>4D Connect Four — QuadCraft</title>
+    <meta name="description" content="Gravity-drop 4-in-a-row in 4D Quadray/IVM space with tetrahedral geometry">
+    <link rel="stylesheet" href="../4d_generic/hud-style.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: linear-gradient(135deg, #070725 0%, #0d1137 30%, #101040 60%, #0a0a30 100%);
+            color: #e0e0e0;
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            overflow-x: hidden;
+        }
+
+        /* Animated background particles */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background:
+                radial-gradient(2px 2px at 10% 20%, rgba(96, 165, 250, 0.3), transparent),
+                radial-gradient(2px 2px at 30% 70%, rgba(167, 139, 250, 0.2), transparent),
+                radial-gradient(2px 2px at 50% 40%, rgba(244, 114, 182, 0.2), transparent),
+                radial-gradient(2px 2px at 70% 80%, rgba(96, 165, 250, 0.25), transparent),
+                radial-gradient(2px 2px at 90% 10%, rgba(167, 139, 250, 0.3), transparent);
+            pointer-events: none;
+            z-index: 0;
+            animation: drift 20s ease-in-out infinite alternate;
+        }
+
+        @keyframes drift {
+            0% {
+                transform: translateY(0) translateX(0);
+            }
+
+            100% {
+                transform: translateY(-30px) translateX(15px);
+            }
+        }
+
+        h1 {
+            font-size: 2.2rem;
+            font-weight: 700;
+            margin-bottom: 4px;
+            background: linear-gradient(90deg, #60a5fa, #a78bfa, #f472b6, #60a5fa);
+            background-size: 200% 100%;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-align: center;
+            position: relative;
+            z-index: 1;
+            animation: shimmer 4s ease-in-out infinite;
+        }
+
+        @keyframes shimmer {
+
+            0%,
+            100% {
+                background-position: 0% 50%;
+            }
+
+            50% {
+                background-position: 100% 50%;
+            }
+        }
+
+        .subtitle {
+            color: #64748b;
+            font-size: 0.85rem;
+            margin-bottom: 16px;
+            text-align: center;
+            letter-spacing: 0.5px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .game-container {
+            display: flex;
+            gap: 16px;
+            align-items: flex-start;
+            position: relative;
+            z-index: 1;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        canvas {
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 12px;
+            background: rgba(0, 0, 0, 0.35);
+            cursor: crosshair;
+            box-shadow:
+                0 8px 32px rgba(0, 0, 0, 0.5),
+                0 0 60px rgba(96, 165, 250, 0.05),
+                inset 0 1px 0 rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+        }
+
+        .sidebar {
+            width: 220px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .panel {
+            background: rgba(15, 23, 42, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 10px;
+            padding: 14px;
+            backdrop-filter: blur(12px);
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+        }
+
+        .panel h3 {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: #64748b;
+            margin-bottom: 10px;
+        }
+
+        .controls {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            padding: 7px 14px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 6px;
+            background: rgba(255, 255, 255, 0.05);
+            color: #cbd5e1;
+            cursor: pointer;
+            font-size: 0.78rem;
+            font-family: 'Inter', system-ui, sans-serif;
+            transition: all 0.2s ease;
+            backdrop-filter: blur(4px);
+        }
+
+        button:hover {
+            background: rgba(96, 165, 250, 0.15);
+            border-color: rgba(96, 165, 250, 0.4);
+            color: #e2e8f0;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(96, 165, 250, 0.2);
+        }
+
+        button.active {
+            background: rgba(96, 165, 250, 0.2);
+            border-color: rgba(96, 165, 250, 0.5);
+            color: #60a5fa;
+        }
+
+        .hud {
+            margin-top: 10px;
+            font-family: 'Inter', monospace;
+            font-size: 0.85rem;
+            color: #94a3b8;
+            text-align: center;
+            padding: 10px 20px;
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 8px;
+            backdrop-filter: blur(10px);
+            position: relative;
+            z-index: 1;
+            min-width: 400px;
+            transition: color 0.3s ease;
+        }
+
+        .move-history {
+            max-height: 200px;
+            overflow-y: auto;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.7rem;
+            line-height: 1.6;
+            color: #64748b;
+        }
+
+        .move-history::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .move-history::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .move-history::-webkit-scrollbar-thumb {
+            background: rgba(100, 116, 139, 0.3);
+            border-radius: 4px;
+        }
+
+        .move-entry {
+            display: flex;
+            justify-content: space-between;
+            padding: 2px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+        }
+
+        .move-entry .player-1 {
+            color: #ef4444;
+        }
+
+        .move-entry .player-2 {
+            color: #fbbf24;
+        }
+
+        .move-entry .parity {
+            color: #64748b;
+            font-style: italic;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px;
+            font-size: 0.72rem;
+        }
+
+        .info-item {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .info-label {
+            color: #475569;
+            font-size: 0.65rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .info-value {
+            color: #94a3b8;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .keyboard-hint {
+            font-size: 0.65rem;
+            color: #475569;
+            line-height: 1.5;
+        }
+
+        .keyboard-hint kbd {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+            padding: 1px 5px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.6rem;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>🔴 4D Connect Four</h1>
+    <p class="subtitle">Gravity-drop 4-in-a-row in 4D Quadray / IVM tetrahedral space</p>
+
+    <div class="game-container">
+        <div class="sidebar">
+            <!-- Controls Panel -->
+            <div class="panel">
+                <h3>Controls</h3>
+                <div class="controls">
+                    <button id="btnNew" onclick="game.newGame()">New Game</button>
+                    <button id="btnPause" onclick="game.togglePause()">Pause</button>
+                    <button id="btnReset" onclick="game.reset()">Reset</button>
+                </div>
+                <div class="controls" style="margin-top:6px;">
+                    <button id="btnAI" onclick="game.toggleAI()">AI: Off</button>
+                    <button id="btnDiff" onclick="game.cycleDifficulty()">Difficulty</button>
+                </div>
+            </div>
+
+            <!-- IVM Info Panel -->
+            <div class="panel" id="infoPanel">
+                <h3>IVM Geometry</h3>
+                <div class="info-grid" id="infoGrid">
+                    <div class="info-item">
+                        <span class="info-label">Cell Vol</span>
+                        <span class="info-value" id="infoCellVol">—</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">S3</span>
+                        <span class="info-value" id="infoS3">—</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Tetra</span>
+                        <span class="info-value" id="infoTetra">0</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Octa</span>
+                        <span class="info-value" id="infoOcta">0</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">T:O:C</span>
+                        <span class="info-value" id="infoRatios">1:4:20</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Moves</span>
+                        <span class="info-value" id="infoMoves">0</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Keyboard Shortcuts -->
+            <div class="panel">
+                <h3>Shortcuts</h3>
+                <div class="keyboard-hint">
+                    <kbd>N</kbd> New game<br>
+                    <kbd>R</kbd> Reset all<br>
+                    <kbd>P</kbd> Pause<br>
+                    <kbd>A</kbd> Toggle AI<br>
+                    <kbd>D</kbd> Difficulty<br>
+                    <kbd>Shift</kbd>+drag Rotate
+                </div>
+            </div>
+        </div>
+
+        <canvas id="gameCanvas" width="800" height="600"></canvas>
+
+        <div class="sidebar">
+            <!-- Move History -->
+            <div class="panel">
+                <h3>Move History</h3>
+                <div class="move-history" id="moveHistory">
+                    <div style="color:#475569;">No moves yet</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="hud" id="hud">🔴 Player 1's turn | Click a column to drop</div>
+
+    <!-- Shared modules from 4d_generic -->
+    <script src="../4d_generic/quadray.js"></script>
+    <script src="../4d_generic/camera.js"></script>
+    <script src="../4d_generic/projection.js"></script>
+    <script src="../4d_generic/zoom.js"></script>
+    <script src="../4d_generic/synergetics.js"></script>
+    <script src="../4d_generic/game_loop.js"></script>
+    <script src="../4d_generic/input_controller.js"></script>
+    <script src="../4d_generic/grid_utils.js"></script>
+    <script src="../4d_generic/base_renderer.js"></script>
+    <script src="../4d_generic/base_game.js"></script>
+    <script src="../4d_generic/hud.js"></script>
+    <script src="../4d_generic/score_manager.js"></script>
+
+    <!-- Game-specific modules -->
+    <script src="js/connect_four_board.js"></script>
+    <script src="js/connect_four_renderer.js"></script>
+    <script src="js/connect_four_game.js"></script>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const hudEl = document.getElementById('hud');
+        const game = new ConnectFourGame(canvas, hudEl);
+        game.init();
+
+        // Update sidebar info panels periodically
+        setInterval(() => {
+            const meta = game.board.getMetadata();
+            document.getElementById('infoCellVol').textContent = game.board.cellVolumeUnit.toFixed(3);
+            document.getElementById('infoS3').textContent = game.board.s3Constant.toFixed(4);
+            document.getElementById('infoTetra').textContent = meta.tetraCount;
+            document.getElementById('infoOcta').textContent = meta.octaCount;
+            document.getElementById('infoRatios').textContent =
+                `${meta.volumeRatios.tetra}:${meta.volumeRatios.octa}:${meta.volumeRatios.cubo}`;
+            document.getElementById('infoMoves').textContent = meta.moveCount;
+
+            // Update AI button
+            const aiBtn = document.getElementById('btnAI');
+            if (game.aiEnabled) {
+                aiBtn.textContent = `AI: ${ConnectFourGame.DIFFICULTIES[game.aiDifficulty]}`;
+                aiBtn.classList.add('active');
+            } else {
+                aiBtn.textContent = 'AI: Off';
+                aiBtn.classList.remove('active');
+            }
+
+            // Update move history
+            const histEl = document.getElementById('moveHistory');
+            const history = game.board.moveHistory;
+            if (history.length > 0) {
+                histEl.innerHTML = history.slice(-20).map(m => {
+                    const q = m.quadray;
+                    const cls = `player-${m.player}`;
+                    return `<div class="move-entry">` +
+                        `<span class="${cls}">#${m.moveNum} P${m.player}</span>` +
+                        `<span>(${q.a},${q.b},${q.c},${q.d})</span>` +
+                        `<span class="parity">${m.cellType}</span></div>`;
+                }).join('');
+                histEl.scrollTop = histEl.scrollHeight;
+            }
+        }, 200);
+    </script>
+</body>
+
+</html>

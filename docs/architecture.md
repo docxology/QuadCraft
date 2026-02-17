@@ -4,6 +4,9 @@
 
 QuadCraft is structured as a modular, component-based game engine focused on tetrahedral voxel rendering and manipulation. The architecture is designed to separate core systems from rendering and game-specific logic, providing a clean and extensible codebase.
 
+> [!NOTE]
+> For the **detailed technical architecture** with class diagrams, sequence diagrams, and full system specifications, see [development/architecture.md](development/architecture.md) (846 lines).
+
 ## System Architecture Diagram
 
 ```mermaid
@@ -11,9 +14,11 @@ flowchart LR
     Core["Core\n- Coordinate System\n- World Management\n- Chunk System\n- Block System"]
     Rendering["Rendering\n- Mesh Generation\n- Shader System\n- Rendering Pipeline\n- Texture Management"]
     Game["Game\n- Input Handling\n- Game Logic\n- User Interface\n- Game Loop"]
+    Browser["Browser Games\n- 12 Standalone Apps\n- HTML5 Canvas\n- Quadray.js"]
     
     Core <--> Rendering
     Rendering <--> Game
+    Core -.->|"shared math"| Browser
 ```
 
 ## Core Components
@@ -25,6 +30,7 @@ The core components handle the fundamental data structures and algorithms that d
 - **Vector3**: Traditional 3D vector for Cartesian coordinates
 - **Quadray**: Four-dimensional coordinate system for tetrahedral space
 - **Conversion utilities**: Functions to convert between coordinate systems
+- **IVM constants**: Synergetics volume ratios and the S3 constant (√(9/8))
 
 ### World Management
 
@@ -67,6 +73,15 @@ The game components handle user interaction and game logic:
 
 - **Game**: Manages the overall game state and main loop
 - **Update cycle**: Updates the world, handles input, and triggers rendering
+
+## Browser Games Layer
+
+The 12 standalone browser games share the Quadray coordinate math but are otherwise independent:
+
+- Each game is a **self-contained HTML5 application** in `games/<name>/`
+- Each carries its own `quadray.js` with identical coordinate math
+- Games use HTML5 Canvas for rendering (no WebGL dependency)
+- See [games.md](games.md) for the full portfolio
 
 ## Data Flow
 
@@ -111,4 +126,5 @@ The architecture is designed to be extensible in several ways:
 - **Block Types**: New block types can be added to the `BlockRegistry`
 - **Terrain Features**: The `TerrainGenerator` can be extended with new terrain features
 - **Rendering Effects**: The shader system can be enhanced with new visual effects
-- **Game Mechanics**: The modular design allows new game mechanics to be added without major refactoring 
+- **Game Mechanics**: The modular design allows new game mechanics to be added without major refactoring
+- **New Games**: The standalone game architecture allows adding new 4D games without touching the core engine

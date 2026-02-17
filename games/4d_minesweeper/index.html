@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>4D Minesweeper — QuadCraft</title>
+    <meta name="description" content="Mine-counting puzzle with IVM adjacency in 4D">
+    <link rel="stylesheet" href="../4d_generic/hud-style.css">
+    <style>
+        :root {
+            --accent: #ef4444;
+        }
+
+        .subtitle {
+            color: var(--text-dim);
+            font-size: 0.85rem;
+            margin-bottom: 16px;
+            text-align: center;
+            letter-spacing: 0.5px;
+        }
+
+        .game-container {
+            display: flex;
+            gap: 16px;
+            align-items: flex-start;
+            flex-wrap: wrap;
+            justify-content: center;
+            padding: 24px;
+            max-width: 1100px;
+            width: 100%;
+        }
+
+        .controls {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px;
+            font-size: 0.72rem;
+        }
+
+        .info-item {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .info-label {
+            color: var(--text-dim);
+            font-size: 0.65rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .info-value {
+            color: var(--text);
+            font-family: monospace;
+        }
+
+        .keyboard-hint {
+            font-size: 0.65rem;
+            color: var(--text-dim);
+            line-height: 1.5;
+        }
+
+        .keyboard-hint kbd {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+            padding: 1px 5px;
+            font-family: monospace;
+            font-size: 0.6rem;
+        }
+
+        .hud {
+            margin-top: 10px;
+            font-family: monospace;
+            font-size: 0.85rem;
+            color: var(--text-dim);
+            text-align: center;
+            padding: 10px 20px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            min-width: 400px;
+            transition: color 0.3s ease;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>4D Minesweeper</h1>
+        <span class="badge">IVM</span>
+    </header>
+
+    <div class="game-container">
+        <div class="sidebar">
+            <!-- Controls Panel -->
+            <div class="panel">
+                <h3>Controls</h3>
+                <div class="controls">
+                    <button id="btnNew" onclick="game.newGame()">New Game</button>
+                    <button id="btnPause" onclick="game.togglePause()">Pause</button>
+                    <button id="btnReset" onclick="game.reset()">Reset</button>
+                </div>
+            </div>
+
+            <!-- IVM Info Panel -->
+            <div class="panel" id="infoPanel">
+                <h3>IVM Geometry</h3>
+                <div class="info-grid" id="infoGrid">
+                    <div class="info-item">
+                        <span class="info-label">Cell Vol</span>
+                        <span class="info-value" id="infoCellVol">&mdash;</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">S3</span>
+                        <span class="info-value" id="infoS3">&mdash;</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Tetra</span>
+                        <span class="info-value" id="infoTetra">0</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Octa</span>
+                        <span class="info-value" id="infoOcta">0</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">T:O:C</span>
+                        <span class="info-value" id="infoRatios">1:4:20</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Revealed</span>
+                        <span class="info-value" id="infoRevealed">0</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Keyboard Shortcuts -->
+            <div class="panel">
+                <h3>Shortcuts</h3>
+                <div class="keyboard-hint">
+                    <kbd>N</kbd> New game<br>
+                    <kbd>R</kbd> Reset all<br>
+                    <kbd>P</kbd> Pause<br>
+                    <kbd>Shift</kbd>+drag Rotate<br>
+                    Left click Reveal<br>
+                    Right click Flag
+                </div>
+            </div>
+        </div>
+
+        <canvas id="gameCanvas" width="800" height="600"></canvas>
+    </div>
+
+    <div class="hud" id="hud">Click any cell to begin</div>
+
+    <!-- Shared modules from 4d_generic (all 12) -->
+    <script src="../4d_generic/quadray.js"></script>
+    <script src="../4d_generic/camera.js"></script>
+    <script src="../4d_generic/projection.js"></script>
+    <script src="../4d_generic/zoom.js"></script>
+    <script src="../4d_generic/synergetics.js"></script>
+    <script src="../4d_generic/game_loop.js"></script>
+    <script src="../4d_generic/input_controller.js"></script>
+    <script src="../4d_generic/grid_utils.js"></script>
+    <script src="../4d_generic/base_renderer.js"></script>
+    <script src="../4d_generic/base_game.js"></script>
+    <script src="../4d_generic/hud.js"></script>
+    <script src="../4d_generic/score_manager.js"></script>
+
+    <!-- Game-specific modules -->
+    <script src="js/minesweeper_board.js"></script>
+    <script src="js/minesweeper_renderer.js"></script>
+    <script src="js/minesweeper_game.js"></script>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const hudEl = document.getElementById('hud');
+        const game = new MinesweeperGame(canvas, hudEl);
+        game.init();
+
+        // Update sidebar info panels periodically
+        setInterval(() => {
+            const meta = game.board.getMetadata();
+            document.getElementById('infoCellVol').textContent = game.board.cellVolumeUnit.toFixed(3);
+            document.getElementById('infoS3').textContent = game.board.s3Constant.toFixed(4);
+            document.getElementById('infoTetra').textContent = meta.tetraRevealed;
+            document.getElementById('infoOcta').textContent = meta.octaRevealed;
+            document.getElementById('infoRatios').textContent =
+                `${meta.volumeRatios.tetra}:${meta.volumeRatios.octa}:${meta.volumeRatios.cubo}`;
+            document.getElementById('infoRevealed').textContent =
+                `${meta.revealedCount}/${meta.totalSafe}`;
+        }, 200);
+    </script>
+</body>
+
+</html>

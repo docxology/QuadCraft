@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>4D Pong Tests</title>
+    <style>
+        body { font-family: monospace; background: #1a1a2e; color: #e0e0e0; padding: 20px; }
+        .pass { color: #4caf50; }
+        .fail { color: #f44336; }
+        h1 { color: #60a5fa; }
+        pre { white-space: pre-wrap; }
+    </style>
+</head>
+<body>
+    <h1>🏓 4D Pong — Browser Tests</h1>
+    <pre id="output"></pre>
+    <script src="../../4d_generic/quadray.js"></script>
+    <script src="../js/pong_board.js"></script>
+    <script src="../js/pong_renderer.js"></script>
+    <script src="../js/pong_game.js"></script>
+    <script>
+        const out = document.getElementById('output');
+        let passed = 0, failed = 0;
+        function assert(name, cond) {
+            if (cond) { passed++; out.innerHTML += `<span class="pass">  ✅ ${name}</span>\n`; }
+            else { failed++; out.innerHTML += `<span class="fail">  ❌ ${name}</span>\n`; }
+        }
+        // Run same tests as Node version
+        const board = new PongBoard(4);
+        assert('Board created with size 4', board.size === 4);
+        assert('Board starts with score 0', board.score === 0);
+        assert('Board starts at level 1', board.level === 1);
+        assert('Board is not game over', board.gameOver === false);
+        const pos = new Quadray(1, 0, 0, 0);
+        board.setCell(pos, 'test');
+        assert('setCell stores value', board.getCell(pos) === 'test');
+        const empty = new Quadray(0, 0, 0, 0);
+        assert('Empty cell returns null', board.getCell(empty) === null);
+        board.init();
+        assert('Init resets score', board.score === 0);
+        assert('Init clears grid', board.getCell(pos) === null);
+        out.innerHTML += `\n=== Results: ${passed} passed, ${failed} failed ===`;
+    </script>
+</body>
+</html>

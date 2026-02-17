@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <title>4D Tower Defense | Quadray IVM</title>
+    <meta name="description"
+        content="Tower defense game in 4D Quadray coordinate space using Isotropic Vector Matrix geometry with synergetics polyhedra towers.">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../4d_generic/hud-style.css">
+    <style>
+        :root {
+            --bg: #060610;
+            --surface: rgba(14, 14, 28, 0.85);
+            --surface-solid: #0e0e1c;
+            --border: rgba(40, 50, 90, 0.4);
+            --text: #c0c8e0;
+            --text-dim: #556;
+            --accent: #44aaff;
+            --tetra: #44aaff;
+            --octa: #ffaa22;
+            --cubo: #ff44aa;
+            --gold: #ffdd44;
+            --danger: #ff4444;
+            --success: #44dd44;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Outfit', system-ui, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* ─── Header ───────────────────────────────────────────── */
+        header {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            padding: 14px 20px;
+            background: linear-gradient(180deg, rgba(14, 14, 28, 0.95), rgba(6, 6, 16, 0.5));
+            border-bottom: 1px solid var(--border);
+            backdrop-filter: blur(12px);
+            z-index: 10;
+        }
+
+        header h1 {
+            font-size: 20px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #44aaff 0%, #8866ff 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .badge {
+            font-size: 10px;
+            padding: 3px 8px;
+            border-radius: 50px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+
+        .badge-quad {
+            background: rgba(68, 170, 255, 0.15);
+            color: var(--accent);
+            border: 1px solid rgba(68, 170, 255, 0.3);
+        }
+
+        .badge-syn {
+            background: linear-gradient(135deg, rgba(255, 170, 34, 0.15), rgba(255, 68, 170, 0.15));
+            color: #ffaa88;
+            border: 1px solid rgba(255, 170, 34, 0.3);
+        }
+
+        /* ─── Game Layout ──────────────────────────────────────── */
+        .game-wrap {
+            display: flex;
+            gap: 16px;
+            padding: 16px;
+            max-width: 1150px;
+            width: 100%;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-items: flex-start;
+        }
+
+        canvas {
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            box-shadow: 0 4px 40px rgba(68, 170, 255, 0.06);
+            cursor: crosshair;
+        }
+
+        /* ─── Sidebar ──────────────────────────────────────────── */
+        .sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            width: 240px;
+            flex-shrink: 0;
+        }
+
+        .panel {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 14px;
+            backdrop-filter: blur(8px);
+        }
+
+        .panel h3 {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: var(--text-dim);
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+
+        .stat {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--accent);
+            line-height: 1;
+        }
+
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 3px 0;
+            font-size: 13px;
+            color: #889;
+        }
+
+        .stat-row .val {
+            font-weight: 700;
+            color: var(--accent);
+            font-family: 'Outfit', monospace;
+        }
+
+        .stat-row .val.gold {
+            color: var(--gold);
+        }
+
+        .stat-row .val.danger {
+            color: var(--danger);
+        }
+
+        /* ─── Tower Buttons ────────────────────────────────────── */
+        button {
+            background: var(--surface-solid);
+            border: 1px solid var(--border);
+            color: var(--text);
+            padding: 9px 14px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 13px;
+            font-weight: 600;
+            transition: all 0.15s ease;
+        }
+
+        button:hover:not(:disabled) {
+            background: rgba(68, 170, 255, 0.12);
+            border-color: rgba(68, 170, 255, 0.4);
+        }
+
+        button:disabled {
+            opacity: 0.35;
+            cursor: not-allowed;
+        }
+
+        .tower-btn {
+            width: 100%;
+            margin-bottom: 5px;
+            text-align: left;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 12px;
+        }
+
+        .tower-btn:last-of-type {
+            margin-bottom: 0;
+        }
+
+        .tower-btn .icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 26px;
+            height: 26px;
+            border-radius: 6px;
+            font-size: 14px;
+            flex-shrink: 0;
+        }
+
+        .tower-btn .info {
+            flex: 1;
+        }
+
+        .tower-btn .info .name {
+            font-weight: 600;
+            font-size: 13px;
+        }
+
+        .tower-btn .info .desc {
+            font-size: 10px;
+            color: var(--text-dim);
+            margin-top: 1px;
+        }
+
+        .tower-btn .cost {
+            font-weight: 700;
+            font-size: 12px;
+            color: var(--gold);
+            white-space: nowrap;
+        }
+
+        .tower-btn .key {
+            font-size: 10px;
+            color: var(--text-dim);
+            margin-left: 4px;
+        }
+
+        .tower-btn[data-tower="tetra"] {
+            border-left: 3px solid var(--tetra);
+        }
+
+        .tower-btn[data-tower="tetra"] .icon {
+            background: rgba(68, 170, 255, 0.15);
+            color: var(--tetra);
+        }
+
+        .tower-btn[data-tower="tetra"].active {
+            background: rgba(68, 170, 255, 0.1);
+            border-color: var(--tetra);
+        }
+
+        .tower-btn[data-tower="octa"] {
+            border-left: 3px solid var(--octa);
+        }
+
+        .tower-btn[data-tower="octa"] .icon {
+            background: rgba(255, 170, 34, 0.15);
+            color: var(--octa);
+        }
+
+        .tower-btn[data-tower="octa"].active {
+            background: rgba(255, 170, 34, 0.1);
+            border-color: var(--octa);
+        }
+
+        .tower-btn[data-tower="cubo"] {
+            border-left: 3px solid var(--cubo);
+        }
+
+        .tower-btn[data-tower="cubo"] .icon {
+            background: rgba(255, 68, 170, 0.15);
+            color: var(--cubo);
+        }
+
+        .tower-btn[data-tower="cubo"].active {
+            background: rgba(255, 68, 170, 0.1);
+            border-color: var(--cubo);
+        }
+
+        /* ─── Speed Controls ───────────────────────────────────── */
+        .speed-row {
+            display: flex;
+            gap: 6px;
+        }
+
+        .speed-btn {
+            flex: 1;
+            padding: 7px 0;
+            text-align: center;
+            font-size: 12px;
+        }
+
+        .speed-btn.active {
+            background: rgba(68, 170, 255, 0.15);
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        /* ─── Action Buttons ───────────────────────────────────── */
+        .action-btn {
+            flex: 1;
+            font-size: 12px;
+            padding: 7px 10px;
+        }
+
+        .upgrade-btn {
+            border-color: rgba(68, 255, 68, 0.3);
+            color: var(--success);
+        }
+
+        .upgrade-btn:hover:not(:disabled) {
+            background: rgba(68, 255, 68, 0.1);
+        }
+
+        .sell-btn {
+            border-color: rgba(255, 170, 34, 0.3);
+            color: var(--gold);
+        }
+
+        .sell-btn:hover {
+            background: rgba(255, 170, 34, 0.1);
+        }
+
+        .wave-btn {
+            width: 100%;
+            padding: 10px;
+            background: rgba(68, 170, 255, 0.08);
+            border-color: rgba(68, 170, 255, 0.3);
+            color: var(--accent);
+            font-size: 13px;
+        }
+
+        .wave-btn:hover {
+            background: rgba(68, 170, 255, 0.18);
+        }
+
+        .reset-btn {
+            width: 100%;
+            padding: 10px;
+            color: var(--text-dim);
+            font-size: 13px;
+        }
+
+        /* ─── Controls Help ────────────────────────────────────── */
+        .controls-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .controls-list li {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 3px 0;
+            font-size: 12px;
+            color: var(--text-dim);
+        }
+
+        .controls-list kbd {
+            display: inline-block;
+            padding: 2px 6px;
+            border-radius: 4px;
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            font-family: 'Outfit', monospace;
+            font-size: 10px;
+            color: #aab;
+            min-width: 22px;
+            text-align: center;
+        }
+
+        /* ─── Tower Info Panel ─────────────────────────────────── */
+        #towerInfoPanel {
+            display: none;
+        }
+
+        #towerInfoPanel h3 {
+            font-size: 14px;
+            margin-bottom: 8px;
+            text-transform: none;
+            letter-spacing: 0;
+        }
+
+        /* ─── HUD Bar ─────────────────────────────────────────── */
+        .hud {
+            margin-top: 10px;
+            font-family: 'Outfit', monospace;
+            font-size: 0.85rem;
+            color: #94a3b8;
+            text-align: center;
+            padding: 10px 20px;
+            background: rgba(14, 14, 28, 0.6);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            backdrop-filter: blur(10px);
+            min-width: 500px;
+            transition: color 0.3s ease;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>4D Tower Defense</h1>
+        <span class="badge badge-quad">Quadray</span>
+        <span class="badge badge-syn">Synergetics</span>
+    </header>
+
+    <div class="game-wrap">
+        <canvas id="gameCanvas" width="780" height="580"></canvas>
+        <div class="sidebar">
+            <!-- Wave -->
+            <div class="panel">
+                <h3>Wave</h3>
+                <div class="stat" id="waveLabel">1</div>
+            </div>
+
+            <!-- Status -->
+            <div class="panel">
+                <h3>Status</h3>
+                <div id="statLabel"></div>
+            </div>
+
+            <!-- Tower Selection -->
+            <div class="panel">
+                <h3>Build Tower</h3>
+                <button class="tower-btn active" data-tower="tetra" onclick="game.selectTowerType('tetra')">
+                    <span class="icon">&#x25B2;</span>
+                    <span class="info">
+                        <div class="name">Tetra <span class="key">[1]</span></div>
+                        <div class="desc">Fast fire - 1 TV</div>
+                    </span>
+                    <span class="cost">15g</span>
+                </button>
+                <button class="tower-btn" data-tower="octa" onclick="game.selectTowerType('octa')">
+                    <span class="icon">&#x25C6;</span>
+                    <span class="info">
+                        <div class="name">Octa <span class="key">[2]</span></div>
+                        <div class="desc">Splash - 4 TV</div>
+                    </span>
+                    <span class="cost">40g</span>
+                </button>
+                <button class="tower-btn" data-tower="cubo" onclick="game.selectTowerType('cubo')">
+                    <span class="icon">&#x2B21;</span>
+                    <span class="info">
+                        <div class="name">Cubo <span class="key">[3]</span></div>
+                        <div class="desc">Slow aura - 20 TV</div>
+                    </span>
+                    <span class="cost">100g</span>
+                </button>
+            </div>
+
+            <!-- Tower Info (context-sensitive) -->
+            <div class="panel" id="towerInfoPanel"></div>
+
+            <!-- Speed & Controls -->
+            <div class="panel">
+                <h3>Speed</h3>
+                <div class="speed-row">
+                    <button class="speed-btn active" data-speed="1" onclick="game.setSpeed(1)">1x</button>
+                    <button class="speed-btn" data-speed="2" onclick="game.setSpeed(2)">2x</button>
+                    <button class="speed-btn" data-speed="3" onclick="game.setSpeed(3)">3x</button>
+                </div>
+            </div>
+
+            <button class="wave-btn" onclick="game.sendNextWave()">Send Next Wave <kbd>N</kbd></button>
+
+            <!-- Synergetics -->
+            <div class="panel">
+                <h3>Synergetics</h3>
+                <div class="stat-row"><span>IVM Waypoints</span><span class="val" id="waypointLabel">--</span></div>
+                <div class="stat-row"><span>Towers (TV)</span><span class="val" id="towerTVLabel">--</span></div>
+                <div class="stat-row"><span>Total Range</span><span class="val" id="rangeTVLabel">--</span></div>
+                <div class="stat-row"><span>Polyhedra</span><span class="val" id="polyLabel">--</span></div>
+                <div class="stat-row"><span>Creep CoM</span><span class="val" id="creepComLabel">--</span></div>
+                <div class="stat-row"><span>IVM Grid Check</span><span class="val" id="ivmCheckLabel">--</span></div>
+                <div style="margin-top:8px">
+                    <button onclick="verifySynergetics()"
+                        style="font-size:11px;padding:5px 10px;background:var(--surface-solid);border:1px solid var(--border);color:var(--text);border-radius:6px;cursor:pointer">Verify
+                        Math</button>
+                    <div id="verifyResult" style="font-size:10px;margin-top:4px;color:var(--text-dim)"></div>
+                </div>
+            </div>
+
+            <!-- Controls Reference -->
+            <div class="panel">
+                <h3>Controls</h3>
+                <ul class="controls-list">
+                    <li><kbd>Click</kbd> Place tower / Select</li>
+                    <li><kbd>Shift+drag</kbd> Rotate view</li>
+                    <li><kbd>Scroll</kbd> Zoom in/out</li>
+                    <li><kbd>1-3</kbd> Tower types</li>
+                    <li><kbd>U</kbd> Upgrade tower</li>
+                    <li><kbd>X</kbd> Sell tower</li>
+                    <li><kbd>Space</kbd> Toggle speed</li>
+                    <li><kbd>P</kbd> Pause</li>
+                    <li><kbd>R</kbd> Reset</li>
+                    <li><kbd>Esc</kbd> Deselect</li>
+                </ul>
+            </div>
+
+            <button class="reset-btn" id="resetBtn">Restart</button>
+        </div>
+    </div>
+
+    <!-- HUD Bar (managed by BaseGame + HUD module) -->
+    <div class="hud" id="hud">4D Tower Defense | Loading...</div>
+
+    <!-- All 12 shared QuadCraft modules (same order as connect_four gold standard) -->
+    <script src="../4d_generic/quadray.js"></script>
+    <script src="../4d_generic/camera.js"></script>
+    <script src="../4d_generic/projection.js"></script>
+    <script src="../4d_generic/zoom.js"></script>
+    <script src="../4d_generic/synergetics.js"></script>
+    <script src="../4d_generic/game_loop.js"></script>
+    <script src="../4d_generic/input_controller.js"></script>
+    <script src="../4d_generic/grid_utils.js"></script>
+    <script src="../4d_generic/base_renderer.js"></script>
+    <script src="../4d_generic/base_game.js"></script>
+    <script src="../4d_generic/hud.js"></script>
+    <script src="../4d_generic/score_manager.js"></script>
+
+    <!-- Game-specific modules -->
+    <script src="js/td_board.js"></script>
+    <script src="js/td_renderer.js"></script>
+    <script src="js/td_game.js"></script>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const hudEl = document.getElementById('hud');
+        const game = new TDGame(canvas, hudEl);
+        game.init();
+
+        document.getElementById('resetBtn').addEventListener('click', () => game.reset());
+
+        // Update synergetics sidebar info periodically
+        function updateSynergetics() {
+            const b = game.board;
+            const meta = b.getMetadata();
+
+            // Polyhedra count (from metadata)
+            document.getElementById('polyLabel').textContent = `T:${meta.tetraCount} O:${meta.octaCount} C:${meta.cuboCount}`;
+
+            // Creep center of mass
+            const alive = b.creeps.filter(c => c.alive && c.started);
+            if (alive.length > 0) {
+                let sa = 0, sb = 0, sc = 0, sd = 0;
+                for (const c of alive) {
+                    const q = b.getCreepPosition(c);
+                    sa += q.a; sb += q.b; sc += q.c; sd += q.d;
+                }
+                const n = alive.length;
+                document.getElementById('creepComLabel').textContent = `(${(sa / n).toFixed(1)},${(sb / n).toFixed(1)},${(sc / n).toFixed(1)},${(sd / n).toFixed(1)})`;
+            } else {
+                document.getElementById('creepComLabel').textContent = '--';
+            }
+
+            // IVM Grid Check
+            document.getElementById('ivmCheckLabel').textContent = b.path.length > 0 ? 'Active' : '--';
+
+            requestAnimationFrame(updateSynergetics);
+        }
+        updateSynergetics();
+
+        function verifySynergetics() {
+            const r = verifyGeometricIdentities();
+            document.getElementById('verifyResult').innerHTML = r.checks.map(c => `${c.passed ? 'PASS' : 'FAIL'} ${c.name}`).join('<br>');
+            document.getElementById('verifyResult').style.color = r.allPassed ? '#44ff44' : '#ff4444';
+        }
+    </script>
+</body>
+
+</html>
