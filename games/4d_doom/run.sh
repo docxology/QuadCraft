@@ -10,7 +10,10 @@ if ! command -v python3 &>/dev/null; then
     exit 1
 fi
 
-echo "🎮 Starting 4D Doom on port $PORT..."
+echo "======================================"
+echo "      4 D   D O O M   E N G I N E     "
+echo "======================================"
+echo "🎮 Starting server on port $PORT..."
 echo "   Dir: $SCRIPT_DIR"
 
 cd "$SCRIPT_DIR"

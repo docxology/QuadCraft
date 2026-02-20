@@ -38,12 +38,11 @@ class CheckersGame extends BaseGame {
         this.renderer.game = this;
 
         // Game state
-        this.currentPlayer = PlayerColor.RED;
+        this.turnManager = new TurnManager([PlayerColor.RED, PlayerColor.BLACK], { maxHistory: 1000 });
         this.selectedPiece = null;
         this.possibleMoves = [];
         this.gameOver = false;
         this.gameOverMessage = '';
-        this.moveLog = [];
 
         // Score tracking via ScoreManager
         this.scoring = new ScoreManager({
@@ -55,6 +54,9 @@ class CheckersGame extends BaseGame {
         // Startup integrity check
         this._runGeometricVerification();
     }
+
+    get currentPlayer() { return this.turnManager.currentPlayer; }
+    get moveLog() { return this.turnManager.moveHistory; }
 
     /** Run verifyGeometricIdentities() on startup and log results. */
     _runGeometricVerification() {
@@ -99,12 +101,11 @@ class CheckersGame extends BaseGame {
     /** Start a new game, preserving scores. */
     newGame() {
         this.board.reset();
-        this.currentPlayer = PlayerColor.RED;
+        this.turnManager.reset();
         this.selectedPiece = null;
         this.possibleMoves = [];
         this.gameOver = false;
         this.gameOverMessage = '';
-        this.moveLog = [];
         this.renderer.gridPositions = this.renderer._computeGridPositions();
         console.log('[CheckersGame] New game started');
     }
@@ -192,18 +193,21 @@ class CheckersGame extends BaseGame {
      */
     _makeMove(move) {
         this.board.executeMove(move);
-        this.moveLog.push({
+
+        const logEntry = {
             player: this.currentPlayer,
             from: move.from.toString(),
             to: move.to.toString(),
             type: move.type,
-        });
+        };
         console.log(`[CheckersGame] ${this.currentPlayer} ${move.type}: ${move.from} -> ${move.to}`);
 
         // Track captures as score
         if (move.type === 'capture') {
             this.scoring.addScore(1);
         }
+
+        this.turnManager.recordAndAdvance(logEntry);
 
         this._endTurn();
     }
@@ -212,7 +216,6 @@ class CheckersGame extends BaseGame {
     _endTurn() {
         this.selectedPiece = null;
         this.possibleMoves = [];
-        this.currentPlayer = this.currentPlayer === PlayerColor.RED ? PlayerColor.BLACK : PlayerColor.RED;
 
         this._checkWinCondition();
     }

@@ -30,6 +30,10 @@ if (typeof Quadray === 'undefined' && typeof require !== 'undefined') {
     const _q = require('../../4d_generic/quadray.js');
     globalThis.Quadray = _q.Quadray;
 }
+if (typeof BaseBoard === 'undefined' && typeof require !== 'undefined') {
+    const _bb = require('../../4d_generic/base_board.js');
+    globalThis.BaseBoard = _bb.BaseBoard;
+}
 if (typeof GridUtils === 'undefined' && typeof require !== 'undefined') {
     const _g = require('../../4d_generic/grid_utils.js');
     globalThis.GridUtils = _g.GridUtils;
@@ -66,11 +70,12 @@ class CheckersPiece {
     }
 }
 
-class CheckersBoard {
+class CheckersBoard extends BaseBoard {
     /**
      * @param {number} size - Grid dimension (0 to size-1 per axis)
      */
     constructor(size = 4) {
+        super(size, { name: 'CheckersBoard', verify: false });
         this.size = size;
         this.pieces = new Map(); // Key: position string, Value: CheckersPiece
         this.gameOver = false;

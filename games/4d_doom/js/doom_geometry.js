@@ -15,6 +15,7 @@
  */
 
 import { Quadray, ROOT2, S3 } from './quadray.js';
+import { Logger, LOG_LEVEL } from './doom_logger.js';
 
 // ═══════════════════════════════════════════════════════════════════
 // CONCENTRIC HIERARCHY — Volume Table (in tetravolumes)
@@ -455,10 +456,10 @@ export function verifySynergeticsConstants() {
     const passed = checks.filter(c => c.passed).length;
     const failed = checks.filter(c => !c.passed).length;
 
-    console.log(`[Synergetics Geometry] ${passed}/${checks.length} constant verifications passed`);
+    Logger.geometry(`${passed}/${checks.length} constant verifications passed`);
     if (failed > 0) {
         checks.filter(c => !c.passed).forEach(c =>
-            console.warn(`  FAIL: ${c.name} — expected ${c.expected}, got ${c.actual}`)
+            Logger.warn('Geometry', `FAIL: ${c.name} — expected ${c.expected}, got ${c.actual}`)
         );
     }
 

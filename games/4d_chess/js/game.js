@@ -59,10 +59,9 @@ class Game extends BaseGame {
         });
 
         // Chess-specific state
-        this.currentPlayer = PlayerColor.WHITE;
+        this.turnManager = new TurnManager([PlayerColor.WHITE, PlayerColor.BLACK], { maxHistory: 1000 });
         this.selectedPiece = null;
         this.gameOver = false;
-        this.moveHistory = [];
         this.autoPlayInterval = null;
         this.autoPlaySpeed = 1000; // ms between moves
 
@@ -72,6 +71,9 @@ class Game extends BaseGame {
         // Startup integrity check
         this._runGeometricVerification();
     }
+
+    get currentPlayer() { return this.turnManager.currentPlayer; }
+    get moveHistory() { return this.turnManager.moveHistory; }
 
     /** Run verifyGeometricIdentities() on startup and log results. */
     _runGeometricVerification() {
@@ -308,7 +310,8 @@ class Game extends BaseGame {
         // Log detailed math for the move
         this.logMoveMath(from, to, captured);
 
-        this.moveHistory.push({ from, to, captured });
+        // Record the move and advance the turn
+        this.turnManager.recordAndAdvance({ from, to, captured });
 
         // Track score for captures
         if (captured) {
@@ -316,7 +319,7 @@ class Game extends BaseGame {
         }
 
         // Check for checkmate or stalemate
-        const nextPlayer = this.currentPlayer === PlayerColor.WHITE ? PlayerColor.BLACK : PlayerColor.WHITE;
+        const nextPlayer = this.currentPlayer; // already advanced
         const isCheck = this.board.isInCheck(nextPlayer);
         const hasLegalMoves = this.hasLegalMoves(nextPlayer);
 
@@ -325,7 +328,7 @@ class Game extends BaseGame {
                 this.gameOver = true;
                 this.board.gameOver = true;
                 setTimeout(() => {
-                    alert(`Checkmate! ${this.currentPlayer.toUpperCase()} wins!`);
+                    alert(`Checkmate! ${this.turnManager.opponent.toUpperCase()} wins!`);
                 }, 100);
             } else {
                 this.gameOver = true;
@@ -338,12 +341,10 @@ class Game extends BaseGame {
             this.gameOver = true;
             this.board.gameOver = true;
             setTimeout(() => {
-                alert(`${this.currentPlayer.toUpperCase()} wins by capturing the King!`);
+                alert(`${this.turnManager.opponent.toUpperCase()} wins by capturing the King!`);
             }, 100);
         }
 
-        // Switch turns
-        this.currentPlayer = nextPlayer;
         this.deselectPiece();
     }
 
@@ -433,11 +434,10 @@ class Game extends BaseGame {
             this.fpvRenderer.board = this.board;
         }
 
-        this.currentPlayer = PlayerColor.WHITE;
+        this.turnManager.reset();
         this.selectedPiece = null;
         this.gameOver = false;
         this.board.gameOver = false;
-        this.moveHistory = [];
         this.deselectPiece();
         console.log('[ChessGame] Game reset');
     }

@@ -17,7 +17,19 @@ node games/4d_generic/tests/test_synergetics.js
 node tests/test_all_shared.js
 ```
 
+## Modules (17)
+
+| Category | Modules |
+|----------|---------|
+| **Math** | `quadray.js`, `synergetics.js`, `grid_utils.js` |
+| **Rendering** | `camera.js`, `projection.js`, `zoom.js`, `base_renderer.js` |
+| **Engine** | `game_loop.js`, `score_manager.js`, `base_game.js`, `entity_system.js`, `turn_manager.js` |
+| **Board** | `base_board.js`, `pathfinding.js` |
+| **Input** | `input_controller.js` |
+| **UI** | `hud.js`, `hud-style.css` |
+
 ## Documentation
 
 - **Agent Instructions**: [AGENTS.md](AGENTS.md) — Module inventory and code standards
+- **Shared Modules Reference**: [shared_modules_reference.md](../doc/shared_modules_reference.md) — Full API docs
 - **Game Index**: [GAMES_INDEX.md](../GAMES_INDEX.md) — Full portfolio of all QuadCraft games

@@ -255,10 +255,10 @@ class ConnectFourGame extends BaseGame {
      */
     _undoLastMove() {
         if (this.board.moveHistory.length === 0) return;
-        const last = this.board.moveHistory.pop();
+        const entry = this.board.turnManager.undo();
+        const last = entry.move;
         this.board.grid.delete(last.quadray.toKey());
-        this.board.moveCount--;
-        this.board.currentPlayer = last.player;
+        this.board.turnManager.moveCount--;
         this.board.winner = 0;
         this.board.gameOver = false;
         this.board.winLine = [];

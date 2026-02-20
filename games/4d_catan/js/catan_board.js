@@ -26,6 +26,10 @@ if (typeof Quadray === 'undefined' && typeof require !== 'undefined') {
     const _q = require('../../4d_generic/quadray.js');
     globalThis.Quadray = _q.Quadray;
 }
+if (typeof BaseBoard === 'undefined' && typeof require !== 'undefined') {
+    const _bb = require('../../4d_generic/base_board.js');
+    globalThis.BaseBoard = _bb.BaseBoard;
+}
 if (typeof GridUtils === 'undefined' && typeof require !== 'undefined') {
     const _g = require('../../4d_generic/grid_utils.js');
     globalThis.GridUtils = _g.GridUtils;
@@ -90,8 +94,9 @@ class CatanTile {
     toQuadray() { return new Quadray(this.pos.a, this.pos.b, this.pos.c, this.pos.d); }
 }
 
-class CatanBoard {
+class CatanBoard extends BaseBoard {
     constructor() {
+        super(6, { name: 'CatanBoard', verify: false });
         this.tiles = [];
         this.grid = new Map();              // Quadray key -> tile/settlement data
         this.players = [

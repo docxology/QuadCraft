@@ -12,6 +12,7 @@ import { SynergeticsHUD } from './doom_hud_synergetics.js';
 import { SynergeticsFX } from './doom_fx.js';
 import { markDirty } from './doom_synergetics.js';
 import { verifySynergeticsConstants, verifyAllEuler } from './doom_geometry.js';
+import { Logger } from './doom_logger.js';
 import { WEAPONS, ENEMY_STATS, MAP, RENDER } from './doom_config.js';
 
 export class DoomGame {
@@ -52,7 +53,7 @@ export class DoomGame {
         this.running = true;
 
         this.loop();
-        console.log('[4D Doom] Synergetics Engine v2 initialized — Rip and Tear in IVM space!');
+        Logger.engine('Synergetics Engine v3 initialized — Rip and Tear in IVM space!');
     }
 
     _runGeometryVerification() {
@@ -71,10 +72,10 @@ export class DoomGame {
         const totalChecks = (hudVerify?.checks?.length || 0) +
             geoVerify.total + eulerChecks.length;
 
-        console.log(`[Synergetics] Total verification: ${totalPassed}/${totalChecks} checks passed`);
-        console.log(`  HUD: ${hudVerify?.checks?.filter(c => c.passed)?.length || 0}/${hudVerify?.checks?.length || 0}`);
-        console.log(`  Geometry: ${geoVerify.passed}/${geoVerify.total}`);
-        console.log(`  Euler: ${eulerPassed}/${eulerChecks.length}`);
+        Logger.geometry(`Total verification: ${totalPassed}/${totalChecks} checks passed`);
+        Logger.geometry(`  HUD: ${hudVerify?.checks?.filter(c => c.passed)?.length || 0}/${hudVerify?.checks?.length || 0}`);
+        Logger.geometry(`  Geometry: ${geoVerify.passed}/${geoVerify.total}`);
+        Logger.geometry(`  Euler: ${eulerPassed}/${eulerChecks.length}`);
 
         return {
             totalPassed,
@@ -101,7 +102,7 @@ export class DoomGame {
                 this.enemies.push(e);
             }
         }
-        console.log(`[4D Doom] Spawned ${this.enemies.length} enemies across ${this.map.rooms.length} IVM rooms`);
+        Logger.map(`Spawned ${this.enemies.length} enemies across ${this.map.rooms.length} IVM rooms`);
     }
 
     spawnPickups() {
@@ -123,7 +124,7 @@ export class DoomGame {
             if (e.code === 'KeyR' && !this.player.alive) this.respawn();
             if (e.code === 'KeyG') {
                 RENDER.IVM_GRID_MODE = (RENDER.IVM_GRID_MODE + 1) % 3;
-                console.log(`[Synergetics] Grid Mode: ${RENDER.IVM_GRID_MODE}`);
+                Logger.render(`Grid Mode: ${RENDER.IVM_GRID_MODE}`);
             }
             e.preventDefault();
         });
@@ -180,8 +181,9 @@ export class DoomGame {
                 let hitEnemy = false;
                 for (const e of this.enemies) {
                     if (!e.alive) continue;
-                    if (Math.abs(e.c - p.c) > 1.5 || Math.abs(e.d - p.d) > 1.5) continue;
-                    if (Math.hypot(e.a - ha, e.b - hb) < 0.5) {
+                    const hitPos = { a: ha, b: hb, c: p.c, d: p.d };
+                    const dist = Quadray.distance(e, hitPos);
+                    if (dist < 0.8) {
                         e.hp -= weapon.damage;
                         e.state = 'pain';
                         e.painTimer = 8;
@@ -253,6 +255,7 @@ export class DoomGame {
 
         if (p.cooldown > 0) p.cooldown--;
         if (p.muzzleFlash > 0) p.muzzleFlash--;
+        if (p.hitMarkerTimer > 0) p.hitMarkerTimer--;
         if (this.damageFlash > 0) this.damageFlash -= 0.05;
 
         if (this.keys['MouseLeft'] && p.weapon.auto) this.shoot();
@@ -265,8 +268,7 @@ export class DoomGame {
         for (let i = this.pickups.length - 1; i >= 0; i--) {
             const pk = this.pickups[i];
             if (!pk.alive) continue;
-            if (Math.abs(pk.c - p.c) > 1.5 || Math.abs(pk.d - p.d) > 1.5) continue;
-            if (Math.hypot(pk.a - p.a, pk.b - p.b) < 0.8) {
+            if (Quadray.distance(pk, p) < 0.8) {
                 pk.alive = false;
                 if (pk.type === 'health') p.hp = Math.min(p.maxHp, p.hp + 25);
                 if (pk.type === 'shells') { p.ammo.shells += 8; p.weapons[1] = true; }

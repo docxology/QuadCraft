@@ -19,7 +19,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Dict, List, Optional
 
-from ..config import GAMES_DIR, GENERIC_DIR, SHARED_MODULES, REQUIRED_FILES
+from ..core.config import GAMES_DIR, GENERIC_DIR, SHARED_MODULES, ALL_SHARED_MODULES, REQUIRED_FILES
 
 logger = logging.getLogger(__name__)
 
@@ -140,16 +140,16 @@ class GameAnalytics:
                     m.total_js_lines += len(lines)
                     content = js_file.read_text()
 
-                    if "_board.js" in js_file.name:
+                    if "Board" in content and "class " in content:
                         m.has_board = True
-                    if "_renderer.js" in js_file.name:
+                    if "Renderer" in content and "class " in content:
                         m.has_renderer = True
-                    if "_game.js" in js_file.name:
+                    if "class " in content and "Game" in content:
                         m.has_game_controller = True
-                        if "GameLoop" in content:
-                            m.has_game_loop = True
-                        if "InputController" in content:
-                            m.has_input_controller = True
+                    if "GameLoop" in content or "requestAnimationFrame" in content:
+                        m.has_game_loop = True
+                    if "InputController" in content or "addEventListener('keydown'" in content:
+                        m.has_input_controller = True
                 except Exception as e:
                     m.issues.append(f"Error reading {js_file.name}: {e}")
 
@@ -176,11 +176,11 @@ class GameAnalytics:
         """Scan all game directories and produce a suite report."""
         report = SuiteReport()
 
-        # Count shared modules
+        # Count shared modules (JS + CSS)
         if self.generic_dir.is_dir():
             report.shared_module_count = sum(
                 1 for f in self.generic_dir.iterdir()
-                if f.suffix == '.js'
+                if f.suffix in ('.js', '.css')
             )
 
         # Scan each 4d_* directory

@@ -7,6 +7,7 @@
 import { Particle } from './doom_entities.js';
 import { IVM } from './doom_config.js';
 import { Quadray } from './quadray.js';
+import { Logger } from './doom_logger.js';
 
 export class Physics {
     constructor(map) {
@@ -80,8 +81,9 @@ export class Physics {
             if (p.alive && p.owner === 'player') {
                 for (const e of enemies) {
                     if (!e.alive) continue;
-                    const dist = Math.hypot(e.a - p.a, e.b - p.b);
-                    if (dist < 0.5) {
+                    // Check collision with enemy
+                    const dist = Quadray.distance(e, p);
+                    if (dist < 0.8) {
                         e.hp -= p.damage;
                         e.state = 'pain';
                         e.painTimer = 10;
@@ -96,8 +98,9 @@ export class Physics {
 
             // Hit player (enemy projectiles)
             if (p.alive && p.owner === 'enemy') {
-                const dist = Math.hypot(player.a - p.a, player.b - p.b);
-                if (dist < 0.4) {
+                // Check collision with player
+                const dist = Quadray.distance(player, p);
+                if (dist < 0.6) {
                     player.hp -= p.damage;
                     p.alive = false;
                     particles.push(new Particle(p.a, p.b, 'blood', '#cc0000'));
@@ -120,43 +123,91 @@ export class Physics {
         }
     }
 
+    /**
+     * True 4D DDA Raycast for Line of Sight.
+     * Returns true if clear path exists.
+     */
+    hasLineOfSight(e1, e2) {
+        const diffA = e2.a - e1.a;
+        const diffB = e2.b - e1.b;
+        const diffC = e2.c - e1.c;
+        const diffD = e2.d - e1.d;
+
+        const dist = Quadray.distance(e1, e2);
+        if (dist === 0) return true;
+
+        const steps = Math.ceil(dist * 2); // More steps for higher precision
+        for (let i = 1; i < steps; i++) {
+            const t = i / steps;
+            const checkA = e1.a + t * diffA;
+            const checkB = e1.b + t * diffB;
+            const checkC = e1.c + t * diffC;
+            const checkD = e1.d + t * diffD;
+            if (this.map.isSolid(checkA, checkB, checkC, checkD)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     /** 
-     * Enemy AI — uses IVM adjacency for movement and Quadray distance for range.
+     * Enemy AI — intelligent state machine with LOS, flanking, and wandering.
      */
     updateEnemies(enemies, player, projectiles, particles) {
         for (const e of enemies) {
             if (!e.alive) continue;
 
-            // Only act if in same C,D hyperplane (within 2 units)
             const cdDist = Math.hypot(e.c - player.c, e.d - player.d);
             if (cdDist > 2) continue;
 
-            const dist = Math.hypot(e.a - player.a, e.b - player.b);
+            const dist = Quadray.distance(e, player);
             const angleToPlayer = Math.atan2(player.b - e.b, player.a - e.a);
+            const hasLOS = this.hasLineOfSight(e, player);
 
             if (e.painTimer > 0) { e.painTimer--; continue; }
             if (e.attackCooldown > 0) e.attackCooldown--;
 
-            // State machine with IVM-aware movement
-            if (dist < e.attackRange && dist > 1.5) {
-                e.state = 'chase';
-                e.angle = angleToPlayer;
-                this.moveEntity(e, Math.cos(e.angle) * e.speed, Math.sin(e.angle) * e.speed);
-            } else if (dist <= 1.5 && e.attackCooldown <= 0) {
-                e.state = 'attack';
-                player.hp -= e.damage;
-                if (player.hp <= 0) { player.hp = 0; player.alive = false; }
-                e.attackCooldown = 60;
-                particles.push(new Particle(player.a, player.b, 'blood', '#cc0000'));
-            } else if (dist < 12) {
-                e.state = 'chase';
-                e.angle = angleToPlayer;
-                this.moveEntity(e, Math.cos(e.angle) * e.speed * 0.5, Math.sin(e.angle) * e.speed * 0.5);
+            const oldState = e.state;
+
+            if (hasLOS) {
+                e.lastSeenPlayer = { a: player.a, b: player.b, c: player.c, d: player.d };
+                if (dist <= 1.5 && e.attackCooldown <= 0) {
+                    e.state = 'attack';
+                    player.hp -= e.damage;
+                    if (player.hp <= 0) { player.hp = 0; player.alive = false; }
+                    e.attackCooldown = 60;
+                    particles.push(new Particle(player.a, player.b, 'blood', '#cc0000'));
+                    Logger.ai(`Enemy attacked player (-${e.damage} HP)`);
+                } else if (dist < e.attackRange) {
+                    e.state = 'chase';
+                    e.angle = angleToPlayer;
+                    this.moveEntity(e, Math.cos(e.angle) * e.speed, Math.sin(e.angle) * e.speed);
+                } else {
+                    e.state = 'idle';
+                }
             } else {
-                e.state = 'idle';
-                if (Math.random() < 0.01) e.angle = Math.random() * Math.PI * 2;
-                this.moveEntity(e, Math.cos(e.angle) * e.speed * 0.3, Math.sin(e.angle) * e.speed * 0.3);
+                if (e.lastSeenPlayer) {
+                    const distToLastSeen = Quadray.distance(e, e.lastSeenPlayer);
+                    if (distToLastSeen > 1.0) {
+                        e.state = 'flank';
+                        e.angle = Math.atan2(e.lastSeenPlayer.b - e.b, e.lastSeenPlayer.a - e.a);
+                        this.moveEntity(e, Math.cos(e.angle) * e.speed, Math.sin(e.angle) * e.speed);
+                    } else {
+                        e.state = 'wander';
+                        e.lastSeenPlayer = null;
+                        this.wander(e);
+                    }
+                } else {
+                    e.state = 'wander';
+                    this.wander(e);
+                }
             }
+            if (e.state !== oldState && e.state !== 'wander') Logger.ai(`Enemy state changed: ${oldState} -> ${e.state}`);
         }
+    }
+
+    wander(e) {
+        if (Math.random() < 0.05) e.angle += (Math.random() - 0.5) * Math.PI;
+        this.moveEntity(e, Math.cos(e.angle) * e.speed * 0.3, Math.sin(e.angle) * e.speed * 0.3);
     }
 }

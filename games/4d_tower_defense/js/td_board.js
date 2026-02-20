@@ -2,7 +2,7 @@
  * TowerDefenseBoard.js -- 4D Tower Defense on IVM Grid
  *
  * IVM grid-snapped paths, polyhedra tower types, Quadray-native creeps.
- * Synergetics geometry: tetrahedron (TV=1), octahedron (TV=4), cuboctahedron (TV=20).
+ * Synergetics geometry: tetrahedron (TV=1), octahedron (TV=4), rhombic dodecahedron (TV=6), cuboctahedron (TV=20).
  *
  * Deeply integrated with all Quadray/IVM shared modules:
  *   - Quadray: toKey, normalized, add, subtract, equals, distance,
@@ -24,6 +24,10 @@ if (typeof Quadray === 'undefined' && typeof require !== 'undefined') {
     /* eslint-disable no-global-assign */
     const _q = require('../../4d_generic/quadray.js');
     globalThis.Quadray = _q.Quadray;
+}
+if (typeof BaseBoard === 'undefined' && typeof require !== 'undefined') {
+    const _bb = require('../../4d_generic/base_board.js');
+    globalThis.BaseBoard = _bb.BaseBoard;
 }
 if (typeof GridUtils === 'undefined' && typeof require !== 'undefined') {
     const _g = require('../../4d_generic/grid_utils.js');
@@ -74,6 +78,17 @@ const TOWER_TYPES = {
             { damage: 70, range: 7.0, fireRate: 1400, cost: 140 },
             { damage: 100, range: 8.0, fireRate: 1200, cost: 200 }
         ]
+    },
+    rhombic: {
+        name: 'Rhombic', symbol: '\u2726', tv: 6, cost: 250,
+        range: 12.0, fireRate: 3000, damage: 150,
+        ability: 'sniper',          // extreme damage, very slow fire
+        color: '#aa44ff',
+        upgrades: [
+            { damage: 250, range: 14.0, fireRate: 2800, cost: 250 },
+            { damage: 400, range: 16.0, fireRate: 2500, cost: 400 },
+            { damage: 700, range: 20.0, fireRate: 2000, cost: 600 }
+        ]
     }
 };
 
@@ -82,6 +97,9 @@ const CREEP_TYPES = {
     normal: { name: 'Normal', speedMul: 1.0, hpMul: 1.0, goldMul: 1.0, color: '#55cc55', symbol: '\u25CF' },
     fast: { name: 'Fast', speedMul: 2.0, hpMul: 0.5, goldMul: 1.2, color: '#55ccff', symbol: '\u25C6' },
     armored: { name: 'Armored', speedMul: 0.5, hpMul: 2.5, goldMul: 1.5, color: '#ccaa22', symbol: '\u25A0' },
+    regen: { name: 'Regen', speedMul: 0.6, hpMul: 3.0, goldMul: 2.0, color: '#ffaaaa', symbol: '\u271A' },
+    swarm: { name: 'Swarm', speedMul: 1.5, hpMul: 0.8, goldMul: 1.5, color: '#cccc33', symbol: '\u273F' },
+    swarmlet: { name: 'Swarmlet', speedMul: 2.0, hpMul: 0.2, goldMul: 0.3, color: '#aaaa22', symbol: '\u2022' },
     boss: { name: 'Boss', speedMul: 0.3, hpMul: 6.0, goldMul: 5.0, color: '#ff4444', symbol: '\u2605' }
 };
 
@@ -156,12 +174,13 @@ class TDTower {
 }
 
 // ─── Board ──────────────────────────────────────────────────────────────────
-class TowerDefenseBoard {
+class TowerDefenseBoard extends BaseBoard {
 
     /**
      * @param {number} size - Grid dimension
      */
     constructor(size = 6) {
+        super(size, { name: 'TowerDefenseBoard', verify: false });
         this.size = size;
         this.grid = new Map();          // GridUtils.key() -> cell data
         this.path = this.generateIVMPath();
@@ -186,6 +205,7 @@ class TowerDefenseBoard {
             tetra: SYNERGETICS?.TETRA_VOL ?? 1,
             octa: SYNERGETICS?.OCTA_VOL ?? 4,
             cubo: SYNERGETICS?.CUBO_VOL ?? 20,
+            rhombic: 6,
         };
         this.cellVolumeUnit = Quadray.cellVolume();
         this.s3Constant = SYNERGETICS?.S3 ?? 1.0607;
@@ -195,7 +215,7 @@ class TowerDefenseBoard {
 
         console.log(`[TowerDefenseBoard] ${size}^4 IVM grid`);
         console.log(`[TowerDefenseBoard] Cell volume: ${this.cellVolumeUnit}, S3: ${this.s3Constant}`);
-        console.log(`[TowerDefenseBoard] Volume ratios T:O:C = ${this.volumeRatios.tetra}:${this.volumeRatios.octa}:${this.volumeRatios.cubo}`);
+        console.log(`[TowerDefenseBoard] Volume ratios T:O:C:R = ${this.volumeRatios.tetra}:${this.volumeRatios.octa}:${this.volumeRatios.cubo}:${this.volumeRatios.rhombic}`);
     }
 
     /** Verify geometric integrity on construction. */
@@ -305,33 +325,36 @@ class TowerDefenseBoard {
     }
 
     /**
-     * Generate an IVM grid-snapped path of ~20 integer Quadray waypoints.
-     * The path zigzags through the board using axis-aligned steps,
-     * creating a serpentine route through tetrahedral space.
+     * Procedurally generate a meandering, grid-snapped IVM path.
      */
     generateIVMPath() {
-        return [
-            new Quadray(0, 0, 0, 0),
-            new Quadray(1, 0, 0, 0),
-            new Quadray(2, 0, 0, 0),
-            new Quadray(3, 0, 0, 0),
-            new Quadray(3, 1, 0, 0),
-            new Quadray(3, 2, 0, 0),
-            new Quadray(3, 2, 1, 0),
-            new Quadray(3, 2, 2, 0),
-            new Quadray(3, 2, 2, 1),
-            new Quadray(2, 2, 2, 1),
-            new Quadray(1, 2, 2, 1),
-            new Quadray(0, 2, 2, 1),
-            new Quadray(0, 2, 2, 2),
-            new Quadray(0, 2, 3, 2),
-            new Quadray(0, 3, 3, 2),
-            new Quadray(1, 3, 3, 2),
-            new Quadray(2, 3, 3, 2),
-            new Quadray(2, 3, 3, 3),
-            new Quadray(2, 4, 3, 3),
-            new Quadray(2, 4, 4, 3)
-        ];
+        const path = [new Quadray(0, 0, 0, 0)];
+        let current = path[0];
+        const visited = new Set([GridUtils.key(0, 0, 0, 0)]);
+        const maxLen = 20 + Math.floor(Math.random() * 8);
+
+        for (let i = 1; i < maxLen; i++) {
+            let candidates = [];
+            for (const basis of Quadray.BASIS) {
+                const next = current.add(basis);
+                const rn = new Quadray(Math.round(next.a), Math.round(next.b), Math.round(next.c), Math.round(next.d));
+                const k = GridUtils.key(rn.a, rn.b, rn.c, rn.d);
+                if (!visited.has(k)) candidates.push({ q: rn, k });
+            }
+            if (candidates.length === 0) break;
+
+            candidates.sort((c1, c2) => {
+                const d1 = c1.q.a + c1.q.b + c1.q.c + c1.q.d;
+                const d2 = c2.q.a + c2.q.b + c2.q.c + c2.q.d;
+                return d2 - d1; // Descending sum (moves away from origin)
+            });
+
+            const chosen = (Math.random() < 0.7) ? candidates[0] : candidates[Math.floor(Math.random() * candidates.length)];
+            path.push(chosen.q);
+            visited.add(chosen.k);
+            current = chosen.q;
+        }
+        return path;
     }
 
     /**
@@ -389,6 +412,10 @@ class TowerDefenseBoard {
             let type = 'normal';
             if (isBossWave && i === 0) {
                 type = 'boss';
+            } else if (this.wave >= 6 && Math.random() < 0.15) {
+                type = 'regen';
+            } else if (this.wave >= 4 && Math.random() < 0.2) {
+                type = 'swarm';
             } else if (this.wave >= 3 && Math.random() < 0.2) {
                 type = 'fast';
             } else if (this.wave >= 5 && Math.random() < 0.15) {
@@ -446,6 +473,11 @@ class TowerDefenseBoard {
                 c.slowTimer--;
             } else {
                 c.speed = c.baseSpeed;
+            }
+
+            // Regen effect
+            if (c.type === 'regen' && this.tick % 30 === 0 && c.hp < c.maxHp) {
+                c.hp = Math.min(c.maxHp, c.hp + c.maxHp * 0.05);
             }
 
             // Store trail position
@@ -516,6 +548,26 @@ class TowerDefenseBoard {
                         }
                     }
                 }
+            } else if (def.ability === 'sniper') {
+                // Sniper: single target, prioritises highest-HP creep
+                let best = null;
+                let bestHP = -1;
+                let bestCq = null;
+                for (const c of this.creeps) {
+                    if (!c.alive || !c.started) continue;
+                    const cq = this.getCreepPosition(c);
+                    const dist = Quadray.distance(tq, cq);
+                    if (dist <= t.range && c.hp > bestHP) {
+                        best = c; bestHP = c.hp; bestCq = cq;
+                    }
+                }
+                if (best) {
+                    best.hp -= t.damage;
+                    t.lastFire = now;
+                    t.fireFlash = 12;
+                    this.projectiles.push({ from: tq, to: bestCq, life: 8, color: def.color });
+                    if (best.hp <= 0) this._killCreep(best, t);
+                }
             } else {
                 // Rapid: single target, fast fire
                 for (const c of this.creeps) {
@@ -560,6 +612,17 @@ class TowerDefenseBoard {
         this.score += creep.scoreValue;
         this.totalKills++;
         if (tower) tower.kills++;
+
+        if (creep.type === 'swarm') {
+            for (let i = 0; i < 2; i++) {
+                const letc = new TDCreep('swarmlet', this.wave);
+                letc.segmentIndex = creep.segmentIndex;
+                letc.segmentT = Math.max(0, creep.segmentT + (i === 0 ? 0.05 : -0.05));
+                letc.delay = 0;
+                this.creeps.push(letc);
+            }
+        }
+
         // Spawn death particles
         const pos = this.getCreepPosition(creep);
         for (let i = 0; i < 8; i++) {
@@ -589,10 +652,11 @@ class TowerDefenseBoard {
      * @returns {Object}
      */
     getMetadata() {
-        let tetraCount = 0, octaCount = 0, cuboCount = 0;
+        let tetraCount = 0, octaCount = 0, cuboCount = 0, rhombicCount = 0;
         for (const t of this.towers) {
             if (t.type === 'tetra') tetraCount++;
             else if (t.type === 'octa') octaCount++;
+            else if (t.type === 'rhombic') rhombicCount++;
             else cuboCount++;
         }
         return {
@@ -609,6 +673,7 @@ class TowerDefenseBoard {
             tetraCount,
             octaCount,
             cuboCount,
+            rhombicCount,
             totalTV: this.getTotalTV(),
             totalRangeTV: this.getTotalRangeTV(),
             waypointCount: this.path.length,

@@ -38,7 +38,7 @@ Collection of **22 standalone 4D games** built on the QuadCraft Quadray coordina
 | 🔴 [4D Connect Four](4d_connect_four/) | Gravity-drop 4-in-a-row in 4D | 70 | ✅ |
 | 💥 [4D Minesweeper](4d_minesweeper/) | Mine-counting with IVM neighbors | 23 | ✅ |
 
-**Total: 22 games, 707 unit tests, all passing.**
+**Total: 22 games, 1,060 unit tests, all passing.**
 
 ## Quick Start
 
@@ -49,7 +49,7 @@ Collection of **22 standalone 4D games** built on the QuadCraft Quadray coordina
 # Launch via Python (Recommended - Handles shared imports correctly)
 python3 run_games.py --game chess           # One game
 python3 run_games.py --game chess doom life # Multiple games
-python3 run_games.py --all                  # All 12 games in 12 windows
+python3 run_games.py --all                  # All 22 games simultaneously
 python3 run_games.py --config games_config.json  # From config file
 
 # List all games
@@ -83,6 +83,14 @@ Each game has a standalone `run.sh` inside its directory:
 
 ## Python Launcher (`run_games.py`)
 
+| File | Description |
+|---|---|
+| `run_games.py` | Main entrypoint for launching one, multiple, or all games. Supports custom ports. |
+| `src/core/registry.py` | Central `GAMES` dictionary configuring metadata and unique offsets. |
+| `src/core/config.py` | Shared file, folder, and logic constants across python. |
+| `src/qa/testing.py` | Universal test harness traversing directories and detecting JS/PY tests. |
+| `src/server/launcher.py` | Spawns individual threaded servers per game. |
+
 The master launcher supports:
 
 - `--game NAME [NAME ...]` — launch one or more games
@@ -110,12 +118,22 @@ The master launcher supports:
 
 ```text
 games/
-├── run_games.py            # Main CLI Launcher (--game, --all, --test, --validate)
-├── src/                    # Core Python Modules
-│   ├── registry.py         # Game definitions
-│   ├── launcher.py         # Server logic
-│   ├── testing.py          # Test runner
-│   └── validation.py       # Structural validation
+├── run_games.py            # Main CLI Launcher (--game, --all, --test, --validate)│
+├── src/                    # Core Python modules
+│   ├── __init__.py         # Consolidated export API
+│   ├── core/               # Configuration and Registration
+│   │   ├── config.py       # Shared constants, required files lists
+│   │   └── registry.py     # Game definitions mapping
+│   ├── server/             # Game Server
+│   │   └── launcher.py     # HTTP Server
+│   ├── qa/                 # Quality Assurance
+│   │   ├── validation.py   # Structural validation rules
+│   │   └── testing.py      # Test runner
+│   ├── scaffold/           # Auto-generates new games
+│   ├── analytics/          # Health/Status analytics
+│   ├── shared/             # JS module metadata
+│   ├── board/              # Board logic utilities
+│   └── space/              # Pure Quadray / Synergetics modelinge Tests
 ├── scripts/                # Maintenance Scripts
 │   ├── _run_template.sh    # Shell script template
 │   ├── generate_test_html.py
@@ -125,13 +143,21 @@ games/
 │   ├── test_projection.js  # projectQuadray(), drawQuadrayAxes()
 │   ├── test_camera.js      # CameraController
 │   ├── test_zoom.js        # setupZoom()
+│   ├── test_base_board.js  # BaseBoard
+│   ├── test_entity_system.js # QuadrayEntity, EntityManager
+│   ├── test_turn_manager.js  # TurnManager
+│   ├── test_pathfinding.js   # QuadrayPathfinder
 │   └── test_all_shared.js  # Integration runner
 ├── 4d_generic/             # Shared JS Modules
 │   ├── quadray.js          # Quadray class (single source of truth)
 │   ├── camera.js           # CameraController
 │   ├── projection.js       # projectQuadray() + drawQuadrayAxes()
 │   ├── zoom.js             # setupZoom()
-│   └── synergetics.js      # Synergetics constants
+│   ├── synergetics.js      # Synergetics constants
+│   ├── base_board.js       # BaseBoard (grid, distances, integrity)
+│   ├── entity_system.js    # QuadrayEntity + EntityManager
+│   ├── turn_manager.js     # TurnManager (rotation, undo/redo)
+│   └── pathfinding.js      # QuadrayPathfinder (BFS, A*, flood)
 └── 4d_<game>/              # Standalone Game
     ├── index.html          # Imports shared modules from ../4d_generic/
     ├── js/                 # Game-specific logic

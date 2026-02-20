@@ -12,6 +12,7 @@
  */
 import { COLORS, IVM, RENDER } from './doom_config.js';
 import { getAnalysis, verifyGeometricIdentities } from './doom_synergetics.js';
+import { Logger } from './doom_logger.js';
 
 // Cache verification (expensive, run once)
 let _verifyCache = null;
@@ -29,9 +30,9 @@ export class SynergeticsHUD {
     verify() {
         if (!_verifyCache) {
             _verifyCache = verifyGeometricIdentities();
-            console.log(`[Synergetics] Geometric verification: ${_verifyCache.allPassed ? 'ALL PASSED' : 'FAILURES'}`);
+            Logger.geometry(`Geometric verification: ${_verifyCache.allPassed ? 'ALL PASSED' : 'FAILURES'}`);
             for (const c of _verifyCache.checks) {
-                console.log(`  ${c.passed ? '✓' : '✗'} ${c.name}: ${c.value}`);
+                Logger.geometry(`  ${c.passed ? '✓' : '✗'} ${c.name}: ${c.value}`);
             }
         }
         this._verifyResult = _verifyCache;

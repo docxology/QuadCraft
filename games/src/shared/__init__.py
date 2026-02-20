@@ -17,7 +17,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import List, Optional
 
-from ..config import GENERIC_DIR, SHARED_MODULES
+from ..core.config import GENERIC_DIR, SHARED_MODULES
 
 logger = logging.getLogger(__name__)
 
@@ -91,6 +91,19 @@ _MODULE_DEFS = [
     JSModule("BaseGame", "base_game.js", "engine",
              "Base game controller with auto-setup for GameLoop, InputController, camera.",
              depends_on=["game_loop.js", "input_controller.js"]),
+    # ── Extended Modules (available but not required by all games) ────────
+    JSModule("BaseBoard", "base_board.js", "engine",
+             "Grid operations, distances, integrity checks, metadata for board games.",
+             depends_on=["grid_utils.js"]),
+    JSModule("EntitySystem", "entity_system.js", "engine",
+             "QuadrayEntity + EntityManager with collision detection and wrapping.",
+             depends_on=["quadray.js"]),
+    JSModule("TurnManager", "turn_manager.js", "engine",
+             "Player rotation, undo/redo stack for turn-based games.",
+             depends_on=[]),
+    JSModule("Pathfinding", "pathfinding.js", "engine",
+             "QuadrayPathfinder with BFS, A*, flood fill, and line-of-sight.",
+             depends_on=["grid_utils.js"]),
 ]
 
 

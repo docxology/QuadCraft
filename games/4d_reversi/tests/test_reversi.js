@@ -19,17 +19,17 @@ function runTests() {
     const before = board.count('black');
     board.place(move.pos, ReversiColor.BLACK);
     assert(board.count('black') > before, "Placing disc increases count");
-    assert(board.getAt(move.pos) === 'black', "Placed disc is on board");
+    assert(board.getCell(move.pos) === 'black', "Placed disc is on board");
     // Flipped discs
     for (const f of move.flips) {
-        assert(board.getAt(f) === 'black', "Flipped disc is now black");
+        assert(board.getCell(f) === 'black', "Flipped disc is now black");
     }
     // Directions count
     assert(ReversiBoard.DIRECTIONS.length === 80, "80 directions in 4D");
     // Board boundaries
-    assert(board.isValid(new Quadray(0, 0, 0, 0)), "Origin is valid");
-    assert(board.isValid(new Quadray(3, 3, 3, 3)), "Max corner is valid");
-    assert(!board.isValid(new Quadray(4, 0, 0, 0)), "Out of bounds detected");
+    assert(board.inBounds(new Quadray(0, 0, 0, 0)), "Origin is valid");
+    assert(board.inBounds(new Quadray(3, 3, 3, 3)), "Max corner is valid");
+    assert(!board.inBounds(new Quadray(4, 0, 0, 0)), "Out of bounds detected");
     console.log("All 4D Reversi tests completed!");
 }
 if (typeof require !== 'undefined' && require.main === module) runTests();

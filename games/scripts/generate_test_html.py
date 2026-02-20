@@ -8,7 +8,7 @@ game_root = str(Path(__file__).resolve().parent.parent)
 if game_root not in sys.path:
     sys.path.insert(0, game_root)
 
-from src.registry import GAMES
+from src.core.registry import GAMES
 
 TEMPLATE = """<!DOCTYPE html>
 <html lang="en">

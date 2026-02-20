@@ -18,29 +18,33 @@ Usage:
 """
 
 from .quadrays import Quadray
-from .ivm import IVM, SYNERGETICS
+from .ivm import IVM, SYNERGETICS, IVMGrid, Jitterbug
 from .xyz import (
     quadray_to_xyz, xyz_to_quadray,
     project_quadray, rotate_xyz,
+    ScreenPoint, project_basis_axes,
 )
 from .geometry import (
     angle_between, distance, manhattan_4d, euclidean_4d,
     verify_round_trip, verify_geometric_identities,
     generate_grid, neighbors_8, bounded_neighbors,
-    in_bounds, depth_sort,
+    in_bounds, depth_sort, random_coord,
+    CheckResult, VerificationReport,
 )
 
 __all__ = [
     # Quadray
     "Quadray",
     # IVM
-    "IVM", "SYNERGETICS",
+    "IVM", "SYNERGETICS", "IVMGrid", "Jitterbug",
     # XYZ
     "quadray_to_xyz", "xyz_to_quadray",
     "project_quadray", "rotate_xyz",
+    "ScreenPoint", "project_basis_axes",
     # Geometry
     "angle_between", "distance", "manhattan_4d", "euclidean_4d",
     "verify_round_trip", "verify_geometric_identities",
+    "CheckResult", "VerificationReport",
     "generate_grid", "neighbors_8", "bounded_neighbors",
-    "in_bounds", "depth_sort",
+    "in_bounds", "depth_sort", "random_coord",
 ]

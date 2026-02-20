@@ -26,6 +26,10 @@ if (typeof Quadray === 'undefined' && typeof require !== 'undefined') {
     const _q = require('../../4d_generic/quadray.js');
     globalThis.Quadray = _q.Quadray;
 }
+if (typeof BaseBoard === 'undefined' && typeof require !== 'undefined') {
+    const _bb = require('../../4d_generic/base_board.js');
+    globalThis.BaseBoard = _bb.BaseBoard;
+}
 if (typeof GridUtils === 'undefined' && typeof require !== 'undefined') {
     const _g = require('../../4d_generic/grid_utils.js');
     globalThis.GridUtils = _g.GridUtils;
@@ -38,12 +42,13 @@ if (typeof SYNERGETICS === 'undefined' && typeof require !== 'undefined') {
     globalThis.verifyGeometricIdentities = _s.verifyGeometricIdentities;
 }
 
-class MinesweeperBoard {
+class MinesweeperBoard extends BaseBoard {
     /**
      * @param {number} size  - Grid extent in each Quadray axis (0..size-1)
      * @param {number} mineRatio - Fraction of cells that are mines
      */
     constructor(size = 4, mineRatio = 0.15) {
+        super(size, { name: 'MinesweeperBoard', verify: false });
         this.size = size;
         this.mineRatio = mineRatio;
         this.mines = new Set();      // Set of position keys

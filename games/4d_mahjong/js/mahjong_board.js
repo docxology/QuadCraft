@@ -33,6 +33,10 @@ if (typeof SYNERGETICS === 'undefined' && typeof require !== 'undefined') {
     globalThis.verifyRoundTrip = _s.verifyRoundTrip;
     globalThis.verifyGeometricIdentities = _s.verifyGeometricIdentities;
 }
+if (typeof BaseBoard === 'undefined' && typeof require !== 'undefined') {
+    const _b = require('../../4d_generic/base_board.js');
+    globalThis.BaseBoard = _b.BaseBoard;
+}
 
 const TILE_SUITS = ['bamboo', 'circle', 'character', 'wind', 'dragon'];
 const TILE_COLORS = { bamboo: '#4CAF50', circle: '#2196F3', character: '#FF5722', wind: '#9C27B0', dragon: '#F44336' };
@@ -47,8 +51,9 @@ class MahjongTile {
     toQuadray() { return new Quadray(this.pos.a, this.pos.b, this.layer * 2, this.pos.d); }
 }
 
-class MahjongBoard {
+class MahjongBoard extends BaseBoard {
     constructor() {
+        super();
         this.tiles = [];
         this.selected = null;
         this.score = 0;

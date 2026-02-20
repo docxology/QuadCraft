@@ -9,6 +9,7 @@
  */
 import { CELL, MAP, IVM } from './doom_config.js';
 import { Quadray } from './quadray.js';
+import { Logger } from './doom_logger.js';
 
 export class DoomMap {
     constructor(size = MAP.SIZE) {
@@ -129,7 +130,7 @@ export class DoomMap {
             });
         }
 
-        // Connect rooms with IVM-aware corridors
+        // Connect rooms with IVM-aware corridors (Main Loop)
         for (let i = 1; i < this.rooms.length; i++) {
             this._carveCorridorIVM(this.rooms[i - 1], this.rooms[i]);
         }
@@ -137,9 +138,15 @@ export class DoomMap {
             this._carveCorridorIVM(this.rooms[this.rooms.length - 1], this.rooms[0]);
         }
 
-        console.log(`[DoomMap] Generated ${this.rooms.length} rooms ` +
-            `(T:${this.stats.tetraRooms} O:${this.stats.octaRooms} R:${this.stats.rectRooms}) ` +
-            `in ${S}^4 IVM grid (${this.cells.size} cells)`);
+        // Add random cross-connections for better interconnectedness Web
+        for (let i = 0; i < this.rooms.length; i++) {
+            if (Math.random() < 0.4) {
+                const j = Math.floor(Math.random() * this.rooms.length);
+                if (i !== j) this._carveCorridorIVM(this.rooms[i], this.rooms[j]);
+            }
+        }
+
+        Logger.map(`Generated ${this.rooms.length} rooms (T:${this.stats.tetraRooms} O:${this.stats.octaRooms} R:${this.stats.rectRooms}) in ${S}^4 IVM grid (${this.cells.size} cells)`);
     }
 
     /**
@@ -198,30 +205,32 @@ export class DoomMap {
         }
     }
 
+    _carveCorridorSegment(a, b, c, d) {
+        this.setCell(a, b, c, d, CELL.FLOOR);
+        if (a + 1 < this.size) this.setCell(a + 1, b, c, d, CELL.FLOOR);
+        if (b + 1 < this.size) this.setCell(a, b + 1, c, d, CELL.FLOOR);
+        if (a + 1 < this.size && b + 1 < this.size) this.setCell(a + 1, b + 1, c, d, CELL.FLOOR);
+        this.stats.corridorCells += 4;
+    }
+
     _carveCorridorIVM(src, dst) {
         let a = src.a, b = src.b, c = src.c, d = src.d;
 
         while (a !== dst.a) {
             a += Math.sign(dst.a - a);
-            this.setCell(a, b, c, d, CELL.FLOOR);
-            if (b + 1 < this.size) this.setCell(a, b + 1, c, d, CELL.FLOOR);
-            this.stats.corridorCells += 2;
+            this._carveCorridorSegment(a, b, c, d);
         }
         while (b !== dst.b) {
             b += Math.sign(dst.b - b);
-            this.setCell(a, b, c, d, CELL.FLOOR);
-            if (a + 1 < this.size) this.setCell(a + 1, b, c, d, CELL.FLOOR);
-            this.stats.corridorCells += 2;
+            this._carveCorridorSegment(a, b, c, d);
         }
         while (c !== dst.c) {
             c += Math.sign(dst.c - c);
-            this.setCell(a, b, c, d, CELL.FLOOR);
-            this.stats.corridorCells++;
+            this._carveCorridorSegment(a, b, c, d);
         }
         while (d !== dst.d) {
             d += Math.sign(dst.d - d);
-            this.setCell(a, b, c, d, CELL.FLOOR);
-            this.stats.corridorCells++;
+            this._carveCorridorSegment(a, b, c, d);
         }
     }
 

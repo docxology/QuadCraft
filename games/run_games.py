@@ -30,10 +30,10 @@ import time
 from pathlib import Path
 
 # Import from our new src package
-from src.registry import GAMES, load_config
-from src.launcher import GameServer
-from src.testing import run_tests
-from src.validation import audit_all
+from src.core.registry import GAMES, load_config
+from src.server.launcher import GameServer
+from src.qa.testing import run_tests
+from src.qa.validation import audit_all
 
 def main():
     parser = argparse.ArgumentParser(

@@ -3,6 +3,7 @@
  * Run: node tests/test_bomberman.js
  */
 const { Quadray } = require('../../4d_generic/quadray.js');
+const { GridUtils } = require('../../4d_generic/grid_utils.js');
 const { BombermanBoard } = require('../js/bomberman_board.js');
 
 let passed = 0, failed = 0;
@@ -17,7 +18,7 @@ const board = new BombermanBoard(6);
 assert('Board size 6', board.size === 6);
 assert('Player starts at (0,0,0,0)', board.player.a === 0 && board.player.b === 0);
 assert('Lives start at 3', board.lives === 3);
-assert('Grid has walls', Object.values(board.grid).some(v => v === 'wall'));
+assert('Grid has walls', Array.from(board.grid.values()).some(v => v && v.type === 'wall'));
 
 // Movement
 const moveResult = board.movePlayer(BombermanBoard.DIRECTIONS[0]); // +A
@@ -25,7 +26,8 @@ assert('Movement returns valid result', ['moved', 'blocked'].includes(moveResult
 
 // Blocked by wall
 const board2 = new BombermanBoard(6);
-board2.grid[board2.key(1, 0, 0, 0)] = 'wall';
+const wallKey = GridUtils.key(1, 0, 0, 0);
+board2.grid.set(wallKey, { type: 'wall', quadray: new Quadray(1, 0, 0, 0), cellType: 'up' });
 const blocked = board2.movePlayer({ da: 1, db: 0, dc: 0, dd: 0 });
 assert('Blocked by wall', blocked === 'blocked');
 
@@ -52,7 +54,8 @@ for (let i = 0; i < 6; i++)
     for (let j = 0; j < 6; j++)
         for (let k = 0; k < 3; k++) {
             const key = board4.key(i, j, k, 0);
-            if (board4.grid[key] === 'destructible') delete board4.grid[key];
+            const cell = board4.grid.get(key);
+            if (cell && cell.type === 'destructible') board4.grid.delete(key);
         }
 board4.bombs = [{ a: 3, b: 3, c: 3, d: 3, timer: 0, range: 2 }];
 board4.player = { a: 0, b: 0, c: 0, d: 0 };

@@ -27,6 +27,10 @@ if (typeof Quadray === 'undefined' && typeof require !== 'undefined') {
     const _q = require('../../4d_generic/quadray.js');
     globalThis.Quadray = _q.Quadray;
 }
+if (typeof BaseBoard === 'undefined' && typeof require !== 'undefined') {
+    const _bb = require('../../4d_generic/base_board.js');
+    globalThis.BaseBoard = _bb.BaseBoard;
+}
 if (typeof GridUtils === 'undefined' && typeof require !== 'undefined') {
     const _g = require('../../4d_generic/grid_utils.js');
     globalThis.GridUtils = _g.GridUtils;
@@ -39,7 +43,7 @@ if (typeof SYNERGETICS === 'undefined' && typeof require !== 'undefined') {
     globalThis.verifyGeometricIdentities = _s.verifyGeometricIdentities;
 }
 
-class BombermanBoard {
+class BombermanBoard extends BaseBoard {
     /** 8 IVM explosion/movement directions. */
     static DIRECTIONS = [
         { da: 1, db: 0, dc: 0, dd: 0, name: '+A' },
@@ -56,6 +60,7 @@ class BombermanBoard {
      * @param {number} size - Grid dimension (size^4 IVM grid)
      */
     constructor(size = 6) {
+        super(size, { name: 'BombermanBoard', verify: false });
         this.size = size;
         this.grid = new Map();    // GridUtils.key() -> { type, quadray, cellType }
         this.player = { a: 0, b: 0, c: 0, d: 0 };

@@ -26,6 +26,10 @@ if (typeof Quadray === 'undefined' && typeof require !== 'undefined') {
     const _q = require('../../4d_generic/quadray.js');
     globalThis.Quadray = _q.Quadray;
 }
+if (typeof BaseBoard === 'undefined' && typeof require !== 'undefined') {
+    const _bb = require('../../4d_generic/base_board.js');
+    globalThis.BaseBoard = _bb.BaseBoard;
+}
 if (typeof GridUtils === 'undefined' && typeof require !== 'undefined') {
     const _g = require('../../4d_generic/grid_utils.js');
     globalThis.GridUtils = _g.GridUtils;
@@ -38,8 +42,9 @@ if (typeof SYNERGETICS === 'undefined' && typeof require !== 'undefined') {
     globalThis.verifyGeometricIdentities = _s.verifyGeometricIdentities;
 }
 
-class SpaceInvadersBoard {
+class SpaceInvadersBoard extends BaseBoard {
     constructor(width = 6, height = 12, depthC = 3, depthD = 3) {
+        super(width, { name: 'SpaceInvadersBoard', verify: false });
         this.width = width;
         this.height = height;
         this.depthC = depthC;

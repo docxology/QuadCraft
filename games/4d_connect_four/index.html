@@ -361,6 +361,8 @@
     <script src="../4d_generic/game_loop.js"></script>
     <script src="../4d_generic/input_controller.js"></script>
     <script src="../4d_generic/grid_utils.js"></script>
+    <script src="../4d_generic/base_board.js"></script>
+    <script src="../4d_generic/turn_manager.js"></script>
     <script src="../4d_generic/base_renderer.js"></script>
     <script src="../4d_generic/base_game.js"></script>
     <script src="../4d_generic/hud.js"></script>
@@ -403,12 +405,12 @@
             const history = game.board.moveHistory;
             if (history.length > 0) {
                 histEl.innerHTML = history.slice(-20).map(m => {
-                    const q = m.quadray;
+                    const q = m.move.quadray;
                     const cls = `player-${m.player}`;
                     return `<div class="move-entry">` +
-                        `<span class="${cls}">#${m.moveNum} P${m.player}</span>` +
+                        `<span class="${cls}">#${m.move.moveNum} P${m.player}</span>` +
                         `<span>(${q.a},${q.b},${q.c},${q.d})</span>` +
-                        `<span class="parity">${m.cellType}</span></div>`;
+                        `<span class="parity">${m.move.cellType}</span></div>`;
                 }).join('');
                 histEl.scrollTop = histEl.scrollHeight;
             }

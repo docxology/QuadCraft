@@ -25,6 +25,10 @@ if (typeof Quadray === 'undefined' && typeof require !== 'undefined') {
     const _q = require('../../4d_generic/quadray.js');
     globalThis.Quadray = _q.Quadray;
 }
+if (typeof BaseBoard === 'undefined' && typeof require !== 'undefined') {
+    const _bb = require('../../4d_generic/base_board.js');
+    globalThis.BaseBoard = _bb.BaseBoard;
+}
 if (typeof GridUtils === 'undefined' && typeof require !== 'undefined') {
     const _g = require('../../4d_generic/grid_utils.js');
     globalThis.GridUtils = _g.GridUtils;
@@ -41,12 +45,13 @@ const BlockType = { AIR: 0, STONE: 1, DIRT: 2, GRASS: 3, WOOD: 4, LEAVES: 5, WAT
 const BLOCK_COLORS = { 0: 'transparent', 1: '#888', 2: '#965B3B', 3: '#4CAF50', 4: '#8B6914', 5: '#2E7D32', 6: '#1565C0', 7: '#F4D03F', 8: '#00BCD4' };
 const BLOCK_NAMES = { 0: 'Air', 1: 'Stone', 2: 'Dirt', 3: 'Grass', 4: 'Wood', 5: 'Leaves', 6: 'Water', 7: 'Sand', 8: 'Diamond' };
 
-class MinecraftBoard {
+class MinecraftBoard extends BaseBoard {
 
     /**
      * @param {number} size - World size per axis
      */
     constructor(size = 8) {
+        super(size, { name: 'MinecraftBoard', verify: false });
         this.size = size;
         this.blocks = new Map(); // GridUtils.key() -> BlockType
         this.inventory = { 1: 99, 2: 99, 3: 64, 4: 64, 5: 64, 7: 32, 8: 5 };

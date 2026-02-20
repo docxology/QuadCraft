@@ -121,9 +121,9 @@ assert('Horizontal win along B axis', hWin === 'win');
 console.log('\n— Move History —');
 assert('Board4 has move history', board4.moveHistory.length === 7);
 const lastMove = board4.moveHistory[board4.moveHistory.length - 1];
-assert('Last move has quadray', lastMove.quadray instanceof Quadray);
-assert('Last move has cellType', typeof lastMove.cellType === 'string');
-assert('Last move has moveNum', lastMove.moveNum === 7);
+assert('Last move has quadray', lastMove.move.quadray instanceof Quadray);
+assert('Last move has cellType', typeof lastMove.move.cellType === 'string');
+assert('Last move has moveNum', lastMove.move.moveNum === 7);
 
 // ─── 11. Distance Metrics ───────────────────────────────────────────
 console.log('\n— Distance Metrics —');

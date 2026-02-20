@@ -16,7 +16,7 @@ import os
 import json
 from pathlib import Path
 
-from ..config import GAMES_DIR, GENERIC_DIR, SHARED_MODULES, REQUIRED_FILES
+from ..core.config import GAMES_DIR, GENERIC_DIR, SHARED_MODULES, OPTIONAL_SHARED_MODULES, REQUIRED_FILES, SHARED_DIR_NAME
 
 logger = logging.getLogger(__name__)
 
@@ -28,14 +28,22 @@ class GameScaffold:
     """Generates a new game directory from the QuadCraft template."""
 
     def __init__(self, game_key: str, display_name: str, *,
-                 grid_size: int = 8, tick_rate: int = 16):
+                 grid_size: int = 8, tick_rate: int = 16,
+                 optional_modules: list[str] | None = None):
         self.game_key = game_key
         self.display_name = display_name
         self.grid_size = grid_size
         self.tick_rate = tick_rate
+        self.optional_modules = optional_modules or []
         self.dir_name = f"4d_{game_key}"
         self.game_dir = Path(GAMES_DIR) / self.dir_name
-        logger.info("[Scaffold] Initialized for %s → %s", game_key, self.game_dir)
+        # Validate optional module names
+        valid = set(OPTIONAL_SHARED_MODULES)
+        invalid = [m for m in self.optional_modules if m not in valid]
+        if invalid:
+            raise ValueError(f"Unknown optional modules: {invalid}. Valid: {sorted(valid)}")
+        logger.info("[Scaffold] Initialized for %s → %s (optional: %s)",
+                    game_key, self.game_dir, self.optional_modules or 'none')
 
     # ── Public API ───────────────────────────────────────────────────────────
 
@@ -47,6 +55,8 @@ class GameScaffold:
         self.game_dir.mkdir(parents=True, exist_ok=True)
         js_dir = self.game_dir / "js"
         js_dir.mkdir(exist_ok=True)
+        tests_dir = self.game_dir / "tests"
+        tests_dir.mkdir(exist_ok=True)
 
         self._write_board(js_dir)
         self._write_renderer(js_dir)
@@ -55,6 +65,7 @@ class GameScaffold:
         self._write_run_sh()
         self._write_agents_md()
         self._write_manifest()
+        self._write_test_stub(tests_dir)
 
         logger.info("[Scaffold] Created game: %s at %s", self.display_name, self.game_dir)
         return self.game_dir
@@ -268,12 +279,17 @@ if (typeof module !== 'undefined' && module.exports) {{
 
     def _write_html(self):
         script_tags = '\n'.join(_SCRIPT_TAG.format(module=m) for m in SHARED_MODULES)
+        # Add optional modules if requested
+        if self.optional_modules:
+            opt_tags = '\n'.join(_SCRIPT_TAG.format(module=m) for m in self.optional_modules)
+            script_tags += '\n\n    <!-- Optional shared modules -->\n' + opt_tags
         content = f"""<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{self.display_name} — QuadCraft</title>
+    <link rel="stylesheet" href="../4d_generic/hud-style.css">
     <style>
         body {{ margin: 0; background: #0f172a; color: #e2e8f0; font-family: 'Inter', sans-serif; display: flex; flex-direction: column; align-items: center; }}
         h1 {{ margin: 1rem 0 0.5rem; font-size: 1.6rem; }}
@@ -320,6 +336,7 @@ open http://localhost:8080/index.html
 
     def _write_agents_md(self):
         cls = self._class_name('')
+        all_mods = SHARED_MODULES + self.optional_modules
         content = f"""# {self.display_name} — AGENTS.md
 
 ## Architecture
@@ -328,7 +345,7 @@ open http://localhost:8080/index.html
 - **Game Controller** (`js/{self.game_key}_game.js`): GameLoop, InputController, HUD, camera integration.
 
 ## Shared Modules
-Depends on: {', '.join('`' + m + '`' for m in SHARED_MODULES)}
+Depends on: {', '.join('`' + m + '`' for m in all_mods)}
 
 ## Controls
 | Key | Action |
@@ -347,8 +364,42 @@ Depends on: {', '.join('`' + m + '`' for m in SHARED_MODULES)}
             "grid_size": self.grid_size,
             "tick_rate": self.tick_rate,
             "shared_modules": SHARED_MODULES,
+            "optional_modules": self.optional_modules,
         }
         (self.game_dir / "manifest.json").write_text(
             json.dumps(manifest, indent=2) + '\n'
         )
         logger.debug("[Scaffold] Wrote manifest.json")
+
+    def _write_test_stub(self, tests_dir: Path):
+        board_cls = self._class_name('Board')
+        content = f"""/**
+ * test_{self.game_key}.js — Basic tests for {self.display_name}
+ */
+const {{ {board_cls} }} = require('../js/{self.game_key}_board.js');
+
+let passed = 0;
+let failed = 0;
+
+function assert(cond, msg) {{
+    if (cond) {{ passed++; console.log(`  ✅ ${{msg}}`); }}
+    else      {{ failed++; console.log(`  ❌ ${{msg}}`); }}
+}}
+
+// ── Board creation ──
+const board = new {board_cls}();
+assert(board.size === {self.grid_size}, 'default grid size');
+assert(board.gameOver === false, 'starts not game-over');
+assert(board.score === 0, 'initial score is 0');
+assert(board.grid.length > 0, 'grid is populated');
+
+// ── Reset ──
+board.score = 42;
+board.reset();
+assert(board.score === 0, 'reset clears score');
+
+console.log(`\\n=== Results: ${{passed}} passed, ${{failed}} failed ===`);
+process.exit(failed > 0 ? 1 : 0);
+"""
+        (tests_dir / f"test_{self.game_key}.js").write_text(content)
+        logger.debug("[Scaffold] Wrote test stub: test_%s.js", self.game_key)

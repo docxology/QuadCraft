@@ -34,6 +34,9 @@ class ReversiGame extends BaseGame {
             cameraMode: 'shift-drag',
         });
 
+        // Turn state
+        this.turnManager = new TurnManager([ReversiColor.BLACK, ReversiColor.WHITE], { maxHistory: 1000 });
+
         // Score tracking via ScoreManager
         this.scoring = new ScoreManager({
             lives: 0,    // unlimited — turn-based game
@@ -82,8 +85,8 @@ class ReversiGame extends BaseGame {
 
     /** Sync current game state to renderer for display. */
     _syncRendererState() {
-        this.renderer.validMoves = this.board.getValidMoves(this.board.currentPlayer);
-        this.renderer.currentPlayer = this.board.currentPlayer;
+        this.renderer.validMoves = this.board.getValidMoves(this.turnManager.currentPlayer);
+        this.renderer.currentPlayer = this.turnManager.currentPlayer;
         this.renderer.gameOver = this.board.gameOver;
         this.renderer.gameOverMessage = this.board.gameOverMessage;
     }
@@ -96,6 +99,7 @@ class ReversiGame extends BaseGame {
     /** Start a new game, preserving scores. */
     newGame() {
         this.board.reset();
+        this.turnManager.reset();
         this._syncRendererState();
         console.log('[ReversiGame] New game started');
     }
@@ -133,11 +137,13 @@ class ReversiGame extends BaseGame {
      * @param {Object} move - { pos: Quadray, flips: Array }
      */
     _handlePlace(move) {
-        const color = this.board.currentPlayer;
+        const color = this.turnManager.currentPlayer;
         const success = this.board.place(move.pos, color);
         if (!success) return;
 
         console.log(`[ReversiGame] ${color} placed at ${move.pos} flipping ${move.flips.length}`);
+
+        this.turnManager.recordMove({ pos: move.pos, flips: move.flips, player: color });
 
         // End turn — check for valid opponent or same-player moves
         this._endTurn();
@@ -145,15 +151,15 @@ class ReversiGame extends BaseGame {
 
     /** Process end of turn: check opponent moves, check game over. */
     _endTurn() {
-        const opp = this.board.currentPlayer === ReversiColor.BLACK ? ReversiColor.WHITE : ReversiColor.BLACK;
+        const opp = this.turnManager.opponent;
         const oppMoves = this.board.getValidMoves(opp);
 
         if (oppMoves.length > 0) {
-            this.board.currentPlayer = opp;
+            this.turnManager.nextTurn();
         } else {
-            const myMoves = this.board.getValidMoves(this.board.currentPlayer);
+            const myMoves = this.board.getValidMoves(this.turnManager.currentPlayer);
             if (myMoves.length > 0) {
-                console.log(`[ReversiGame] ${opp} has no moves, ${this.board.currentPlayer} goes again`);
+                console.log(`[ReversiGame] ${opp} has no moves, ${this.turnManager.currentPlayer} goes again`);
             } else {
                 // Game over
                 this.board.gameOver = true;
@@ -181,7 +187,7 @@ class ReversiGame extends BaseGame {
      */
     randomMove() {
         if (this.board.gameOver || this.loop.paused) return false;
-        const validMoves = this.board.getValidMoves(this.board.currentPlayer);
+        const validMoves = this.board.getValidMoves(this.turnManager.currentPlayer);
         if (validMoves.length === 0) return false;
         const move = validMoves[Math.floor(Math.random() * validMoves.length)];
         this._handlePlace(move);
@@ -203,7 +209,7 @@ class ReversiGame extends BaseGame {
             };
         }
 
-        const isBlack = this.board.currentPlayer === ReversiColor.BLACK;
+        const isBlack = this.turnManager.currentPlayer === ReversiColor.BLACK;
         const emoji = isBlack ? 'Black' : 'White';
         const validCount = this.renderer.validMoves.length;
         return {

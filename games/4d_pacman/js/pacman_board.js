@@ -26,6 +26,10 @@ if (typeof Quadray === 'undefined' && typeof require !== 'undefined') {
     const _q = require('../../4d_generic/quadray.js');
     globalThis.Quadray = _q.Quadray;
 }
+if (typeof BaseBoard === 'undefined' && typeof require !== 'undefined') {
+    const _bb = require('../../4d_generic/base_board.js');
+    globalThis.BaseBoard = _bb.BaseBoard;
+}
 if (typeof GridUtils === 'undefined' && typeof require !== 'undefined') {
     const _g = require('../../4d_generic/grid_utils.js');
     globalThis.GridUtils = _g.GridUtils;
@@ -38,7 +42,7 @@ if (typeof SYNERGETICS === 'undefined' && typeof require !== 'undefined') {
     globalThis.verifyGeometricIdentities = _s.verifyGeometricIdentities;
 }
 
-class PacManBoard {
+class PacManBoard extends BaseBoard {
     /**
      * Canonical 8 IVM directions — delegated from GridUtils.DIRECTIONS_8.
      * Each entry gains a name label for HUD display and logging.
@@ -52,6 +56,7 @@ class PacManBoard {
      * @param {number} size — Grid dimension (0 to size-1 per axis).
      */
     constructor(size = 5) {
+        super(size, { name: 'PacManBoard', verify: false });
         this.size = size;
         this.walls = new Set();
         this.pellets = new Set();

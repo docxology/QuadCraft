@@ -26,6 +26,10 @@ if (typeof Quadray === 'undefined' && typeof require !== 'undefined') {
     const _q = require('../../4d_generic/quadray.js');
     globalThis.Quadray = _q.Quadray;
 }
+if (typeof BaseBoard === 'undefined' && typeof require !== 'undefined') {
+    const _bb = require('../../4d_generic/base_board.js');
+    globalThis.BaseBoard = _bb.BaseBoard;
+}
 if (typeof GridUtils === 'undefined' && typeof require !== 'undefined') {
     const _g = require('../../4d_generic/grid_utils.js');
     globalThis.GridUtils = _g.GridUtils;
@@ -37,8 +41,12 @@ if (typeof SYNERGETICS === 'undefined' && typeof require !== 'undefined') {
     globalThis.verifyRoundTrip = _s.verifyRoundTrip;
     globalThis.verifyGeometricIdentities = _s.verifyGeometricIdentities;
 }
+if (typeof TurnManager === 'undefined' && typeof require !== 'undefined') {
+    const _tm = require('../../4d_generic/turn_manager.js');
+    globalThis.TurnManager = _tm.TurnManager;
+}
 
-class ConnectFourBoard {
+class ConnectFourBoard extends BaseBoard {
 
     /**
      * @param {number} height - Column height (A axis)
@@ -47,17 +55,17 @@ class ConnectFourBoard {
      * @param {number} depthD - D axis extent
      */
     constructor(height = 6, width = 5, depthC = 3, depthD = 3) {
+        super(height, { name: 'ConnectFourBoard', verify: false });
         this.height = height;
         this.width = width;
         this.depthC = depthC;
         this.depthD = depthD;
         this.grid = new Map();          // Quadray.toKey() -> { player, quadray, cellType }
-        this.currentPlayer = 1;
+        this.turnManager = new TurnManager([1, 2], { maxHistory: Infinity }); // High tracking for minimax
         this.winner = 0;
         this.gameOver = false;
         this.winLine = [];              // Winning 4 Quadray positions
         this.moveCount = 0;
-        this.moveHistory = [];          // Array of { player, quadray, cellType, moveNum }
         this.totalSlots = width * depthC * depthD * height;
 
         // Synergetics metadata
@@ -96,6 +104,9 @@ class ConnectFourBoard {
         }
         if (allPassed) console.log('[ConnectFourBoard] ✅ Round-trip integrity verified on corner positions');
     }
+
+    get currentPlayer() { return this.turnManager.currentPlayer; }
+    get moveHistory() { return this.turnManager.moveHistory; }
 
     /**
      * Check if coordinates are within the board bounds.
@@ -162,8 +173,9 @@ class ConnectFourBoard {
         const parity = Quadray.cellType(landingQuadray.a, landingQuadray.b, landingQuadray.c, landingQuadray.d);
 
         // Place piece using Quadray.toKey() for storage
+        const player = this.currentPlayer;
         const cellData = {
-            player: this.currentPlayer,
+            player: player,
             quadray: landingQuadray,
             cellType: parity,
             moveNum: this.moveCount + 1,
@@ -171,19 +183,19 @@ class ConnectFourBoard {
         this.grid.set(landingQuadray.toKey(), cellData);
         this.moveCount++;
 
-        // Record move history
-        this.moveHistory.push({
-            player: this.currentPlayer,
+        const moveRecord = {
+            player: player,
             quadray: landingQuadray.clone(),
             cellType: parity,
             moveNum: this.moveCount,
-        });
+        };
 
         // Check win using IVM directions
         if (this._checkWin(landingQuadray)) {
             this.gameOver = true;
-            this.winner = this.currentPlayer;
+            this.winner = player;
             console.log(`[ConnectFourBoard] 🏆 Player ${this.winner} wins at ${landingQuadray.toString()} (${parity})`);
+            this.turnManager.recordAndAdvance(moveRecord);
             return { result: 'win', quadray: landingQuadray, cellType: parity };
         }
 
@@ -191,11 +203,12 @@ class ConnectFourBoard {
         if (this.moveCount >= this.totalSlots) {
             this.gameOver = true;
             console.log('[ConnectFourBoard] 🤝 Draw!');
+            this.turnManager.recordAndAdvance(moveRecord);
             return { result: 'draw', quadray: landingQuadray, cellType: parity };
         }
 
         // Switch player
-        this.currentPlayer = this.currentPlayer === 1 ? 2 : 1;
+        this.turnManager.recordAndAdvance(moveRecord);
         return { result: 'placed', quadray: landingQuadray, cellType: parity };
     }
 
@@ -497,12 +510,11 @@ class ConnectFourBoard {
     /** Reset board to initial state. */
     reset() {
         this.grid = new Map();
-        this.currentPlayer = 1;
+        this.turnManager.reset();
         this.winner = 0;
         this.gameOver = false;
         this.winLine = [];
         this.moveCount = 0;
-        this.moveHistory = [];
     }
 }
 

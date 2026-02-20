@@ -23,6 +23,10 @@ if (typeof Quadray === 'undefined' && typeof require !== 'undefined') {
     const _q = require('../../4d_generic/quadray.js');
     globalThis.Quadray = _q.Quadray;
 }
+if (typeof BaseBoard === 'undefined' && typeof require !== 'undefined') {
+    const _bb = require('../../4d_generic/base_board.js');
+    globalThis.BaseBoard = _bb.BaseBoard;
+}
 if (typeof GridUtils === 'undefined' && typeof require !== 'undefined') {
     const _g = require('../../4d_generic/grid_utils.js');
     globalThis.GridUtils = _g.GridUtils;
@@ -116,11 +120,12 @@ class AsteroidsEntity {
 /**
  * Game state manager for 4D Asteroids.
  */
-class AsteroidsBoard {
+class AsteroidsBoard extends BaseBoard {
     /**
      * @param {number} size - World hypercube size (0 to size per axis)
      */
     constructor(size = 8) {
+        super(size, { name: 'AsteroidsBoard', verify: false });
         this.size = size;
         this.entities = [];
         this.score = 0;

@@ -12,6 +12,7 @@
  */
 import { Quadray, ROOT2, S3 } from './quadray.js';
 import { CELL, IVM } from './doom_config.js';
+import { Logger } from './doom_logger.js';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // CACHE SYSTEM — recompute only on map change, not every frame

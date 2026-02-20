@@ -24,6 +24,10 @@ if (typeof Quadray === 'undefined' && typeof require !== 'undefined') {
     const _q = require('../../4d_generic/quadray.js');
     globalThis.Quadray = _q.Quadray;
 }
+if (typeof BaseBoard === 'undefined' && typeof require !== 'undefined') {
+    const _bb = require('../../4d_generic/base_board.js');
+    globalThis.BaseBoard = _bb.BaseBoard;
+}
 if (typeof GridUtils === 'undefined' && typeof require !== 'undefined') {
     const _g = require('../../4d_generic/grid_utils.js');
     globalThis.GridUtils = _g.GridUtils;
@@ -36,11 +40,12 @@ if (typeof SYNERGETICS === 'undefined' && typeof require !== 'undefined') {
     globalThis.verifyGeometricIdentities = _s.verifyGeometricIdentities;
 }
 
-class PongBoard {
+class PongBoard extends BaseBoard {
     /**
      * @param {number} courtSize - Court size in Quadray units
      */
     constructor(courtSize = 10) {
+        super(courtSize, { name: 'PongBoard', verify: false });
         this.courtSize = courtSize;
         this.ball = { a: 5, b: 5, c: 5, d: 5 };       // Position
         this.ballVel = { a: 0.15, b: 0.08, c: 0.05, d: -0.03 }; // Velocity

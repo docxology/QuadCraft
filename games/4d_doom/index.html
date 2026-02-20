@@ -28,6 +28,26 @@
             cursor: crosshair;
         }
 
+        /* ── Vignette & CRT Effects ── */
+        body::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(circle, transparent 50%, rgba(0, 0, 0, 0.85) 120%);
+            pointer-events: none;
+            z-index: 5;
+        }
+
+        .crt-overlay {
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%);
+            background-size: 100% 4px;
+            pointer-events: none;
+            z-index: 6;
+            opacity: 0.6;
+        }
+
         /* ── Animated background ── */
         #instructions::before {
             content: '';
@@ -213,6 +233,7 @@
 
 <body>
     <canvas id="gameCanvas"></canvas>
+    <div class="crt-overlay"></div>
 
     <div id="instructions">
         <div class="corner-tri tl"></div>

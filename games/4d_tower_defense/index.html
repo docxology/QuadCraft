@@ -21,6 +21,7 @@
             --tetra: #44aaff;
             --octa: #ffaa22;
             --cubo: #ff44aa;
+            --rhombic: #aa44ff;
             --gold: #ffdd44;
             --danger: #ff4444;
             --success: #44dd44;
@@ -56,6 +57,7 @@
             font-weight: 700;
             background: linear-gradient(135deg, #44aaff 0%, #8866ff 100%);
             -webkit-background-clip: text;
+            background-clip: text;
             -webkit-text-fill-color: transparent;
         }
 
@@ -273,6 +275,20 @@
             border-color: var(--cubo);
         }
 
+        .tower-btn[data-tower="rhombic"] {
+            border-left: 3px solid var(--rhombic);
+        }
+
+        .tower-btn[data-tower="rhombic"] .icon {
+            background: rgba(170, 68, 255, 0.15);
+            color: var(--rhombic);
+        }
+
+        .tower-btn[data-tower="rhombic"].active {
+            background: rgba(170, 68, 255, 0.1);
+            border-color: var(--rhombic);
+        }
+
         /* ─── Speed Controls ───────────────────────────────────── */
         .speed-row {
             display: flex;
@@ -330,6 +346,29 @@
             background: rgba(68, 170, 255, 0.18);
         }
 
+        .auto-wave-row {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+        }
+
+        .auto-wave-row .wave-btn {
+            flex: 1;
+        }
+
+        .auto-wave-toggle {
+            padding: 10px;
+            font-size: 12px;
+            min-width: 52px;
+            text-align: center;
+        }
+
+        .auto-wave-toggle.active {
+            background: rgba(68, 255, 68, 0.12);
+            border-color: rgba(68, 255, 68, 0.4);
+            color: var(--success);
+        }
+
         .reset-btn {
             width: 100%;
             padding: 10px;
@@ -375,6 +414,77 @@
             margin-bottom: 8px;
             text-transform: none;
             letter-spacing: 0;
+        }
+
+        /* ─── Creep Legend ─────────────────────────────────────── */
+        .creep-legend {
+            display: grid;
+            grid-template-columns: auto 1fr auto;
+            gap: 2px 8px;
+            font-size: 11px;
+            color: var(--text-dim);
+        }
+
+        .creep-legend .cl-icon {
+            font-size: 13px;
+            text-align: center;
+            width: 18px;
+        }
+
+        .creep-legend .cl-name {
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        .creep-legend .cl-note {
+            text-align: right;
+            font-size: 10px;
+        }
+
+        .cl-normal {
+            color: #55cc55;
+        }
+
+        .cl-fast {
+            color: #55ccff;
+        }
+
+        .cl-armored {
+            color: #ccaa22;
+        }
+
+        .cl-regen {
+            color: #ffaaaa;
+        }
+
+        .cl-swarm {
+            color: #cccc33;
+        }
+
+        .cl-swarmlet {
+            color: #aaaa22;
+        }
+
+        .cl-boss {
+            color: #ff4444;
+        }
+
+        /* ─── Tower Info Dynamic ──────────────────────────────── */
+        .tower-info-name {
+            font-size: 15px;
+            font-weight: 700;
+            margin-bottom: 6px;
+        }
+
+        .tower-info-actions {
+            display: flex;
+            gap: 6px;
+            margin-top: 10px;
+        }
+
+        .tower-info-maxed {
+            color: #556;
+            font-size: 12px;
         }
 
         /* ─── HUD Bar ─────────────────────────────────────────── */
@@ -444,6 +554,14 @@
                     </span>
                     <span class="cost">100g</span>
                 </button>
+                <button class="tower-btn" data-tower="rhombic" onclick="game.selectTowerType('rhombic')">
+                    <span class="icon">&#x2726;</span>
+                    <span class="info">
+                        <div class="name">Rhombic <span class="key">[4]</span></div>
+                        <div class="desc">Sniper - 6 TV</div>
+                    </span>
+                    <span class="cost">250g</span>
+                </button>
             </div>
 
             <!-- Tower Info (context-sensitive) -->
@@ -459,7 +577,11 @@
                 </div>
             </div>
 
-            <button class="wave-btn" onclick="game.sendNextWave()">Send Next Wave <kbd>N</kbd></button>
+            <div class="auto-wave-row">
+                <button class="wave-btn" onclick="game.sendNextWave()">Send Next Wave <kbd>N</kbd></button>
+                <button class="auto-wave-toggle" id="autoWaveBtn" onclick="game.toggleAutoWave()"
+                    title="Auto-send waves">Auto</button>
+            </div>
 
             <!-- Synergetics -->
             <div class="panel">
@@ -478,6 +600,27 @@
                 </div>
             </div>
 
+            <!-- Creep Legend -->
+            <div class="panel">
+                <h3>Creep Types</h3>
+                <div class="creep-legend">
+                    <span class="cl-icon cl-normal">&#x25CF;</span><span class="cl-name">Normal</span><span
+                        class="cl-note">1× HP</span>
+                    <span class="cl-icon cl-fast">&#x25C6;</span><span class="cl-name">Fast</span><span
+                        class="cl-note">2× speed</span>
+                    <span class="cl-icon cl-armored">&#x25A0;</span><span class="cl-name">Armored</span><span
+                        class="cl-note">2.5× HP</span>
+                    <span class="cl-icon cl-regen">&#x271A;</span><span class="cl-name">Regen</span><span
+                        class="cl-note">heals 5%/s</span>
+                    <span class="cl-icon cl-swarm">&#x273F;</span><span class="cl-name">Swarm</span><span
+                        class="cl-note">splits ×2</span>
+                    <span class="cl-icon cl-swarmlet">&#x2022;</span><span class="cl-name">Swarmlet</span><span
+                        class="cl-note">0.2× HP</span>
+                    <span class="cl-icon cl-boss">&#x2605;</span><span class="cl-name">Boss</span><span
+                        class="cl-note">6× HP</span>
+                </div>
+            </div>
+
             <!-- Controls Reference -->
             <div class="panel">
                 <h3>Controls</h3>
@@ -485,10 +628,12 @@
                     <li><kbd>Click</kbd> Place tower / Select</li>
                     <li><kbd>Shift+drag</kbd> Rotate view</li>
                     <li><kbd>Scroll</kbd> Zoom in/out</li>
-                    <li><kbd>1-3</kbd> Tower types</li>
+                    <li><kbd>1-4</kbd> Tower types</li>
                     <li><kbd>U</kbd> Upgrade tower</li>
                     <li><kbd>X</kbd> Sell tower</li>
                     <li><kbd>Space</kbd> Toggle speed</li>
+                    <li><kbd>N</kbd> Send next wave</li>
+                    <li><kbd>A</kbd> Toggle auto-wave</li>
                     <li><kbd>P</kbd> Pause</li>
                     <li><kbd>R</kbd> Reset</li>
                     <li><kbd>Esc</kbd> Deselect</li>
@@ -511,6 +656,8 @@
     <script src="../4d_generic/game_loop.js"></script>
     <script src="../4d_generic/input_controller.js"></script>
     <script src="../4d_generic/grid_utils.js"></script>
+    <script src="../4d_generic/base_board.js"></script>
+    <script src="../4d_generic/pathfinding.js"></script>
     <script src="../4d_generic/base_renderer.js"></script>
     <script src="../4d_generic/base_game.js"></script>
     <script src="../4d_generic/hud.js"></script>
@@ -535,7 +682,7 @@
             const meta = b.getMetadata();
 
             // Polyhedra count (from metadata)
-            document.getElementById('polyLabel').textContent = `T:${meta.tetraCount} O:${meta.octaCount} C:${meta.cuboCount}`;
+            document.getElementById('polyLabel').textContent = `T:${meta.tetraCount} O:${meta.octaCount} C:${meta.cuboCount} R:${meta.rhombicCount}`;
 
             // Creep center of mass
             const alive = b.creeps.filter(c => c.alive && c.started);
@@ -562,6 +709,15 @@
             const r = verifyGeometricIdentities();
             document.getElementById('verifyResult').innerHTML = r.checks.map(c => `${c.passed ? 'PASS' : 'FAIL'} ${c.name}`).join('<br>');
             document.getElementById('verifyResult').style.color = r.allPassed ? '#44ff44' : '#ff4444';
+        }
+
+        // Update auto-wave button state
+        function updateAutoWaveBtn() {
+            const btn = document.getElementById('autoWaveBtn');
+            if (btn && game) {
+                btn.classList.toggle('active', game.autoWave === true);
+                btn.textContent = game.autoWave ? 'Auto ✓' : 'Auto';
+            }
         }
     </script>
 </body>

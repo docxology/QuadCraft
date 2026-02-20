@@ -27,6 +27,10 @@ if (typeof Quadray === 'undefined' && typeof require !== 'undefined') {
     const _q = require('../../4d_generic/quadray.js');
     globalThis.Quadray = _q.Quadray;
 }
+if (typeof BaseBoard === 'undefined' && typeof require !== 'undefined') {
+    const _bb = require('../../4d_generic/base_board.js');
+    globalThis.BaseBoard = _bb.BaseBoard;
+}
 if (typeof GridUtils === 'undefined' && typeof require !== 'undefined') {
     const _g = require('../../4d_generic/grid_utils.js');
     globalThis.GridUtils = _g.GridUtils;
@@ -39,7 +43,7 @@ if (typeof SYNERGETICS === 'undefined' && typeof require !== 'undefined') {
     globalThis.verifyGeometricIdentities = _s.verifyGeometricIdentities;
 }
 
-class TetrisBoard {
+class TetrisBoard extends BaseBoard {
     /** Tetromino shapes as Quadray offset arrays. */
     static PIECES = {
         I: [[0, 0, 0, 0], [1, 0, 0, 0], [2, 0, 0, 0], [3, 0, 0, 0]],
@@ -63,6 +67,7 @@ class TetrisBoard {
      * @param {number} depthD - Grid depth in D axis
      */
     constructor(width = 6, height = 16, depthC = 3, depthD = 3) {
+        super(width, { name: 'TetrisBoard', verify: false });
         this.width = width;
         this.height = height;
         this.depthC = depthC;

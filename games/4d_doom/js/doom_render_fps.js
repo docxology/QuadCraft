@@ -305,7 +305,29 @@ export class DoomRenderer {
 
             // Atmospheric fog (non-linear for depth feel)
             const fogRaw = perpDist / RENDER.DRAW_DISTANCE;
-            const fog = Math.max(0, 1 - fogRaw * fogRaw);
+            let fog = Math.max(0, 1 - fogRaw * fogRaw);
+
+            // Dynamic lighting from projectiles and particles 
+            for (const p of game.projectiles) {
+                const wallObj = { a: mapA, b: mapB, c: player.c, d: player.d };
+                const distToLight = Quadray.distance(wallObj, p);
+                if (distToLight < 4.0) {
+                    const lightIntensity = (4.0 - distToLight) / 4.0;
+                    fog += lightIntensity * 0.4;
+                }
+            }
+            for (const p of game.particles) {
+                if (p.type !== 'blood') {
+                    const wallObj = { a: mapA, b: mapB, c: player.c, d: player.d };
+                    const distToLight = Quadray.distance(wallObj, p);
+                    if (distToLight < 2.0) {
+                        const lightIntensity = (2.0 - distToLight) / 2.0;
+                        fog += lightIntensity * 0.3 * (p.life / p.maxLife);
+                    }
+                }
+            }
+            fog = Math.min(1, fog);
+
             const sideMul = side === 1 ? 0.65 : 1.0;
             const brightness = fog * sideMul;
 
@@ -725,6 +747,21 @@ export class DoomRenderer {
         ctx.arc(cx, H / 2, 1.5, 0, Math.PI * 2);
         ctx.fill();
         ctx.globalAlpha = 1.0;
+
+        // Hit marker
+        if (player.hitMarkerTimer > 0) {
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 1.5;
+            ctx.globalAlpha = player.hitMarkerTimer / 15;
+            const mSize = 6;
+            ctx.beginPath();
+            ctx.moveTo(cx - mSize, H / 2 - mSize); ctx.lineTo(cx - 2, H / 2 - 2);
+            ctx.moveTo(cx + mSize, H / 2 - mSize); ctx.lineTo(cx + 2, H / 2 - 2);
+            ctx.moveTo(cx - mSize, H / 2 + mSize); ctx.lineTo(cx - 2, H / 2 + 2);
+            ctx.moveTo(cx + mSize, H / 2 + mSize); ctx.lineTo(cx + 2, H / 2 + 2);
+            ctx.stroke();
+            ctx.globalAlpha = 1.0;
+        }
     }
 
     // ─── HUD ──────────────────────────────────────────────────────────

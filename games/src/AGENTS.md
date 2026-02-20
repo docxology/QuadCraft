@@ -2,103 +2,99 @@
 
 ## Overview
 
-The `games/src` directory contains the core Python infrastructure for the QuadCraft project. This includes the game launcher, test runner, validation tools, analytics engine, and shared libraries used by the 22+ games.
+The `games/src` directory contains the core Python infrastructure for the QuadCraft project. This includes the game launcher, test runner, validation tools, board analysis, analytics engine, scaffold generator, and shared libraries used by the 22 games.
 
 ## Directory Structure
 
 ### Root Modules
 
-- **`launcher.py`**: The entry point for the "Game Launcher" GUI. Scans `games/` for valid game subdirectories and presents a unified launch interface.
-- **`testing.py`**: A robust test runner that discovers and executes:
-  - JavaScript unit tests (`games/*/tests/*.js`) via Node.js
-  - Python unit tests (`games/*/tests/*.py`)
-  - Shared infrastructure tests
-- **`validation.py`**: A structural linter that enforces the "Standard Game Template". Checks for:
-  - Required files (`AGENTS.md`, `README.md`, `index.html`)
-  - Directory structure (`js/`, `css/`, `tests/`)
-  - Valid metadata in `metadata.json` (if present) or `package.json`
-- **`registry.py`**: Central registry for game discovery. Handles:
-  - Loading game metadata
-  - Dependency resolution (e.g., ensuring `4d_generic` is available)
-  - Validation of game configuration
-- **`config.py`**: Global configuration settings, constants, and path definitions.
+| Module               | Purpose                                                                |
+|----------------------|------------------------------------------------------------------------|
+| `core/config.py`     | Global constants: paths, ports, shared module lists, required files    |
+| `core/registry.py`   | Game registry (GAMES dict), config file loading                        |
+| `server/launcher.py` | HTTP server per game with browser launch                               |
+| `qa/testing.py`      | Node.js + Python test discovery and execution                          |
+| `qa/validation.py`   | Structural linting: required files, shared imports, scaffold detection |
 
-### Submodules
+### Subpackages
 
-#### `analytics/`
+#### `analytics/` — Suite Health Reporting
 
-Analyzes codebase health and complexity.
+| Export | Description |
+|--------|-------------|
+| `GameAnalytics` | Scans game dirs, computes health metrics |
+| `GameMetrics` | Per-game metrics (JS files, lines, patterns) |
+| `SuiteReport` | Aggregate report with `summary()` and `to_json()` |
 
-- **`health_score.py`**: Calculates a "Health Score" (0-100) for each game based on:
-  - Test coverage
-  - Documentation presence
-  - Code complexity (linting)
-- **`metrics.py`**: Collects raw metrics (Line counts, file counts).
+#### `board/` — Board Analysis & Migration
 
-#### `scaffold/`
+| Export | Description |
+|--------|-------------|
+| `BoardAudit` | Detects BaseBoard migration status, local method overrides |
+| `BoardCatalog` | Catalogs board classes, patterns (turn-based/real-time/sandbox), shared methods |
+| `migrate_board()` | Conservative migration: adds `extends BaseBoard` + `super()` |
 
-Templates and tools for generating new games.
+#### `scaffold/` — Game Generation
 
-- **`generator.py`**: Creates a new game directory populated with:
-  - `index.html` (Standard template)
-  - `js/` (Game loop, Renderer, Board stubs)
-  - `tests/` (Basic test suite)
-  - Documentation (`AGENTS.md`, `README.md`)
+| Export | Description |
+|--------|-------------|
+| `GameScaffold` | Creates new game dirs with HTML, JS, tests, docs, manifest |
 
-#### `shared/`
+#### `shared/` — JS Module Registry
 
-Shared Python logic usable by game scripts.
+| Export | Description |
+|--------|-------------|
+| `ModuleRegistry` | 17-module registry with dependency-safe load ordering |
+| `JSModule` | Metadata dataclass (name, filename, category, deps) |
+| `resolve_module_path()` | Resolve a module filename to its absolute path |
 
-- **`metadata.py`**: Schema and parsers for game metadata.
-- **`utils.py`**: Common file I/O and string manipulation utilities.
+#### `space/` — Quadray / IVM / XYZ Math
 
-#### `space/`
-
-Core mathematical libraries for 4D geometry (used by Python tools).
-
-- **`quadrays.py`**: Python implementation of 4D Quadray coordinates (parities `js/quadray.js`).
-- **`ivm.py`**: Integer Vector Matrix (IVM) grid utilities.
-- **`geometry.py`**: Synergetics geometry constants and helper functions.
+| File | Contents |
+|------|----------|
+| `quadrays.py` | `Quadray` class with arithmetic, normalization, XYZ conversion |
+| `ivm.py` | `SynergeticsConstants`, `IVMGrid`, `Jitterbug` transform |
+| `xyz.py` | Coordinate transforms, `project_quadray()`, `rotate_xyz()` |
+| `geometry.py` | Distances, angles, grid generation, verification suite |
 
 ## Usage
 
-### Running Tests
-
-Execute the global test runner from the repository root:
-
 ```bash
-# Run all tests
-python3 games/run_games.py --test --all
+# Run all tests via master script
+python3 games/run_games.py --test
 
-# Run tests for a specific game
-python3 games/run_games.py --test --game snake
-```
+# Run Python infrastructure tests directly
+python3 -m pytest games/tests/
 
-### Validating Structure
-
-Run the validation suite to ensure all games meet the project standards:
-
-```bash
+# Validate structure
 python3 games/run_games.py --validate
-```
 
-### Launching the Dashboard
+# Board migration report
+python3 -c "from games.src.board import BoardAudit; print(BoardAudit().migration_report())"
 
-Start the interactive game launcher:
+# Board catalog
+python3 -c "from games.src.board import BoardCatalog; print(BoardCatalog().summary_report())"
 
-```bash
-python3 games/run_games.py
+# Shared module coverage
+python3 -c "from games.src.shared import ModuleRegistry; print(ModuleRegistry().coverage_report())"
+
+# Analytics health report
+python3 -c "from games.src.analytics import GameAnalytics; print(GameAnalytics().full_report().summary())"
 ```
 
 ## Maintenance Guide
 
 ### Adding a New Shared Module
 
-1. Create the module in `games/src/shared/`.
-2. Register it in `games/src/config.py` if it needs global visibility.
-3. Add unit tests in `games/tests/test_infrastructure.py`.
+1. Create the JS file in `games/4d_generic/`.
+2. Add a `JSModule(...)` entry to `games/src/shared/__init__.py` `_MODULE_DEFS`.
+3. Add to `SHARED_MODULES` or `OPTIONAL_SHARED_MODULES` in `games/src/config.py`.
+4. Add to `REQUIRED_SHARED_MODULES` or `OPTIONAL_SHARED_MODULES` in `games/src/validation.py`.
+5. Add tests in `games/tests/`.
 
-### Updating the Validation Rules
+### Adding a New Game
 
-Modify `games/src/validation.py` to add new checks (e.g., enforcing a new documentation file).
-Ensure to update `games/src/scaffold/` to generate compliant code for new games.
+1. Use `GameScaffold('key', 'Display Name').create()` or create manually.
+2. Add entry to `games/src/registry.py` `GAMES` dict.
+3. Run `python3 games/scripts/regenerate_scripts.py`.
+4. Add to `GAMES_INDEX.md`.

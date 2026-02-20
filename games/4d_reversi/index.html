@@ -38,7 +38,8 @@
 
 <body>
     <header>
-        <h1>4D Quadray Reversi</h1><span class="badge">Quadray</span><span class="badge" style="background:#664422">Synergetics</span>
+        <h1>4D Quadray Reversi</h1><span class="badge">Quadray</span><span class="badge"
+            style="background:#664422">Synergetics</span>
     </header>
     <div class="game-area">
         <canvas id="gameCanvas" width="740" height="560"></canvas>
@@ -111,6 +112,8 @@
     <script src="../4d_generic/game_loop.js"></script>
     <script src="../4d_generic/input_controller.js"></script>
     <script src="../4d_generic/grid_utils.js"></script>
+    <script src="../4d_generic/base_board.js"></script>
+    <script src="../4d_generic/turn_manager.js"></script>
     <script src="../4d_generic/base_renderer.js"></script>
     <script src="../4d_generic/base_game.js"></script>
     <script src="../4d_generic/hud.js"></script>
@@ -136,7 +139,7 @@
             const meta = game.board.getMetadata();
 
             // Turn label
-            const isBlack = game.board.currentPlayer === 'black';
+            const isBlack = game.turnManager.currentPlayer === 'black';
             document.getElementById('turnLabel').textContent = isBlack ? 'Black' : 'White';
 
             // Score counts

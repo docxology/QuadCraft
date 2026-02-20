@@ -33,6 +33,10 @@ node tests/test_all_shared.js
 | `hud.js` | `HUD` class | On-canvas HUD rendering (status, controls, geometry) |
 | `input_controller.js` | `InputController` class | Keyboard/mouse event multiplexer |
 | `score_manager.js` | `ScoreManager` class | Win/loss/score tracking with persistence |
+| `base_board.js` | `BaseBoard` class | Common board logic (grid, distances, integrity, metadata) |
+| `entity_system.js` | `QuadrayEntity`, `EntityManager` | Entity position/velocity, collision, batch updates |
+| `turn_manager.js` | `TurnManager` class | Player rotation, move history, undo/redo |
+| `pathfinding.js` | `QuadrayPathfinder` | BFS, A*, flood fill, line-of-sight on IVM grids |
 | `hud-style.css` | — | Shared CSS for HUD panels, controls, and overlays |
 
 ## How Games Import

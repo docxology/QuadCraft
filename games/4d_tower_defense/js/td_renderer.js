@@ -209,9 +209,9 @@ class TDRenderer extends BaseRenderer {
                 const dist = Quadray.distance(nodes[i], nodes[j]);
                 if (Math.abs(dist - 1.0) < 0.15) {
                     const p2 = this._projectQ(nodes[j]);
-                    // Depth-based opacity
+                    // Depth-based opacity - enhanced fog
                     const avgZ = (p1.z + p2.z) / 2;
-                    const depthAlpha = Math.max(0.05, Math.min(0.35, 0.35 - avgZ * 0.003));
+                    const depthAlpha = Math.max(0.01, Math.min(0.4, 0.4 - avgZ * 0.005));
                     ctx.strokeStyle = `rgba(40, 50, 90, ${depthAlpha})`;
                     ctx.beginPath();
                     ctx.moveTo(p1.x, p1.y);
@@ -238,7 +238,9 @@ class TDRenderer extends BaseRenderer {
             }
 
             if (!onPath && !hasTower) {
-                ctx.fillStyle = `rgba(80, 90, 140, ${depthAlpha})`;
+                // Dim dots more aggressively with depth
+                const foggedAlpha = Math.max(0.02, depthAlpha - 0.1);
+                ctx.fillStyle = `rgba(80, 90, 140, ${foggedAlpha})`;
                 ctx.beginPath();
                 ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
                 ctx.fill();
@@ -373,6 +375,7 @@ class TDRenderer extends BaseRenderer {
             if (t.type === 'tetra') this._drawTetra(p.x, p.y, s, color);
             else if (t.type === 'octa') this._drawOcta(p.x, p.y, s, color);
             else if (t.type === 'cubo') this._drawCubo(p.x, p.y, s, color);
+            else if (t.type === 'rhombic') this._drawRhombic(p.x, p.y, s, color);
 
             // Level indicator
             if (t.level > 0) {
@@ -461,8 +464,17 @@ class TDRenderer extends BaseRenderer {
                 // Star for boss
                 ctx.fillStyle = bodyColor;
                 this._drawStar(p.x, p.y, bodyR, 5);
+            } else if (c.type === 'swarm') {
+                // 7-point star for swarm
+                ctx.fillStyle = bodyColor;
+                this._drawStar(p.x, p.y, bodyR, 7);
+            } else if (c.type === 'regen') {
+                // Plus sign for regen
+                ctx.fillStyle = bodyColor;
+                ctx.fillRect(p.x - bodyR * 0.8, p.y - bodyR * 0.3, bodyR * 1.6, bodyR * 0.6);
+                ctx.fillRect(p.x - bodyR * 0.3, p.y - bodyR * 0.8, bodyR * 0.6, bodyR * 1.6);
             } else {
-                // Circle for normal
+                // Circle for normal and swarmlet
                 ctx.fillStyle = bodyColor;
                 ctx.beginPath();
                 ctx.arc(p.x, p.y, bodyR, 0, Math.PI * 2);
@@ -490,31 +502,41 @@ class TDRenderer extends BaseRenderer {
             const alpha = pr.life / 6;
             const color = pr.color || '#ffff00';
 
+            const progress = 1 - (pr.life / 6);
+            const hx = f.x + (t.x - f.x) * progress;
+            const hy = f.y + (t.y - f.y) * progress;
+
+            const tailP = Math.max(0, progress - 0.4);
+            const tx = f.x + (t.x - f.x) * tailP;
+            const ty = f.y + (t.y - f.y) * tailP;
+
             // Bolt glow
             ctx.save();
-            ctx.strokeStyle = this._rgba(color, alpha * 0.3);
-            ctx.lineWidth = 6;
+            ctx.strokeStyle = this._rgba(color, alpha * 0.5);
+            ctx.lineWidth = 8;
             ctx.lineCap = 'round';
             ctx.beginPath();
-            ctx.moveTo(f.x, f.y);
-            ctx.lineTo(t.x, t.y);
+            ctx.moveTo(tx, ty);
+            ctx.lineTo(hx, hy);
             ctx.stroke();
             ctx.restore();
 
             // Bolt core
-            ctx.strokeStyle = this._rgba('#ffffff', alpha * 0.8);
-            ctx.lineWidth = 2;
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 3;
             ctx.lineCap = 'round';
             ctx.beginPath();
-            ctx.moveTo(f.x, f.y);
-            ctx.lineTo(t.x, t.y);
+            ctx.moveTo(tx, ty);
+            ctx.lineTo(hx, hy);
             ctx.stroke();
 
             // Impact flash
-            ctx.fillStyle = this._rgba(color, alpha * 0.5);
-            ctx.beginPath();
-            ctx.arc(t.x, t.y, 4 * alpha, 0, Math.PI * 2);
-            ctx.fill();
+            if (progress > 0.8) {
+                ctx.fillStyle = this._rgba(color, alpha * 0.8);
+                ctx.beginPath();
+                ctx.arc(t.x, t.y, 8 * alpha, 0, Math.PI * 2);
+                ctx.fill();
+            }
         }
     }
 
@@ -522,6 +544,11 @@ class TDRenderer extends BaseRenderer {
     _drawParticles() {
         const ctx = this.ctx;
         for (const p of this.board.particles) {
+            // Apply drag
+            p.vx *= 0.95; // drag
+            p.vy *= 0.95; // drag
+            p.vz *= 0.95; // drag
+
             // Move particle
             p.x += p.vx;
             p.y += p.vy;
@@ -529,10 +556,18 @@ class TDRenderer extends BaseRenderer {
             const q = new Quadray(p.x, p.y, p.z, p.w);
             const sp = this._projectQ(q);
             const alpha = p.life / 25;
-            const r = 3 * alpha * sp.scale;
+            const dynR = (2 + (Math.abs(p.x) * 10 % 2)) * alpha * sp.scale;
+
+            // Glow
             ctx.fillStyle = this._rgba(p.color, alpha * 0.8);
             ctx.beginPath();
-            ctx.arc(sp.x, sp.y, r, 0, Math.PI * 2);
+            ctx.arc(sp.x, sp.y, dynR * 2, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Core
+            ctx.fillStyle = `rgba(255, 255, 255, ${alpha})`;
+            ctx.beginPath();
+            ctx.arc(sp.x, sp.y, dynR, 0, Math.PI * 2);
             ctx.fill();
         }
     }
@@ -567,6 +602,7 @@ class TDRenderer extends BaseRenderer {
         if (this.game.selectedTowerType === 'tetra') this._drawTetra(p.x, p.y, p.scale, color);
         else if (this.game.selectedTowerType === 'octa') this._drawOcta(p.x, p.y, p.scale, color);
         else if (this.game.selectedTowerType === 'cubo') this._drawCubo(p.x, p.y, p.scale, color);
+        else if (this.game.selectedTowerType === 'rhombic') this._drawRhombic(p.x, p.y, p.scale, color);
 
         // Range preview
         const rangeR = def.range * this.scale * p.scale * 0.32;
@@ -772,6 +808,42 @@ class TDRenderer extends BaseRenderer {
             i === 0 ? ctx.moveTo(ix, iy) : ctx.lineTo(ix, iy);
         }
         ctx.closePath();
+        ctx.stroke();
+        ctx.globalAlpha = 1.0;
+    }
+
+    _drawRhombic(px, py, s, color) {
+        const ctx = this.ctx;
+        const r = 13 * s;
+        const pts = [];
+        for (let i = 0; i < 6; i++) {
+            const angle = (i / 6) * Math.PI * 2 + Math.PI / 6;
+            pts.push({ x: px + Math.cos(angle) * r, y: py + Math.sin(angle) * r });
+        }
+
+        const g = ctx.createLinearGradient(px, py - r, px, py + r);
+        g.addColorStop(0, color);
+        g.addColorStop(1, this._rgba(color, 0.4));
+        ctx.fillStyle = g;
+
+        // Outer hexagon
+        ctx.beginPath();
+        for (let i = 0; i < 6; i++) {
+            i === 0 ? ctx.moveTo(pts[i].x, pts[i].y) : ctx.lineTo(pts[i].x, pts[i].y);
+        }
+        ctx.closePath();
+        ctx.fill();
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+
+        // Inner rhombi edges
+        ctx.globalAlpha = 0.4;
+        ctx.strokeStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.moveTo(px, py); ctx.lineTo(pts[1].x, pts[1].y);
+        ctx.moveTo(px, py); ctx.lineTo(pts[3].x, pts[3].y);
+        ctx.moveTo(px, py); ctx.lineTo(pts[5].x, pts[5].y);
         ctx.stroke();
         ctx.globalAlpha = 1.0;
     }

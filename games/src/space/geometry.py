@@ -33,15 +33,16 @@ logger = logging.getLogger(__name__)
 def angle_between(q1: Quadray, q2: Quadray) -> float:
     """Angle between two Quadray vectors in **degrees**.
 
-    Converts to Cartesian, then uses dot-product formula.
+    Ported from synergetics.js `angleBetweenQuadrays`.
     """
-    c1 = q1.to_xyz()
-    c2 = q2.to_xyz()
-    dot = c1[0] * c2[0] + c1[1] * c2[1] + c1[2] * c2[2]
-    mag1 = math.sqrt(sum(v**2 for v in c1))
-    mag2 = math.sqrt(sum(v**2 for v in c2))
+    x1, y1, z1 = q1.to_xyz()
+    x2, y2, z2 = q2.to_xyz()
+    dot = x1 * x2 + y1 * y2 + z1 * z2
+    mag1 = math.sqrt(x1**2 + y1**2 + z1**2)
+    mag2 = math.sqrt(x2**2 + y2**2 + z2**2)
     if mag1 == 0 or mag2 == 0:
         return 0.0
+
     cos_angle = max(-1.0, min(1.0, dot / (mag1 * mag2)))
     return math.degrees(math.acos(cos_angle))
 

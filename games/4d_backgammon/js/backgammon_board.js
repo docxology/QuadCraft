@@ -25,6 +25,10 @@ if (typeof Quadray === 'undefined' && typeof require !== 'undefined') {
     const _q = require('../../4d_generic/quadray.js');
     globalThis.Quadray = _q.Quadray;
 }
+if (typeof BaseBoard === 'undefined' && typeof require !== 'undefined') {
+    const _bb = require('../../4d_generic/base_board.js');
+    globalThis.BaseBoard = _bb.BaseBoard;
+}
 if (typeof GridUtils === 'undefined' && typeof require !== 'undefined') {
     const _g = require('../../4d_generic/grid_utils.js');
     globalThis.GridUtils = _g.GridUtils;
@@ -37,7 +41,7 @@ if (typeof SYNERGETICS === 'undefined' && typeof require !== 'undefined') {
     globalThis.verifyGeometricIdentities = _s.verifyGeometricIdentities;
 }
 
-class BackgammonBoard {
+class BackgammonBoard extends BaseBoard {
 
     /** Lane labels for the 4 Quadray axes. */
     static LANE_NAMES = ['A', 'B', 'C', 'D'];
@@ -46,6 +50,7 @@ class BackgammonBoard {
     static LANE_COLORS = ['#ff4444', '#44ff44', '#4488ff', '#ffff44'];
 
     constructor() {
+        super(6, { name: 'BackgammonBoard', verify: false });
         this.points = new Array(24).fill(null).map(() => []);
         this.bar = { white: 0, black: 0 };
         this.borne = { white: 0, black: 0 };

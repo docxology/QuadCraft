@@ -2,6 +2,8 @@
 
 A Wolfenstein-3D-style raycasting FPS operating in **4D Quadray tetrahedral coordinates** on an **IVM (Isotropic Vector Matrix) grid** — Fuller's Synergetics geometry brought to life as a playable first-person shooter.
 
+We utilize a **True 4D DDA Raycaster** tracing rays across 4 intersecting IVM hyperplanes simultaneously, completely removing traditional 2D Euclidean fallbacks for collision, hit-scanning, spacing, and dynamic lighting. Rendered with a stunning high-fidelity vignette and active CRT-scanline atmospheric aesthetic overlay.
+
 ## Architecture
 
 | Module | Role |
@@ -9,9 +11,9 @@ A Wolfenstein-3D-style raycasting FPS operating in **4D Quadray tetrahedral coor
 | `doom_config.js` | IVM constants, cell types, weapons, rendering config |
 | `doom_map.js` | IVM sparse map (Map-based), room generation, 4D slice extraction |
 | `doom_entities.js` | Player/Enemy/Projectile with Quadray helpers |
-| `doom_physics.js` | IVM 8-connected collision, Quadray distance, enemy AI |
-| `doom_render_fps.js` | DDA raycaster with Synergetics wall textures (tetra/octa patterns) |
-| `doom_hud_synergetics.js` | Synergetics analysis panel, Quadray compass, IVM floor grid |
+| `doom_physics.js` | Pure Quadray distance algorithms and True 4D DDA raycasting |
+| `doom_render_fps.js` | True 4D dynamic lighting, IVM wall textures (tetra/octa) |
+| `doom_hud_synergetics.js` | Synergetics analysis panel, animated hit-markers |
 | `doom_synergetics.js` | Tetravolumes, IVM grid, coordination, polyhedra (T:O:C=1:4:20), 8 geometric identity checks |
 | `doom_main.js` | Game controller wiring modules + Synergetics HUD |
 | `quadray.js` | Quadray coordinate class with IVM utilities |

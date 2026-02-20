@@ -28,6 +28,10 @@ if (typeof Quadray === 'undefined' && typeof require !== 'undefined') {
     const _q = require('../../4d_generic/quadray.js');
     globalThis.Quadray = _q.Quadray;
 }
+if (typeof BaseBoard === 'undefined' && typeof require !== 'undefined') {
+    const _bb = require('../../4d_generic/base_board.js');
+    globalThis.BaseBoard = _bb.BaseBoard;
+}
 if (typeof GridUtils === 'undefined' && typeof require !== 'undefined') {
     const _g = require('../../4d_generic/grid_utils.js');
     globalThis.GridUtils = _g.GridUtils;
@@ -80,8 +84,9 @@ class Ant {
     }
 }
 
-class SimAntBoard {
+class SimAntBoard extends BaseBoard {
     constructor(size = 12) {
+        super(size, { name: 'SimAntBoard', verify: false });
         this.size = size;
         this.volume = size ** 4;
 
@@ -514,6 +519,8 @@ class SimAntBoard {
 }
 
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { SimAntBoard, Ant, TYPE_EMPTY, TYPE_DIRT, TYPE_BEDROCK, TYPE_FOOD,
-                       FACTION_YELLOW, FACTION_RED, CASTE_QUEEN, CASTE_WORKER, CASTE_SOLDIER };
+    module.exports = {
+        SimAntBoard, Ant, TYPE_EMPTY, TYPE_DIRT, TYPE_BEDROCK, TYPE_FOOD,
+        FACTION_YELLOW, FACTION_RED, CASTE_QUEEN, CASTE_WORKER, CASTE_SOLDIER
+    };
 }

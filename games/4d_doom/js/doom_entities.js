@@ -43,19 +43,17 @@ export class Player {
     /** Quadray distance to another entity */
     distanceTo(other) {
         return Quadray.distance(
-            new Quadray(this.a, this.b, this.c, this.d),
-            new Quadray(other.a, other.b, other.c, other.d)
+            new Quadray(this.a, this.b, 0, 0),
+            new Quadray(other.a, other.b, 0, 0)
         );
-    }
-
-    /** Distance in AB plane only (for 2D raycaster slice) */
-    distanceAB(other) {
-        return Math.hypot(this.a - other.a, this.b - other.b);
     }
 
     /** Distance in CD hyperplane only */
     distanceCD(other) {
-        return Math.hypot(this.c - other.c, this.d - other.d);
+        // Compute distance exclusively on the C/D planes by isolating components
+        const q1 = new Quadray(0, 0, this.c, this.d);
+        const q2 = new Quadray(0, 0, other.c, other.d);
+        return Quadray.distance(q1, q2);
     }
 
     /** Get IVM cell parity at current position */

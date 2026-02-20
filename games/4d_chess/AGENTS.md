@@ -2,12 +2,12 @@
 
 ## Project Overview
 
-4D Chess game using Quadray coordinates and the Isotropic Vector Matrix (IVM) tetrahedral geometry. **Production-ready** with 83 passing tests.
+4D Chess game using Quadray coordinates and the Isotropic Vector Matrix (IVM) tetrahedral geometry. **Production-ready** with 91 passing tests.
 
 ## Quick Commands
 
 ```bash
-# Run all tests (83 tests, 100% pass)
+# Run all tests (91 tests, 100% pass)
 cd tests && node test_all.js
 
 # Start local server
@@ -23,7 +23,7 @@ open index.html
 |-----------|-------|---------|
 | `js/` | 7 modules | Core JavaScript (Quadray, pieces, board, renderer, game, storage, analysis) |
 | `docs/` | 10 files | Documentation (rules, theory, notation, API, architecture) |
-| `tests/` | 5 files | Test suite (83 tests across 4 test files) |
+| `tests/` | 5 files | Test suite (91 tests across 4 test files) |
 
 ## Shared Modules
 
@@ -155,7 +155,7 @@ getValidMoves(board) {
 
 ## Verification Checklist
 
-- [ ] All 83 tests pass: `cd tests && node test_all.js`
+- [ ] All 91 tests pass: `cd tests && node test_all.js`
 - [ ] Browser loads: `open index.html`
 - [ ] Game plays correctly (select piece, click move)
 - [ ] Verify Math button works in sidebar

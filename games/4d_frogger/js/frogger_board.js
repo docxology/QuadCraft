@@ -26,6 +26,10 @@ if (typeof Quadray === 'undefined' && typeof require !== 'undefined') {
     const _q = require('../../4d_generic/quadray.js');
     globalThis.Quadray = _q.Quadray;
 }
+if (typeof BaseBoard === 'undefined' && typeof require !== 'undefined') {
+    const _bb = require('../../4d_generic/base_board.js');
+    globalThis.BaseBoard = _bb.BaseBoard;
+}
 if (typeof GridUtils === 'undefined' && typeof require !== 'undefined') {
     const _g = require('../../4d_generic/grid_utils.js');
     globalThis.GridUtils = _g.GridUtils;
@@ -38,7 +42,7 @@ if (typeof SYNERGETICS === 'undefined' && typeof require !== 'undefined') {
     globalThis.verifyGeometricIdentities = _s.verifyGeometricIdentities;
 }
 
-class FroggerBoard {
+class FroggerBoard extends BaseBoard {
     static DIRECTIONS = [
         { da: 1, db: 0, dc: 0, dd: 0, name: '+A' },
         { da: -1, db: 0, dc: 0, dd: 0, name: '-A' },
@@ -51,6 +55,7 @@ class FroggerBoard {
     ];
 
     constructor(width = 8, lanes = 8, depthC = 3, depthD = 3) {
+        super(width, { name: 'FroggerBoard', verify: false });
         this.width = width;
         this.lanes = lanes;      // Total A rows (including safe zones)
         this.depthC = depthC;

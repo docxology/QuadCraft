@@ -28,6 +28,10 @@ if (typeof Quadray === 'undefined' && typeof require !== 'undefined') {
     const _q = require('../../4d_generic/quadray.js');
     globalThis.Quadray = _q.Quadray;
 }
+if (typeof BaseBoard === 'undefined' && typeof require !== 'undefined') {
+    const _bb = require('../../4d_generic/base_board.js');
+    globalThis.BaseBoard = _bb.BaseBoard;
+}
 if (typeof GridUtils === 'undefined' && typeof require !== 'undefined') {
     const _g = require('../../4d_generic/grid_utils.js');
     globalThis.GridUtils = _g.GridUtils;
@@ -40,12 +44,13 @@ if (typeof SYNERGETICS === 'undefined' && typeof require !== 'undefined') {
     globalThis.verifyGeometricIdentities = _s.verifyGeometricIdentities;
 }
 
-class LifeBoard {
+class LifeBoard extends BaseBoard {
 
     /**
      * @param {number} size — Grid dimension (size^4 lattice).
      */
     constructor(size = 8) {
+        super(size, { name: 'LifeBoard', verify: false });
         this.size = size;
         this.cells = new Set();     // Set of GridUtils.key() strings
         this.generation = 0;

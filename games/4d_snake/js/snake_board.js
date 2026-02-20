@@ -26,6 +26,10 @@ if (typeof Quadray === 'undefined' && typeof require !== 'undefined') {
     const _q = require('../../4d_generic/quadray.js');
     globalThis.Quadray = _q.Quadray;
 }
+if (typeof BaseBoard === 'undefined' && typeof require !== 'undefined') {
+    const _bb = require('../../4d_generic/base_board.js');
+    globalThis.BaseBoard = _bb.BaseBoard;
+}
 if (typeof GridUtils === 'undefined' && typeof require !== 'undefined') {
     const _g = require('../../4d_generic/grid_utils.js');
     globalThis.GridUtils = _g.GridUtils;
@@ -37,7 +41,7 @@ if (typeof SYNERGETICS === 'undefined' && typeof require !== 'undefined') {
     globalThis.verifyGeometricIdentities = _s.verifyGeometricIdentities;
 }
 
-class SnakeBoard {
+class SnakeBoard extends BaseBoard {
     /** IVM axis-aligned directions: +/-1 on each Quadray axis, delegated to GridUtils. */
     static get DIRECTIONS() {
         return GridUtils.DIRECTIONS_8.map((d, i) => ({
@@ -50,6 +54,7 @@ class SnakeBoard {
      * @param {number} size - Grid size per Quadray axis
      */
     constructor(size = 6) {
+        super(size, { name: 'SnakeBoard', verify: false });
         this.size = size;
         this.snake = [];          // Array of position keys (head is last)
         this.snakeSet = new Set();

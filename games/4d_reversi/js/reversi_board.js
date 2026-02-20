@@ -26,6 +26,10 @@ if (typeof Quadray === 'undefined' && typeof require !== 'undefined') {
     const _q = require('../../4d_generic/quadray.js');
     globalThis.Quadray = _q.Quadray;
 }
+if (typeof BaseBoard === 'undefined' && typeof require !== 'undefined') {
+    const _bb = require('../../4d_generic/base_board.js');
+    globalThis.BaseBoard = _bb.BaseBoard;
+}
 if (typeof GridUtils === 'undefined' && typeof require !== 'undefined') {
     const _g = require('../../4d_generic/grid_utils.js');
     globalThis.GridUtils = _g.GridUtils;
@@ -40,11 +44,12 @@ if (typeof SYNERGETICS === 'undefined' && typeof require !== 'undefined') {
 
 const ReversiColor = { BLACK: 'black', WHITE: 'white' };
 
-class ReversiBoard {
+class ReversiBoard extends BaseBoard {
     /**
      * @param {number} size - Board dimension per axis (default 4 = 4x4x4x4)
      */
     constructor(size = 4) {
+        super(size, { name: 'ReversiBoard', verify: false });
         this.size = size;
         this.grid = new Map();          // GridUtils.key() -> ReversiColor
         this.currentPlayer = ReversiColor.BLACK;

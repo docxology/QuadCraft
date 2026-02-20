@@ -18,11 +18,12 @@
  *   R-Click     : Cancel selection
  *   Shift+drag  : Rotate view
  *   Scroll      : Zoom in/out
- *   1-3         : Tower types
+ *   1-4         : Tower types
  *   U           : Upgrade tower
  *   X           : Sell tower
  *   Space       : Toggle speed
  *   N           : Send next wave
+ *   A           : Toggle auto-wave
  *   P           : Pause
  *   R           : Reset
  *   Esc         : Deselect
@@ -54,6 +55,7 @@ class TDGame extends BaseGame {
         // Tower selection state
         this.selectedTowerType = 'tetra';
         this.selectedTowerInstance = null;   // tower object being inspected
+        this.autoWave = false;                // auto-send next wave
 
         // Click tracking (to distinguish click from drag)
         this._clickStart = null;
@@ -88,6 +90,7 @@ class TDGame extends BaseGame {
         this.input.bind(['1'], () => this.selectTowerType('tetra'));
         this.input.bind(['2'], () => this.selectTowerType('octa'));
         this.input.bind(['3'], () => this.selectTowerType('cubo'));
+        this.input.bind(['4'], () => this.selectTowerType('rhombic'));
         this.input.bind(['u'], () => this.upgradeSelected());
         this.input.bind(['x', 'Delete', 'Backspace'], () => this.sellSelected());
         this.input.bind([' '], () => this.toggleSpeed());
@@ -96,6 +99,7 @@ class TDGame extends BaseGame {
             this.selectedTowerInstance = null;
             this._updateUI();
         });
+        this.input.bind(['a'], () => this.toggleAutoWave());
     }
 
     /**
@@ -112,6 +116,11 @@ class TDGame extends BaseGame {
      */
     update() {
         this.board.update();
+        // Auto-wave: immediately spawn when countdown starts
+        if (this.autoWave && !this.board.waveActive && this.board.waveCountdown > 0 && !this.board.gameOver) {
+            this.board.waveCountdown = 0;
+            this.board.spawnWave();
+        }
     }
 
     /**
@@ -302,6 +311,12 @@ class TDGame extends BaseGame {
         }
     }
 
+    // ─── Auto-Wave Toggle ───────────────────────────────────────────────
+    toggleAutoWave() {
+        this.autoWave = !this.autoWave;
+        if (typeof updateAutoWaveBtn === 'function') updateAutoWaveBtn();
+    }
+
     /**
      * Override BaseGame._getHUDState() -- rich status with wave/lives/gold info.
      * @returns {{ text: string, color: string }}
@@ -368,7 +383,7 @@ class TDGame extends BaseGame {
         const rvEl = document.getElementById('rangeTVLabel');
         if (rvEl) rvEl.textContent = meta.towerCount > 0 ? meta.totalRangeTV.toFixed(1) : '\u2014';
         const polyEl = document.getElementById('polyLabel');
-        if (polyEl) polyEl.textContent = `T:${meta.tetraCount} O:${meta.octaCount} C:${meta.cuboCount}`;
+        if (polyEl) polyEl.textContent = `T:${meta.tetraCount} O:${meta.octaCount} C:${meta.cuboCount} R:${meta.rhombicCount}`;
 
         // Selected tower panel
         const infoPanel = document.getElementById('towerInfoPanel');
@@ -380,13 +395,13 @@ class TDGame extends BaseGame {
                 const sellVal = t.getSellValue();
                 infoPanel.style.display = '';
                 infoPanel.innerHTML = `
-                    <h3 style="color:${def.color}">${def.symbol} ${def.name} Lv${t.level}</h3>
+                    <h3 class="tower-info-name" style="color:${def.color}">${def.symbol} ${def.name} Lv${t.level}</h3>
                     <div class="stat-row"><span>Damage</span><span class="val">${t.damage}</span></div>
                     <div class="stat-row"><span>Range</span><span class="val">${t.range.toFixed(1)}</span></div>
                     <div class="stat-row"><span>Fire Rate</span><span class="val">${t.fireRate}ms</span></div>
                     <div class="stat-row"><span>Kills</span><span class="val">${t.kills}</span></div>
-                    <div style="display:flex;gap:6px;margin-top:10px">
-                        ${upCost > 0 ? `<button class="action-btn upgrade-btn" onclick="game.upgradeSelected()" ${this.board.gold < upCost ? 'disabled' : ''}>Upgrade (${upCost}g)</button>` : '<span style="color:#556;font-size:12px">MAX LEVEL</span>'}
+                    <div class="tower-info-actions">
+                        ${upCost > 0 ? `<button class="action-btn upgrade-btn" onclick="game.upgradeSelected()" ${this.board.gold < upCost ? 'disabled' : ''}>Upgrade (${upCost}g)</button>` : '<span class="tower-info-maxed">MAX LEVEL</span>'}
                         <button class="action-btn sell-btn" onclick="game.sellSelected()">Sell (${sellVal}g)</button>
                     </div>
                 `;

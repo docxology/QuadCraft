@@ -2,7 +2,7 @@
 
 ## Overview
 
-The `games/` directory contains the QuadCraft game portfolio — **22 standalone 4D games** built on Quadray coordinates (12 complete + 10 scaffolded). Each game is self-contained with its own `index.html`, JavaScript modules, and tests. Shared math, camera, and projection code lives in `4d_generic/`.
+The `games/` directory contains the QuadCraft game portfolio — **22 standalone 4D games** built on Quadray coordinates. Each game is self-contained with its own `index.html`, JavaScript modules, and tests. Shared math, camera, and projection code lives in `4d_generic/`.
 
 > **📋 Full portfolio index:** [GAMES_INDEX.md](GAMES_INDEX.md)
 
@@ -14,9 +14,9 @@ python3 run_games.py --all
 
 # Launch specific game(s)
 python3 run_games.py --game chess doom
-./run_chess.sh
+./4d_chess/run.sh
 
-# Run all unit tests (707 passing)
+# Run all unit tests (1,060 passing)
 python3 run_games.py --test
 
 # Run tests for specific game
@@ -77,6 +77,10 @@ games/
 ├── 4d_generic/             # Shared JS modules (served at /4d_generic/)
 │   ├── quadray.js          # Core math
 │   ├── camera.js           # Camera controller
+│   ├── base_board.js       # BaseBoard (grid, distances, integrity)
+│   ├── entity_system.js    # QuadrayEntity + EntityManager
+│   ├── turn_manager.js     # TurnManager (rotation, undo/redo)
+│   ├── pathfinding.js      # QuadrayPathfinder (BFS, A*, flood)
 │   └── ...
 └── 4d_<game>/              # Standalone game (served at /4d_<game>/)
     ├── index.html          # Imports ../4d_generic/
@@ -111,8 +115,15 @@ When creating a new game, use this `index.html` structure:
     <script src="../4d_generic/projection.js"></script>
     <script src="../4d_generic/zoom.js"></script>
     <script src="../4d_generic/synergetics.js"></script>
+    <script src="../4d_generic/grid_utils.js"></script>
     <script src="../4d_generic/game_loop.js"></script>
     <script src="../4d_generic/input_controller.js"></script>
+
+    <!-- Optional: Game-Pattern Modules -->
+    <!-- <script src="../4d_generic/base_board.js"></script> -->
+    <!-- <script src="../4d_generic/entity_system.js"></script> -->
+    <!-- <script src="../4d_generic/turn_manager.js"></script> -->
+    <!-- <script src="../4d_generic/pathfinding.js"></script> -->
 
     <!-- Game Logic -->
     <script src="js/board.js"></script>
@@ -131,7 +142,7 @@ When creating a new game, use this `index.html` structure:
 
 1. Create `games/4d_<name>/`
 2. Implement standard structure (`js/`, `tests/`, `index.html`)
-3. Add to `games/src/registry.py` (GAMES dict)
+3. Add to `games/src/core/registry.py` (GAMES dict)
 4. Run `python3 games/scripts/regenerate_scripts.py`
 5. **Add to [GAMES_INDEX.md](GAMES_INDEX.md)**
 
