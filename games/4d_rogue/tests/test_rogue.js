@@ -324,6 +324,75 @@ b14._log('Test message');
 assert('Log message added', b14.combatLog.includes('Test message'));
 assert('Max log enforced', b14.combatLog.length <= b14.maxLog);
 
+// ─── 24. Magic Scrolls ───────────────────────────────────────────────
+console.log('\n— Magic Scrolls —');
+const b15 = new RogueBoard(6);
+b15.scrolls.teleport = 1;
+b15.scrolls.fireball = 1;
+b15.scrolls.mapping = 1;
+
+// Test Teleport
+b15.useScroll('teleport');
+assert('Teleport consumes scroll', b15.scrolls.teleport === 0);
+
+// Test Fireball
+const fbEnemyPos = GridUtils.boundedNeighbors(b15.player.a, b15.player.b, b15.player.c, b15.player.d, b15.size).find(c => b15.getCell(c) === TILE.FLOOR);
+if (fbEnemyPos) {
+    b15.enemies.push({ pos: fbEnemyPos, type: 'goblin', hp: 5, maxHp: 5, xp: 5, def: 0, name: 'Target', atk: 1 });
+    b15.setCell(fbEnemyPos, TILE.ENEMY);
+    b15._computeFOV();
+    b15.useScroll('fireball');
+    const targetAlive = b15.enemies.find(e => e.name === 'Target');
+    assert('Fireball damages/kills visible enemy', !targetAlive || targetAlive.hp < 5);
+    assert('Fireball consumes scroll', b15.scrolls.fireball === 0);
+}
+
+// Test Mapping
+const expBefore = b15.explored.size;
+b15.useScroll('mapping');
+assert('Mapping scroll reveals map', b15.explored.size > expBefore);
+assert('Mapping consumes scroll', b15.scrolls.mapping === 0);
+
+// ─── 25. Doors and Traps ─────────────────────────────────────────────
+console.log('\n— Doors and Traps —');
+const b16 = new RogueBoard(6);
+const dtNbrsPos = GridUtils.boundedNeighbors(b16.player.a, b16.player.b, b16.player.c, b16.player.d, b16.size);
+const doorPos = dtNbrsPos[0];
+b16.setCell(doorPos, TILE.DOOR);
+
+const allNbrs = GridUtils.neighbors(b16.player.a, b16.player.b, b16.player.c, b16.player.d);
+let dirIndexDoor = -1;
+for (let i = 0; i < allNbrs.length; i++) {
+    if (allNbrs[i].a === doorPos.a && allNbrs[i].b === doorPos.b && allNbrs[i].c === doorPos.c && allNbrs[i].d === doorPos.d) {
+        dirIndexDoor = i; break;
+    }
+}
+const resultDoor = b16.move(dirIndexDoor);
+assert('Moving into door opens it', resultDoor === 'door');
+assert('Door tile becomes FLOOR', b16.getCell(doorPos) === TILE.FLOOR);
+
+// Test Trap
+const trapPos = dtNbrsPos[1];
+b16.setCell(trapPos, TILE.TRAP);
+let dirIndexTrap = -1;
+for (let i = 0; i < allNbrs.length; i++) {
+    if (allNbrs[i].a === trapPos.a && allNbrs[i].b === trapPos.b && allNbrs[i].c === trapPos.c && allNbrs[i].d === trapPos.d) {
+        dirIndexTrap = i; break;
+    }
+}
+const hpBeforeTrap = b16.hp;
+const resultTrap = b16.move(dirIndexTrap);
+assert('Moving into trap triggers it', resultTrap === 'moved' || resultTrap === 'dead');
+assert('Trap deals 5 damage', b16.hp === Math.max(0, hpBeforeTrap - 5));
+
+// ─── 26. Boss Generation ─────────────────────────────────────────────
+console.log('\n— Boss Generation —');
+const b17 = new RogueBoard(6);
+b17.depth = 5;
+b17._generateDungeon();
+const hasBoss = b17.enemies.some(e => e.boss === true || e.type === 'dragon');
+assert('Boss (Dragon) generates on depth 5', hasBoss);
+
 // ─── Summary ─────────────────────────────────────────────────────────
 console.log(`\n=== Results: ${passed} passed, ${failed} failed (${total} total) ===`);
 process.exit(failed > 0 ? 1 : 0);

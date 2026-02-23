@@ -43,7 +43,7 @@ if (typeof QuadrayPathfinder === 'undefined' && typeof require !== 'undefined') 
 const TILE = {
     FLOOR: 0, WALL: 1, PLAYER: 2, ENEMY: 3,
     STAIRS: 4, POTION: 5, GOLD: 6,
-    WEAPON: 7, ARMOR: 8,
+    WEAPON: 7, ARMOR: 8, SCROLL: 9, DOOR: 10, TRAP: 11
 };
 
 /** Enemy type definitions */
@@ -52,6 +52,7 @@ const ENEMY_TYPES = {
     skeleton: { name: 'Skeleton', hp: 5, atk: 2, def: 1, xp: 10, speed: 1, symbol: 's', color: '#bdc3c7', chaseRange: 6 },
     ogre: { name: 'Ogre', hp: 10, atk: 4, def: 2, xp: 20, speed: 1, symbol: 'O', color: '#8e44ad', chaseRange: 4 },
     wraith: { name: 'Wraith', hp: 7, atk: 3, def: 0, xp: 25, speed: 1, symbol: 'W', color: '#2980b9', chaseRange: 8, phasing: true },
+    dragon: { name: 'Dragon Boss', hp: 50, atk: 8, def: 4, xp: 150, speed: 1, symbol: 'D', color: '#c0392b', chaseRange: 12, boss: true },
 };
 
 class RogueBoard extends BaseBoard {
@@ -75,6 +76,7 @@ class RogueBoard extends BaseBoard {
         this.weapon = null;   // { name, bonus }
         this.armor = null;    // { name, bonus }
         this.potions = 3;
+        this.scrolls = { teleport: 0, fireball: 0, mapping: 0 };
 
         // Dungeon state
         this.depth = 1;
@@ -159,12 +161,23 @@ class RogueBoard extends BaseBoard {
 
         // Spawn enemies — variety scales with depth
         this.enemies = [];
-        const numEnemies = Math.min(3 + this.depth, Math.floor(floors.length / 8));
+        let numEnemies = Math.min(3 + this.depth, Math.floor(floors.length / 8));
         const enemyPool = this._getEnemyPool();
+
+        let hasBoss = false;
+        if (this.depth > 0 && this.depth % 5 === 0) {
+            hasBoss = true;
+            numEnemies = Math.max(1, Math.floor(numEnemies / 2)); // Fewer enemies on boss floor
+        }
 
         for (let i = 0; i < numEnemies && idx < floors.length; i++) {
             const pos = floors[idx++];
-            const typeName = enemyPool[Math.floor(Math.random() * enemyPool.length)];
+            let typeName = enemyPool[Math.floor(Math.random() * enemyPool.length)];
+
+            if (hasBoss && i === 0) {
+                typeName = 'dragon';
+            }
+
             const template = ENEMY_TYPES[typeName];
             this.enemies.push({
                 pos,
@@ -180,6 +193,7 @@ class RogueBoard extends BaseBoard {
                 color: template.color,
                 chaseRange: template.chaseRange,
                 phasing: template.phasing || false,
+                boss: template.boss || false,
             });
             this.setCell(pos, TILE.ENEMY);
         }
@@ -211,15 +225,21 @@ class RogueBoard extends BaseBoard {
             const pos = floors[idx++];
             const roll = Math.random();
 
-            if (roll < 0.4) {
+            if (roll < 0.3) {
                 // Gold pile
                 const amount = 5 + Math.floor(Math.random() * 10 * this.depth);
                 this.setCell(pos, TILE.GOLD);
                 this.items.push({ pos, type: 'gold', data: { amount } });
-            } else if (roll < 0.65) {
+            } else if (roll < 0.5) {
                 // Potion
                 this.setCell(pos, TILE.POTION);
                 this.items.push({ pos, type: 'potion', data: { heal: 5 + this.depth } });
+            } else if (roll < 0.7) {
+                // Scroll
+                const types = ['teleport', 'fireball', 'mapping'];
+                const type = types[Math.floor(Math.random() * types.length)];
+                this.setCell(pos, TILE.SCROLL);
+                this.items.push({ pos, type: 'scroll', data: { type } });
             } else if (roll < 0.85) {
                 // Weapon
                 const bonus = 1 + Math.floor(Math.random() * this.depth);
@@ -234,6 +254,17 @@ class RogueBoard extends BaseBoard {
                 const name = names[Math.min(bonus - 1, names.length - 1)];
                 this.setCell(pos, TILE.ARMOR);
                 this.items.push({ pos, type: 'armor', data: { name, bonus } });
+            }
+        }
+
+        // Place doors and traps
+        for (let i = idx; i < floors.length; i++) {
+            const f = floors[i];
+            const r = Math.random();
+            if (r < 0.05) { // 5% chance for a trap
+                this.setCell(f, TILE.TRAP);
+            } else if (r < 0.15) { // 10% chance for a door
+                this.setCell(f, TILE.DOOR);
             }
         }
     }
@@ -252,7 +283,10 @@ class RogueBoard extends BaseBoard {
 
         // Cast rays along all 12 IVM directions
         const directions = GridUtils.DIRECTIONS;
-        const isBlocking = (pos) => this.getCell(pos) === TILE.WALL;
+        const isBlocking = (pos) => {
+            const t = this.getCell(pos);
+            return t === TILE.WALL || t === TILE.DOOR;
+        };
         const fovRange = 5;
 
         for (const dir of directions) {
@@ -330,6 +364,17 @@ class RogueBoard extends BaseBoard {
             }
         }
 
+        // Door — open it
+        if (tile === TILE.DOOR) {
+            this.setCell(target, TILE.FLOOR);
+            this._log('You opened a door.');
+            this.moveCount++;
+            this.turns.nextTurn();
+            this._enemyTurn();
+            this._computeFOV();
+            return 'door';
+        }
+
         // Stairs — descend
         if (tile === TILE.STAIRS) {
             this.depth++;
@@ -338,8 +383,30 @@ class RogueBoard extends BaseBoard {
             return 'stairs';
         }
 
+        // Trap
+        if (tile === TILE.TRAP) {
+            this.setCell(target, TILE.FLOOR);
+            this._log('You triggered a trap! 💥 HP -5');
+            this.hp -= 5;
+            if (this.hp <= 0) {
+                this.hp = 0;
+                this.gameOver = true;
+                this._log(`☠️ You died to a trap on depth ${this.depth}!`);
+                return 'dead';
+            }
+            // Move player onto it
+            this.setCell(this.player, TILE.FLOOR);
+            this.player = target;
+            this.setCell(target, TILE.PLAYER);
+            this.moveCount++;
+            this.turns.nextTurn();
+            this._enemyTurn();
+            this._computeFOV();
+            return 'moved';
+        }
+
         // Pick up items
-        if (tile === TILE.POTION || tile === TILE.GOLD || tile === TILE.WEAPON || tile === TILE.ARMOR) {
+        if (tile === TILE.POTION || tile === TILE.GOLD || tile === TILE.WEAPON || tile === TILE.ARMOR || tile === TILE.SCROLL) {
             this._pickupItem(target);
         }
 
@@ -437,6 +504,10 @@ class RogueBoard extends BaseBoard {
                     this._log(`Sold ${item.data.name} for ${item.data.bonus * 5}g`);
                 }
                 break;
+            case 'scroll':
+                this.scrolls[item.data.type]++;
+                this._log(`Found a Scroll of ${item.data.type}!`);
+                break;
         }
 
         this.items = this.items.filter(i => i !== item);
@@ -452,13 +523,63 @@ class RogueBoard extends BaseBoard {
         return true;
     }
 
+    /** Use a magic scroll. */
+    useScroll(type) {
+        if (this.gameOver || !this.scrolls[type] || this.scrolls[type] <= 0) return false;
+
+        this.scrolls[type]--;
+
+        if (type === 'teleport') {
+            const floors = this.cells.filter(c => this.getCell(c) === TILE.FLOOR);
+            if (floors.length > 0) {
+                const target = floors[Math.floor(Math.random() * floors.length)];
+                this.setCell(this.player, TILE.FLOOR);
+                this.player = target;
+                this.setCell(target, TILE.PLAYER);
+                this._log(`✨ Teleported!`);
+            }
+        } else if (type === 'fireball') {
+            let hits = 0;
+            for (const enemy of this.enemies) {
+                if (this.isVisible(enemy.pos)) {
+                    enemy.hp -= 10;
+                    hits++;
+                    if (enemy.hp <= 0) {
+                        this._log(`🔥 ${enemy.name} scorched to death!`);
+                        this.enemies = this.enemies.filter(e => e !== enemy);
+                        this.setCell(enemy.pos, TILE.FLOOR);
+                        this.xp += enemy.xp;
+                    }
+                }
+            }
+            if (hits > 0) {
+                this._checkLevelUp();
+                this._log(`🔥 Fireball hit ${hits} enemies!`);
+            } else {
+                this._log(`🔥 Fireball fizzled (no visible targets)!`);
+            }
+        } else if (type === 'mapping') {
+            const mapped = this.cells.filter(c => this.getCell(c) !== TILE.WALL);
+            for (const c of mapped) {
+                this.explored.add(this.key(c.a, c.b, c.c, c.d));
+            }
+            this._log(`🗺️ Map revealed!`);
+        }
+
+        this.moveCount++;
+        this.turns.nextTurn();
+        this._enemyTurn();
+        this._computeFOV();
+        return true;
+    }
+
     // ─── Enemy AI (Pathfinding) ─────────────────────────────────────
 
     /** Execute all enemy turns using pathfinding AI. */
     _enemyTurn() {
         const isWalkable = (pos) => {
             const tile = this.getCell(pos);
-            return tile !== TILE.WALL && tile !== TILE.ENEMY;
+            return tile !== TILE.WALL && tile !== TILE.DOOR && tile !== TILE.ENEMY;
         };
         const isWalkablePhasing = (pos) => {
             const tile = this.getCell(pos);
@@ -567,6 +688,7 @@ class RogueBoard extends BaseBoard {
         this.weapon = null;
         this.armor = null;
         this.potions = 3;
+        this.scrolls = { teleport: 0, fireball: 0, mapping: 0 };
         this.depth = 1;
         this.moveCount = 0;
         this.gameOver = false;

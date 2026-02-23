@@ -231,6 +231,19 @@
                 <div class="stat" id="countLabel">0 blocks</div>
             </div>
 
+            <!-- Crafting & Inventory -->
+            <div class="panel">
+                <h3>Inventory & Crafting</h3>
+                <div class="stat-row"><span>Wood (4)</span><span class="val" id="invWood">0</span></div>
+                <div class="stat-row"><span>Sand (7)</span><span class="val" id="invSand">0</span></div>
+                <div class="stat-row"><span>Planks (9)</span><span class="val" id="invPlanks">0</span></div>
+                <div class="stat-row"><span>Glass (0)</span><span class="val" id="invGlass">0</span></div>
+                <div style="display:flex;gap:6px;margin-top:8px">
+                    <button onclick="game.board.craft('planks')" style="flex:1;font-size:11px">Craft Planks</button>
+                    <button onclick="game.board.craft('glass')" style="flex:1;font-size:11px">Craft Glass</button>
+                </div>
+            </div>
+
             <!-- Synergetics Panel -->
             <div class="panel">
                 <h3>Synergetics</h3>
@@ -355,6 +368,17 @@
 
             const a = game.analysis;
             if (a) {
+                // Update Inventory
+                document.getElementById('invWood').textContent = game.board.inventory[4] || 0;
+                document.getElementById('invSand').textContent = game.board.inventory[7] || 0;
+                document.getElementById('invPlanks').textContent = game.board.inventory[9] || 0;
+                document.getElementById('invGlass').textContent = game.board.inventory[10] || 0;
+
+                // Update HUD color based on time of day
+                const t = game.board.timeOfDay;
+                hudEl.style.color = (t > 12000 && t < 23000) ? '#4a6fa5' : '#94a3b8';
+                hudEl.textContent = `${BLOCK_NAMES[game.board.selectedBlock]} | ${game.board.blocks.size} blocks | Time: ${Math.floor(t / 1000)}h`;
+
                 // Synergetics panel
                 document.getElementById('tetravolLabel').textContent = a.tetravolume.totalTetravolumes.toFixed(1);
                 document.getElementById('ivmFillLabel').textContent = (a.ivmGrid.fillRatio * 100).toFixed(1) + '%';

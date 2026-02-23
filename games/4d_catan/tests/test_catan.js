@@ -126,6 +126,80 @@ assert('Round-trip passes', rt.passed);
 const geo = verifyGeometricIdentities();
 assert('Geometric identities pass', geo.allPassed);
 
+// ─── 14. Trading & Dev Cards & Robber ─────────────────────────────────────
+console.log('\n— Trading & Dev Cards & Robber —');
+const b4 = new CatanBoard();
+const gameMock = { board: b4, startRobberPlacement: () => { }, phase: 'build', freeRoads: 0, deck: { remaining: () => 10, draw: () => DevCardType.KNIGHT } };
+const p4_0 = b4.players[0];
+const p4_1 = b4.players[1];
+
+// Trading
+p4_0.resources = { wood: 4, brick: 0, wheat: 0, sheep: 0, ore: 0 };
+b4.currentPlayer = 0;
+// Note: test needs to require catan_trading, catan_cards, catan_robber if available, or we test logic directly.
+// Let's just verify resources directly if the modules aren't exported nicely.
+// Wait, we need to load them to test them. Use `require` or test existing if available.
+const fs = require('fs');
+const path = require('path');
+const tradingCode = fs.readFileSync(path.join(__dirname, '../js/catan_trading.js'), 'utf8');
+const cardsCode = fs.readFileSync(path.join(__dirname, '../js/catan_cards.js'), 'utf8');
+const robberCode = fs.readFileSync(path.join(__dirname, '../js/catan_robber.js'), 'utf8');
+
+// Inject constants into global scope for eval
+const { DevCardType, BUILD_COSTS, ResourceType } = require('../js/catan_board.js');
+globalThis.DevCardType = DevCardType;
+globalThis.BUILD_COSTS = BUILD_COSTS;
+globalThis.ResourceType = ResourceType;
+
+eval(tradingCode);
+eval(cardsCode);
+eval(robberCode);
+
+// Test Trade
+const tradeSuccess = executeBestTrade(p4_0, 'wood', 'brick');
+assert('Bank Trade (4:1) success', tradeSuccess);
+assert('Bank Trade deducted resources', p4_0.resources.wood === 0);
+assert('Bank Trade added resources', p4_0.resources.brick === 1);
+
+// Test Robber Drop
+p4_0.resources = { wood: 2, brick: 2, wheat: 2, sheep: 2, ore: 0 }; // 8 total
+handleRobberRoll(gameMock);
+assert('Robber roll halves resources > 7', totalResources(p4_0) === 4);
+
+// Test Robber Steal
+p4_1.settlements.push({ a: 0, b: 0, c: 0, d: 0 }); // Next to tile 0
+p4_1.resources = { wood: 1, brick: 0, wheat: 0, sheep: 0, ore: 0 };
+b4.tiles[0].pos = { a: 0, b: 0, c: 0, d: 0 }; // align
+moveRobber(gameMock, 0);
+assert('Robber stole resource', p4_0.resources.wood > 0 || p4_1.resources.wood === 0);
+
+// Test Dev Cards
+p4_0.devCards.push(DevCardType.KNIGHT);
+p4_0.cardsBoughtThisTurn = [];
+p4_0.playedDevCardThisTurn = false;
+const knightSuccess = playKnight(gameMock);
+assert('Played Knight dev card', knightSuccess);
+assert('Knight count increased', p4_0.knightsPlayed === 1);
+
+p4_0.devCards.push(DevCardType.ROAD_BUILDING);
+p4_0.playedDevCardThisTurn = false;
+const rbSuccess = playRoadBuilding(gameMock);
+assert('Played Road Building dev card', rbSuccess);
+assert('Road Building gives free roads', gameMock.freeRoads === 2);
+
+p4_0.devCards.push(DevCardType.YEAR_OF_PLENTY);
+p4_0.playedDevCardThisTurn = false;
+const yopSuccess = playYearOfPlenty(gameMock, 'ore', 'ore');
+assert('Played Year of Plenty', yopSuccess);
+assert('Year of Plenty added resources', p4_0.resources.ore >= 2);
+
+p4_0.devCards.push(DevCardType.MONOPOLY);
+p4_0.playedDevCardThisTurn = false;
+p4_1.resources.wheat = 5;
+const monopolySuccess = playMonopoly(gameMock, 'wheat');
+assert('Played Monopoly', monopolySuccess);
+assert('Monopoly stole all wheat', p4_0.resources.wheat >= 5 && p4_1.resources.wheat === 0);
+
 // ─── Summary ─────────────────────────────────────────────────────────
 console.log(`\n=== Results: ${passed} passed, ${failed} failed (${total} total) ===`);
 process.exit(failed > 0 ? 1 : 0);

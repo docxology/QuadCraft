@@ -64,6 +64,9 @@ class RogueGame extends BaseGame {
     _setupGameInput() {
         this.input.bind(['n'], () => this.newGame());
         this.input.bind(['h'], () => this._usePotion());
+        this.input.bind(['t'], () => this._useScroll('teleport'));
+        this.input.bind(['f'], () => this._useScroll('fireball'));
+        this.input.bind(['m'], () => this._useScroll('mapping'));
     }
 
     /** Override: hook for additional input. */
@@ -92,9 +95,10 @@ class RogueGame extends BaseGame {
                 this._updateCombatLog();
             }
 
-            if (key === 'h') {
-                this._usePotion();
-            }
+            if (key === 'h') this._usePotion();
+            if (key === 't') this._useScroll('teleport');
+            if (key === 'f') this._useScroll('fireball');
+            if (key === 'm') this._useScroll('mapping');
         });
     }
 
@@ -102,6 +106,13 @@ class RogueGame extends BaseGame {
     _usePotion() {
         this.board.usePotion();
         this._updateCombatLog();
+    }
+
+    /** Use a magic scroll. */
+    _useScroll(type) {
+        if (this.board.useScroll(type)) {
+            this._updateCombatLog();
+        }
     }
 
     /** Update the combat log panel in the DOM. */

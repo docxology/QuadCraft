@@ -81,6 +81,8 @@ class MinecraftGame extends BaseGame {
         this.input.bind(['6'], () => this.board.selectedBlock = 6);
         this.input.bind(['7'], () => this.board.selectedBlock = 7);
         this.input.bind(['8'], () => this.board.selectedBlock = 8);
+        this.input.bind(['9'], () => this.board.selectedBlock = 9);
+        this.input.bind(['0'], () => this.board.selectedBlock = 10);
 
         // New world
         this.input.bind(['n'], () => this.newWorld());

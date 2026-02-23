@@ -234,10 +234,14 @@
 
             <!-- Inventory -->
             <div class="panel">
-                <div class="panel-title">Equipment</div>
+                <div class="panel-title">Equipment & Magic</div>
                 <div id="inventory">
                     <div class="inventory-item">⚔️ Weapon: <span id="invWeapon">Fists</span></div>
                     <div class="inventory-item">🛡️ Armor: <span id="invArmor">None</span></div>
+                    <div class="inventory-item" style="margin-top:4px">📜 Teleport (T): <span id="invScrollT">0</span>
+                    </div>
+                    <div class="inventory-item">📜 Fireball (F): <span id="invScrollF">0</span></div>
+                    <div class="inventory-item">📜 Mapping (M): <span id="invScrollM">0</span></div>
                 </div>
             </div>
 
@@ -247,11 +251,10 @@
                 <div class="shortcuts">
                     <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> Move<br>
                     <kbd>Q</kbd><kbd>E</kbd><kbd>Z</kbd><kbd>X</kbd> Diagonal<br>
-                    <kbd>H</kbd> Use potion<br>
-                    <kbd>N</kbd> New game<br>
-                    <kbd>R</kbd> Reset all<br>
-                    <kbd>P</kbd> Pause<br>
-                    <kbd>Shift</kbd>+drag Rotate
+                    <kbd>H</kbd> Potion &nbsp; <kbd>T</kbd> Teleport<br>
+                    <kbd>F</kbd> Fireball <kbd>M</kbd> Mapping<br>
+                    <kbd>N</kbd> New game <kbd>R</kbd> Reset<br>
+                    <kbd>P</kbd> Pause &nbsp; <kbd>Shift</kbd>+drag View
                 </div>
             </div>
         </div>
@@ -311,6 +314,9 @@
             el('statPotions').textContent = m.potions;
             el('invWeapon').textContent = m.weapon ? `${m.weapon.name} (+${m.weapon.bonus})` : 'Fists';
             el('invArmor').textContent = m.armor ? `${m.armor.name} (+${m.armor.bonus})` : 'None';
+            el('invScrollT').textContent = m.scrolls ? (m.scrolls.teleport || 0) : 0;
+            el('invScrollF').textContent = m.scrolls ? (m.scrolls.fireball || 0) : 0;
+            el('invScrollM').textContent = m.scrolls ? (m.scrolls.mapping || 0) : 0;
         }, 200);
     </script>
 </body>

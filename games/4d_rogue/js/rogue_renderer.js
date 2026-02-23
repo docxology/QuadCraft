@@ -34,6 +34,9 @@ class RogueRenderer extends BaseRenderer {
             6: '#ffd700',                    // Gold
             7: '#ff6b6b',                    // Weapon
             8: '#4ecdc4',                    // Armor
+            9: '#9b59b6',                    // Scroll
+            10: '#a0522d',                   // Door (Sienna)
+            11: '#c0392b',                   // Trap
         };
 
         this.animTime = 0;
@@ -99,10 +102,16 @@ class RogueRenderer extends BaseRenderer {
         ctx.save();
         ctx.globalAlpha = alpha * Math.max(0.3, p.pScale);
 
-        if (tile === 1) {
-            // Wall — filled square
-            ctx.fillStyle = this.tileColors[1];
+        if (tile === 1 || tile === 10) {
+            // Wall/Door — filled square
+            ctx.fillStyle = this.tileColors[tile];
             ctx.fillRect(p.px - r * 0.6, p.py - r * 0.6, r * 1.2, r * 1.2);
+            if (tile === 10) {
+                // Door outline
+                ctx.strokeStyle = '#5c2a16';
+                ctx.lineWidth = 1;
+                ctx.strokeRect(p.px - r * 0.6, p.py - r * 0.6, r * 1.2, r * 1.2);
+            }
         } else if (tile === 4) {
             // Stairs — yellow triangle, pulsing
             const pulse = 0.8 + Math.sin(this.animTime * 3) * 0.2;
@@ -117,7 +126,7 @@ class RogueRenderer extends BaseRenderer {
             ctx.strokeStyle = '#f39c12';
             ctx.lineWidth = 1;
             ctx.stroke();
-        } else if (tile === 5 || tile === 6 || tile === 7 || tile === 8) {
+        } else if (tile >= 5 && tile <= 9) {
             // Items — glowing circles/diamonds
             const itemColor = this.tileColors[tile];
             const glowPhase = (Math.sin(this.animTime * 2 + p.a + p.b) + 1) / 2;
@@ -133,14 +142,24 @@ class RogueRenderer extends BaseRenderer {
                 ctx.fill();
             }
             ctx.shadowBlur = 0;
-        } else if (tile === 0) {
-            // Floor — subtle dot based on parity
+        } else if (tile === 0 || tile === 11) {
+            // Floor / Trap
             ctx.fillStyle = isVisible ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.01)';
             if (parity === 'tetra') {
                 this._drawDiamond(p.px, p.py, r * 0.2, ctx.fillStyle);
             } else {
                 ctx.beginPath();
                 ctx.arc(p.px, p.py, r * 0.15, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            if (tile === 11 && isVisible) {
+                // Draw trap spike if visible
+                ctx.fillStyle = this.tileColors[11];
+                ctx.beginPath();
+                ctx.moveTo(p.px, p.py - r * 0.3);
+                ctx.lineTo(p.px + r * 0.3, p.py + r * 0.3);
+                ctx.lineTo(p.px - r * 0.3, p.py + r * 0.3);
+                ctx.closePath();
                 ctx.fill();
             }
         }

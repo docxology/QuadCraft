@@ -129,6 +129,45 @@ assert('Round-trip passes', rt.passed);
 const geo = verifyGeometricIdentities();
 assert('Geometric identities pass', geo.allPassed);
 
+// ─── 13. Crafting & Inventory ────────────────────────────────────────
+console.log('\n— Crafting & Inventory —');
+const b4 = new MinecraftBoard(8);
+b4.inventory[BlockType.WOOD] = 1;
+b4.inventory[BlockType.SAND] = 1;
+assert('Craft Planks from Wood', b4.craft('planks'));
+assert('Wood consumed', b4.inventory[BlockType.WOOD] === 0);
+assert('Planks produced', b4.inventory[BlockType.PLANKS] === 4);
+assert('Craft Glass from Sand', b4.craft('glass'));
+assert('Sand consumed', b4.inventory[BlockType.SAND] === 0);
+assert('Glass produced', b4.inventory[BlockType.GLASS] === 1);
+assert('Cannot craft without resources', !b4.craft('glass'));
+
+// ─── 14. Physics & Daytime ───────────────────────────────────────────
+console.log('\n— Physics & Daytime —');
+// Sand gravity
+const b5 = new MinecraftBoard(8);
+b5.setBlock(2, 2, 5, 2, BlockType.SAND);
+b5.setBlock(2, 2, 4, 2, BlockType.AIR); // empty space below
+b5.stepPhysics(); // Sand should fall
+assert('Sand falls down one block', b5.getBlock(2, 2, 4, 2) === BlockType.SAND);
+assert('Sand vacates previous block', b5.getBlock(2, 2, 5, 2) === BlockType.AIR);
+
+// Water Flow
+b5.setBlock(4, 4, 3, 4, BlockType.WATER); // Place water
+b5.setBlock(4, 4, 2, 4, BlockType.STONE); // Solid floor so it doesn't fall
+b5.stepPhysics(); // Water should spread
+let countWater = 0;
+for (const [k, type] of b5.blocks.entries()) {
+    if (type === BlockType.WATER) countWater++;
+}
+assert('Water flow generates new blocks laterally', countWater > 1);
+
+// Time of Day
+const initTime = b5.timeOfDay;
+b5.stepTime();
+assert('Time of Day advances', b5.timeOfDay > initTime);
+assert('Light level exists', typeof b5.lightLevel === 'number');
+
 // ─── Summary ─────────────────────────────────────────────────────────
 console.log(`\n=== Results: ${passed} passed, ${failed} failed (${total} total) ===`);
 process.exit(failed > 0 ? 1 : 0);

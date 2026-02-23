@@ -41,9 +41,9 @@ if (typeof SYNERGETICS === 'undefined' && typeof require !== 'undefined') {
     globalThis.verifyGeometricIdentities = _s.verifyGeometricIdentities;
 }
 
-const BlockType = { AIR: 0, STONE: 1, DIRT: 2, GRASS: 3, WOOD: 4, LEAVES: 5, WATER: 6, SAND: 7, DIAMOND: 8 };
-const BLOCK_COLORS = { 0: 'transparent', 1: '#888', 2: '#965B3B', 3: '#4CAF50', 4: '#8B6914', 5: '#2E7D32', 6: '#1565C0', 7: '#F4D03F', 8: '#00BCD4' };
-const BLOCK_NAMES = { 0: 'Air', 1: 'Stone', 2: 'Dirt', 3: 'Grass', 4: 'Wood', 5: 'Leaves', 6: 'Water', 7: 'Sand', 8: 'Diamond' };
+const BlockType = { AIR: 0, STONE: 1, DIRT: 2, GRASS: 3, WOOD: 4, LEAVES: 5, WATER: 6, SAND: 7, DIAMOND: 8, PLANKS: 9, GLASS: 10 };
+const BLOCK_COLORS = { 0: 'transparent', 1: '#888', 2: '#965B3B', 3: '#4CAF50', 4: '#8B6914', 5: '#2E7D32', 6: '#1565C0', 7: '#F4D03F', 8: '#00BCD4', 9: '#B8860B', 10: 'rgba(173, 216, 230, 0.5)' };
+const BLOCK_NAMES = { 0: 'Air', 1: 'Stone', 2: 'Dirt', 3: 'Grass', 4: 'Wood', 5: 'Leaves', 6: 'Water', 7: 'Sand', 8: 'Diamond', 9: 'Planks', 10: 'Glass' };
 
 class MinecraftBoard extends BaseBoard {
 
@@ -54,11 +54,15 @@ class MinecraftBoard extends BaseBoard {
         super(size, { name: 'MinecraftBoard', verify: false });
         this.size = size;
         this.blocks = new Map(); // GridUtils.key() -> BlockType
-        this.inventory = { 1: 99, 2: 99, 3: 64, 4: 64, 5: 64, 7: 32, 8: 5 };
+        this.inventory = { 1: 99, 2: 99, 3: 64, 4: 64, 5: 64, 7: 32, 8: 5, 9: 0, 10: 0 };
         this.selectedBlock = BlockType.STONE;
         this.gameOver = false; // BaseGame expects this property
         this.blocksPlaced = 0;
         this.blocksRemoved = 0;
+
+        // Day/Night cycle
+        this.timeOfDay = 0; // 0-24000
+        this.lightLevel = 15; // 0-15
 
         // Synergetics metadata
         this.volumeRatios = {
@@ -168,6 +172,85 @@ class MinecraftBoard extends BaseBoard {
         // Diamond cave
         this.setBlock(3, 3, 0, 3, BlockType.DIAMOND);
         this.setBlock(4, 4, 0, 4, BlockType.DIAMOND);
+        // Add some sand and water
+        this.setBlock(2, 2, 3, 2, BlockType.SAND);
+        this.setBlock(2, 2, 4, 2, BlockType.SAND);
+        this.setBlock(5, 5, 3, 5, BlockType.WATER);
+    }
+
+    /** Physics Step: Gravity for sand, Flow for water */
+    stepPhysics() {
+        const updates = [];
+        for (const [k, type] of this.blocks.entries()) {
+            const { a, b, c, d } = GridUtils.parseKey(k);
+
+            // Sand Gravity
+            if (type === BlockType.SAND || type === BlockType.WATER) {
+                // Check block directly below (c - 1)
+                if (c > 0 && this.getBlock(a, b, c - 1, d) === BlockType.AIR) {
+                    updates.push({ a, b, c, d, to: BlockType.AIR });
+                    updates.push({ a, b, c: c - 1, d, to: type });
+                    continue; // Processed falling
+                }
+            }
+
+            // Water flowing
+            if (type === BlockType.WATER) {
+                // Flow out to adjacent sides laterally if possible
+                const nbrs = GridUtils.boundedNeighbors(a, b, c, d, this.size);
+                for (const n of nbrs) {
+                    // Only spread laterally (same c level) or down
+                    if (n.c <= c) {
+                        if (this.getBlock(n.a, n.b, n.c, n.d) === BlockType.AIR) {
+                            updates.push({ a: n.a, b: n.b, c: n.c, d: n.d, to: BlockType.WATER });
+                            // Randomize flow to prevent instant flooding
+                            if (Math.random() > 0.5) break;
+                        }
+                    }
+                }
+            }
+        }
+
+        for (const u of updates) {
+            this.setBlock(u.a, u.b, u.c, u.d, u.to);
+        }
+    }
+
+    /** Advance Day/Night Cycle */
+    stepTime() {
+        this.timeOfDay = (this.timeOfDay + 10) % 24000;
+        // Calculate light level (0-15)
+        // Day: 0-12000 (15)
+        // Night: 13000-23000 (4)
+        if (this.timeOfDay > 12000 && this.timeOfDay < 23000) {
+            this.lightLevel = 4;
+        } else {
+            this.lightLevel = 15;
+        }
+    }
+
+    /** Call this per frame or tick from the game engine */
+    update() {
+        this.stepPhysics();
+        this.stepTime();
+    }
+
+    /** Crafting system: 1 Wood = 4 Planks, 1 Sand = 1 Glass */
+    craft(recipeType) {
+        if (recipeType === 'planks') {
+            if (this.inventory[BlockType.WOOD] > 0) {
+                this.inventory[BlockType.WOOD]--;
+                this.inventory[BlockType.PLANKS] = (this.inventory[BlockType.PLANKS] || 0) + 4;
+                return true;
+            }
+        } else if (recipeType === 'glass') {
+            if (this.inventory[BlockType.SAND] > 0) {
+                this.inventory[BlockType.SAND]--;
+                this.inventory[BlockType.GLASS] = (this.inventory[BlockType.GLASS] || 0) + 1;
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
@@ -255,16 +338,20 @@ class MinecraftBoard extends BaseBoard {
             volumeRatios: this.volumeRatios,
             cellVolume: this.cellVolumeUnit,
             s3: this.s3Constant,
+            timeOfDay: this.timeOfDay,
+            lightLevel: this.lightLevel
         };
     }
 
     /** Reset board to initial state with fresh terrain. */
     reset() {
         this.blocks.clear();
-        this.inventory = { 1: 99, 2: 99, 3: 64, 4: 64, 5: 64, 7: 32, 8: 5 };
+        this.inventory = { 1: 99, 2: 99, 3: 64, 4: 64, 5: 64, 7: 32, 8: 5, 9: 0, 10: 0 };
         this.selectedBlock = BlockType.STONE;
         this.blocksPlaced = 0;
         this.blocksRemoved = 0;
+        this.timeOfDay = 0;
+        this.lightLevel = 15;
         this.generateTerrain();
     }
 }

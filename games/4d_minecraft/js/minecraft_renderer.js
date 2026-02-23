@@ -62,9 +62,24 @@ class MinecraftRenderer extends BaseRenderer {
     _drawSkyGradient() {
         const ctx = this.ctx, w = this.canvas.width, h = this.canvas.height;
         const sky = ctx.createLinearGradient(0, 0, 0, h);
-        sky.addColorStop(0, '#1a1a3e');
-        sky.addColorStop(0.5, '#4a6fa5');
-        sky.addColorStop(1, '#87CEEB');
+
+        // Day/night logic based on 24000 tick cycle
+        const t = this.board.timeOfDay;
+        let isNight = (t > 12000 && t < 23000);
+        let top = isNight ? '#0a0a20' : '#1a1a3e';
+        let mid = isNight ? '#12122a' : '#4a6fa5';
+        let bot = isNight ? '#1a1a3e' : '#87CEEB';
+
+        // Transition times
+        if (t >= 11000 && t <= 12000) { // Sunset
+            top = '#1a153e'; mid = '#b05b3a'; bot = '#ff8844';
+        } else if (t >= 23000 && t <= 24000) { // Sunrise
+            top = '#1a1a3e'; mid = '#7a5fa5'; bot = '#ffaa88';
+        }
+
+        sky.addColorStop(0, top);
+        sky.addColorStop(0.5, mid);
+        sky.addColorStop(1, bot);
         ctx.fillStyle = sky;
         ctx.fillRect(0, 0, w, h);
     }
