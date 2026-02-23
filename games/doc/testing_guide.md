@@ -1,5 +1,8 @@
 # Testing Guide
 
+> **Note on 4D Geometry & Nomenclature**: Throughout QuadCraft, whenever we refer to **"4D"**, we strictly mean **Synergetics** geometry. This entails **Quadray 4D tetrahedral coordinates** deployed on an **Isotropic Vector Matrix (IVM)** of close-packed spheres, where the Quadray coordinates of the 12 neighboring balls are strictly defined by all permutations of `(0, 1, 1, 2)`.
+
+
 > How to run, write, and extend tests for QuadCraft games and shared modules.
 
 ---
@@ -215,7 +218,7 @@ if __name__ == '__main__':
 | Backgammon | 8 | Dice, bearing off |
 | Mahjong | 7 | Tile matching, layers |
 
-**Total: 707 tests across 22 games**
+**Total: 1,147 tests across 30 games**
 
 ---
 

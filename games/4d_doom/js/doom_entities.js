@@ -34,6 +34,76 @@ export class Player {
 
     get weapon() { return WEAPONS[this.weaponIndex]; }
 
+    /** Switch to next unlocked weapon. */
+    switchWeapon(delta = 1) {
+        const start = this.weaponIndex;
+        let idx = this.weaponIndex;
+        do {
+            idx = ((idx + delta) % WEAPONS.length + WEAPONS.length) % WEAPONS.length;
+        } while (!this.weapons[idx] && idx !== start);
+        this.weaponIndex = idx;
+        console.log(`[Player] Weapon: ${this.weapon.name}`);
+    }
+
+    /** Switch directly to a weapon by index (if unlocked). */
+    selectWeapon(idx) {
+        if (idx >= 0 && idx < WEAPONS.length && this.weapons[idx]) {
+            this.weaponIndex = idx;
+        }
+    }
+
+    /** Take damage with armor absorption (50% to armor). */
+    takeDamage(amount) {
+        if (!this.alive) return;
+        const armorAbsorb = Math.min(this.armor, Math.floor(amount * 0.5));
+        this.armor -= armorAbsorb;
+        this.hp -= (amount - armorAbsorb);
+        if (this.hp <= 0) {
+            this.hp = 0;
+            this.alive = false;
+            console.log('[Player] Killed!');
+        }
+    }
+
+    /** Apply a pickup item. Returns true if pickup was consumed. */
+    applyPickup(pickup) {
+        switch (pickup.type) {
+            case 'health':
+                if (this.hp >= this.maxHp) return false;
+                this.hp = Math.min(this.maxHp, this.hp + 25);
+                return true;
+            case 'armor':
+                if (this.armor >= 200) return false;
+                this.armor = Math.min(200, this.armor + 50);
+                return true;
+            case 'ammo_bullets':
+                this.ammo.bullets = Math.min(200, this.ammo.bullets + 20);
+                return true;
+            case 'ammo_shells':
+                this.ammo.shells = Math.min(50, this.ammo.shells + 8);
+                return true;
+            case 'ammo_cells':
+                this.ammo.cells = Math.min(300, this.ammo.cells + 40);
+                return true;
+            case 'shotgun':
+                this.weapons[1] = true;
+                this.ammo.shells = Math.min(50, this.ammo.shells + 8);
+                return true;
+            case 'plasma':
+                this.weapons[2] = true;
+                this.ammo.cells = Math.min(300, this.ammo.cells + 40);
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    /** Kill the player. */
+    kill() {
+        this.hp = 0;
+        this.alive = false;
+    }
+
     /** Get position as Quadray object */
     get quadray() { return new Quadray(this.a, this.b, this.c, this.d); }
 
@@ -89,6 +159,19 @@ export class Enemy {
         return Quadray.distance(this.quadray, new Quadray(other.a, other.b, other.c, other.d));
     }
 
+    /** Take damage. Returns true if killed. */
+    takeDamage(amount) {
+        if (!this.alive) return false;
+        this.hp -= amount;
+        this.painTimer = 8;
+        if (this.hp <= 0) {
+            this.hp = 0;
+            this.alive = false;
+            return true;
+        }
+        return false;
+    }
+
     /** Get IVM cell parity at current position */
     get cellParity() {
         return (Math.floor(this.a) + Math.floor(this.b) + Math.floor(this.c) + Math.floor(this.d)) % 2 === 0 ? 'tetra' : 'octa';
@@ -119,6 +202,8 @@ export class Particle {
 }
 
 export class Pickup {
+    static TYPES = ['health', 'armor', 'ammo_bullets', 'ammo_shells', 'ammo_cells', 'shotgun', 'plasma'];
+
     constructor(a, b, c, d, type) {
         this.a = a; this.b = b; this.c = c; this.d = d;
         this.type = type;

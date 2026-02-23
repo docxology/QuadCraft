@@ -1,6 +1,8 @@
 # Games Architecture
 
-> System architecture for the QuadCraft 22-game portfolio built on Quadray tetrahedral coordinates.
+> **Note on 4D Geometry & Nomenclature**: Throughout QuadCraft, whenever we refer to **"4D"**, we strictly mean **Synergetics** geometry. This entails **Quadray 4D tetrahedral coordinates** deployed on an **Isotropic Vector Matrix (IVM)** of close-packed spheres, where the Quadray coordinates of the 12 neighboring balls are strictly defined by all permutations of `(0, 1, 1, 2)`.
+
+> System architecture for the QuadCraft 30-game portfolio built on Quadray tetrahedral coordinates.
 
 ---
 
@@ -12,7 +14,7 @@ graph TD
         G1["4d_chess/"]
         G2["4d_doom/"]
         G3["4d_snake/"]
-        GN["4d_*/  (22 games)"]
+        GN["4d_*/  (30 games)"]
     end
 
     subgraph "Layer 2 — Python Infrastructure"
@@ -99,10 +101,9 @@ games/
 │   ├── score_manager.js         # ScoreManager (localStorage)
 │   └── hud-style.css            # Shared HUD stylesheet
 │
-├── 4d_<game>/                   # Layer 3 — Per-game (×22)
+├── 4d_<game>/                   # Layer 3 — Per-game (×30)
 │   ├── index.html               # Entry point (imports generic modules)
 │   ├── AGENTS.md                # Game-specific agent instructions
-│   ├── run.sh                   # Standalone launcher
 │   ├── js/                      # Game-specific JS modules
 │   │   ├── <game>_board.js      # Board / world state
 │   │   ├── <game>_renderer.js   # Rendering logic
@@ -178,7 +179,7 @@ sequenceDiagram
 | Coordinates | `quadray.js` → `Quadray` class | `space/quadrays.py` → `Quadray` class |
 | Constants | `synergetics.js` → IVM volumes | `space/ivm.py` → `IVM`, `SYNERGETICS` |
 | Projection | `projection.js` → `projectQuadray()` | `space/xyz.py` → `project_quadray()` |
-| Grid ops | `grid_utils.js` → `GridUtils` | `space/geometry.py` → `generate_grid()`, `neighbors_8()` |
+| Grid ops | `grid_utils.js` → `GridUtils` | `space/geometry.py` → `generate_grid()`, `neighbors()` |
 | Verification | `synergetics.js` → `verifyGeometricIdentities()` | `space/geometry.py` → `verify_geometric_identities()` |
 
 ---

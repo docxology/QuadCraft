@@ -1,5 +1,8 @@
 # Space Math Reference — `src/space/`
 
+> **Note on 4D Geometry & Nomenclature**: Throughout QuadCraft, whenever we refer to **"4D"**, we strictly mean **Synergetics** geometry. This entails **Quadray 4D tetrahedral coordinates** deployed on an **Isotropic Vector Matrix (IVM)** of close-packed spheres, where the Quadray coordinates of the 12 neighboring balls are strictly defined by all permutations of `(0, 1, 1, 2)`.
+
+
 > Python implementation of Quadray, IVM, XYZ, and geometry math — parity with the JavaScript foundation in `4d_generic/`.
 
 ---
@@ -115,7 +118,7 @@ Isotropic Vector Matrix constants from Buckminster Fuller's Synergetics.
 |----------|-----------|-------------|
 | `generate_grid` | `(size: int) → list[Quadray]` | All cells in `size⁴` integer grid |
 | `in_bounds` | `(a,b,c,d, size) → bool` | Bounds check `[0, size)` |
-| `neighbors_8` | `(a,b,c,d) → list[tuple]` | 8 face-touching neighbours (unbounded) |
+| `neighbors` | `(a,b,c,d) → list[tuple]` | 12 kissing neighbours (unbounded) |
 | `bounded_neighbors` | `(a,b,c,d, size) → list[tuple]` | In-bounds neighbours only |
 | `depth_sort` | `(cells, project_fn?) → list[dict]` | Painter's algorithm sort |
 | `random_coord` | `(size) → Quadray` | Random integer Quadray in `[0, size)` |
@@ -123,7 +126,7 @@ Isotropic Vector Matrix constants from Buckminster Fuller's Synergetics.
 ### Directions
 
 ```python
-DIRECTIONS_8 = [
+DIRECTIONS = [
     (1,0,0,0), (-1,0,0,0),
     (0,1,0,0), (0,-1,0,0),
     (0,0,1,0), (0,0,-1,0),
@@ -176,7 +179,7 @@ assert report.all_passed
 | IVM constants | `SYNERGETICS.*` | `IVM.*` / `SYNERGETICS.*` |
 | Verification | `verifyGeometricIdentities()` | `verify_geometric_identities()` |
 | Grid generation | `GridUtils.generateGrid()` | `generate_grid()` |
-| Neighbours | `GridUtils.getNeighbors()` | `neighbors_8()` |
+| Neighbours | `GridUtils.getNeighbors()` | `neighbors()` |
 | Depth sort | `GridUtils.depthSort()` | `depth_sort()` |
 | Projection | `projectQuadray()` | `project_quadray()` |
 

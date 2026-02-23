@@ -17,10 +17,10 @@ console.log('╔═════════════════════�
 console.log('║   Test: GridUtils Module          ║');
 console.log('╚═══════════════════════════════════╝\n');
 
-// 1. DIRECTIONS_8
-console.log('▸ DIRECTIONS_8');
-assert(GridUtils.DIRECTIONS_8.length === 8, 'has 8 directions');
-assert(GridUtils.DIRECTIONS_8[0].length === 4, 'each direction has 4 components');
+// 1. DIRECTIONS
+console.log('▸ DIRECTIONS');
+assert(GridUtils.DIRECTIONS.length === 12, 'has 12 directions');
+assert(GridUtils.DIRECTIONS[0].length === 4, 'each direction has 4 components');
 
 // 2. generateGrid
 console.log('▸ generateGrid()');

@@ -57,11 +57,11 @@
             summary.style.color = failed === 0 ? '#4f4' : '#f44';
         };
 
-        // Mock Node.js require/module for hybrid scripts
+        // Shim Node.js require/module for hybrid scripts
         window.require = function(module) {
             // Attempt to return global objects if they exist
             if (module.includes('quadray')) return { Quadray: window.Quadray };
-            // Return empty object or mock as needed
+            // Return empty object or shim as needed
             return {};
         };
         

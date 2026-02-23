@@ -183,28 +183,8 @@ class MinesweeperBoard extends BaseBoard {
         this._extraData[this.key(q.a, q.b, q.c, q.d)] = value;
     }
 
-    /**
-     * Get all IVM neighbors of a cell.
-     * In 4D, each cell has up to 3^4 - 1 = 80 neighbors (all +/-1 offsets).
-     * @param {number} a
-     * @param {number} b
-     * @param {number} c
-     * @param {number} d
-     * @returns {string[]} Array of neighbor keys
-     */
     getNeighborKeys(a, b, c, d) {
-        const neighbors = [];
-        for (let da = -1; da <= 1; da++)
-            for (let db = -1; db <= 1; db++)
-                for (let dc = -1; dc <= 1; dc++)
-                    for (let dd = -1; dd <= 1; dd++) {
-                        if (da === 0 && db === 0 && dc === 0 && dd === 0) continue;
-                        const na = a + da, nb = b + db, nc = c + dc, nd = d + dd;
-                        if (this.inBounds(na, nb, nc, nd)) {
-                            neighbors.push(this.key(na, nb, nc, nd));
-                        }
-                    }
-        return neighbors;
+        return GridUtils.boundedNeighbors(a, b, c, d, this.size).map(n => this.key(n.a, n.b, n.c, n.d));
     }
 
     /**
@@ -213,7 +193,7 @@ class MinesweeperBoard extends BaseBoard {
      * @param {Quadray} q
      * @returns {Array<Quadray>}
      */
-    getIVMNeighbors(q) {
+    getNeighbors(q) {
         const bounded = GridUtils.boundedNeighbors(q.a, q.b, q.c, q.d, this.size);
         return bounded.map(n => new Quadray(n.a, n.b, n.c, n.d));
     }

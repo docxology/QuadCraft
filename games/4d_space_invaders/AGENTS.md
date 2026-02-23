@@ -7,7 +7,7 @@ Wave-based shooting with formation movement in 4D. Standalone browser applicatio
 ## Quick Commands
 
 ```bash
-# Run tests (8 tests)
+# Run tests (22 tests)
 node tests/test_space_invaders.js
 
 # Open in browser
@@ -46,7 +46,7 @@ Load in this order to avoid reference errors:
 
 | File | Tests | Coverage |
 |------|-------|----------|
-| `test_space_invaders.js` | 8 | Board creation, cell operations, reset |
+| `test_space_invaders.js` | 22 | Board creation, cell operations, reset |
 | `test.html` | — | Browser test runner |
 
 ## Game Rules Summary

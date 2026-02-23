@@ -44,9 +44,9 @@ if (typeof SYNERGETICS === 'undefined' && typeof require !== 'undefined') {
 class SnakeBoard extends BaseBoard {
     /** IVM axis-aligned directions: +/-1 on each Quadray axis, delegated to GridUtils. */
     static get DIRECTIONS() {
-        return GridUtils.DIRECTIONS_8.map((d, i) => ({
+        return GridUtils.DIRECTIONS.map((d, i) => ({
             da: d[0], db: d[1], dc: d[2], dd: d[3],
-            name: ['+A', '-A', '+B', '-B', '+C', '-C', '+D', '-D'][i]
+            name: `IVM_${i}`
         }));
     }
 
@@ -143,10 +143,10 @@ class SnakeBoard extends BaseBoard {
     setDirection(dir) {
         // Can't reverse into self
         const isOpposite = (
-            dir.da === -this.direction.da &&
-            dir.db === -this.direction.db &&
-            dir.dc === -this.direction.dc &&
-            dir.dd === -this.direction.dd
+            dir.da === 2 - this.direction.da &&
+            dir.db === 2 - this.direction.db &&
+            dir.dc === 2 - this.direction.dc &&
+            dir.dd === 2 - this.direction.dd
         );
         if (!isOpposite) {
             this.nextDirection = dir;

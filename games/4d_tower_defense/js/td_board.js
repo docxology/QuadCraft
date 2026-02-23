@@ -627,10 +627,11 @@ class TowerDefenseBoard extends BaseBoard {
         const pos = this.getCreepPosition(creep);
         for (let i = 0; i < 8; i++) {
             this.particles.push({
-                x: pos.a, y: pos.b, z: pos.c, w: pos.d,
-                vx: (Math.random() - 0.5) * 0.3,
-                vy: (Math.random() - 0.5) * 0.3,
-                vz: (Math.random() - 0.5) * 0.3,
+                a: pos.a, b: pos.b, c: pos.c, d: pos.d,
+                va: (Math.random() - 0.5) * 0.3,
+                vb: (Math.random() - 0.5) * 0.3,
+                vc: (Math.random() - 0.5) * 0.3,
+                vd: (Math.random() - 0.5) * 0.3,
                 life: 15 + Math.random() * 10,
                 color: creep.color
             });

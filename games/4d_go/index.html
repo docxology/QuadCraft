@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>4D Go — QuadCraft</title>
+    <meta name="description" content="Territory-capturing strategy game on 4D IVM grid">
+    <link rel="stylesheet" href="../4d_generic/hud-style.css">
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { background:linear-gradient(135deg,#0a1a0a,#152d15); color:#e0e0e0; font-family:'Segoe UI',system-ui,sans-serif; min-height:100vh; display:flex; flex-direction:column; align-items:center; padding:20px; }
+        h1 { font-size:2rem; margin-bottom:10px; background:linear-gradient(90deg,#27ae60,#fff,#27ae60); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+        .subtitle { color:#888; font-size:0.9rem; margin-bottom:20px; text-align:center; }
+        canvas { border:1px solid rgba(255,255,255,0.1); border-radius:8px; background:rgba(0,0,0,0.3); cursor:crosshair; box-shadow:0 4px 20px rgba(0,0,0,0.4); }
+        .controls { margin-top:15px; display:flex; gap:10px; flex-wrap:wrap; justify-content:center; }
+        button { padding:8px 20px; border:1px solid rgba(255,255,255,0.2); border-radius:6px; background:rgba(255,255,255,0.08); color:#ddd; cursor:pointer; font-size:0.9rem; transition:all 0.2s; }
+        button:hover { background:rgba(255,255,255,0.15); }
+        .hud { margin-top:10px; font-family:monospace; font-size:0.85rem; color:#aaa; text-align:center; }
+    </style>
+</head>
+<body>
+    <h1>⚫ 4D Go</h1>
+    <p class="subtitle">Territory-capturing strategy game — 12 IVM kissing-sphere directions</p>
+    <canvas id="gameCanvas" width="800" height="600"></canvas>
+    <div class="controls"><button onclick="game.newGame()">New Game</button><button onclick="game.togglePause()">Pause</button><button onclick="game.reset()">Reset</button></div>
+    <div class="hud" id="hud">Loading...</div>
+    <script src="../4d_generic/quadray.js"></script><script src="../4d_generic/camera.js"></script><script src="../4d_generic/projection.js"></script><script src="../4d_generic/zoom.js"></script><script src="../4d_generic/synergetics.js"></script><script src="../4d_generic/game_loop.js"></script><script src="../4d_generic/input_controller.js"></script><script src="../4d_generic/grid_utils.js"></script><script src="../4d_generic/base_board.js"></script><script src="../4d_generic/base_renderer.js"></script><script src="../4d_generic/base_game.js"></script><script src="../4d_generic/hud.js"></script><script src="../4d_generic/score_manager.js"></script><script src="../4d_generic/turn_manager.js"></script>
+    <script src="js/go_board.js"></script><script src="js/go_renderer.js"></script><script src="js/go_game.js"></script>
+    <script>const canvas=document.getElementById('gameCanvas');const hudEl=document.getElementById('hud');const game=new GoGame(canvas,hudEl);game.init();</script>
+</body></html>

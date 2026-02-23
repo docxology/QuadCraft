@@ -41,6 +41,10 @@ if (typeof SYNERGETICS === 'undefined' && typeof require !== 'undefined') {
     globalThis.verifyRoundTrip = _s.verifyRoundTrip;
     globalThis.verifyGeometricIdentities = _s.verifyGeometricIdentities;
 }
+if (typeof TurnManager === 'undefined' && typeof require !== 'undefined') {
+    const _tm = require('../../4d_generic/turn_manager.js');
+    globalThis.TurnManager = _tm.TurnManager;
+}
 
 const ResourceType = { WOOD: 'wood', BRICK: 'brick', WHEAT: 'wheat', SHEEP: 'sheep', ORE: 'ore', DESERT: 'desert' };
 const RESOURCE_COLORS = { wood: '#4CAF50', brick: '#E65100', wheat: '#FFD54F', sheep: '#81C784', ore: '#78909C', desert: '#D2B48C' };
@@ -123,12 +127,11 @@ class CatanBoard extends BaseBoard {
                 hasLargestArmy: false
             }
         ];
-        this.currentPlayer = 0;
+        this.turnManager = new TurnManager([0, 1], { maxHistory: 1000 });
         this.dice = [0, 0];
         this.robber = null;
         this.robberTile = -1;
         this.gameOver = false;
-        this.moveCount = 0;
 
         // Synergetics metadata
         this.volumeRatios = {
@@ -147,6 +150,16 @@ class CatanBoard extends BaseBoard {
         console.log(`[CatanBoard] ${this.tiles.length} tiles on IVM grid`);
         console.log(`[CatanBoard] Cell volume: ${this.cellVolumeUnit}, S3: ${this.s3Constant}`);
         console.log(`[CatanBoard] Volume ratios T:O:C = ${this.volumeRatios.tetra}:${this.volumeRatios.octa}:${this.volumeRatios.cubo}`);
+    }
+
+    /** Current player index — delegated to TurnManager. */
+    get currentPlayer() {
+        return this.turnManager.currentPlayer;
+    }
+
+    /** Move count — delegated to TurnManager. */
+    get moveCount() {
+        return this.turnManager.moveCount;
     }
 
     /** Verify geometric integrity on construction. */
@@ -387,7 +400,7 @@ class CatanBoard extends BaseBoard {
 
         deductCost(p, BUILD_COSTS.settlement);
         p.settlements.push({ ...pos, isCity: false });
-        this.moveCount++;
+        this.turnManager.recordMove({ type: 'settlement', player, pos });
         this.recalcPoints();
         return true;
     }
@@ -400,7 +413,7 @@ class CatanBoard extends BaseBoard {
 
         deductCost(p, BUILD_COSTS.city);
         p.settlements[settlementIdx].isCity = true;
-        this.moveCount++;
+        this.turnManager.recordMove({ type: 'city', player, settlementIdx });
         this.recalcPoints();
         return true;
     }
@@ -410,7 +423,7 @@ class CatanBoard extends BaseBoard {
         if (!canAfford(p, BUILD_COSTS.road)) return false;
         deductCost(p, BUILD_COSTS.road);
         p.roads.push({ from, to });
-        this.moveCount++;
+        this.turnManager.recordMove({ type: 'road', player, from, to });
         this.recalcPoints();
         return true;
     }
@@ -512,7 +525,7 @@ class CatanBoard extends BaseBoard {
         const p = this.players[this.currentPlayer];
         p.playedDevCardThisTurn = false;
         p.cardsBoughtThisTurn = [];
-        this.currentPlayer = (this.currentPlayer + 1) % this.players.length;
+        this.turnManager.nextTurn();
     }
 
     winner() {
@@ -582,12 +595,11 @@ class CatanBoard extends BaseBoard {
             hasLongestRoad: false,
             hasLargestArmy: false
         };
-        this.currentPlayer = 0;
+        this.turnManager.reset();
         this.dice = [0, 0];
         this.robber = null;
         this.robberTile = -1;
         this.gameOver = false;
-        this.moveCount = 0;
         this.generateBoard();
     }
 }

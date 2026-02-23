@@ -1,23 +1,45 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <title>4D Catan - Tests</title>
     <style>
-        body { font-family: monospace; background: #111; color: #eee; padding: 20px; }
-        .pass { color: #4f4; }
-        .fail { color: #f44; font-weight: bold; }
-        .group { margin-top: 15px; border-bottom: 1px solid #333; padding-bottom: 5px; }
-        h1 { color: #add8e6; }
+        body {
+            font-family: monospace;
+            background: #111;
+            color: #eee;
+            padding: 20px;
+        }
+
+        .pass {
+            color: #4f4;
+        }
+
+        .fail {
+            color: #f44;
+            font-weight: bold;
+        }
+
+        .group {
+            margin-top: 15px;
+            border-bottom: 1px solid #333;
+            padding-bottom: 5px;
+        }
+
+        h1 {
+            color: #add8e6;
+        }
     </style>
 </head>
+
 <body>
     <h1>🧪 Unit Tests: 4D Catan</h1>
     <div id="results">Running tests...</div>
 
     <!-- Core Dependencies -->
     <script src="../js/quadray.js"></script>
-    
+
     <!-- Game Modules (Load order matters) -->
     <script src="../js/catan_cards.js"></script>
     <script src="../js/catan_board.js"></script>
@@ -27,12 +49,12 @@
     <script>
         const results = document.getElementById('results');
         results.innerHTML = ''; // Clear "Running tests..."
-        
+
         let passed = 0;
         let failed = 0;
 
         // Global assert for browser tests that don't have their own reporting
-        window.assert = function(condition, message) {
+        window.assert = function (condition, message) {
             const div = document.createElement('div');
             if (condition) {
                 div.className = 'pass';
@@ -47,8 +69,8 @@
             results.appendChild(div);
             updateSummary();
         };
-        
-        window.updateSummary = function() {
+
+        window.updateSummary = function () {
             let summary = document.getElementById('summary');
             if (!summary) {
                 summary = document.createElement('h2');
@@ -59,18 +81,19 @@
             summary.style.color = failed === 0 ? '#4f4' : '#f44';
         };
 
-        // Mock Node.js require/module for hybrid scripts
-        window.require = function(module) {
+        // Shim Node.js require/module for hybrid scripts
+        window.require = function (module) {
             // Attempt to return global objects if they exist
             if (module.includes('quadray')) return { Quadray: window.Quadray };
-            // Return empty object or mock as needed
+            // Return empty object or shim as needed
             return {};
         };
-        
+
         window.module = { exports: {} };
     </script>
-    
+
     <!-- Test Script -->
-    <script  src="test_catan.js"></script>
+    <script src="test_catan.js"></script>
 </body>
+
 </html>

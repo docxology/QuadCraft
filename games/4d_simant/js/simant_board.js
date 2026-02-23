@@ -4,8 +4,11 @@
  * Features:
  * - 4D Grid (12^4 = 20,736 cells)
  * - Terrain: DIRT, EMPTY, BEDROCK, FOOD
- * - Pheromones: Float32Array for diffusion
+ * - Pheromones: Float32Array — 6 channels per cell (Food, Home, Danger × 2 factions)
  * - Factions: Yellow (Player) vs Red (AI)
+ * - Tunnel network tracking with IVM connectivity
+ * - Food regeneration, population caps, colony health
+ * - Real IVM-neighbor pheromone diffusion
  *
  * Deeply integrated with all Quadray/IVM shared modules:
  *   - Quadray: toKey, normalized, add, subtract, equals, distance,
@@ -45,42 +48,65 @@ if (typeof SYNERGETICS === 'undefined' && typeof require !== 'undefined') {
 }
 
 // Cell Types
-const TYPE_EMPTY = 0;
-const TYPE_DIRT = 1;
-const TYPE_BEDROCK = 2;
-const TYPE_FOOD = 3;
+var TYPE_EMPTY = 0;
+var TYPE_DIRT = 1;
+var TYPE_BEDROCK = 2;
+var TYPE_FOOD = 3;
 
 // Factions
-const FACTION_YELLOW = 0;
-const FACTION_RED = 1;
+var FACTION_YELLOW = 0;
+var FACTION_RED = 1;
 
 // Castes
-const CASTE_QUEEN = 0;
-const CASTE_WORKER = 1;
-const CASTE_SOLDIER = 2;
+var CASTE_QUEEN = 0;
+var CASTE_WORKER = 1;
+var CASTE_SOLDIER = 2;
+var CASTE_SCOUT = 3;
+
+// Pheromone channels (6 total)
+var PHERO_YELLOW_FOOD = 0;
+var PHERO_YELLOW_HOME = 1;
+var PHERO_RED_FOOD = 2;
+var PHERO_RED_HOME = 3;
+var PHERO_YELLOW_DANGER = 4;
+var PHERO_RED_DANGER = 5;
+var PHERO_CHANNELS = 6;
+
+// Population cap per faction
+var MAX_ANTS_PER_FACTION = 60;
 
 class Ant {
-    constructor(x, y, z, w, faction, caste) {
+    constructor(a, b, c, d, faction, caste) {
         // Position (integer coordinates in Grid)
-        this.x = x; this.y = y; this.z = z; this.w = w;
+        this.a = a; this.b = b; this.c = c; this.d = d;
+        // Previous position for animation interpolation
+        this.prevA = a; this.prevB = b; this.prevC = c; this.prevD = d;
         this.faction = faction;
         this.caste = caste;
 
         // Stats
-        this.hp = caste === CASTE_SOLDIER ? 50 : (caste === CASTE_QUEEN ? 200 : 20);
+        this.hp = caste === CASTE_SOLDIER ? 50
+            : caste === CASTE_QUEEN ? 200
+                : caste === CASTE_SCOUT ? 15
+                    : 20;
         this.maxHp = this.hp;
         this.energy = 100; // Hunger
         this.alive = true;
         this.carrying = 0; // Food amount
 
         // AI State
-        this.target = null; // {x,y,z,w}
-        this.state = 'idle'; // idle, foraging, returning, attacking
+        this.target = null; // { a, b, c, d }
+        this.state = 'idle'; // idle, foraging, returning, attacking, scouting
+        this.scoutAngle = Math.random() * Math.PI * 2; // For spiral scout patterns
+
+        // Combat tracking
+        this.kills = 0;
+        this.deathTick = -1; // Set when killed, for death animation
     }
 
     // Convert grid coords to Quadray for rendering/distance
     toQuadray() {
-        return new Quadray(this.x, this.y, this.z, this.w);
+        return new Quadray(this.a, this.b, this.c, this.d);
     }
 }
 
@@ -93,19 +119,35 @@ class SimAntBoard extends BaseBoard {
         // 4D Grid: Stores Cell Type (Uint8)
         this.grid = new Uint8Array(this.volume);
 
-        // Pheromones: 4 channels per cell [YellowFood, YellowHome, RedFood, RedHome]
-        this.pheromones = new Float32Array(this.volume * 4);
+        // Pheromones: 6 channels per cell [YFood, YHome, RFood, RHome, YDanger, RDanger]
+        this.pheromones = new Float32Array(this.volume * PHERO_CHANNELS);
 
         this.ants = [];
         this.foodStored = [50, 50]; // [Yellow, Red]
         this.queens = [null, null];
-        this.nests = [null, null]; // Nest positions {x,y,z,w}
+        this.nests = [null, null]; // Nest positions { a, b, c, d }
 
         this.tick = 0;
         this.gameOver = false; // BaseGame compatibility
+        this.winner = -1; // -1 = none, 0 = yellow, 1 = red
 
         // AI controller for Red Colony
         this.redAI = null;
+        // Yellow assist AI
+        this.yellowAI = null;
+        this.yellowAssistEnabled = false;
+
+        // Colony statistics
+        this.stats = {
+            yellowKills: 0, redKills: 0,
+            yellowDeaths: 0, redDeaths: 0,
+            yellowFoodCollected: 0, redFoodCollected: 0,
+            foodIncome: [0, 0], // per-tick average
+            _foodSampleWindow: [[], []], // rolling 50-tick samples
+        };
+
+        // Tunnel tracking — set of keys for quick lookup
+        this.tunnelSet = new Set();
 
         // Synergetics metadata
         this.volumeRatios = {
@@ -148,29 +190,29 @@ class SimAntBoard extends BaseBoard {
 
     // --- Helpers ---
 
-    idx(x, y, z, w) {
+    idx(a, b, c, d) {
         // Bounded world — treat out-of-bounds as bedrock
-        if (x < 0 || x >= this.size || y < 0 || y >= this.size ||
-            z < 0 || z >= this.size || w < 0 || w >= this.size) return -1;
-        return ((x * this.size + y) * this.size + z) * this.size + w;
+        if (a < 0 || a >= this.size || b < 0 || b >= this.size ||
+            c < 0 || c >= this.size || d < 0 || d >= this.size) return -1;
+        return ((a * this.size + b) * this.size + c) * this.size + d;
     }
 
     coords(i) {
         let r = i;
-        const w = r % this.size; r = Math.floor(r / this.size);
-        const z = r % this.size; r = Math.floor(r / this.size);
-        const y = r % this.size;
-        const x = Math.floor(r / this.size);
-        return { x, y, z, w };
+        const d = r % this.size; r = Math.floor(r / this.size);
+        const c = r % this.size; r = Math.floor(r / this.size);
+        const b = r % this.size;
+        const a = Math.floor(r / this.size);
+        return { a, b, c, d };
     }
 
     /**
-     * Get cell data at a Quadray-like position {a,b,c,d} or (x,y,z,w).
+     * Get cell data at a Quadray-like position {a,b,c,d}.
      * @param {Object} q — { a, b, c, d } or Quadray
      * @returns {number|null} Cell type or null if out of bounds
      */
     getCell(q) {
-        const i = this.idx(q.a ?? q.x, q.b ?? q.y, q.c ?? q.z, q.d ?? q.w);
+        const i = this.idx(q.a, q.b, q.c, q.d);
         if (i === -1) return null;
         return this.grid[i];
     }
@@ -181,10 +223,32 @@ class SimAntBoard extends BaseBoard {
      * @param {number} value — Cell type
      */
     setCell(q, value) {
-        const i = this.idx(q.a ?? q.x, q.b ?? q.y, q.c ?? q.z, q.d ?? q.w);
+        const i = this.idx(q.a, q.b, q.c, q.d);
         if (i !== -1) {
             this.grid[i] = value;
         }
+    }
+
+    /**
+     * Count alive ants of a given faction.
+     * @param {number} faction
+     * @returns {number}
+     */
+    antCount(faction) {
+        let count = 0;
+        for (const a of this.ants) {
+            if (a.faction === faction && a.alive) count++;
+        }
+        return count;
+    }
+
+    /**
+     * Check if faction has reached population cap.
+     * @param {number} faction
+     * @returns {boolean}
+     */
+    atPopCap(faction) {
+        return this.antCount(faction) >= MAX_ANTS_PER_FACTION;
     }
 
     // --- Initialization ---
@@ -196,14 +260,14 @@ class SimAntBoard extends BaseBoard {
         // 3. Dig Chambers for Colonies
         // Yellow: Near (3,3,3,3)
         this.digRoom(3, 3, 3, 3, 2);
-        this.nests[0] = { x: 3, y: 3, z: 3, w: 3 };
+        this.nests[0] = { a: 3, b: 3, c: 3, d: 3 };
         this.spawnAnt(3, 3, 3, 3, FACTION_YELLOW, CASTE_QUEEN);
         for (let i = 0; i < 5; i++) this.spawnAnt(3, 3, 3, 3, FACTION_YELLOW, CASTE_WORKER);
 
         // Red: Near (size-4,...)
         const f = this.size - 4;
         this.digRoom(f, f, f, f, 2);
-        this.nests[1] = { x: f, y: f, z: f, w: f };
+        this.nests[1] = { a: f, b: f, c: f, d: f };
         this.spawnAnt(f, f, f, f, FACTION_RED, CASTE_QUEEN);
         for (let i = 0; i < 5; i++) this.spawnAnt(f, f, f, f, FACTION_RED, CASTE_WORKER);
 
@@ -212,24 +276,30 @@ class SimAntBoard extends BaseBoard {
             this.redAI = new RedColonyAI(this);
         }
 
+        // Initialize Yellow Assist AI
+        if (typeof YellowAssistAI !== 'undefined') {
+            this.yellowAI = new YellowAssistAI(this);
+        }
+
         // 4. Scatter Food (in clusters)
         this.scatterFoodClusters(10);
     }
 
-    digRoom(cx, cy, cz, cw, radius) {
-        for (let x = cx - radius; x <= cx + radius; x++) {
-            for (let y = cy - radius; y <= cy + radius; y++) {
-                for (let z = cz - radius; z <= cz + radius; z++) {
-                    for (let w = cw - radius; w <= cw + radius; w++) {
-                        const i = this.idx(x, y, z, w);
+    digRoom(ca, cb, cc, cd, radius) {
+        for (let a = ca - radius; a <= ca + radius; a++) {
+            for (let b = cb - radius; b <= cb + radius; b++) {
+                for (let c = cc - radius; c <= cc + radius; c++) {
+                    for (let d = cd - radius; d <= cd + radius; d++) {
+                        const i = this.idx(a, b, c, d);
                         if (i !== -1) {
                             // Use GridUtils.manhattan for distance check
                             const dist = GridUtils.manhattan(
-                                { a: x, b: y, c: z, d: w },
-                                { a: cx, b: cy, c: cz, d: cw }
+                                { a: a, b: b, c: c, d: d },
+                                { a: ca, b: cb, c: cc, d: cd }
                             );
                             if (dist <= radius * 1.5) {
                                 this.grid[i] = TYPE_EMPTY;
+                                this.tunnelSet.add(GridUtils.key(a, b, c, d));
                             }
                         }
                     }
@@ -238,16 +308,19 @@ class SimAntBoard extends BaseBoard {
         }
     }
 
-    spawnAnt(x, y, z, w, faction, caste) {
-        const i = this.idx(x, y, z, w);
-        if (i === -1) return; // Invalid
-        const ant = new Ant(x, y, z, w, faction, caste);
+    spawnAnt(a, b, c, d, faction, caste) {
+        const i = this.idx(a, b, c, d);
+        if (i === -1) return null; // Invalid
+        // Population cap check
+        if (caste !== CASTE_QUEEN && this.atPopCap(faction)) return null;
+        const ant = new Ant(a, b, c, d, faction, caste);
         this.ants.push(ant);
         if (caste === CASTE_QUEEN) this.queens[faction] = ant;
+        return ant;
     }
 
-    spawnFood(x, y, z, w) {
-        const i = this.idx(x, y, z, w);
+    spawnFood(a, b, c, d) {
+        const i = this.idx(a, b, c, d);
         if (i !== -1) {
             this.grid[i] = TYPE_FOOD;
         }
@@ -256,19 +329,19 @@ class SimAntBoard extends BaseBoard {
     scatterFoodClusters(count) {
         for (let c = 0; c < count; c++) {
             // Random center
-            const cx = Math.floor(Math.random() * (this.size - 2)) + 1;
-            const cy = Math.floor(Math.random() * (this.size - 2)) + 1;
-            const cz = Math.floor(Math.random() * (this.size - 2)) + 1;
-            const cw = Math.floor(Math.random() * (this.size - 2)) + 1;
+            const ca = Math.floor(Math.random() * (this.size - 2)) + 1;
+            const cb = Math.floor(Math.random() * (this.size - 2)) + 1;
+            const cc = Math.floor(Math.random() * (this.size - 2)) + 1;
+            const cd = Math.floor(Math.random() * (this.size - 2)) + 1;
 
             // Cluster
-            this.digRoom(cx, cy, cz, cw, 1); // Clear space for food
+            this.digRoom(ca, cb, cc, cd, 1); // Clear space for food
 
-            const i = this.idx(cx, cy, cz, cw);
+            const i = this.idx(ca, cb, cc, cd);
             if (i !== -1) this.grid[i] = TYPE_FOOD; // Center is food
 
             // Add neighbors using GridUtils
-            const neighbors = this.getNeighbors(cx, cy, cz, cw);
+            const neighbors = this.getNeighbors(ca, cb, cc, cd);
             for (const ni of neighbors) {
                 if (Math.random() > 0.5) this.grid[ni] = TYPE_FOOD;
             }
@@ -298,86 +371,169 @@ class SimAntBoard extends BaseBoard {
             this.redAI.update();
         }
 
-        // 4. Pheromone Decay & Diffusion (Simplified)
+        // 4. Yellow Assist AI
+        if (this.yellowAssistEnabled && this.yellowAI && this.tick % 30 === 0) {
+            this.yellowAI.update();
+        }
+
+        // 5. Queen egg-laying (organic growth) — every 60 ticks
+        if (this.tick % 60 === 0) {
+            this._queenAutoSpawn();
+        }
+
+        // 6. Pheromone Decay & Diffusion
         if (this.tick % 5 === 0) {
             this.diffusePheromones();
         }
 
-        // 5. Check game-over condition (queen death)
+        // 7. Food Regeneration — every 200 ticks
+        if (this.tick % 200 === 0 && this.tick > 0) {
+            this.regenerateFood();
+        }
+
+        // 8. Update food income tracking
+        this._trackFoodIncome();
+
+        // 9. Check game-over/win conditions
+        this._checkEndConditions();
+    }
+
+    /** Queen auto-spawns a worker when food > 80 and pop < cap */
+    _queenAutoSpawn() {
+        for (let f = 0; f < 2; f++) {
+            const queen = this.queens[f];
+            if (!queen || !queen.alive) continue;
+            if (this.foodStored[f] >= 15 && !this.atPopCap(f)) {
+                this.foodStored[f] -= 10;
+                this.spawnAnt(queen.a, queen.b, queen.c, queen.d, f, CASTE_WORKER);
+            }
+        }
+    }
+
+    /** Track rolling food income rate */
+    _trackFoodIncome() {
+        for (let f = 0; f < 2; f++) {
+            this.stats._foodSampleWindow[f].push(this.foodStored[f]);
+            if (this.stats._foodSampleWindow[f].length > 50) {
+                this.stats._foodSampleWindow[f].shift();
+            }
+            const w = this.stats._foodSampleWindow[f];
+            if (w.length >= 2) {
+                this.stats.foodIncome[f] = ((w[w.length - 1] - w[0]) / w.length).toFixed(1);
+            }
+        }
+    }
+
+    /** Check win/loss conditions */
+    _checkEndConditions() {
+        // Yellow queen dead → game over (loss)
         if (this.queens[0] && !this.queens[0].alive) {
             this.gameOver = true;
+            this.winner = 1; // Red wins
+        }
+        // Red queen dead → victory
+        if (this.queens[1] && !this.queens[1].alive) {
+            this.gameOver = true;
+            this.winner = 0; // Yellow wins
+        }
+    }
+
+    /** Regenerate food clusters in unexplored dirt regions */
+    regenerateFood() {
+        const clusterCount = 2 + Math.floor(Math.random() * 2); // 2–3 clusters
+        for (let c = 0; c < clusterCount; c++) {
+            const ca = Math.floor(Math.random() * (this.size - 2)) + 1;
+            const cb = Math.floor(Math.random() * (this.size - 2)) + 1;
+            const cc = Math.floor(Math.random() * (this.size - 2)) + 1;
+            const cd = Math.floor(Math.random() * (this.size - 2)) + 1;
+            const i = this.idx(ca, cb, cc, cd);
+            if (i !== -1 && this.grid[i] === TYPE_DIRT) {
+                // Create small food cluster in dirt
+                this.digRoom(ca, cb, cc, cd, 1);
+                this.grid[i] = TYPE_FOOD;
+                const neighbors = this.getNeighbors(ca, cb, cc, cd);
+                for (const ni of neighbors) {
+                    if (Math.random() > 0.6) this.grid[ni] = TYPE_FOOD;
+                }
+            }
         }
     }
 
     updateAnt(ant) {
         if (!ant.alive) return;
 
+        // Save previous position for animation interpolation
+        ant.prevA = ant.a; ant.prevB = ant.b; ant.prevC = ant.c; ant.prevD = ant.d;
+
         // Hunger
         ant.energy -= 0.05;
         if (ant.energy <= 0) {
             ant.hp -= 0.1;
-            if (ant.hp <= 0) ant.alive = false;
+            if (ant.hp <= 0) {
+                ant.alive = false;
+                ant.deathTick = this.tick;
+            }
         }
 
         // Behavior Logic
         if (ant.caste === CASTE_QUEEN) return; // Queens just sit
 
-        // drop Home pheromone
-        this.dropPheromone(ant, ant.faction === FACTION_YELLOW ? 1 : 3, 2.0); // 1=YellowHome
+        // Drop Home pheromone
+        const homeChannel = ant.faction === FACTION_YELLOW ? PHERO_YELLOW_HOME : PHERO_RED_HOME;
+        this.dropPheromone(ant, homeChannel, 2.0);
 
-        const i = this.idx(ant.x, ant.y, ant.z, ant.w);
+        const i = this.idx(ant.a, ant.b, ant.c, ant.d);
 
-        // Check current cell
+        // Check current cell for food pickup
         if (this.grid[i] === TYPE_FOOD && !ant.carrying) {
-            // Pick up food
             this.grid[i] = TYPE_EMPTY;
-            ant.carrying = 10; // Units of food
+            ant.carrying = 10;
             ant.state = 'returning';
         }
 
         // Move
-        const neighbors = this.getNeighborCoords(ant.x, ant.y, ant.z, ant.w);
-        // Filter valid moves
-        // Logic:
-        // - If carrying, follow 'Home' pheromone gradient (uphill)
-        // - If foraging, follow 'Food' pheromone gradient
-        // - Else random
-        // - Can DIG dirt (costs energy)
+        const neighbors = this.getNeighborCoords(ant.a, ant.b, ant.c, ant.d);
 
         let bestMove = null;
         let maxVal = -Infinity;
 
-        // Gradient Search
-        const pheromoneType = ant.carrying ? (ant.faction === FACTION_YELLOW ? 1 : 3) : (ant.faction === FACTION_YELLOW ? 0 : 2); // 0=YellowFood, 1=YellowHome...
-        // Wait, if carrying, follow HOME. If foraging, follow FOOD.
+        // Determine pheromone channel to follow
+        const foodChannel = ant.faction === FACTION_YELLOW ? PHERO_YELLOW_FOOD : PHERO_RED_FOOD;
+        const dangerChannel = ant.faction === FACTION_YELLOW ? PHERO_YELLOW_DANGER : PHERO_RED_DANGER;
+        const pheromoneType = ant.carrying ? homeChannel : foodChannel;
 
         for (const n of neighbors) {
-            const ni = this.idx(n.x, n.y, n.z, n.w);
+            const ni = this.idx(n.a, n.b, n.c, n.d);
             if (ni === -1) continue;
 
             let score = Math.random() * 0.5; // Random noise
 
             // Pheromone attraction
-            // If carrying, go UP Home gradient
-            // If foraging, go UP Food gradient (if weak, go DOWN Home gradient = away from home)
-            const pVal = this.pheromones[ni * 4 + pheromoneType];
+            const pVal = this.pheromones[ni * PHERO_CHANNELS + pheromoneType];
             score += pVal * 2.0;
 
-            // If foraging and smell home strongly, maybe go away? (Exploration bias)
-            if (!ant.carrying) {
-                const homeSmell = this.pheromones[ni * 4 + (pheromoneType + 1)];
-                // score -= homeSmell * 0.5;
+            // Danger avoidance (workers and scouts avoid, soldiers don't)
+            if (ant.caste !== CASTE_SOLDIER) {
+                const dangerVal = this.pheromones[ni * PHERO_CHANNELS + dangerChannel];
+                score -= dangerVal * 1.5;
+            }
+
+            // Scout behavior: spiral exploration away from home
+            if (ant.caste === CASTE_SCOUT && ant.state === 'scouting') {
+                const homeSmell = this.pheromones[ni * PHERO_CHANNELS + homeChannel];
+                score -= homeSmell * 0.8; // Explore away from home
+                score += Math.random() * 3.0; // High randomness
             }
 
             // Target-based movement (soldiers directed by AI)
             if (ant.target && ant.state === 'attacking') {
                 const distNow = GridUtils.manhattan(
-                    { a: ant.x, b: ant.y, c: ant.z, d: ant.w },
-                    { a: ant.target.x, b: ant.target.y, c: ant.target.z, d: ant.target.w }
+                    { a: ant.a, b: ant.b, c: ant.c, d: ant.d },
+                    { a: ant.target.a, b: ant.target.b, c: ant.target.c, d: ant.target.d }
                 );
                 const distNext = GridUtils.manhattan(
-                    { a: n.x, b: n.y, c: n.z, d: n.w },
-                    { a: ant.target.x, b: ant.target.y, c: ant.target.z, d: ant.target.w }
+                    { a: n.a, b: n.b, c: n.c, d: n.d },
+                    { a: ant.target.a, b: ant.target.b, c: ant.target.c, d: ant.target.d }
                 );
                 if (distNext < distNow) score += 10; // Strong bias toward target
             }
@@ -385,10 +541,19 @@ class SimAntBoard extends BaseBoard {
             // Terrain cost
             const cell = this.grid[ni];
             if (cell === TYPE_DIRT) {
-                if (ant.caste === CASTE_WORKER) score -= 2.0; // Digging cost
-                else score = -Infinity; // Soldiers can't dig well
+                if (ant.caste === CASTE_WORKER || ant.caste === CASTE_SCOUT) {
+                    score -= 2.0; // Digging cost
+                } else {
+                    score = -Infinity; // Soldiers can't dig well
+                }
             } else if (cell === TYPE_FOOD) {
                 if (!ant.carrying) score += 100; // Found food!
+            }
+
+            // Prefer tunnel network for speed
+            const key = GridUtils.key(n.a, n.b, n.c, n.d);
+            if (this.tunnelSet.has(key)) {
+                score += 0.3; // Small tunnel preference
             }
 
             if (score > maxVal) {
@@ -398,36 +563,43 @@ class SimAntBoard extends BaseBoard {
         }
 
         if (bestMove) {
-            const ni = this.idx(bestMove.x, bestMove.y, bestMove.z, bestMove.w);
+            const ni = this.idx(bestMove.a, bestMove.b, bestMove.c, bestMove.d);
             if (this.grid[ni] === TYPE_DIRT) {
                 // Dig
                 if (ant.energy > 5) {
                     this.grid[ni] = TYPE_EMPTY;
+                    this.tunnelSet.add(GridUtils.key(bestMove.a, bestMove.b, bestMove.c, bestMove.d));
                     ant.energy -= 2;
-                    ant.x = bestMove.x; ant.y = bestMove.y; ant.z = bestMove.z; ant.w = bestMove.w;
+                    ant.a = bestMove.a; ant.b = bestMove.b; ant.c = bestMove.c; ant.d = bestMove.d;
                 }
             } else {
                 // Move
-                ant.x = bestMove.x; ant.y = bestMove.y; ant.z = bestMove.z; ant.w = bestMove.w;
+                ant.a = bestMove.a; ant.b = bestMove.b; ant.c = bestMove.c; ant.d = bestMove.d;
             }
 
             // Drop Food pheromone if carrying
             if (ant.carrying) {
-                this.dropPheromone(ant, ant.faction === FACTION_YELLOW ? 0 : 2, 5.0); // 0=YellowFood
+                const fc = ant.faction === FACTION_YELLOW ? PHERO_YELLOW_FOOD : PHERO_RED_FOOD;
+                this.dropPheromone(ant, fc, 5.0);
 
-                // At home?
-                // Check dist to Queen
+                // At home? Check dist to Queen
                 const q = this.queens[ant.faction];
                 if (q) {
                     const distToQueen = GridUtils.manhattan(
-                        { a: ant.x, b: ant.y, c: ant.z, d: ant.w },
-                        { a: q.x, b: q.y, c: q.z, d: q.w }
+                        { a: ant.a, b: ant.b, c: ant.c, d: ant.d },
+                        { a: q.a, b: q.b, c: q.c, d: q.d }
                     );
                     if (distToQueen < 3) {
                         // Drop food
                         this.foodStored[ant.faction] += ant.carrying;
+                        if (ant.faction === FACTION_YELLOW) {
+                            this.stats.yellowFoodCollected += ant.carrying;
+                        } else {
+                            this.stats.redFoodCollected += ant.carrying;
+                        }
                         ant.carrying = 0;
                         ant.energy = 100; // Refuel
+                        ant.state = 'foraging';
                     }
                 }
             }
@@ -435,15 +607,55 @@ class SimAntBoard extends BaseBoard {
     }
 
     dropPheromone(ant, typeIdx, amount) {
-        const i = this.idx(ant.x, ant.y, ant.z, ant.w);
+        const i = this.idx(ant.a, ant.b, ant.c, ant.d);
         if (i !== -1) {
-            this.pheromones[i * 4 + typeIdx] = Math.min(100, this.pheromones[i * 4 + typeIdx] + amount);
+            this.pheromones[i * PHERO_CHANNELS + typeIdx] = Math.min(100, this.pheromones[i * PHERO_CHANNELS + typeIdx] + amount);
+        }
+    }
+
+    /** Emit danger pheromone at a position */
+    emitDanger(a, b, c, d, faction, amount) {
+        const i = this.idx(a, b, c, d);
+        if (i !== -1) {
+            const channel = faction === FACTION_YELLOW ? PHERO_YELLOW_DANGER : PHERO_RED_DANGER;
+            this.pheromones[i * PHERO_CHANNELS + channel] = Math.min(100, this.pheromones[i * PHERO_CHANNELS + channel] + amount);
         }
     }
 
     diffusePheromones() {
-        // Simple decay for performance (True diffusion in 4D is expensive in JS loop)
-        // Just decay 2% per tick
+        // Real IVM-neighbor diffusion every 10 ticks, simple decay otherwise
+        const doFullDiffusion = (this.tick % 10 === 0);
+        const DIFFUSION_COEFF = 0.1;
+
+        if (doFullDiffusion) {
+            // Sample a subset of cells for diffusion to keep performance acceptable
+            const sampleSize = Math.min(500, this.volume);
+            for (let s = 0; s < sampleSize; s++) {
+                const ri = Math.floor(Math.random() * this.volume);
+                if (this.grid[ri] !== TYPE_EMPTY) continue;
+
+                const c = this.coords(ri);
+                const neighborCoords = this.getNeighborCoords(c.a, c.b, c.c, c.d);
+
+                for (let ch = 0; ch < PHERO_CHANNELS; ch++) {
+                    const val = this.pheromones[ri * PHERO_CHANNELS + ch];
+                    if (val < 0.5) continue;
+
+                    // Spread to IVM neighbors
+                    for (const nc of neighborCoords) {
+                        const ni = this.idx(nc.a, nc.b, nc.c, nc.d);
+                        if (ni === -1 || this.grid[ni] !== TYPE_EMPTY) continue;
+                        const nVal = this.pheromones[ni * PHERO_CHANNELS + ch];
+                        if (val > nVal) {
+                            const transfer = (val - nVal) * DIFFUSION_COEFF;
+                            this.pheromones[ni * PHERO_CHANNELS + ch] += transfer;
+                        }
+                    }
+                }
+            }
+        }
+
+        // Global decay
         for (let i = 0; i < this.pheromones.length; i++) {
             this.pheromones[i] *= 0.98;
             if (this.pheromones[i] < 0.1) this.pheromones[i] = 0;
@@ -451,21 +663,41 @@ class SimAntBoard extends BaseBoard {
     }
 
     /**
-     * Get neighbor coordinates using GridUtils.DIRECTIONS_8.
+     * Get neighbor coordinates using GridUtils.DIRECTIONS.
      * Delegates to GridUtils for consistent IVM direction handling.
      */
-    getNeighborCoords(x, y, z, w) {
-        return GridUtils.DIRECTIONS_8.map(([da, db, dc, dd]) => ({
-            x: x + da, y: y + db, z: z + dc, w: w + dd
+    getNeighborCoords(a, b, c, d) {
+        return GridUtils.DIRECTIONS.map(([da, db, dc, dd]) => ({
+            a: a + da, b: b + db, c: c + dc, d: d + dd
         }));
     }
 
     /**
      * Get valid neighbor indices using GridUtils.
      */
-    getNeighbors(x, y, z, w) {
-        const coords = this.getNeighborCoords(x, y, z, w);
-        return coords.map(c => this.idx(c.x, c.y, c.z, c.w)).filter(i => i !== -1);
+    getNeighbors(a, b, c, d) {
+        const coords = this.getNeighborCoords(a, b, c, d);
+        return coords.map(c => this.idx(c.a, c.b, c.c, c.d)).filter(i => i !== -1);
+    }
+
+    /**
+     * Compute colony health for a faction (0–100 scale).
+     * @param {number} faction
+     * @returns {number}
+     */
+    colonyHealth(faction) {
+        const queen = this.queens[faction];
+        if (!queen || !queen.alive) return 0;
+
+        const queenFactor = (queen.hp / queen.maxHp) * 30; // 30% weight
+        const popFactor = Math.min(30, (this.antCount(faction) / 20) * 30); // 30% weight
+        const foodFactor = Math.min(20, (this.foodStored[faction] / 100) * 20); // 20% weight
+        const combatFactor = Math.min(20, Math.max(0,
+            10 + (this.stats[faction === 0 ? 'yellowKills' : 'redKills'] -
+                this.stats[faction === 0 ? 'yellowDeaths' : 'redDeaths']) * 2
+        )); // 20% weight
+
+        return Math.round(Math.min(100, queenFactor + popFactor + foodFactor + combatFactor));
     }
 
     /**
@@ -491,6 +723,8 @@ class SimAntBoard extends BaseBoard {
             redFood: Math.floor(this.foodStored[1]),
             yellowQueenAlive: this.queens[0] && this.queens[0].alive,
             redQueenAlive: this.queens[1] && this.queens[1].alive,
+            yellowHealth: this.colonyHealth(0),
+            redHealth: this.colonyHealth(1),
             totalCells,
             tunnelCells,
             foodCells,
@@ -500,20 +734,35 @@ class SimAntBoard extends BaseBoard {
             cellVolume: this.cellVolumeUnit,
             s3: this.s3Constant,
             gameOver: this.gameOver,
+            winner: this.winner,
+            stats: { ...this.stats },
+            foodIncome: [...this.stats.foodIncome],
+            yellowAssist: this.yellowAssistEnabled,
+            popCap: MAX_ANTS_PER_FACTION,
         };
     }
 
     /** Reset board to initial state. */
     reset() {
         this.grid = new Uint8Array(this.volume);
-        this.pheromones = new Float32Array(this.volume * 4);
+        this.pheromones = new Float32Array(this.volume * PHERO_CHANNELS);
         this.ants = [];
         this.foodStored = [50, 50];
         this.queens = [null, null];
         this.nests = [null, null];
         this.tick = 0;
         this.gameOver = false;
+        this.winner = -1;
         this.redAI = null;
+        this.yellowAI = null;
+        this.tunnelSet = new Set();
+        this.stats = {
+            yellowKills: 0, redKills: 0,
+            yellowDeaths: 0, redDeaths: 0,
+            yellowFoodCollected: 0, redFoodCollected: 0,
+            foodIncome: [0, 0],
+            _foodSampleWindow: [[], []],
+        };
         this.initWorld();
     }
 }
@@ -521,6 +770,8 @@ class SimAntBoard extends BaseBoard {
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
         SimAntBoard, Ant, TYPE_EMPTY, TYPE_DIRT, TYPE_BEDROCK, TYPE_FOOD,
-        FACTION_YELLOW, FACTION_RED, CASTE_QUEEN, CASTE_WORKER, CASTE_SOLDIER
+        FACTION_YELLOW, FACTION_RED, CASTE_QUEEN, CASTE_WORKER, CASTE_SOLDIER, CASTE_SCOUT,
+        PHERO_CHANNELS, PHERO_YELLOW_FOOD, PHERO_YELLOW_HOME, PHERO_RED_FOOD, PHERO_RED_HOME,
+        PHERO_YELLOW_DANGER, PHERO_RED_DANGER, MAX_ANTS_PER_FACTION
     };
 }

@@ -22,7 +22,7 @@ open games/4d_asteroids/index.html
 | Directory | Files | Purpose |
 |-----------|-------|---------|
 | `js/` | 3 modules | Core logic (Quadray, Board, Renderer, Game) |
-| `tests/` | 1 file | Test suite (8 tests) |
+| `tests/` | 1 file | Test suite (12 tests) |
 
 ## Shared Modules
 
@@ -53,13 +53,13 @@ Load in this order:
 
 | File | Tests | Coverage |
 |------|-------|----------|
-| `test_asteroids.js` | 8 | Movement, wrapping, collision detection, asteroid splitting |
+| `test_asteroids.js` | 12 | Movement, wrapping, collision detection, asteroid splitting |
 
 ## Key Concepts
 
 ### 4D Wrapping
 
-The game world is a 4-torus. When an object leaves the bound (e.g., x > 4), it wraps to the opposite side (x = -4). This is implemented in `Board.update()`.
+The game world is a 4-torus. When an object leaves the bound (e.g., a > 4), it wraps to the opposite side (a = -4). This is implemented in `Board.update()`.
 
 ### Inertia
 

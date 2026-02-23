@@ -1,5 +1,7 @@
 # Contributing a New Game
 
+> **Note on 4D Geometry & Nomenclature**: Throughout QuadCraft, whenever we refer to **"4D"**, we strictly mean **Synergetics** geometry. This entails **Quadray 4D tetrahedral coordinates** deployed on an **Isotropic Vector Matrix (IVM)** of close-packed spheres, where the Quadray coordinates of the 12 neighboring balls are strictly defined by all permutations of `(0, 1, 1, 2)`.
+
 > End-to-end guide for adding a new 4D game to the QuadCraft portfolio.
 
 ---
@@ -35,7 +37,6 @@ This generates the complete directory structure:
 games/4d_my_game/
 ├── index.html
 ├── AGENTS.md
-├── run.sh
 ├── manifest.json
 ├── js/
 │   ├── my_game_board.js
@@ -153,17 +154,7 @@ process.exit(failed > 0 ? 1 : 0);
 
 ---
 
-### 5. Regenerate Shell Scripts
-
-```bash
-python3 games/scripts/regenerate_scripts.py
-```
-
-This creates/updates `4d_my_game/run.sh` from the template.
-
----
-
-### 6. Validate Structure
+### 5. Validate Structure
 
 ```bash
 python3 run_games.py --validate
@@ -243,12 +234,11 @@ Add to `games_config.json`:
 [ ] 2. Register in registry    — Add to GAMES dict in src/registry.py
 [ ] 3. Implement game logic    — js/my_game_{board,renderer,game}.js
 [ ] 4. Write tests             — tests/test_my_game.js
-[ ] 5. Regenerate scripts      — python3 scripts/regenerate_scripts.py
-[ ] 6. Validate structure      — python3 run_games.py --validate
-[ ] 7. Run tests               — python3 run_games.py --test --game my_game
-[ ] 8. Test in browser         — python3 run_games.py --game my_game
-[ ] 9. Update GAMES_INDEX.md   — Add portfolio row
-[ ] 10. Update config          — Add to games_config.json
+[ ] 5. Validate structure      — python3 run_games.py --validate
+[ ] 6. Run tests               — python3 run_games.py --test --game my_game
+[ ] 7. Test in browser         — python3 run_games.py --game my_game
+[ ] 8. Update GAMES_INDEX.md   — Add portfolio row
+[ ] 9. Update config           — Add to games_config.json
 ```
 
 ---

@@ -29,6 +29,10 @@ if (typeof GridUtils === 'undefined' && typeof require !== 'undefined') {
     const _g = require('../../4d_generic/grid_utils.js');
     globalThis.GridUtils = _g.GridUtils;
 }
+if (typeof BaseBoard === 'undefined' && typeof require !== 'undefined') {
+    const _bb = require('../../4d_generic/base_board.js');
+    globalThis.BaseBoard = _bb.BaseBoard;
+}
 if (typeof SYNERGETICS === 'undefined' && typeof require !== 'undefined') {
     const _s = require('../../4d_generic/synergetics.js');
     globalThis.SYNERGETICS = _s.SYNERGETICS;
@@ -48,29 +52,18 @@ const BOARD_CONFIG = {
 
 /**
  * 4D Chess Board using Quadray coordinates.
+ * Extends BaseBoard for shared grid infrastructure.
  */
-class Board {
+class Board extends BaseBoard {
     /**
      * @param {number} size - Board extends from 0 to size-1 in each Quadray axis
      */
     constructor(size = 4) {
-        this.size = size;
+        super(size, { name: 'ChessBoard', verify: true });
         this.maxDistance = size * 2; // Maximum sliding distance
-        this.pieces = new Map(); // Map from position key to Piece
+        // Alias: 'pieces' is chess terminology for what BaseBoard calls 'grid'
+        this.pieces = this.grid;
         this.capturedPieces = { white: [], black: [] };
-        this.gameOver = false;
-
-        // Synergetics metadata
-        this.volumeRatios = {
-            tetra: SYNERGETICS?.TETRA_VOL ?? 1,
-            octa: SYNERGETICS?.OCTA_VOL ?? 4,
-            cubo: SYNERGETICS?.CUBO_VOL ?? 20,
-        };
-        this.cellVolumeUnit = typeof Quadray !== 'undefined' && Quadray.cellVolume ? Quadray.cellVolume() : 1;
-        this.s3Constant = SYNERGETICS?.S3 ?? 1.0607;
-
-        // Integrity check -- verify round-trip on corner positions
-        this._verifyIntegrity();
 
         // Auto-initialize with starting position
         this.setupInitialPosition();
@@ -78,26 +71,6 @@ class Board {
         console.log(`[Board] ${size}x${size}x${size}x${size} IVM grid`);
         console.log(`[Board] Cell volume: ${this.cellVolumeUnit}, S3: ${this.s3Constant}`);
         console.log(`[Board] Volume ratios T:O:C = ${this.volumeRatios.tetra}:${this.volumeRatios.octa}:${this.volumeRatios.cubo}`);
-    }
-
-    /** Verify geometric integrity on construction. */
-    _verifyIntegrity() {
-        if (typeof verifyRoundTrip !== 'function') return;
-        const corners = [
-            new Quadray(0, 0, 0, 0),
-            new Quadray(this.size, this.size, this.size, this.size),
-            new Quadray(this.size, 0, 0, 0),
-            new Quadray(0, this.size, 0, 0),
-        ];
-        let allPassed = true;
-        for (const corner of corners) {
-            const result = verifyRoundTrip(corner);
-            if (!result.passed) {
-                console.warn(`[Board] Round-trip failed for ${corner.toString()}: error=${result.error.toFixed(6)}`);
-                allPassed = false;
-            }
-        }
-        if (allPassed) console.log('[Board] Round-trip integrity verified on corner positions');
     }
 
     /**
@@ -160,24 +133,6 @@ class Board {
      */
     getPieceAt(position) {
         return this.pieces.get(position.toKey()) || null;
-    }
-
-    /**
-     * Get cell data at a Quadray position (generic grid interface).
-     * @param {Quadray} q
-     * @returns {Piece|null}
-     */
-    getCell(q) {
-        return this.pieces.get(q.toKey()) || null;
-    }
-
-    /**
-     * Set cell data at a Quadray position (generic grid interface).
-     * @param {Quadray} q
-     * @param {*} value
-     */
-    setCell(q, value) {
-        this.pieces.set(q.toKey(), value);
     }
 
     /**
@@ -325,75 +280,8 @@ class Board {
         return false;
     }
 
-    /**
-     * Get IVM neighbors of a position that are within board bounds.
-     * Uses GridUtils.neighbors().
-     * @param {Quadray} q
-     * @returns {Array<Quadray>}
-     */
-    getNeighbors(q) {
-        if (typeof GridUtils === 'undefined') return [];
-        const raw = GridUtils.neighbors(q.a, q.b, q.c, q.d);
-        return raw
-            .map(n => new Quadray(n.a, n.b, n.c, n.d))
-            .filter(n => this.isValidPosition(n));
-    }
-
-    /**
-     * Calculate Manhattan distance between two positions on the board.
-     * Uses GridUtils.manhattan().
-     * @param {Quadray} q1
-     * @param {Quadray} q2
-     * @returns {number}
-     */
-    manhattanDistance(q1, q2) {
-        if (typeof GridUtils === 'undefined') return 0;
-        return GridUtils.manhattan(
-            { a: q1.a, b: q1.b, c: q1.c, d: q1.d },
-            { a: q2.a, b: q2.b, c: q2.c, d: q2.d }
-        );
-    }
-
-    /**
-     * Calculate Euclidean distance between two positions on the board.
-     * Uses GridUtils.euclidean().
-     * @param {Quadray} q1
-     * @param {Quadray} q2
-     * @returns {number}
-     */
-    euclideanDistance(q1, q2) {
-        if (typeof GridUtils === 'undefined') return 0;
-        return GridUtils.euclidean(
-            { a: q1.a, b: q1.b, c: q1.c, d: q1.d },
-            { a: q2.a, b: q2.b, c: q2.c, d: q2.d }
-        );
-    }
-
-    /**
-     * Calculate Quadray distance (proper IVM distance) between two positions.
-     * Uses Quadray.distance().
-     * @param {Quadray} q1
-     * @param {Quadray} q2
-     * @returns {number}
-     */
-    quadrayDistance(q1, q2) {
-        return Quadray.distance(q1, q2);
-    }
-
-    /**
-     * Get the angle between two direction vectors from a position.
-     * Uses angleBetweenQuadrays() from synergetics.
-     * @param {Quadray} from
-     * @param {Quadray} to1
-     * @param {Quadray} to2
-     * @returns {number} Angle in degrees
-     */
-    angleBetween(from, to1, to2) {
-        if (typeof angleBetweenQuadrays !== 'function') return 0;
-        const v1 = to1.subtract(from);
-        const v2 = to2.subtract(from);
-        return angleBetweenQuadrays(v1, v2);
-    }
+    // getNeighbors, manhattanDistance, euclideanDistance, quadrayDistance,
+    // angleBetween — all inherited from BaseBoard.
 
     /**
      * Get all valid board positions for rendering.
@@ -422,6 +310,7 @@ class Board {
 
     /**
      * Get board metadata for HUD display.
+     * Merges BaseBoard metadata with chess-specific fields.
      * @returns {Object}
      */
     getMetadata() {
@@ -439,14 +328,12 @@ class Board {
         }
 
         return {
+            ...this._baseMetadata(),
             whitePieces: whitePieces.length,
             blackPieces: blackPieces.length,
             totalPieces: this.pieces.size,
             tetraCount,
             octaCount,
-            volumeRatios: this.volumeRatios,
-            cellVolume: this.cellVolumeUnit,
-            s3: this.s3Constant,
             capturedWhite: this.capturedPieces.white.length,
             capturedBlack: this.capturedPieces.black.length,
         };
@@ -454,7 +341,7 @@ class Board {
 
     /** Reset board to initial state. */
     reset() {
-        this.pieces.clear();
+        this.grid.clear();
         this.capturedPieces = { white: [], black: [] };
         this.gameOver = false;
         this.setupInitialPosition();

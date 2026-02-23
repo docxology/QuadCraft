@@ -243,6 +243,38 @@ class LifeBoard extends BaseBoard {
         }
     }
 
+    /** Built-in pattern presets adapted for 4D IVM lattice. */
+    static get PATTERNS() {
+        return {
+            blinker: [[0, 0, 0, 0], [1, 0, 0, 0], [2, 0, 0, 0]],
+            toad: [[0, 0, 0, 0], [1, 0, 0, 0], [2, 0, 0, 0], [0, 1, 0, 0], [1, 1, 0, 0], [2, 1, 0, 0]],
+            glider: [[0, 1, 0, 0], [1, 0, 0, 0], [1, 1, 0, 0], [2, 0, 0, 0], [0, 0, 1, 0]],
+            rpentomino: [[0, 1, 0, 0], [1, 0, 0, 0], [1, 1, 0, 0], [0, 0, 0, 0], [1, 0, 1, 0]],
+            block: [[0, 0, 0, 0], [0, 1, 0, 0], [1, 0, 0, 0], [1, 1, 0, 0]],
+        };
+    }
+
+    /**
+     * Load a named pattern preset, centered in the grid.
+     * @param {string} name — Pattern name (blinker, toad, glider, rpentomino, block).
+     */
+    loadPattern(name) {
+        const pattern = LifeBoard.PATTERNS[name];
+        if (!pattern) {
+            console.warn(`[LifeBoard] Unknown pattern: ${name}`);
+            return false;
+        }
+        this.cells.clear();
+        this.generation = 0;
+        this.peakPopulation = 0;
+        const half = Math.floor(this.size / 2);
+        for (const [da, db, dc, dd] of pattern) {
+            this.set(this.wrap(half + da), this.wrap(half + db), this.wrap(half + dc), this.wrap(half + dd), true);
+        }
+        console.log(`[LifeBoard] Loaded pattern '${name}' (${pattern.length} cells)`);
+        return true;
+    }
+
     /**
      * Reset board — re-seed with random cells.
      */
@@ -263,7 +295,7 @@ class LifeBoard extends BaseBoard {
             const cellType = typeof Quadray.cellType === 'function'
                 ? Quadray.cellType(a, b, c, d) : 'tetra';
             const cartesian = typeof q.toCartesian === 'function'
-                ? q.toCartesian() : { x: a, y: b, z: c };
+                ? q.toCartesian() : { a: a, b: b, c: c, d: d };
             result.push({
                 a, b, c, d,
                 quadray: q,

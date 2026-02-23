@@ -1,16 +1,35 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <title>4D Minesweeper Tests</title>
     <style>
-        body { font-family: monospace; background: #1a1a2e; color: #e0e0e0; padding: 20px; }
-        .pass { color: #4caf50; }
-        .fail { color: #f44336; }
-        h1 { color: #60a5fa; }
-        pre { white-space: pre-wrap; }
+        body {
+            font-family: monospace;
+            background: #1a1a2e;
+            color: #e0e0e0;
+            padding: 20px;
+        }
+
+        .pass {
+            color: #4caf50;
+        }
+
+        .fail {
+            color: #f44336;
+        }
+
+        h1 {
+            color: #60a5fa;
+        }
+
+        pre {
+            white-space: pre-wrap;
+        }
     </style>
 </head>
+
 <body>
     <h1>4D Minesweeper — Browser Tests</h1>
     <pre id="output"></pre>
@@ -79,8 +98,8 @@
         assert('getMetadata has score', meta.score === 0);
 
         // 8. IVM neighbors
-        const ivmNeighbors = board.getIVMNeighbors(new Quadray(1, 1, 1, 1));
-        assert('getIVMNeighbors returns 8 axis-aligned neighbors', ivmNeighbors.length === 8);
+        const ivmNeighbors = board.getNeighbors(new Quadray(1, 1, 1, 1));
+        assert('getNeighbors returns 12 IVM neighbors', ivmNeighbors.length === 12);
 
         // 9. Distance methods
         const q1 = new Quadray(0, 0, 0, 0);
@@ -97,4 +116,5 @@
         out.innerHTML += `\n=== Results: ${passed} passed, ${failed} failed ===`;
     </script>
 </body>
+
 </html>

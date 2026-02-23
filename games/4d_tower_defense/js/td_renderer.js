@@ -545,18 +545,20 @@ class TDRenderer extends BaseRenderer {
         const ctx = this.ctx;
         for (const p of this.board.particles) {
             // Apply drag
-            p.vx *= 0.95; // drag
-            p.vy *= 0.95; // drag
-            p.vz *= 0.95; // drag
+            p.va *= 0.95; // drag
+            p.vb *= 0.95; // drag
+            p.vc *= 0.95; // drag
+            p.vd *= 0.95; // drag
 
             // Move particle
-            p.x += p.vx;
-            p.y += p.vy;
-            p.z += p.vz;
-            const q = new Quadray(p.x, p.y, p.z, p.w);
+            p.a += p.va;
+            p.b += p.vb;
+            p.c += p.vc;
+            p.d += p.vd;
+            const q = new Quadray(p.a, p.b, p.c, p.d);
             const sp = this._projectQ(q);
             const alpha = p.life / 25;
-            const dynR = (2 + (Math.abs(p.x) * 10 % 2)) * alpha * sp.scale;
+            const dynR = (2 + (Math.abs(p.a) * 10 % 2)) * alpha * sp.scale;
 
             // Glow
             ctx.fillStyle = this._rgba(p.color, alpha * 0.8);

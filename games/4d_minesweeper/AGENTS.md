@@ -7,7 +7,7 @@ Mine-counting puzzle with IVM adjacency in 4D. Standalone browser application bu
 ## Quick Commands
 
 ```bash
-# Run tests (8 tests)
+# Run tests (23 tests)
 node tests/test_minesweeper.js
 
 # Open in browser
@@ -46,7 +46,7 @@ Load in this order to avoid reference errors:
 
 | File | Tests | Coverage |
 |------|-------|----------|
-| `test_minesweeper.js` | 8 | Board creation, cell operations, reset |
+| `test_minesweeper.js` | 23 | Board creation, cell operations, reset |
 | `test.html` | — | Browser test runner |
 
 ## Game Rules Summary

@@ -8,7 +8,7 @@ Provides:
     • verify_round_trip       — Quadray↔XYZ round-trip fidelity
     • verify_geometric_identities — 8-check Synergetics verification suite
     • generate_grid           — full 4D IVM grid cell generation
-    • neighbors_8 / bounded_neighbors / in_bounds — adjacency
+    • neighbors / bounded_neighbors / in_bounds — adjacency
     • depth_sort              — painter's-algorithm depth ordering
 """
 
@@ -240,12 +240,12 @@ def verify_geometric_identities(tolerance: float = 0.01) -> VerificationReport:
 # IVM Grid Generation (mirrors grid_utils.js)
 # ═══════════════════════════════════════════════════════════════════════════
 
-# The 8 face-touching neighbour directions in Quadray-integer space
-DIRECTIONS_8 = [
-    (1, 0, 0, 0), (-1, 0, 0, 0),
-    (0, 1, 0, 0), (0, -1, 0, 0),
-    (0, 0, 1, 0), (0, 0, -1, 0),
-    (0, 0, 0, 1), (0, 0, 0, -1),
+# The 12 face-touching IVM direction vectors
+DIRECTIONS = [
+    (0, 1, 1, 2), (0, 1, 2, 1), (0, 2, 1, 1),
+    (1, 0, 1, 2), (1, 0, 2, 1), (1, 1, 0, 2),
+    (1, 1, 2, 0), (1, 2, 0, 1), (1, 2, 1, 0),
+    (2, 0, 1, 1), (2, 1, 0, 1), (2, 1, 1, 0)
 ]
 
 
@@ -268,11 +268,11 @@ def in_bounds(a: int, b: int, c: int, d: int, size: int) -> bool:
     return 0 <= a < size and 0 <= b < size and 0 <= c < size and 0 <= d < size
 
 
-def neighbors_8(a: int, b: int, c: int, d: int) -> List[Quadray]:
-    """Return the 8 face-touching neighbours (unbounded)."""
+def neighbors(a: int, b: int, c: int, d: int) -> List[Quadray]:
+    """Return the 12 kissing neighbours (unbounded)."""
     return [
         Quadray(a + da, b + db, c + dc, d + dd)
-        for da, db, dc, dd in DIRECTIONS_8
+        for da, db, dc, dd in DIRECTIONS
     ]
 
 
@@ -280,7 +280,7 @@ def bounded_neighbors(a: int, b: int, c: int, d: int, size: int) -> List[Quadray
     """Return only in-bounds face-touching neighbours."""
     return [
         Quadray(a + da, b + db, c + dc, d + dd)
-        for da, db, dc, dd in DIRECTIONS_8
+        for da, db, dc, dd in DIRECTIONS
         if in_bounds(a + da, b + db, c + dc, d + dd, size)
     ]
 
@@ -328,4 +328,4 @@ def random_coord(size: int) -> Quadray:
     )
 
 
-logger.debug("[Geometry] Module loaded – %d directions defined", len(DIRECTIONS_8))
+logger.debug("[Geometry] Module loaded – %d directions defined", len(DIRECTIONS))

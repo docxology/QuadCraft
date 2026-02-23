@@ -372,6 +372,34 @@ class ReversiBoard extends BaseBoard {
         };
     }
 
+    /**
+     * AI opponent — greedy strategy: pick the move that flips the most discs.
+     * @param {string} color — The AI's color (default: current player).
+     * @returns {Object|null} The placed position, or null if no moves.
+     */
+    aiMove(color = this.currentPlayer) {
+        const moves = this.getValidMoves(color);
+        if (moves.length === 0) return null;
+        // Greedy: pick move with max flips
+        moves.sort((a, b) => b.flips.length - a.flips.length);
+        const best = moves[0];
+        this.place(best.pos, color);
+        // Switch current player after AI move
+        this.currentPlayer = color === ReversiColor.BLACK ? ReversiColor.WHITE : ReversiColor.BLACK;
+        // Check if opponent has moves, otherwise skip
+        const oppMoves = this.getValidMoves(this.currentPlayer);
+        if (oppMoves.length === 0) {
+            this.currentPlayer = color; // Skip back
+            const myMoves = this.getValidMoves(color);
+            if (myMoves.length === 0) {
+                this.gameOver = true;
+                const bc = this.count(ReversiColor.BLACK), wc = this.count(ReversiColor.WHITE);
+                this.gameOverMessage = bc > wc ? 'Black wins!' : wc > bc ? 'White wins!' : 'Draw!';
+            }
+        }
+        return { pos: best.pos, flips: best.flips.length };
+    }
+
     /** Reset board to initial state. */
     reset() {
         this.grid = new Map();

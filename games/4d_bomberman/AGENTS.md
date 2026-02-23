@@ -7,7 +7,7 @@ Grid-based bombing with destructible walls in 4D IVM space. Standalone browser a
 ## Quick Commands
 
 ```bash
-# Run tests (8 tests)
+# Run tests (22 tests)
 node tests/test_bomberman.js
 
 # Open in browser
@@ -46,7 +46,7 @@ Load in this order to avoid reference errors:
 
 | File | Tests | Coverage |
 |------|-------|----------|
-| `test_bomberman.js` | 8 | Board creation, cell operations, reset |
+| `test_bomberman.js` | 22 | Board creation, cell operations, reset |
 | `test.html` | — | Browser test runner |
 
 ## Game Rules Summary

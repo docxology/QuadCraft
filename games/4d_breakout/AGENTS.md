@@ -7,7 +7,7 @@ Brick-breaking with Quadray ball physics in 4D. Standalone browser application b
 ## Quick Commands
 
 ```bash
-# Run tests (8 tests)
+# Run tests (20 tests)
 node tests/test_breakout.js
 
 # Open in browser
@@ -46,7 +46,7 @@ Load in this order to avoid reference errors:
 
 | File | Tests | Coverage |
 |------|-------|----------|
-| `test_breakout.js` | 8 | Board creation, cell operations, reset |
+| `test_breakout.js` | 20 | Board creation, cell operations, reset |
 | `test.html` | — | Browser test runner |
 
 ## Game Rules Summary

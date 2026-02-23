@@ -7,7 +7,7 @@ Gravity-drop 4-in-a-row in 4D Quadray/IVM space. Standalone browser application 
 ## Quick Commands
 
 ```bash
-# Run tests (70 tests)
+# Run tests (69 tests)
 node tests/test_connect_four.js
 
 # Open in browser
@@ -70,7 +70,7 @@ All loaded via `<script>` tags from `../4d_generic/`:
 
 | File | Tests | Coverage |
 |------|-------|----------|
-| `test_connect_four.js` | 70 | Board creation, Quadray storage, cellType, gravity, win detection, distances, neighbors, round-trip, synergetics, geometric identities, angles, metadata, AI eval, reset |
+| `test_connect_four.js` | 69 | Board creation, Quadray storage, cellType, gravity, win detection, distances, neighbors, round-trip, synergetics, geometric identities, angles, metadata, AI eval, reset |
 | `test.html` | — | Browser test runner (loads all 12 shared modules) |
 
 ## Game Controls

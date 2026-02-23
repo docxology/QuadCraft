@@ -1,5 +1,8 @@
 # Scaffold Guide — `GameScaffold`
 
+> **Note on 4D Geometry & Nomenclature**: Throughout QuadCraft, whenever we refer to **"4D"**, we strictly mean **Synergetics** geometry. This entails **Quadray 4D tetrahedral coordinates** deployed on an **Isotropic Vector Matrix (IVM)** of close-packed spheres, where the Quadray coordinates of the 12 neighboring balls are strictly defined by all permutations of `(0, 1, 1, 2)`.
+
+
 > Generate a fully structured new game directory from templates, ready for game-specific implementation.
 
 ---

@@ -44,10 +44,9 @@ if (typeof SYNERGETICS === 'undefined' && typeof require !== 'undefined') {
 
 class PacManBoard extends BaseBoard {
     /**
-     * Canonical 8 IVM directions — delegated from GridUtils.DIRECTIONS_8.
-     * Each entry gains a name label for HUD display and logging.
+     * Canonical 12 IVM directions — delegated from GridUtils.DIRECTIONS.
      */
-    static DIRECTIONS = GridUtils.DIRECTIONS_8.map(([da, db, dc, dd], i) => {
+    static DIRECTIONS = GridUtils.DIRECTIONS.map(([da, db, dc, dd], i) => {
         const names = ['+A', '-A', '+B', '-B', '+C', '-C', '+D', '-D'];
         return { da, db, dc, dd, name: names[i] };
     });
@@ -72,6 +71,20 @@ class PacManBoard extends BaseBoard {
         this.pelletsEaten = 0;
         this.ghostsEaten = 0;
         this.totalPellets = 0;
+        this.level = 1;
+        // Fruit system
+        this.fruit = null;       // { pos, type, points, timer }
+        this.fruitEaten = 0;
+        this.fruitThreshold = 0.3; // Spawn fruit after 30% pellets eaten
+        this.fruitSpawned = false;
+        this.fruitTypes = [
+            { name: 'Cherry', points: 100, symbol: '🍒' },
+            { name: 'Strawberry', points: 300, symbol: '🍓' },
+            { name: 'Orange', points: 500, symbol: '🍊' },
+            { name: 'Apple', points: 700, symbol: '🍎' },
+            { name: 'Melon', points: 1000, symbol: '🍈' },
+        ];
+        this.ghostHouse = { a: 2, b: 2, c: 2, d: 2 }; // Define ghost house coordinate
 
         // Synergetics metadata
         this.volumeRatios = {
@@ -261,12 +274,15 @@ class PacManBoard extends BaseBoard {
 
         this.totalPellets = this.pellets.size + this.powerPellets.size;
 
-        // Ghosts at center
+        // Ghosts at center (Ghost House)
         const mid = Math.floor(this.size / 2);
+        this.ghostHouse = { a: mid, b: mid, c: mid, d: mid };
+
         this.ghosts = [
-            { a: mid, b: mid, c: mid, d: mid, scared: false, name: 'Blinky', color: '#ef4444' },
-            { a: mid + 1, b: mid, c: mid, d: mid, scared: false, name: 'Pinky', color: '#f472b6' },
-            { a: mid, b: mid + 1, c: mid, d: mid, scared: false, name: 'Inky', color: '#22d3ee' },
+            { a: mid, b: mid, c: mid, d: mid, state: 'chase', name: 'Blinky', color: '#ef4444' }, // Red (Chaser)
+            { a: mid + 1, b: mid, c: mid, d: mid, state: 'chase', name: 'Pinky', color: '#f472b6' }, // Pink (Ambusher)
+            { a: mid, b: mid + 1, c: mid, d: mid, state: 'chase', name: 'Inky', color: '#22d3ee' }, // Cyan (Flanker)
+            { a: mid, b: mid, c: mid + 1, d: mid, state: 'chase', name: 'Clyde', color: '#f97316' }, // Orange (Ignorant)
         ];
 
         // Clear pacman start area
@@ -284,6 +300,10 @@ class PacManBoard extends BaseBoard {
         this.powerTimer = 0;
         this.pelletsEaten = 0;
         this.ghostsEaten = 0;
+        this.fruit = null;
+        this.fruitEaten = 0;
+        this.fruitSpawned = false;
+        this.level = 1;
         this.pacman = { a: 1, b: 1, c: 1, d: 1 };
         this.pacmanDir = PacManBoard.DIRECTIONS[0];
         this._generateMaze();
@@ -311,6 +331,11 @@ class PacManBoard extends BaseBoard {
             this.pellets.delete(pk);
             this.score += 10;
             this.pelletsEaten++;
+            // Check fruit spawn
+            if (!this.fruitSpawned && this.totalPellets > 0 &&
+                this.pelletsEaten / this.totalPellets >= this.fruitThreshold) {
+                this._spawnFruit();
+            }
         }
         if (this.powerPellets.has(pk)) {
             this.powerPellets.delete(pk);
@@ -319,16 +344,41 @@ class PacManBoard extends BaseBoard {
             this.ghosts.forEach(g => g.scared = true);
         }
 
-        // Move ghosts
+        // Check fruit collection
+        if (this.fruit) {
+            if (this.pacman.a === this.fruit.pos.a && this.pacman.b === this.fruit.pos.b &&
+                this.pacman.c === this.fruit.pos.c && this.pacman.d === this.fruit.pos.d) {
+                this.score += this.fruit.points;
+                this.fruitEaten++;
+                console.log(`[PacMan] Ate ${this.fruit.type.name} (+${this.fruit.points})`);
+                this.fruit = null;
+            } else {
+                this.fruit.timer--;
+                if (this.fruit.timer <= 0) this.fruit = null;
+            }
+        }
+
+        // Move ghosts - distinct timing based on level and state
+        // Higher levels = faster ghosts. Frightened ghosts = half speed. Eaten ghosts = double speed.
+        const ghostSpeedDivisor = Math.max(1, 4 - Math.floor(this.level / 3));
         for (const ghost of this.ghosts) {
-            this._moveGhost(ghost);
+            let movesThisTick = 0;
+            if (ghost.state === 'eaten') movesThisTick = 2; // Fast return to house
+            else if (ghost.state === 'frightened') movesThisTick = (this.score % 2 === 0) ? 1 : 0; // Half speed
+            else movesThisTick = (this.score % ghostSpeedDivisor === 0) ? 1 : 0; // Scales with level
+
+            for (let m = 0; m < movesThisTick; m++) {
+                this._moveGhost(ghost);
+            }
         }
 
         // Power timer
         if (this.powerTimer > 0) {
             this.powerTimer--;
             if (this.powerTimer === 0) {
-                this.ghosts.forEach(g => g.scared = false);
+                this.ghosts.forEach(g => {
+                    if (g.state === 'frightened') g.state = 'chase';
+                });
                 this.ghostsEaten = 0;
             }
         }
@@ -337,71 +387,121 @@ class PacManBoard extends BaseBoard {
         for (const ghost of this.ghosts) {
             if (ghost.a === this.pacman.a && ghost.b === this.pacman.b &&
                 ghost.c === this.pacman.c && ghost.d === this.pacman.d) {
-                if (ghost.scared) {
+                if (ghost.state === 'frightened') {
                     this.ghostsEaten++;
-                    this.score += 200 * this.ghostsEaten; // Escalating bonus
-                    const mid = Math.floor(this.size / 2);
-                    ghost.a = mid; ghost.b = mid; ghost.c = mid; ghost.d = mid;
-                    ghost.scared = false;
-                } else {
+                    this.score += 200 * this.ghostsEaten; // 200, 400, 800, 1600
+                    ghost.state = 'eaten'; // Return to ghost house as eyes
+                } else if (ghost.state === 'chase' || ghost.state === 'scatter') {
                     this.lives--;
                     if (this.lives <= 0) { this.gameOver = true; return 'dead'; }
                     this.pacman = { a: 1, b: 1, c: 1, d: 1 };
+                    // Reset ghosts
+                    const mid = Math.floor(this.size / 2);
+                    this.ghosts.forEach(g => { g.a = mid; g.b = mid; g.c = mid; g.d = mid; g.state = 'chase'; });
                     return 'hit';
                 }
             }
         }
 
-        // Win check
+        // Level complete
         if (this.pellets.size === 0 && this.powerPellets.size === 0) {
-            this.won = true;
-            this.gameOver = true;
-            return 'win';
+            this.level++;
+            this.pacman = { a: 1, b: 1, c: 1, d: 1 };
+            this._generateMaze();
+            return 'levelup';
         }
 
         return 'play';
     }
 
-    /** Ghost AI: chase when normal, flee when scared. Uses GridUtils.manhattan(). */
+    /** Ghost AI: 4 distinct personalities bounding to specific targets. */
     _moveGhost(ghost) {
-        const dirs = PacManBoard.DIRECTIONS;
-        let bestDir = dirs[Math.floor(Math.random() * dirs.length)];
-        let bestDist = ghost.scared ? -1 : Infinity;
+        // 1. Determine Target based on State and Personality
+        let target = { ...this.pacman }; // Default to Pac-Man's location
 
+        if (ghost.state === 'eaten') {
+            // Return to Ghost house
+            target = { ...this.ghostHouse };
+            if (ghost.a === target.a && ghost.b === target.b && ghost.c === target.c && ghost.d === target.d) {
+                ghost.state = 'chase';
+            }
+        } else if (ghost.state === 'frightened') {
+            // Pick a completely random open tile to flee towards
+            const dirs = PacManBoard.DIRECTIONS;
+            const rDir = dirs[Math.floor(Math.random() * dirs.length)];
+            target = {
+                a: this.wrap(ghost.a + rDir.da), b: this.wrap(ghost.b + rDir.db),
+                c: this.wrap(ghost.c + rDir.dc), d: this.wrap(ghost.d + rDir.dd)
+            };
+        } else {
+            // Chase mode - distinct profiles
+            if (ghost.name === 'Blinky') {
+                target = { ...this.pacman }; // Direct chase
+            } else if (ghost.name === 'Pinky') {
+                // Aim 4 steps ahead of pacman's current direction
+                target = {
+                    a: this.wrap(this.pacman.a + this.pacmanDir.da * 4),
+                    b: this.wrap(this.pacman.b + this.pacmanDir.db * 4),
+                    c: this.wrap(this.pacman.c + this.pacmanDir.dc * 4),
+                    d: this.wrap(this.pacman.d + this.pacmanDir.dd * 4)
+                };
+            } else if (ghost.name === 'Inky') {
+                // Flank: Vector from Blinky to 2 spaces ahead of Pacman, doubled.
+                const blinky = this.ghosts.find(g => g.name === 'Blinky');
+                const pivot = {
+                    a: this.wrap(this.pacman.a + this.pacmanDir.da * 2),
+                    b: this.wrap(this.pacman.b + this.pacmanDir.db * 2),
+                    c: this.wrap(this.pacman.c + this.pacmanDir.dc * 2),
+                    d: this.wrap(this.pacman.d + this.pacmanDir.dd * 2)
+                };
+                if (blinky) {
+                    target = {
+                        a: this.wrap(pivot.a + (pivot.a - blinky.a)),
+                        b: this.wrap(pivot.b + (pivot.b - blinky.b)),
+                        c: this.wrap(pivot.c + (pivot.c - blinky.c)),
+                        d: this.wrap(pivot.d + (pivot.d - blinky.d))
+                    };
+                }
+            } else if (ghost.name === 'Clyde') {
+                // Chase if > 8 units away, flee to bottom-left corner if closer
+                const distToPacman = GridUtils.manhattan(ghost, this.pacman);
+                if (distToPacman > 8) {
+                    target = { ...this.pacman };
+                } else {
+                    target = { a: 0, b: this.size - 1, c: 0, d: 0 }; // Go to corner
+                }
+            }
+        }
+
+        // 2. Find best legal move towards 'target' using greedy Manhattan
+        const dirs = PacManBoard.DIRECTIONS;
+        let bestDir = null;
+        let bestDist = Infinity;
+
+        // Ensure ghosts don't reverse direction immediately unless state changed
+        // (For simplicity in this engine, we use greedy local search without look-behind for now)
         for (const dir of dirs) {
             const na = this.wrap(ghost.a + dir.da);
             const nb = this.wrap(ghost.b + dir.db);
             const nc = this.wrap(ghost.c + dir.dc);
             const nd = this.wrap(ghost.d + dir.dd);
-            if (this.walls.has(this.key(na, nb, nc, nd))) continue;
 
-            // Use GridUtils.manhattan() for distance calculation
-            const dist = GridUtils.manhattan(
-                { a: na, b: nb, c: nc, d: nd },
-                this.pacman
-            );
+            // Cannot move into walls unless eaten (eyes pass through walls to return faster)
+            if (ghost.state !== 'eaten' && this.walls.has(this.key(na, nb, nc, nd))) continue;
 
-            if (ghost.scared) {
-                // Flee: maximize distance from Pac-Man
-                if (dist > bestDist) {
-                    bestDist = dist;
-                    bestDir = dir;
-                }
-            } else {
-                // Chase: minimize distance to Pac-Man
-                if (dist < bestDist) {
-                    bestDist = dist;
-                    bestDir = dir;
-                }
+            const dist = GridUtils.manhattan({ a: na, b: nb, c: nc, d: nd }, target);
+            if (dist < bestDist) {
+                bestDist = dist;
+                bestDir = dir;
             }
         }
 
-        const na = this.wrap(ghost.a + bestDir.da);
-        const nb = this.wrap(ghost.b + bestDir.db);
-        const nc = this.wrap(ghost.c + bestDir.dc);
-        const nd = this.wrap(ghost.d + bestDir.dd);
-        if (!this.walls.has(this.key(na, nb, nc, nd))) {
-            ghost.a = na; ghost.b = nb; ghost.c = nc; ghost.d = nd;
+        // Move
+        if (bestDir) {
+            ghost.a = this.wrap(ghost.a + bestDir.da);
+            ghost.b = this.wrap(ghost.b + bestDir.db);
+            ghost.c = this.wrap(ghost.c + bestDir.dc);
+            ghost.d = this.wrap(ghost.d + bestDir.dd);
         }
     }
 
@@ -445,7 +545,7 @@ class PacManBoard extends BaseBoard {
         for (const g of this.ghosts) {
             entities.push({
                 a: g.a, b: g.b, c: g.c, d: g.d, type: 'ghost',
-                color: g.scared ? '#60a5fa' : g.color, name: g.name, scared: g.scared,
+                color: g.color, name: g.name, state: g.state,
                 quadray: new Quadray(g.a, g.b, g.c, g.d),
                 cellType: Quadray.cellType(g.a, g.b, g.c, g.d),
             });
@@ -473,12 +573,15 @@ class PacManBoard extends BaseBoard {
         return {
             score: this.score,
             lives: this.lives,
+            level: this.level,
             pelletsRemaining: this.pellets.size + this.powerPellets.size,
             pelletsEaten: this.pelletsEaten,
             ghostsEaten: this.ghostsEaten,
             powerTimer: this.powerTimer,
             gameOver: this.gameOver,
             won: this.won,
+            fruit: this.fruit ? this.fruit.type.name : null,
+            fruitEaten: this.fruitEaten,
             tetraCount,
             octaCount,
             volumeRatios: this.volumeRatios,
@@ -486,6 +589,26 @@ class PacManBoard extends BaseBoard {
             s3: this.s3Constant,
             totalPellets: this.totalPellets,
         };
+    }
+
+    /** Spawn a fruit bonus at a random pellet position. */
+    _spawnFruit() {
+        this.fruitSpawned = true;
+        const pelletKeys = [...this.pellets];
+        if (pelletKeys.length === 0) return;
+
+        const rk = pelletKeys[Math.floor(Math.random() * pelletKeys.length)];
+        const [a, b, c, d] = this.parseKey(rk);
+        const typeIdx = Math.min(this.level - 1, this.fruitTypes.length - 1);
+        const type = this.fruitTypes[typeIdx];
+
+        this.fruit = {
+            pos: { a, b, c, d },
+            type,
+            points: type.points,
+            timer: 50, // Disappears after 50 steps
+        };
+        console.log(`[PacMan] ${type.name} spawned! (${type.points} pts)`);
     }
 }
 

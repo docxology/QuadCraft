@@ -1,5 +1,7 @@
 # Launch Operations Manual
 
+> **Note on 4D Geometry & Nomenclature**: Throughout QuadCraft, whenever we refer to **"4D"**, we strictly mean **Synergetics** geometry. This entails **Quadray 4D tetrahedral coordinates** deployed on an **Isotropic Vector Matrix (IVM)** of close-packed spheres, where the Quadray coordinates of the 12 neighboring balls are strictly defined by all permutations of `(0, 1, 1, 2)`.
+
 > How to launch, configure, and troubleshoot QuadCraft game servers.
 
 ---
@@ -7,7 +9,7 @@
 ## Quick Reference
 
 ```bash
-# Launch all 22 games
+# Launch all 30 games
 python3 run_games.py --all
 
 # Launch specific game(s)
@@ -40,7 +42,7 @@ python3 run_games.py --validate
 | Flag | Short | Argument | Description |
 |------|-------|----------|-------------|
 | `--game` | `-g` | `NAME [NAME ...]` | Launch specific game(s) by registry key |
-| `--all` | `-a` | — | Launch all 22 games |
+| `--all` | `-a` | — | Launch all 30 games |
 | `--list` | `-l` | — | List all games with ports |
 | `--test` | `-t` | — | Run unit tests (combine with `--game` to filter) |
 | `--validate` | `-v` | — | Structural validation audit |
@@ -66,17 +68,18 @@ The master `run.sh` delegates to `run_games.py` for most operations:
 | Input | Behavior |
 |-------|----------|
 | No args | Launches all games via `run_games.py --all` |
-| `chess doom` | Launches per-game `run.sh` scripts in background |
+| `chess doom` | Delegates to `run_games.py --game chess doom` |
 | `--list` | Lists all games |
 | `--test` / `--validate` / `--all` / `--config` | Delegates to `run_games.py` |
 
-### Per-Game `run.sh`
+### Centralized Launching
 
-Each game has its own `run.sh` for standalone use:
+All game launching is handled through `run_games.py`, which serves the
+`games/` root directory to correctly resolve `../4d_generic/` imports:
 
 ```bash
-cd games/4d_chess && ./run.sh           # Default port
-cd games/4d_chess && ./run.sh 9000      # Custom port
+python3 run_games.py --game chess          # Default port
+python3 run_games.py --game chess --base-port 9000  # Custom port
 ```
 
 ---

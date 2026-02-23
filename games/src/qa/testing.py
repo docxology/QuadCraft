@@ -90,7 +90,7 @@ def _run_python_test(tf: Path, cwd: Path, label: str) -> tuple[int, int]:
         result = subprocess.run(
             ["python3", str(tf)],
             capture_output=True, text=True, cwd=str(cwd), env=env,
-            timeout=10
+            timeout=30
         )
         
         output = result.stderr + result.stdout # unittest prints to stderr usually

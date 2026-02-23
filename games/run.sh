@@ -2,8 +2,8 @@
 # ─────────────────────────────────────────────────────────────────────────────
 # run.sh — QuadCraft Master Game Launcher
 #
-# Launches one, several, or all 22 4D games. Each game has its own run.sh
-# inside its directory for standalone use.
+# Launches one, several, or all 30 4D games. All launching is delegated
+# to the centralized run_games.py Python launcher.
 #
 # Usage:
 #   ./run.sh                     # Launch all games via run_games.py
@@ -12,9 +12,6 @@
 #   ./run.sh --list              # List all available games
 #   ./run.sh --test              # Run all unit tests
 #   ./run.sh --validate          # Run structural validation
-#
-# Standalone per-game usage:
-#   cd 4d_chess && ./run.sh [port]
 # ─────────────────────────────────────────────────────────────────────────────
 set -e
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -44,16 +41,24 @@ game_dir() {
         bomberman)      echo "4d_bomberman" ;;
         connect_four)   echo "4d_connect_four" ;;
         minesweeper)    echo "4d_minesweeper" ;;
+        sokoban)        echo "4d_sokoban" ;;
+        2048)           echo "4d_2048" ;;
+        rogue)          echo "4d_rogue" ;;
+        go)             echo "4d_go" ;;
+        hex)            echo "4d_hex" ;;
+        memory)         echo "4d_memory" ;;
+        sudoku)         echo "4d_sudoku" ;;
+        lights_out)     echo "4d_lights_out" ;;
         *)              echo "" ;;
     esac
 }
 
-ALL_KEYS="chess checkers reversi life asteroids simant backgammon minecraft catan tower_defense doom mahjong tetris snake pong breakout pacman space_invaders frogger bomberman connect_four minesweeper"
+ALL_KEYS="chess checkers reversi life asteroids simant backgammon minecraft catan tower_defense doom mahjong tetris snake pong breakout pacman space_invaders frogger bomberman connect_four minesweeper sokoban 2048 rogue go hex memory sudoku lights_out"
 
 # ── List mode ──
 if [[ "$1" == "--list" || "$1" == "-l" ]]; then
     echo ""
-    echo "🎮 QuadCraft Game Portfolio (22 games)"
+    echo "🎮 QuadCraft Game Portfolio (30 games)"
     echo ""
     printf "  %-18s %s\n" "Key" "Directory"
     printf "  %-18s %s\n" "──────────────────" "──────────────────────"
@@ -87,49 +92,27 @@ if [[ "$1" == "--test" || "$1" == "-t" || \
     exit $?
 fi
 
-# ── Launch specific games by key ──
-PIDS=()
-STARTED=0
-
-cleanup() {
-    echo ""
-    echo "🛑 Shutting down $STARTED server(s)..."
-    for pid in "${PIDS[@]}"; do
-        kill "$pid" 2>/dev/null || true
-    done
-    echo "   All servers stopped."
-    exit 0
-}
-trap cleanup EXIT INT TERM
-
+# ── Launch specific games by key (delegate to run_games.py) ──
 echo ""
 echo "🎮 QuadCraft Launcher"
 echo ""
 
+# Validate all provided keys
+VALID_KEYS=()
 for key in "$@"; do
     dir=$(game_dir "$key")
     if [ -z "$dir" ]; then
         echo "  ❌ Unknown game: $key (use --list to see available games)"
-        continue
+    else
+        VALID_KEYS+=("$key")
     fi
-    game_script="$SCRIPT_DIR/$dir/run.sh"
-    if [ ! -f "$game_script" ]; then
-        echo "  ❌ $key: run.sh not found at $game_script"
-        continue
-    fi
-    bash "$game_script" &
-    PIDS+=($!)
-    STARTED=$((STARTED + 1))
-    sleep 0.3
 done
 
-if [ $STARTED -eq 0 ]; then
-    echo "❌ No games started."
+if [ ${#VALID_KEYS[@]} -eq 0 ]; then
+    echo "❌ No valid games specified."
     exit 1
 fi
 
-echo ""
-echo "  🟢 $STARTED game(s) running. Press Ctrl+C to stop all."
-echo ""
+# Delegate to the centralized Python launcher
+python3 "$SCRIPT_DIR/run_games.py" --game "${VALID_KEYS[@]}"
 
-wait

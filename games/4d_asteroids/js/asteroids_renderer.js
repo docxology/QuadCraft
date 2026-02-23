@@ -25,6 +25,7 @@ class AsteroidsRenderer extends BaseRenderer {
         this.mouseX = 0;
         this.mouseY = 0;
         this._stars = null;
+        this._activeParticles = [];
 
         console.log('[AsteroidsRenderer] Initialized with BaseRenderer + full quadray methods');
     }
@@ -47,6 +48,16 @@ class AsteroidsRenderer extends BaseRenderer {
         const h = this.canvas.height;
 
         this._clearCanvas();
+
+        // Process new particle events from the board
+        const events = this.board.particles;
+        if (events && events.length > 0) {
+            for (const ev of events) {
+                this._spawnParticles(ev);
+            }
+            // Clear processed events
+            this.board.particles = [];
+        }
 
         // Stars background
         if (!this._stars) {
@@ -94,13 +105,48 @@ class AsteroidsRenderer extends BaseRenderer {
                 }
                 ctx.closePath();
                 ctx.stroke();
-            } else if (e.type === 'bullet') {
-                ctx.fillStyle = '#ffff00';
+            } else if (e.type === 'bullet' || e.type === 'ufo_bullet') {
+                ctx.fillStyle = e.type === 'ufo_bullet' ? '#ff4444' : '#ffff00';
                 ctx.beginPath();
                 ctx.arc(p.x, p.y, 2 * p.scale, 0, Math.PI * 2);
                 ctx.fill();
+            } else if (e.type === 'ufo') {
+                const isSmall = e.ufoType === 'small';
+                ctx.strokeStyle = isSmall ? '#ff66aa' : '#aa66ff';
+                ctx.fillStyle = isSmall ? 'rgba(255, 102, 170, 0.2)' : 'rgba(170, 102, 255, 0.2)';
+                ctx.lineWidth = 2;
+
+                // Classic UFO shape: top dome, middle saucer, flat bottom
+                ctx.beginPath();
+                const sw = r * 1.5; // Saucer width
+
+                // Top dome
+                ctx.arc(p.x, p.y - r * 0.2, r * 0.6, Math.PI, 0);
+
+                // Middle saucer edge right
+                ctx.lineTo(p.x + sw, p.y + r * 0.2);
+
+                // Bottom
+                ctx.lineTo(p.x - sw, p.y + r * 0.2);
+
+                // Back to dome left
+                ctx.lineTo(p.x - r * 0.6, p.y - r * 0.2);
+
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+
+                // Lights
+                ctx.fillStyle = (Math.floor(Date.now() / 200) % 2 === 0) ? '#fff' : ctx.strokeStyle;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y + r * 0.2, r * 0.2, 0, Math.PI * 2);
+                ctx.arc(p.x - sw * 0.6, p.y + r * 0.2, r * 0.15, 0, Math.PI * 2);
+                ctx.arc(p.x + sw * 0.6, p.y + r * 0.2, r * 0.15, 0, Math.PI * 2);
+                ctx.fill();
             }
         }
+
+        this._updateAndDrawParticles();
 
         // Dead ship ghost
         if (!board.ship.alive && board.lives > 0) {
@@ -120,6 +166,77 @@ class AsteroidsRenderer extends BaseRenderer {
 
         // In-canvas HUD overlay
         this._drawGameHUD(board);
+    }
+
+    /**
+     * Spawns simple particles based on an event from the board.
+     * @param {Object} ev - The particle event
+     */
+    _spawnParticles(ev) {
+        const count = ev.type === 'explosion' ? 12 : 8;
+        const color = ev.color || '#fff';
+        const speedMultiplier = ev.type === 'explosion' ? 1.0 : 0.5;
+        const maxLife = ev.type === 'explosion' ? 40 : 20;
+
+        for (let i = 0; i < count; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const speed = (0.5 + Math.random() * 1.5) * speedMultiplier;
+            const dQuad = [
+                Math.cos(angle) * speed,
+                Math.sin(angle) * speed,
+                (Math.random() - 0.5) * speed,
+                (Math.random() - 0.5) * speed
+            ];
+
+            this._activeParticles.push({
+                a: ev.pos.a, b: ev.pos.b, c: ev.pos.c, d: ev.pos.d,
+                da: dQuad[0], db: dQuad[1], dc: dQuad[2], dd: dQuad[3],
+                life: maxLife, maxLife: maxLife,
+                color: color,
+                size: (ev.radius || 0.5) * (0.2 + Math.random() * 0.4)
+            });
+        }
+    }
+
+    /**
+     * Updates and draws all active particles.
+     */
+    _updateAndDrawParticles() {
+        const ctx = this.ctx;
+
+        for (let i = this._activeParticles.length - 1; i >= 0; i--) {
+            const p = this._activeParticles[i];
+
+            p.life--;
+            if (p.life <= 0) {
+                this._activeParticles.splice(i, 1);
+                continue;
+            }
+
+            // Move particle in 4D space
+            p.a += p.da * 0.05;
+            p.b += p.db * 0.05;
+            p.c += p.dc * 0.05;
+            p.d += p.dd * 0.05;
+
+            const q = new Quadray(p.a, p.b, p.c, p.d);
+            const proj = this._projectQ(q);
+
+            ctx.fillStyle = p.color;
+            ctx.globalAlpha = p.life / p.maxLife; // Fade out
+
+            const r = p.size * 20 * proj.scale;
+
+            // Draw small diamond/tetrahedron for particle debris
+            ctx.beginPath();
+            ctx.moveTo(proj.x, proj.y - r);
+            ctx.lineTo(proj.x + r, proj.y);
+            ctx.lineTo(proj.x, proj.y + r);
+            ctx.lineTo(proj.x - r, proj.y);
+            ctx.closePath();
+            ctx.fill();
+        }
+        ctx.globalAlpha = 1.0;
     }
 
     /**

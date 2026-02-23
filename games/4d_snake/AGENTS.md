@@ -7,7 +7,7 @@ Classic snake game navigating through 4D Quadray space. Standalone browser appli
 ## Quick Commands
 
 ```bash
-# Run tests (8 tests)
+# Run tests (15 tests)
 node tests/test_snake.js
 
 # Open in browser
@@ -46,7 +46,7 @@ Load in this order to avoid reference errors:
 
 | File | Tests | Coverage |
 |------|-------|----------|
-| `test_snake.js` | 8 | Board creation, cell operations, reset |
+| `test_snake.js` | 15 | Board creation, cell operations, reset |
 | `test.html` | — | Browser test runner |
 
 ## Game Rules Summary

@@ -12,18 +12,24 @@
 
 class GridUtils {
     /**
-     * 8 canonical IVM directions (Quadray unit vectors).
-     * ±A, ±B, ±C, ±D axis movements.
+     * 12 IVM directions — the true "twelve around one" of close-packed spheres.
+     * Each direction is a permutation of (0, 1, 1, 2) in Quadray coordinates.
+     * These represent the 12 kissing-sphere neighbors in the Isotropic Vector Matrix.
+     * Reference: Buckminster Fuller, Synergetics §410.
      */
-    static DIRECTIONS_8 = [
-        [1, 0, 0, 0], // +A
-        [-1, 0, 0, 0], // -A
-        [0, 1, 0, 0], // +B
-        [0, -1, 0, 0], // -B
-        [0, 0, 1, 0], // +C
-        [0, 0, -1, 0], // -C
-        [0, 0, 0, 1], // +D
-        [0, 0, 0, -1], // -D
+    static DIRECTIONS = [
+        [0, 1, 1, 2],
+        [0, 1, 2, 1],
+        [0, 2, 1, 1],
+        [1, 0, 1, 2],
+        [1, 0, 2, 1],
+        [1, 1, 0, 2],
+        [1, 1, 2, 0],
+        [1, 2, 0, 1],
+        [1, 2, 1, 0],
+        [2, 0, 1, 1],
+        [2, 1, 0, 1],
+        [2, 1, 1, 0],
     ];
 
     /**
@@ -64,7 +70,8 @@ class GridUtils {
     }
 
     /**
-     * Get the 8 IVM neighbors of a coordinate.
+     * Get the 12 true IVM neighbors (kissing spheres) of a coordinate.
+     * Uses permutations of (0,1,1,2) — the correct close-packed sphere topology.
      * @param {number} a
      * @param {number} b
      * @param {number} c
@@ -72,13 +79,15 @@ class GridUtils {
      * @returns {Array<{a:number, b:number, c:number, d:number}>}
      */
     static neighbors(a, b, c, d) {
-        return GridUtils.DIRECTIONS_8.map(([da, db, dc, dd]) => ({
-            a: a + da, b: b + db, c: c + dc, d: d + dd
-        }));
+        return GridUtils.DIRECTIONS.map(([da, db, dc, dd]) => {
+            const na = a + da, nb = b + db, nc = c + dc, nd = d + dd;
+            const m = Math.min(na, nb, nc, nd);
+            return { a: na - m, b: nb - m, c: nc - m, d: nd - m };
+        });
     }
 
     /**
-     * Get bounded neighbors (only those within grid bounds).
+     * Get bounded IVM neighbors (12-around-one, within grid bounds).
      * @param {number} a
      * @param {number} b
      * @param {number} c

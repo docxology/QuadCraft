@@ -23,7 +23,7 @@ python3 games/run_games.py --game connect_four
 Or launch directly:
 
 ```bash
-cd games/4d_connect_four && ./run.sh
+python3 games/run_games.py --game connect_four
 ```
 
 ## Controls

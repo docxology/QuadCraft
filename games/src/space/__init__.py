@@ -27,7 +27,7 @@ from .xyz import (
 from .geometry import (
     angle_between, distance, manhattan_4d, euclidean_4d,
     verify_round_trip, verify_geometric_identities,
-    generate_grid, neighbors_8, bounded_neighbors,
+    generate_grid, neighbors, bounded_neighbors,
     in_bounds, depth_sort, random_coord,
     CheckResult, VerificationReport,
 )
@@ -45,6 +45,6 @@ __all__ = [
     "angle_between", "distance", "manhattan_4d", "euclidean_4d",
     "verify_round_trip", "verify_geometric_identities",
     "CheckResult", "VerificationReport",
-    "generate_grid", "neighbors_8", "bounded_neighbors",
+    "generate_grid", "neighbors", "bounded_neighbors",
     "in_bounds", "depth_sort", "random_coord",
 ]

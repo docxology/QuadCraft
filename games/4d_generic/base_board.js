@@ -274,12 +274,10 @@ class BaseBoard {
     // ─── Category 9: Directions ─────────────────────────────────────────────
 
     /**
-     * 8 canonical IVM directions — delegates to GridUtils.DIRECTIONS_8.
-     * Each direction is [da, db, dc, dd].
-     * @returns {Array<number[]>}
+     * canonical 12 IVM directions — delegates to GridUtils.DIRECTIONS.
      */
-    static get DIRECTIONS_8() {
-        return GridUtils.DIRECTIONS_8;
+    static get DIRECTIONS() {
+        return GridUtils.DIRECTIONS;
     }
 
     /**
@@ -288,7 +286,7 @@ class BaseBoard {
      */
     static get NAMED_DIRECTIONS() {
         const names = ['+A', '-A', '+B', '-B', '+C', '-C', '+D', '-D'];
-        return GridUtils.DIRECTIONS_8.map(([da, db, dc, dd], i) => ({
+        return GridUtils.DIRECTIONS.map(([da, db, dc, dd], i) => ({
             da, db, dc, dd, name: names[i]
         }));
     }

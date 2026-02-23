@@ -170,8 +170,8 @@ function verifyGeometricIdentities() {
         name: 'S3 Constant Validation',
         description: 'S3 = sqrt(9/8) = 1.0607 (XYZ-to-IVM volume conversion)',
         expected: expectedS3.toFixed(6),
-        actual: S3.toFixed(6),
-        passed: Math.abs(S3 - expectedS3) < 0.0001
+        actual: SYNERGETICS.S3.toFixed(6),
+        passed: Math.abs(SYNERGETICS.S3 - expectedS3) < 0.0001
     });
 
     // 8. Synergetics volume ratios — Tetra:Octa:Cubo = 1:4:20

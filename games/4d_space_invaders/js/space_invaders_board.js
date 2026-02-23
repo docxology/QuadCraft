@@ -60,6 +60,10 @@ class SpaceInvadersBoard extends BaseBoard {
         this.stepCount = 0;
         this.shootCooldown = 0;
 
+        // Shield bunkers — 4 positions along B axis at row a=2
+        this.shields = [];
+        this._initShields();
+
         // Synergetics metadata
         this.volumeRatios = {
             tetra: SYNERGETICS?.TETRA_VOL ?? 1,
@@ -116,6 +120,21 @@ class SpaceInvadersBoard extends BaseBoard {
                         quadray, cellType
                     });
                 }
+    }
+
+    _initShields() {
+        this.shields = [];
+        const shieldRow = 2;
+        const spacing = Math.max(1, Math.floor(this.width / 5));
+        for (let i = 0; i < 4; i++) {
+            const b = 1 + i * spacing;
+            if (b < this.width) {
+                this.shields.push({
+                    a: shieldRow, b, c: Math.floor(this.depthC / 2), d: Math.floor(this.depthD / 2),
+                    hp: 3, maxHp: 3
+                });
+            }
+        }
     }
 
     /**
@@ -257,6 +276,22 @@ class SpaceInvadersBoard extends BaseBoard {
         // Clean up dead bullets
         this.bullets = this.bullets.filter(b => b.a >= 0 && b.a < this.height);
 
+        // Bullet-shield collision
+        for (const bullet of this.bullets) {
+            if (bullet.a < 0) continue;
+            const bKey = GridUtils.key(Math.round(bullet.a), bullet.b, bullet.c, bullet.d);
+            for (const shield of this.shields) {
+                if (shield.hp <= 0) continue;
+                const sKey = GridUtils.key(shield.a, shield.b, shield.c, shield.d);
+                if (bKey === sKey) {
+                    shield.hp--;
+                    bullet.a = -1;
+                    break;
+                }
+            }
+        }
+        this.bullets = this.bullets.filter(b => b.a >= 0 && b.a < this.height);
+
         // Wave clear check
         if (this.aliens.every(a => !a.alive)) {
             this.level++;
@@ -285,6 +320,7 @@ class SpaceInvadersBoard extends BaseBoard {
         this.bullets = [];
         this.ship = { b: Math.floor(this.width / 2), c: Math.floor(this.depthC / 2), d: Math.floor(this.depthD / 2) };
         this._initAliens();
+        this._initShields();
     }
 
     getLiveAlienCount() { return this.aliens.filter(a => a.alive).length; }
@@ -387,6 +423,17 @@ class SpaceInvadersBoard extends BaseBoard {
                 distFromOrigin: b.quadray.distanceTo(Quadray.ORIGIN),
             });
         }
+        // Shields
+        for (const s of this.shields) {
+            if (s.hp <= 0) continue;
+            entities.push({
+                a: s.a, b: s.b, c: s.c, d: s.d,
+                type: 'shield', color: `rgba(34,197,94,${s.hp / s.maxHp})`,
+                hp: s.hp, maxHp: s.maxHp,
+                quadray: new Quadray(s.a, s.b, s.c, s.d),
+                cellType: Quadray.cellType(s.a, s.b, s.c, s.d),
+            });
+        }
         return entities;
     }
 
@@ -413,6 +460,7 @@ class SpaceInvadersBoard extends BaseBoard {
             cellVolume: this.cellVolumeUnit,
             s3: this.s3Constant,
             stepCount: this.stepCount,
+            shieldsAlive: this.shields.filter(s => s.hp > 0).length,
         };
     }
 }

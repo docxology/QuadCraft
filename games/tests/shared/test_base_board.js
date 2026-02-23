@@ -122,10 +122,10 @@ assert(meta.level === 5, 'metadata has level');
 assert(meta.gameOver === false, 'metadata has gameOver');
 assert(meta.size === 4, 'metadata has size');
 
-// 10. DIRECTIONS_8
-console.log('▸ DIRECTIONS_8');
-assert(BaseBoard.DIRECTIONS_8.length === 8, '8 IVM directions');
-assert(BaseBoard.DIRECTIONS_8[0][0] === 1 && BaseBoard.DIRECTIONS_8[0][1] === 0, '+A direction');
+// 10. DIRECTIONS
+console.log('▸ DIRECTIONS');
+assert(BaseBoard.DIRECTIONS.length === 12, '12 IVM directions');
+assert(BaseBoard.DIRECTIONS[0].da === 0 && BaseBoard.DIRECTIONS[0].db === 1, 'First direction is valid');
 
 // 11. NAMED_DIRECTIONS
 console.log('▸ NAMED_DIRECTIONS');

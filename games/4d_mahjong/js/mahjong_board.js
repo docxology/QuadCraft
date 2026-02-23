@@ -6,7 +6,7 @@
  *
  * Integrated with Quadray/IVM shared modules:
  *   - Quadray: distance, toCartesian, toKey, cellType, cellVolume
- *   - GridUtils: key, parseKey, shuffle, DIRECTIONS_8
+ *   - GridUtils: key, parseKey, shuffle, DIRECTIONS
  *   - SYNERGETICS: constants, volume ratios
  *   - verifyRoundTrip, verifyGeometricIdentities
  *

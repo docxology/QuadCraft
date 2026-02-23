@@ -2,7 +2,7 @@
 
 ## Overview
 
-The `games/src` directory contains the core Python infrastructure for the QuadCraft project. This includes the game launcher, test runner, validation tools, board analysis, analytics engine, scaffold generator, and shared libraries used by the 22 games.
+The `games/src` directory contains the core Python infrastructure for the QuadCraft project. This includes the game launcher, test runner, validation tools, board analysis, analytics engine, scaffold generator, and shared libraries used by the 30 games.
 
 ## Directory Structure
 

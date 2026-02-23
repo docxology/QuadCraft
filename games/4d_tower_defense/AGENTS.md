@@ -11,10 +11,10 @@
 node tests/test_td.js
 
 # Run tests then launch
-./run.sh --test
+python3 ../../run_games.py --test --game tower_defense
 
 # Launch (auto-kills stale port processes)
-./run.sh [port]
+python3 ../../run_games.py --game tower_defense
 ```
 
 ## Key Directories
@@ -95,7 +95,7 @@ Imported via `<script>` tags in `index.html` from `../4d_generic/`:
 
 Each game generates a unique IVM-snapped path using `Quadray.BASIS` neighbor steps, ensuring connected waypoints through tetrahedral space.
 
-### run.sh Flags
+### Launcher Flags
 
 | Flag | Effect |
 |------|--------|

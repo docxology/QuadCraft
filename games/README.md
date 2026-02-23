@@ -1,55 +1,21 @@
 # Games
 
-Collection of **22 standalone 4D games** built on the QuadCraft Quadray coordinate system. Each game runs directly in the browser — no server, no build step.
+> **Note on 4D Geometry & Nomenclature**: Throughout QuadCraft, whenever we refer to **"4D"**, we strictly mean **Synergetics** geometry. This entails **Quadray 4D tetrahedral coordinates** deployed on an **Isotropic Vector Matrix (IVM)** of close-packed spheres, where the Quadray coordinates of the 12 neighboring balls are strictly defined by all permutations of `(0, 1, 1, 2)`. Cartesian (XYZ) analogies are secondary to this true Synergetics foundation.
 
-> **📋 Full portfolio with status and metadata:** See [GAMES_INDEX.md](GAMES_INDEX.md)
+Collection of **30 standalone 4D games** built on the QuadCraft Quadray coordinate system. Each game runs directly in the browser — no server, no build step.
 
-## All Games
-
-### Wave 1: Strategy & Board Games
-
-| Game | Description | Tests | Status |
-|------|-------------|-------|--------|
-| ♟️ [4D Chess](4d_chess/) | Full chess with 6 piece types in 4D Quadray space | 91 | ✅ |
-| 🏁 [4D Checkers](4d_checkers/) | Diagonal capture + King promotion in 4D | 11 | ✅ |
-| ⚫ [4D Reversi](4d_reversi/) | Disc flipping across 80 directions in 4D | 11 | ✅ |
-| 🧬 [4D Life](4d_life/) | Conway's Game of Life with 4D wrapping neighbors | 8 | ✅ |
-| 🚀 [4D Asteroids](4d_asteroids/) | Continuous motion, wrap-around, asteroid splitting | 12 | ✅ |
-| 🐜 [4D SimAnt](4d_simant/) | Pheromone trails, foraging AI, colony simulation | 10 | ✅ |
-| 🎲 [4D Backgammon](4d_backgammon/) | 24-point track in 4D spiral, dice + bearing-off | 8 | ✅ |
-| ⛏️ [4D Minecraft](4d_minecraft/) | Terrain gen, trees, block place/remove, inventory | 74 | ✅ |
-| 🏝️ [4D Catan](4d_catan/) | 19 hex tiles, resource production, settlements | 10 | ✅ |
-| 🏰 [4D Tower Defense](4d_tower_defense/) | Path waves, auto-targeting towers, gold economy | 98 | ✅ |
-| 👹 [4D Doom](4d_doom/) | Hitscan FPS, enemy AI pursuit, wall collision | 116 | ✅ |
-| 🀄 [4D Mahjong](4d_mahjong/) | 144-tile 4-layer matching with hint system | 7 | ✅ |
-
-### Wave 2: Classic Arcade & Puzzle Games
-
-| Game | Description | Tests | Status |
-|------|-------------|-------|--------|
-| 🧱 [4D Tetris](4d_tetris/) | Falling tetrominoes on 4D IVM grid | 18 | ✅ |
-| 🐍 [4D Snake](4d_snake/) | Growing snake, food collection in 4D | 15 | ✅ |
-| 🏓 [4D Pong](4d_pong/) | Paddle-ball in tetrahedral space | 19 | ✅ |
-| 🧨 [4D Breakout](4d_breakout/) | Brick-breaking with Quadray physics | 20 | ✅ |
-| 👾 [4D Pac-Man](4d_pacman/) | Maze navigation, ghost AI in 4D | 19 | ✅ |
-| 👽 [4D Space Invaders](4d_space_invaders/) | Wave-based shooting, formations in 4D | 22 | ✅ |
-| 🐸 [4D Frogger](4d_frogger/) | Lane-crossing, obstacle avoidance in 4D | 23 | ✅ |
-| 💣 [4D Bomberman](4d_bomberman/) | Grid bombs, destructible walls in 4D | 22 | ✅ |
-| 🔴 [4D Connect Four](4d_connect_four/) | Gravity-drop 4-in-a-row in 4D | 70 | ✅ |
-| 💥 [4D Minesweeper](4d_minesweeper/) | Mine-counting with IVM neighbors | 23 | ✅ |
-
-**Total: 22 games, 1,060 unit tests, all passing.**
+> **📋 Full portfolio index (30 games, 1,147 tests):** See [GAMES_INDEX.md](GAMES_INDEX.md)
 
 ## Quick Start
 
 ```bash
 # Launch a single game
-./games/4d_chess/run.sh                   # Opens 4D Chess on port 8100
+python3 run_games.py --game chess           # Opens 4D Chess on port 8100
 
 # Launch via Python (Recommended - Handles shared imports correctly)
 python3 run_games.py --game chess           # One game
 python3 run_games.py --game chess doom life # Multiple games
-python3 run_games.py --all                  # All 22 games simultaneously
+python3 run_games.py --all                  # All 30 games simultaneously
 python3 run_games.py --config games_config.json  # From config file
 
 # List all games
@@ -62,23 +28,19 @@ python3 run_games.py --test
 python3 run_games.py --validate
 ```
 
-## Run Scripts
+## Launching Games
 
-Each game has a standalone `run.sh` inside its directory:
-
-| Game | Script path | Port |
-|------|-------------|------|
-| 4D Chess | `4d_chess/run.sh` | 8100 |
-| 4D Checkers | `4d_checkers/run.sh` | 8101 |
-| ... | ... | ... |
-| 4D Minesweeper | `4d_minesweeper/run.sh` | 8121 |
-
-**Master Launcher:**
+All game launching is centralized through `run_games.py` (or the `run.sh` wrapper):
 
 ```bash
+# Master launcher (shell wrapper)
 ./games/run.sh --list              # List all games
 ./games/run.sh chess doom tetris   # Launch specific games
-./games/run.sh --all               # Launch all 22 games
+./games/run.sh --all               # Launch all 30 games
+
+# Python launcher (direct)
+python3 run_games.py --game chess   # One game
+python3 run_games.py --all          # All 30 games
 ```
 
 ## Python Launcher (`run_games.py`)
@@ -94,7 +56,7 @@ Each game has a standalone `run.sh` inside its directory:
 The master launcher supports:
 
 - `--game NAME [NAME ...]` — launch one or more games
-- `--all` — launch all 22 games simultaneously
+- `--all` — launch all 30 games simultaneously
 - `--list` — show all games with ports
 - `--test` — run unit tests (optionally with `--game` to filter)
 - `--validate` — run structural validation on all game directories

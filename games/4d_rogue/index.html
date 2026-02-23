@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>4D Rogue — QuadCraft</title>
+    <meta name="description" content="Procedural roguelike dungeon crawl on 4D IVM tetrahedral grid">
+    <link rel="stylesheet" href="../4d_generic/hud-style.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: linear-gradient(135deg, #0a0505 0%, #1a0a0a 40%, #0d0d1a 100%);
+            color: #e0e0e0;
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 16px;
+        }
+
+        h1 {
+            font-size: 2.2rem;
+            margin-bottom: 4px;
+            background: linear-gradient(90deg, #e74c3c, #ff6b6b, #e74c3c);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .subtitle {
+            color: #777;
+            font-size: 0.85rem;
+            margin-bottom: 16px;
+            text-align: center;
+        }
+
+        .game-layout {
+            display: flex;
+            gap: 16px;
+            max-width: 1200px;
+            width: 100%;
+            align-items: flex-start;
+        }
+
+        .sidebar {
+            width: 260px;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .panel {
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 8px;
+            padding: 12px;
+        }
+
+        .panel-title {
+            font-size: 0.7rem;
+            font-weight: 700;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: #e74c3c;
+            margin-bottom: 8px;
+        }
+
+        canvas {
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            background: rgba(0, 0, 0, 0.4);
+            cursor: crosshair;
+            box-shadow: 0 4px 30px rgba(231, 76, 60, 0.1);
+            flex: 1;
+            min-width: 0;
+        }
+
+        .controls {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            padding: 6px 14px;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 6px;
+            background: rgba(255, 255, 255, 0.06);
+            color: #ccc;
+            cursor: pointer;
+            font-size: 0.8rem;
+            transition: all 0.2s;
+        }
+
+        button:hover {
+            background: rgba(255, 255, 255, 0.12);
+            color: #fff;
+        }
+
+        .stat-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 4px 12px;
+            font-size: 0.8rem;
+        }
+
+        .stat-label {
+            color: #888;
+        }
+
+        .stat-value {
+            color: #ddd;
+            font-weight: 600;
+            font-family: monospace;
+        }
+
+        .stat-value.hp {
+            color: #48bb78;
+        }
+
+        .stat-value.atk {
+            color: #e74c3c;
+        }
+
+        .stat-value.def {
+            color: #4ecdc4;
+        }
+
+        .stat-value.gold {
+            color: #ffd700;
+        }
+
+        .inventory-item {
+            font-size: 0.8rem;
+            padding: 3px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+        }
+
+        .inventory-item:last-child {
+            border-bottom: none;
+        }
+
+        #combatLog {
+            max-height: 160px;
+            overflow-y: auto;
+            font-size: 0.75rem;
+            font-family: monospace;
+            color: #aaa;
+            line-height: 1.5;
+        }
+
+        #combatLog div {
+            padding: 1px 0;
+        }
+
+        .shortcuts {
+            font-size: 0.72rem;
+            color: #666;
+            line-height: 1.8;
+        }
+
+        .shortcuts kbd {
+            display: inline-block;
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 3px;
+            padding: 1px 5px;
+            font-family: monospace;
+            font-size: 0.7rem;
+            color: #999;
+            min-width: 20px;
+            text-align: center;
+        }
+
+        .hud-bar {
+            margin-top: 8px;
+            font-family: monospace;
+            font-size: 0.8rem;
+            color: #94a3b8;
+            text-align: center;
+            padding: 8px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 6px;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>⚔️ 4D Rogue</h1>
+    <p class="subtitle">Procedural dungeon crawl in 4D Quadray / IVM tetrahedral space</p>
+
+    <div class="game-layout">
+        <div class="sidebar">
+            <!-- Controls -->
+            <div class="panel">
+                <div class="panel-title">Controls</div>
+                <div class="controls">
+                    <button onclick="game.newGame()">New Game</button>
+                    <button onclick="game.togglePause()">Pause</button>
+                    <button onclick="game.reset()">Reset</button>
+                </div>
+            </div>
+
+            <!-- Stats -->
+            <div class="panel" id="statsPanel">
+                <div class="panel-title">Character</div>
+                <div class="stat-grid">
+                    <span class="stat-label">HP</span>
+                    <span class="stat-value hp" id="statHP">20/20</span>
+                    <span class="stat-label">Level</span>
+                    <span class="stat-value" id="statLevel">1</span>
+                    <span class="stat-label">XP</span>
+                    <span class="stat-value" id="statXP">0/20</span>
+                    <span class="stat-label">ATK</span>
+                    <span class="stat-value atk" id="statATK">3</span>
+                    <span class="stat-label">DEF</span>
+                    <span class="stat-value def" id="statDEF">0</span>
+                    <span class="stat-label">Gold</span>
+                    <span class="stat-value gold" id="statGold">0</span>
+                    <span class="stat-label">Depth</span>
+                    <span class="stat-value" id="statDepth">1</span>
+                    <span class="stat-label">Potions</span>
+                    <span class="stat-value" id="statPotions">3</span>
+                </div>
+            </div>
+
+            <!-- Inventory -->
+            <div class="panel">
+                <div class="panel-title">Equipment</div>
+                <div id="inventory">
+                    <div class="inventory-item">⚔️ Weapon: <span id="invWeapon">Fists</span></div>
+                    <div class="inventory-item">🛡️ Armor: <span id="invArmor">None</span></div>
+                </div>
+            </div>
+
+            <!-- Shortcuts -->
+            <div class="panel">
+                <div class="panel-title">Shortcuts</div>
+                <div class="shortcuts">
+                    <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> Move<br>
+                    <kbd>Q</kbd><kbd>E</kbd><kbd>Z</kbd><kbd>X</kbd> Diagonal<br>
+                    <kbd>H</kbd> Use potion<br>
+                    <kbd>N</kbd> New game<br>
+                    <kbd>R</kbd> Reset all<br>
+                    <kbd>P</kbd> Pause<br>
+                    <kbd>Shift</kbd>+drag Rotate
+                </div>
+            </div>
+        </div>
+
+        <!-- Canvas -->
+        <canvas id="gameCanvas" width="800" height="600"></canvas>
+    </div>
+
+    <!-- Combat Log -->
+    <div class="panel" style="max-width:800px;width:100%;margin-top:12px;">
+        <div class="panel-title">Combat Log</div>
+        <div id="combatLog"></div>
+    </div>
+
+    <!-- HUD Bar -->
+    <div class="hud-bar" id="hud">Loading...</div>
+
+    <!-- Shared Modules -->
+    <script src="../4d_generic/quadray.js"></script>
+    <script src="../4d_generic/camera.js"></script>
+    <script src="../4d_generic/projection.js"></script>
+    <script src="../4d_generic/zoom.js"></script>
+    <script src="../4d_generic/synergetics.js"></script>
+    <script src="../4d_generic/game_loop.js"></script>
+    <script src="../4d_generic/input_controller.js"></script>
+    <script src="../4d_generic/grid_utils.js"></script>
+    <script src="../4d_generic/pathfinding.js"></script>
+    <script src="../4d_generic/base_board.js"></script>
+    <script src="../4d_generic/base_renderer.js"></script>
+    <script src="../4d_generic/base_game.js"></script>
+    <script src="../4d_generic/hud.js"></script>
+    <script src="../4d_generic/score_manager.js"></script>
+    <script src="../4d_generic/turn_manager.js"></script>
+
+    <!-- Game Modules -->
+    <script src="js/rogue_board.js"></script>
+    <script src="js/rogue_renderer.js"></script>
+    <script src="js/rogue_game.js"></script>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const hudEl = document.getElementById('hud');
+        const game = new RogueGame(canvas, hudEl);
+        game.init();
+
+        // Periodic stat updates
+        setInterval(() => {
+            const m = game.board.getMetadata();
+            const el = (id) => document.getElementById(id);
+            el('statHP').textContent = `${m.hp}/${m.maxHp}`;
+            el('statLevel').textContent = m.level;
+            el('statXP').textContent = `${m.xp}/${m.xpToLevel}`;
+            el('statATK').textContent = m.attack;
+            el('statDEF').textContent = m.defense;
+            el('statGold').textContent = m.gold;
+            el('statDepth').textContent = m.depth;
+            el('statPotions').textContent = m.potions;
+            el('invWeapon').textContent = m.weapon ? `${m.weapon.name} (+${m.weapon.bonus})` : 'Fists';
+            el('invArmor').textContent = m.armor ? `${m.armor.name} (+${m.armor.bonus})` : 'None';
+        }, 200);
+    </script>
+</body>
+
+</html>

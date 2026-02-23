@@ -74,7 +74,7 @@ walls.clear();
 // 5. BFS — unreachable
 console.log('▸ BFS: unreachable');
 // Wall off all neighbors of origin
-for (const [da, db, dc, dd] of GridUtils.DIRECTIONS_8) {
+for (const [da, db, dc, dd] of GridUtils.DIRECTIONS) {
     walls.add(GridUtils.key(da < 0 ? SIZE + da : da, db < 0 ? SIZE + db : db,
         dc < 0 ? SIZE + dc : dc, dd < 0 ? SIZE + dd : dd));
 }

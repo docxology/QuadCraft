@@ -7,7 +7,7 @@ Falling tetrominoes on a 4D IVM grid with Quadray rotations. Standalone browser 
 ## Quick Commands
 
 ```bash
-# Run tests (8 tests)
+# Run tests (18 tests)
 node tests/test_tetris.js
 
 # Open in browser
@@ -46,7 +46,7 @@ Load in this order to avoid reference errors:
 
 | File | Tests | Coverage |
 |------|-------|----------|
-| `test_tetris.js` | 8 | Board creation, cell operations, reset |
+| `test_tetris.js` | 18 | Board creation, cell operations, reset |
 | `test.html` | — | Browser test runner |
 
 ## Game Rules Summary

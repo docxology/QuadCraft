@@ -21,7 +21,18 @@ class PongRenderer extends BaseRenderer {
             bgColor: '#0f172a',
         });
 
-        console.log('[PongRenderer] Initialized with BaseRenderer + full quadray methods');
+        // Ball trail ring buffer
+        this.trail = [];
+        this.maxTrail = 8;
+
+        // Screen shake
+        this.shakeTimer = 0;
+        this.shakeMag = 0;
+
+        // Animation time
+        this.animTime = 0;
+
+        console.log('[PongRenderer] Initialized with trail, power-ups, screen shake');
     }
 
     /**
@@ -74,26 +85,42 @@ class PongRenderer extends BaseRenderer {
         // Ball
         const bp = this._project(board.ball.a, board.ball.b, board.ball.c, board.ball.d);
         const ballR = 6 * (bp.scale || 1);
+
+        // Ball trail (fading circles)
+        this.trail.push({ x: bp.x, y: bp.y, r: ballR });
+        if (this.trail.length > this.maxTrail) this.trail.shift();
+        for (let i = 0; i < this.trail.length; i++) {
+            const t = this.trail[i];
+            const alpha = (i / this.trail.length) * 0.3;
+            ctx.fillStyle = `rgba(250, 204, 21, ${alpha})`;
+            ctx.beginPath();
+            ctx.arc(t.x, t.y, t.r * (0.3 + (i / this.trail.length) * 0.5), 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        // Ball glow
         ctx.save();
         ctx.shadowColor = '#facc15';
-        ctx.shadowBlur = 12;
+        ctx.shadowBlur = 12 + Math.sin(this.animTime * 5) * 4;
         ctx.fillStyle = '#facc15';
         ctx.beginPath();
         ctx.arc(bp.x, bp.y, ballR, 0, Math.PI * 2);
         ctx.fill();
         ctx.restore();
 
-        // Ball trail
-        ctx.fillStyle = 'rgba(250, 204, 21, 0.15)';
-        const tb = this._project(
-            board.ball.a - board.ballVel.a * 3,
-            board.ball.b - board.ballVel.b * 3,
-            board.ball.c - board.ballVel.c * 3,
-            board.ball.d - board.ballVel.d * 3
-        );
-        ctx.beginPath();
-        ctx.arc(tb.x, tb.y, ballR * 0.6, 0, Math.PI * 2);
-        ctx.fill();
+        // Power-up on field
+        if (board.powerUp) {
+            this._drawPowerUp(board.powerUp);
+        }
+
+        // Speed indicator
+        const sm = board._getSpeedMultiplier();
+        if (sm !== 1.0) {
+            ctx.fillStyle = sm > 1 ? '#ef4444' : '#3b82f6';
+            ctx.font = 'bold 14px monospace';
+            ctx.textAlign = 'center';
+            ctx.fillText(sm > 1 ? '⚡ SPEED' : '❄️ SLOW', canvas.width / 2, 50);
+        }
 
         this._drawScoreOverlay();
     }
@@ -130,12 +157,59 @@ class PongRenderer extends BaseRenderer {
         ctx.fillText(String(board.score2), canvas.width / 2 + 60, 30);
         ctx.fillStyle = 'rgba(148, 163, 184, 0.5)';
         ctx.font = '12px monospace';
-        ctx.fillText(`Rally: ${board.rally}`, canvas.width / 2, 30);
+        ctx.fillText(`Rally: ${board.rally} / Match to 11`, canvas.width / 2, 30);
+
+        if (board.isServing && !board.gameOver) {
+            ctx.fillStyle = '#facc15';
+            ctx.font = 'bold 16px monospace';
+            const servingPlayer = board.serveToPlayer === 1 ? 'Player 2' : 'Player 1';
+            ctx.fillText(`${servingPlayer} Serving...`, canvas.width / 2, canvas.height / 2 + 50);
+        }
+
         if (board.gameOver) {
             ctx.fillStyle = board.winner === 1 ? '#60a5fa' : '#ef4444';
             ctx.font = 'bold 24px monospace';
-            ctx.fillText(`Player ${board.winner} Wins!`, canvas.width / 2, canvas.height / 2);
+            ctx.fillText(`Player ${board.winner} Wins Match!`, canvas.width / 2, canvas.height / 2);
+            ctx.fillStyle = '#94a3b8';
+            ctx.font = '14px monospace';
+            ctx.fillText(`Longest Rally: ${board.longestRally} | Press N`, canvas.width / 2, canvas.height / 2 + 30);
         }
+    }
+
+    /** Draw a power-up diamond with pulsing glow. */
+    _drawPowerUp(powerUp) {
+        const { ctx } = this;
+        const p = this._project(powerUp.pos.a, powerUp.pos.b, powerUp.pos.c, powerUp.pos.d);
+        const r = 10 * (p.scale || 1);
+        const pulse = 0.7 + Math.sin(this.animTime * 4) * 0.3;
+
+        const colors = { bigPaddle: '#22c55e', speedBall: '#ef4444', slowBall: '#3b82f6' };
+        const color = colors[powerUp.type] || '#facc15';
+
+        ctx.save();
+        ctx.shadowColor = color;
+        ctx.shadowBlur = 8 + pulse * 10;
+        ctx.fillStyle = color;
+        ctx.globalAlpha = pulse;
+
+        // Diamond shape
+        ctx.beginPath();
+        ctx.moveTo(p.x, p.y - r);
+        ctx.lineTo(p.x + r * 0.7, p.y);
+        ctx.lineTo(p.x, p.y + r);
+        ctx.lineTo(p.x - r * 0.7, p.y);
+        ctx.closePath();
+        ctx.fill();
+
+        // Label
+        ctx.globalAlpha = 1;
+        ctx.fillStyle = '#fff';
+        ctx.font = `${Math.max(8, r * 0.6)}px monospace`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        const labels = { bigPaddle: '⬛', speedBall: '⚡', slowBall: '❄️' };
+        ctx.fillText(labels[powerUp.type] || '?', p.x, p.y);
+        ctx.restore();
     }
 }
 

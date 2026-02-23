@@ -22,7 +22,7 @@ open games/4d_minecraft/index.html
 | Directory | Files | Purpose |
 |-----------|-------|---------|
 | `js/` | 3 modules | Core logic (Quadray, Board, Renderer, Game) |
-| `tests/` | 1 file | Test suite (11 tests) |
+| `tests/` | 1 file | Test suite (74 tests) |
 
 ## Shared Modules
 
@@ -53,7 +53,7 @@ Load in this order to avoid reference errors:
 
 | File | Tests | Coverage |
 |------|-------|----------|
-| `test_minecraft.js` | 11 | Block placement, removal, coordinate conversion, chunk boundaries |
+| `test_minecraft.js` | 74 | Block placement, removal, coordinate conversion, chunk boundaries |
 
 ## Code Standards
 

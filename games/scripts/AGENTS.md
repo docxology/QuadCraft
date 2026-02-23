@@ -8,8 +8,8 @@ This directory contains **maintenance and code generation scripts** for the Quad
 
 | File | Purpose |
 |------|---------|
-| `_run_template.sh` | Shell script template used by `regenerate_scripts.py` to create per-game `run.sh` files |
-| `regenerate_scripts.py` | Generates/refreshes `run.sh` for all games from the template + registry |
+| `_run_template.sh` | Shell script template for launcher wrappers (delegates to `run_games.py`) |
+| `regenerate_scripts.py` | Generates launcher wrapper scripts from template + registry |
 | `ensure_agents_md.py` | Ensures every game directory has an `AGENTS.md` file (creates stubs if missing) |
 | `generate_test_html.py` | Generates `tests/test.html` browser test harnesses for each game |
 | `audit_docs.py` | Audits documentation completeness across all game directories |
@@ -18,7 +18,7 @@ This directory contains **maintenance and code generation scripts** for the Quad
 ## Usage
 
 ```bash
-# Regenerate all run.sh scripts from template
+# Regenerate launcher wrapper scripts from template
 python3 scripts/regenerate_scripts.py
 
 # Ensure all games have AGENTS.md

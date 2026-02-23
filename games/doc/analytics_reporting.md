@@ -1,5 +1,7 @@
 # Analytics & Reporting — `GameAnalytics`
 
+> **Note on 4D Geometry & Nomenclature**: Throughout QuadCraft, whenever we refer to **"4D"**, we strictly mean **Synergetics** geometry. This entails **Quadray 4D tetrahedral coordinates** deployed on an **Isotropic Vector Matrix (IVM)** of close-packed spheres, where the Quadray coordinates of the 12 neighboring balls are strictly defined by all permutations of `(0, 1, 1, 2)`.
+
 > Suite-wide health scoring, metrics collection, and reporting for all QuadCraft games.
 
 ---
@@ -113,7 +115,7 @@ GameAnalytics(
 
 ### `scan_game()` Analysis Steps
 
-1. Check required files (`index.html`, `run.sh`, `AGENTS.md`)
+1. Check required files (`index.html`, `AGENTS.md`)
 2. Scan `js/*.js` — count files, lines, detect board/renderer/game patterns
 3. Check `index.html` for shared module imports
 4. Flag missing `GameLoop` / `InputController` integration

@@ -1,5 +1,7 @@
 # Configuration Reference
 
+> **Note on 4D Geometry & Nomenclature**: Throughout QuadCraft, whenever we refer to **"4D"**, we strictly mean **Synergetics** geometry. This entails **Quadray 4D tetrahedral coordinates** deployed on an **Isotropic Vector Matrix (IVM)** of close-packed spheres, where the Quadray coordinates of the 12 neighboring balls are strictly defined by all permutations of `(0, 1, 1, 2)`.
+
 > All configuration surfaces for the QuadCraft games framework.
 
 ---
@@ -49,7 +51,7 @@ Used by: `validation.py` (import checks), `shared/ModuleRegistry`, `analytics/Ga
 ### Required Files
 
 ```python
-REQUIRED_FILES = ["index.html", "run.sh", "AGENTS.md"]
+REQUIRED_FILES = ["index.html", "AGENTS.md"]
 ```
 
 Used by: `analytics/GameAnalytics` (health scoring)
@@ -86,7 +88,7 @@ Used by: `scaffold/GameScaffold` (file generation)
 
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
-| `games` | `string[]` | All 22 | Game keys to launch |
+| `games` | `string[]` | All 30 | Game keys to launch |
 | `base_port` | `int` | `8100` | Starting port number |
 | `open_browser` | `bool` | `true` | Auto-open browser windows |
 

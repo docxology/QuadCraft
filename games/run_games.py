@@ -44,7 +44,7 @@ Examples:
   python3 run_games.py --list                    List all games
   python3 run_games.py --game chess              Launch 4D Chess
   python3 run_games.py --game chess doom life    Launch three games
-  python3 run_games.py --all                     Launch all 22 games
+  python3 run_games.py --all                     Launch all 30 games
   python3 run_games.py --all --no-browser        Serve all, don't open browser
   python3 run_games.py --all --base-port 9000    Custom port range
   python3 run_games.py --config games_config.json       Launch from config file

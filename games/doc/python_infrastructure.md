@@ -1,5 +1,7 @@
 # Python Infrastructure — `src/`
 
+> **Note on 4D Geometry & Nomenclature**: Throughout QuadCraft, whenever we refer to **"4D"**, we strictly mean **Synergetics** geometry. This entails **Quadray 4D tetrahedral coordinates** deployed on an **Isotropic Vector Matrix (IVM)** of close-packed spheres, where the Quadray coordinates of the 12 neighboring balls are strictly defined by all permutations of `(0, 1, 1, 2)`.
+
 > Reference for the Python package that powers game registration, launching, testing, validation, scaffolding, analytics, shared-module metadata, and coordinate math.
 
 ---
@@ -34,7 +36,7 @@ src/
 | `GENERIC_DIR` | `str` | `{GAMES_DIR}/4d_generic` | Shared JS modules |
 | `BASE_PORT` | `int` | `8400` | Default starting port |
 | `SHARED_MODULES` | `list[str]` | 12 filenames | Required JS modules from `4d_generic/` |
-| `REQUIRED_FILES` | `list[str]` | `["index.html", "run.sh", "AGENTS.md"]` | Required files per game |
+| `REQUIRED_FILES` | `list[str]` | `[\"index.html\", \"AGENTS.md\"]` | Required files per game |
 | `REQUIRED_JS_PATTERNS` | `dict` | `{board, renderer, game}` | Expected `js/` file naming patterns |
 | `LOG_PREFIX` | `str` | `"[QuadCraft]"` | Logging prefix |
 
@@ -50,7 +52,7 @@ The canonical mapping of game keys → metadata. Drives launching, testing, and 
 GAMES = {
     "chess":    {"dir": "4d_chess",    "name": "4D Chess",    "port_offset": 0},
     "checkers": {"dir": "4d_checkers", "name": "4D Checkers", "port_offset": 1},
-    # ... 22 entries total
+    # ... 30 entries total
 }
 ```
 

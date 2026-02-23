@@ -68,6 +68,8 @@ class PongGame extends BaseGame {
      */
     _setupGameInput() {
         this.input.bind(['n'], () => this.newGame());
+        this.input.bind(['f'], () => this.board.cycleDifficulty());
+        this.input.bind(['t'], () => this.board.toggle2P());
     }
 
     /** Start a new game, preserving scores. */
@@ -86,8 +88,9 @@ class PongGame extends BaseGame {
 
     /**
      * Override BaseGame.update() — poll continuous paddle movement and step physics.
+     * @param {number} dt Delta time
      */
-    update() {
+    update(dt = 0.016) {
         const speed = 0.15;
         let db = 0, dc = 0, dd = 0;
         if (this.input.isDown('ArrowLeft') || this.input.isDown('a')) db = -speed;
@@ -99,10 +102,22 @@ class PongGame extends BaseGame {
         this.board.movePaddle(1, db, dc, dd);
 
         if (!this.board.gameOver) {
-            // AI opponent
+            if (this.board.twoPlayerMode) {
+                // Player 2 controls: I/J/K/L/U/O
+                let db2 = 0, dc2 = 0, dd2 = 0;
+                if (this.input.isDown('j')) db2 = -speed;
+                if (this.input.isDown('l')) db2 = speed;
+                if (this.input.isDown('i')) dc2 = speed;
+                if (this.input.isDown('k')) dc2 = -speed;
+                if (this.input.isDown('u')) dd2 = -speed;
+                if (this.input.isDown('o')) dd2 = speed;
+                this.board.movePaddle(2, db2, dc2, dd2);
+            }
+
+            // AI opponent (only in 1P mode)
             this.board.aiMove();
 
-            const result = this.board.step();
+            const result = this.board.step(dt);
             if (result === 'score1') {
                 this.scoring.addScore(1);
                 console.log(`[PongGame] Player 1 scores! ${JSON.stringify(this.scoring.toJSON())}`);
@@ -120,6 +135,8 @@ class PongGame extends BaseGame {
     _getHUDState() {
         const b = this.board;
         const meta = b.getMetadata();
+        const diffNames = ['Easy', 'Med', 'Hard'];
+        const mode = b.twoPlayerMode ? '2P' : `AI ${diffNames[b.aiDifficulty]}`;
         const scoreLabel = ` | Wins: ${this.scoring.score} | Hi: ${this.scoring.highScore}`;
 
         if (b.gameOver) {
@@ -131,7 +148,7 @@ class PongGame extends BaseGame {
         }
 
         return {
-            text: `P1: ${b.score1} | P2: ${b.score2} | Rally: ${b.rally}${scoreLabel} | Arrows/WASD/QE: Paddle`,
+            text: `P1: ${b.score1} | P2: ${b.score2} | Rally: ${b.rally} | ${mode}${scoreLabel} | F=Diff T=2P`,
             color: '#94a3b8',
         };
     }

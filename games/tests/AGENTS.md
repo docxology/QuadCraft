@@ -2,7 +2,7 @@
 
 ## Overview
 
-This directory contains the **shared module test suites** for the QuadCraft engine's `4d_generic/` modules. These tests verify the core math, rendering, and infrastructure libraries that all 22 games depend on.
+This directory contains the **shared module test suites** for the QuadCraft engine's `4d_generic/` modules. These tests verify the core math, rendering, and infrastructure libraries that all 30 games depend on.
 
 ## File Inventory
 

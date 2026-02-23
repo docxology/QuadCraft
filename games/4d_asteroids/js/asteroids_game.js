@@ -18,6 +18,7 @@
  *   A/D   : Thrust +/-A axis
  *   Q/E   : Thrust B/D axis
  *   Space : Shoot
+ *   Shift : Hyperspace
  *   P     : Pause
  *   R     : Reset
  *
@@ -85,6 +86,16 @@ class AsteroidsGame extends BaseGame {
                 ? [v.a / mag, v.b / mag, v.c / mag, v.d / mag]
                 : [1, 0, 0, 0];
             this.board.shoot(dir);
+        });
+
+        this.input.bind(['Shift'], () => {
+            if (this.board.gameOver || !this.board.ship.alive) return;
+            this.board.hyperspace();
+        });
+
+        this.input.bind(['v'], () => {
+            if (this.board.gameOver || !this.board.ship.alive) return;
+            this.board.activateShield();
         });
     }
 

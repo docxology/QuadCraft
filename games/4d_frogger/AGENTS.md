@@ -7,7 +7,7 @@ Lane-crossing obstacle avoidance in 4D Quadray space. Standalone browser applica
 ## Quick Commands
 
 ```bash
-# Run tests (8 tests)
+# Run tests (23 tests)
 node tests/test_frogger.js
 
 # Open in browser
@@ -46,7 +46,7 @@ Load in this order to avoid reference errors:
 
 | File | Tests | Coverage |
 |------|-------|----------|
-| `test_frogger.js` | 8 | Board creation, cell operations, reset |
+| `test_frogger.js` | 23 | Board creation, cell operations, reset |
 | `test.html` | — | Browser test runner |
 
 ## Game Rules Summary

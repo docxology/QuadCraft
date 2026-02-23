@@ -21,7 +21,15 @@
         "frogger",
         "bomberman",
         "connect_four",
-        "minesweeper"
+        "minesweeper",
+        "sokoban",
+        "2048",
+        "rogue",
+        "go",
+        "hex",
+        "memory",
+        "sudoku",
+        "lights_out"
     ],
     "base_port": 8100,
     "open_browser": true

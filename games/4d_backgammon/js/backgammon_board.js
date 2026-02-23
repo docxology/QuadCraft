@@ -40,6 +40,10 @@ if (typeof SYNERGETICS === 'undefined' && typeof require !== 'undefined') {
     globalThis.verifyRoundTrip = _s.verifyRoundTrip;
     globalThis.verifyGeometricIdentities = _s.verifyGeometricIdentities;
 }
+if (typeof TurnManager === 'undefined' && typeof require !== 'undefined') {
+    const _tm = require('../../4d_generic/turn_manager.js');
+    globalThis.TurnManager = _tm.TurnManager;
+}
 
 class BackgammonBoard extends BaseBoard {
 
@@ -54,11 +58,9 @@ class BackgammonBoard extends BaseBoard {
         this.points = new Array(24).fill(null).map(() => []);
         this.bar = { white: 0, black: 0 };
         this.borne = { white: 0, black: 0 };
-        this.currentPlayer = 'white';
+        this.turnManager = new TurnManager(['white', 'black'], { maxHistory: 1000 });
         this.dice = [0, 0];
         this.gameOver = false;
-        this.moveCount = 0;
-        this.moveHistory = [];
 
         // Quadray position cache — maps point index -> Quadray
         this.quadrayCache = new Map();
@@ -190,6 +192,21 @@ class BackgammonBoard extends BaseBoard {
      * Get all valid moves for the current player.
      * @returns {Array<{from: number|string, to: number|string, die: number}>}
      */
+    /** Current player — delegated to TurnManager. */
+    get currentPlayer() {
+        return this.turnManager.currentPlayer;
+    }
+
+    /** Move history — delegated to TurnManager. */
+    get moveHistory() {
+        return this.turnManager.moveHistory;
+    }
+
+    /** Move count — delegated to TurnManager. */
+    get moveCount() {
+        return this.turnManager.moveCount;
+    }
+
     getValidMoves() {
         const moves = [];
         const c = this.currentPlayer;
@@ -255,18 +272,15 @@ class BackgammonBoard extends BaseBoard {
     move(from, to, die) {
         const c = this.currentPlayer;
 
-        // Record move in history
-        this.moveCount++;
+        // Record move via TurnManager
         const fromQ = from === 'bar' ? null : this.pointToQuadray(from);
         const toQ = to === 'off' ? null : this.pointToQuadray(to);
-        this.moveHistory.push({
-            player: c,
+        this.turnManager.recordMove({
             from,
             to,
             die,
             fromQuadray: fromQ ? fromQ.clone() : null,
             toQuadray: toQ ? toQ.clone() : null,
-            moveNum: this.moveCount,
         });
 
         // Remove from source
@@ -301,9 +315,9 @@ class BackgammonBoard extends BaseBoard {
         }
     }
 
-    /** End the current turn. */
+    /** End the current turn — delegates player rotation to TurnManager. */
     endTurn() {
-        this.currentPlayer = this.currentPlayer === 'white' ? 'black' : 'white';
+        this.turnManager.nextTurn();
         this.dice = [0, 0];
     }
 
@@ -485,11 +499,9 @@ class BackgammonBoard extends BaseBoard {
 
     /** Reset board to initial state. */
     reset() {
-        this.currentPlayer = 'white';
+        this.turnManager.reset();
         this.dice = [0, 0];
         this.gameOver = false;
-        this.moveCount = 0;
-        this.moveHistory = [];
         this.setupInitial();
     }
 }

@@ -8,7 +8,7 @@ A tower defense game set in **Quadray coordinate** space on the **Isotropic Vect
 
 ```bash
 # Run tests + launch
-./run.sh --test
+python3 ../../run_games.py --test --game tower_defense
 
 # Or manually
 cd games/4d_tower_defense
@@ -80,7 +80,7 @@ games/4d_tower_defense/
 │   └── td_game.js        # Input handling, game loop, auto-wave
 ├── tests/
 │   └── test_td.js        # Node.js unit tests (core + extended)
-├── run.sh                # Launch script with --test flag
+# (Launching handled by centralized run_games.py)
 ├── README.md
 └── AGENTS.md
 ```
@@ -92,7 +92,7 @@ games/4d_tower_defense/
 node tests/test_td.js
 
 # Or via run.sh
-./run.sh --test
+python3 ../../run_games.py --test --game tower_defense
 ```
 
 Test suite covers: path connectivity, tower placement/upgrade/sell, all 7 creep types, swarm splitting, regen healing, sniper targeting priority, board reset, creep trail tracking, game-over trigger, wave countdown, speed consistency, volume ratios, and log management.

@@ -23,8 +23,8 @@ assert('Game not over', board.gameOver === false);
 assert('Food exists', board.food !== null);
 assert('Score starts at 0', board.score === 0);
 
-// 2. 8 IVM directions defined
-assert('8 directions defined', SnakeBoard.DIRECTIONS.length === 8);
+// 2. 12 IVM directions defined
+assert('12 directions defined', SnakeBoard.DIRECTIONS.length === 12);
 
 // 3. Movement advances head
 const headBefore = board.head;
@@ -42,8 +42,8 @@ assert('Direction change applied, head B coord changed', true); // non-trivial t
 // 5. Can't reverse into self
 const curDir = board.direction;
 const reverseDir = SnakeBoard.DIRECTIONS.find(d =>
-    d.da === -curDir.da && d.db === -curDir.db &&
-    d.dc === -curDir.dc && d.dd === -curDir.dd
+    d.da === (2 - curDir.da) && d.db === (2 - curDir.db) &&
+    d.dc === (2 - curDir.dc) && d.dd === (2 - curDir.dd)
 );
 board.setDirection(reverseDir);
 board.step(); // Should not reverse
@@ -53,7 +53,7 @@ assert('Reversal blocked (snake still alive)', !board.gameOver || board.snake.le
 const board2 = new SnakeBoard(3); // small grid for easy wrap testing
 board2.snake = [board2.key(0, 1, 1, 1), board2.key(1, 1, 1, 1), board2.key(2, 1, 1, 1)];
 board2.snakeSet = new Set(board2.snake);
-board2.direction = SnakeBoard.DIRECTIONS[0]; // +A
+board2.direction = SnakeBoard.DIRECTIONS[3]; // +A using IVM mapping [1,0,1,2]
 board2.food = board2.key(2, 2, 2, 2); // somewhere else
 board2.step();
 const [wa] = board2.parseKey(board2.head);

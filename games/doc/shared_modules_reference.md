@@ -1,5 +1,8 @@
 # Shared Modules Reference — `4d_generic/`
 
+> **Note on 4D Geometry & Nomenclature**: Throughout QuadCraft, whenever we refer to **"4D"**, we strictly mean **Synergetics** geometry. This entails **Quadray 4D tetrahedral coordinates** deployed on an **Isotropic Vector Matrix (IVM)** of close-packed spheres, where the Quadray coordinates of the 12 neighboring balls are strictly defined by all permutations of `(0, 1, 1, 2)`.
+
+
 > Canonical documentation for all 17 shared JavaScript modules that form the foundation layer of every QuadCraft game.
 
 ---

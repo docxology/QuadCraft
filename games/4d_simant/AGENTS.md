@@ -1,83 +1,62 @@
-# 4D SimAnt - Agent Instructions
-
-## Project Overview
-
-4D SimAnt simulates an ant colony in a 4D tetrahedral grid. Ants forage for food, leaving pheromone trails that others follow. It demonstrates swarm intelligence and path emergence in IVM geometry. **Production-ready** with 9 passing tests.
+# 4D SimAnt — Agent Reference
 
 ## Quick Commands
 
 ```bash
-# Run all tests (9 tests, 100% pass)
-node tests/test_simant.js
-
-# Open in browser
-open games/4d_simant/index.html
-
-# Start local server (Port 8105)
-./games/run_simant.sh
+python3 ../../run_games.py --game simant
+node tests/test_comprehensive.js  # 138 tests
+node tests/test_simant.js         # 10 basic tests
 ```
 
-## Key Directories
-
-| Directory | Files | Purpose |
-|-----------|-------|---------|
-| `js/` | 7 modules | Core logic, AI, Combat, Pheromones |
-| `tests/` | 1 file | Test suite (9 tests) |
-
-## Shared Modules
-
-Imported via `<script>` tags in `index.html` from `../4d_generic/`:
-`quadray.js`, `camera.js`, `projection.js`, `zoom.js`, `synergetics.js`
-
-## Module Dependency Order
-
-Load in this order:
+## Directory
 
 ```
-1. simant_board.js         # World state & Grid
-2. simant_ai.js            # Ant behavior logic
-3. simant_combat.js        # Combat resolution
-4. simant_pheromone_viz.js # Visual effect for trails
-5. simant_renderer.js      # Main renderer
-6. simant_game.js          # Controller
+js/
+  simant_board.js     — SimAntBoard: 4D grid, pheromones (6ch), ants, tunnels, food regen
+  simant_ai.js        — RedColonyAI (4-phase), YellowAssistAI
+  simant_combat.js    — CombatSystem: morale, terrain, danger pheromone, stats
+  simant_pheromone_viz.js — PheromoneVisualizer: gradient colors, glow, danger channel
+  simant_renderer.js  — SimAntRenderer: IVM grid, minimap, particles, sprites, tooltips
+  simant_game.js      — SimAntGame: speed controls, win conditions, assist toggle
+tests/
+  test_comprehensive.js — 138 integration tests (26 groups)
+  test_simant.js       — 10 unit tests
+  test.html            — Browser test runner
+index.html             — Premium UI with glassmorphic panels
 ```
 
-## File Inventory
+## Module Dependencies
 
-### JavaScript Modules (`js/`)
+```
+Quadray → GridUtils → SYNERGETICS → BaseBoard → SimAntBoard
+BaseRenderer → SimAntRenderer
+BaseGame → SimAntGame
+CombatSystem, RedColonyAI, YellowAssistAI, PheromoneVisualizer
+```
 
-| File | Key Exports | Purpose |
-|------|-------------|---------|
-| `simant_board.js` | `Board`, `Ant`, `Food` | Game state container |
-| `simant_ai.js` | `AntAI` | Decision making (Forage, Return, Attack) |
-| `simant_combat.js` | `resolveCombat` | Interaction between Red/Black ants |
-| `simant_pheromone_viz.js`| `PheromoneVisualizer` | Heatmap-style rendering |
-| `simant_renderer.js` | `Renderer` | 3D projection of board |
-| `simant_game.js` | `Game` | Main loop |
+## Key Constants
 
-### Tests (`tests/`)
-
-| File | Tests | Coverage |
-|------|-------|----------|
-| `test_simant.js` | 9 | Movement, pheromone deposit/decay, food gathering |
+| Constant | Value | Purpose |
+|----------|-------|---------|
+| PHERO_CHANNELS | 6 | YFood, YHome, RFood, RHome, YDanger, RDanger |
+| MAX_ANTS_PER_FACTION | 60 | Population cap |
+| CASTE_{QUEEN,WORKER,SOLDIER,SCOUT} | 0–3 | Ant castes |
+| FACTION_{YELLOW,RED} | 0–1 | Colony factions |
 
 ## Key Mechanics
 
-### Pheromones
+- **6-channel pheromones** with IVM-neighbor diffusion (12-around-one)
+- **Population cap**: 60 ants per faction
+- **Food regeneration**: Every 200 ticks, 2–3 new food clusters
+- **Queen auto-spawn**: Workers hatched when food > 15
+- **Colony health**: Composite of queen HP, population, food, combat K/D
+- **Win condition**: Game won when enemy queen dies
+- **Tunnel tracking**: Set-based connectivity for terrain bonus
+- **4 ant castes**: Queen (200 HP), Soldier (50 HP), Worker (20 HP), Scout (15 HP)
 
-Ants leave 'ToFood' or 'ToHome' trails. These are stored in a sparse map in `Board`. The AI polls adjacent cells (12 IVM neighbors) and follows the gradient.
+## Verification
 
-### Swarm AI
-
-- **Wander**: Random walk if no gradient.
-- **Forage**: Follow 'ToFood' or random.
-- **Return**: Carry food, deposit 'ToFood', follow 'ToHome'.
-
-## Verification Checklist
-
-- [ ] All tests pass: `node tests/test_simant.js`
-- [ ] Browser loads without errors
-- [ ] Ants spawn and move
-- [ ] Pheromone trails appear (visualized opacity)
-- [ ] Food is collected and returned to nest
-- [ ] Red vs Black combat works
+- [ ] `node tests/test_comprehensive.js` → 138 pass
+- [ ] `node tests/test_simant.js` → 10 pass
+- [ ] Browser test: game loads, ants move, combat occurs
+- [ ] Verify Math: all 8 geometric identities pass

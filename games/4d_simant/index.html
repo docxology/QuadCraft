@@ -5,15 +5,28 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>4D SimAnt Professional — QuadCraft</title>
+    <meta name="description"
+        content="Ant colony simulation on a 4D Quadray IVM tetrahedral grid with swarm intelligence, pheromone trails, and combat.">
     <link rel="stylesheet" href="../4d_generic/hud-style.css">
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg: #0a0800;
-            --panel: #141008;
+            --bg: #060503;
+            --panel: rgba(16, 12, 6, 0.92);
             --border: #2a2010;
             --accent: #ffaa44;
+            --accent-dim: #885522;
             --red: #ff4444;
+            --green: #4ade80;
+            --blue: #60a5fa;
+            --axis-a: #ff8844;
+            --axis-b: #44aaff;
+            --axis-c: #44ff88;
+            --axis-d: #ff44aa;
+        }
+
+        * {
+            box-sizing: border-box;
         }
 
         body {
@@ -28,18 +41,19 @@
         }
 
         header {
-            padding: 12px 20px;
-            background: #0c0c04;
+            padding: 10px 20px;
+            background: linear-gradient(180deg, #0c0904 0%, var(--bg) 100%);
             border-bottom: 1px solid var(--border);
             display: flex;
             align-items: center;
-            gap: 15px;
+            gap: 12px;
         }
 
         h1 {
             font-size: 20px;
             color: var(--accent);
             margin: 0;
+            text-shadow: 0 0 20px rgba(255, 170, 68, 0.3);
         }
 
         .game-canvas {
@@ -56,35 +70,49 @@
 
         .overlay {
             position: absolute;
-            top: 20px;
-            left: 20px;
+            top: 12px;
+            left: 12px;
             display: flex;
-            gap: 20px;
+            gap: 10px;
             pointer-events: none;
         }
 
         .panel {
-            background: rgba(20, 16, 8, 0.9);
+            background: var(--panel);
             border: 1px solid var(--border);
-            padding: 15px;
-            border-radius: 8px;
-            min-width: 180px;
+            padding: 10px 12px;
+            border-radius: 10px;
+            min-width: 155px;
             pointer-events: auto;
+            -webkit-backdrop-filter: blur(10px);
+            backdrop-filter: blur(10px);
+            transition: border-color 0.3s;
+        }
+
+        .panel:hover {
+            border-color: rgba(255, 170, 68, 0.3);
         }
 
         .panel h3 {
-            margin: 0 0 10px;
-            font-size: 12px;
+            margin: 0 0 6px;
+            font-size: 10px;
             text-transform: uppercase;
-            color: #886;
-            letter-spacing: 1px;
+            color: #665533;
+            letter-spacing: 1.5px;
         }
 
         .stat-row {
             display: flex;
             justify-content: space-between;
-            margin-bottom: 5px;
+            margin-bottom: 3px;
+            font-size: 12px;
             font-weight: 600;
+        }
+
+        .stat-label {
+            opacity: 0.6;
+            font-weight: 400;
+            font-size: 11px;
         }
 
         .yellow {
@@ -95,79 +123,268 @@
             color: var(--red);
         }
 
+        .green {
+            color: var(--green);
+        }
+
+        .health-bar {
+            height: 5px;
+            background: #1a1a10;
+            border-radius: 3px;
+            overflow: hidden;
+            margin: 4px 0 6px;
+        }
+
+        .health-fill {
+            height: 100%;
+            border-radius: 3px;
+            transition: width 0.5s ease, background 0.3s;
+        }
+
         .controls {
             position: absolute;
-            bottom: 20px;
+            bottom: 12px;
             left: 50%;
             transform: translateX(-50%);
             display: flex;
-            gap: 10px;
+            gap: 6px;
             pointer-events: auto;
+            flex-wrap: wrap;
+            justify-content: center;
+            max-width: 95vw;
         }
 
         button {
             background: var(--panel);
             border: 1px solid var(--border);
-            color: var(--accent);
-            padding: 10px 20px;
-            border-radius: 6px;
+            color: #bb9955;
+            padding: 7px 14px;
+            border-radius: 7px;
             cursor: pointer;
             font-weight: 600;
-            transition: 0.2s;
+            font-size: 11px;
+            transition: all 0.2s;
+            -webkit-backdrop-filter: blur(6px);
+            backdrop-filter: blur(6px);
         }
 
         button:hover {
             background: var(--accent);
             color: #000;
-        }
-
-        button.disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
+            box-shadow: 0 0 12px rgba(255, 170, 68, 0.25);
         }
 
         button.active {
             background: var(--accent);
             color: #000;
+            box-shadow: 0 0 8px rgba(255, 170, 68, 0.35);
         }
 
         .key {
             font-family: monospace;
-            opacity: 0.6;
-            font-size: 11px;
-            margin-left: 5px;
+            opacity: 0.4;
+            font-size: 9px;
+            margin-left: 3px;
         }
 
         .combat-log {
             position: absolute;
-            bottom: 70px;
-            right: 20px;
-            background: rgba(20, 16, 8, 0.9);
+            bottom: 55px;
+            right: 12px;
+            background: var(--panel);
             border: 1px solid var(--border);
-            padding: 10px 14px;
-            border-radius: 8px;
-            max-width: 340px;
-            font-size: 11px;
+            padding: 8px 12px;
+            border-radius: 10px;
+            max-width: 300px;
+            font-size: 10px;
             pointer-events: auto;
+            -webkit-backdrop-filter: blur(10px);
+            backdrop-filter: blur(10px);
         }
 
         .combat-log h3 {
-            margin: 0 0 8px;
-            font-size: 11px;
+            margin: 0 0 5px;
+            font-size: 9px;
             text-transform: uppercase;
-            color: #886;
-            letter-spacing: 1px;
+            color: #665533;
+            letter-spacing: 1.5px;
         }
 
         .combat-log .log-entry {
-            margin-bottom: 3px;
-            color: #cc9966;
+            margin-bottom: 1px;
+            color: #997744;
             font-family: monospace;
-            font-size: 10px;
+            font-size: 9px;
+            line-height: 1.3;
         }
 
         .combat-log .log-entry:last-child {
             color: #ffcc88;
+        }
+
+        .tag-accent {
+            font-size: 10px;
+            padding: 3px 8px;
+            border-radius: 6px;
+            background: linear-gradient(135deg, var(--accent), #dd8833);
+            color: #000;
+            font-weight: 700;
+        }
+
+        .tag-dark {
+            font-size: 10px;
+            padding: 3px 8px;
+            border-radius: 6px;
+            background: #332810;
+            color: #aa8855;
+            font-weight: 600;
+        }
+
+        .sub-header {
+            font-size: 11px;
+            color: #555;
+            margin-left: auto;
+        }
+
+        .verify-btn {
+            font-size: 9px;
+            padding: 3px 7px;
+        }
+
+        .verify-res {
+            font-size: 9px;
+            margin-top: 3px;
+            color: #886;
+        }
+
+        .hud-overlay {
+            position: absolute;
+            bottom: 48px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-family: 'Outfit', monospace;
+            font-size: 0.78rem;
+            color: #94a3b8;
+            text-align: center;
+            padding: 6px 16px;
+            background: rgba(10, 15, 25, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            -webkit-backdrop-filter: blur(10px);
+            backdrop-filter: blur(10px);
+            z-index: 2;
+            min-width: 380px;
+            pointer-events: none;
+        }
+
+        .speed-group {
+            display: flex;
+            gap: 3px;
+        }
+
+        .speed-btn {
+            padding: 5px 10px;
+            min-width: unset;
+            font-size: 10px;
+        }
+
+        .speed-btn.active {
+            background: var(--accent);
+            color: #000;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 3px;
+            align-items: center;
+        }
+
+        .separator {
+            width: 1px;
+            height: 22px;
+            background: var(--border);
+            margin: 0 3px;
+        }
+
+        .right-panel {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            pointer-events: none;
+        }
+
+        .right-panel .panel {
+            pointer-events: auto;
+            min-width: 170px;
+        }
+
+        .stat-mini {
+            font-size: 10px;
+            opacity: 0.55;
+        }
+
+        .kd-row {
+            display: flex;
+            gap: 10px;
+            font-size: 11px;
+            margin-top: 3px;
+        }
+
+        .kd-row span {
+            font-weight: 600;
+        }
+
+        /* Quadray Axis Legend */
+        .axis-legend {
+            display: flex;
+            gap: 6px;
+            margin-top: 6px;
+        }
+
+        .axis-tag {
+            font-size: 10px;
+            font-weight: 700;
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+
+        .axis-a {
+            background: rgba(255, 136, 68, 0.15);
+            color: var(--axis-a);
+        }
+
+        .axis-b {
+            background: rgba(68, 170, 255, 0.15);
+            color: var(--axis-b);
+        }
+
+        .axis-c {
+            background: rgba(68, 255, 136, 0.15);
+            color: var(--axis-c);
+        }
+
+        .axis-d {
+            background: rgba(255, 68, 170, 0.15);
+            color: var(--axis-d);
+        }
+
+        @keyframes pulse-glow {
+
+            0%,
+            100% {
+                box-shadow: 0 0 0 rgba(255, 170, 68, 0);
+            }
+
+            50% {
+                box-shadow: 0 0 12px rgba(255, 170, 68, 0.12);
+            }
+        }
+
+        .panel-glow {
+            animation: pulse-glow 3s ease-in-out infinite;
         }
     </style>
 </head>
@@ -175,59 +392,125 @@
 <body>
     <header>
         <h1>4D SimAnt</h1>
-        <span style="font-size:11px;padding:3px 8px;border-radius:6px;background:var(--accent);color:#000;font-weight:600">Quadray</span>
-        <span style="font-size:11px;padding:3px 8px;border-radius:6px;background:#664422;color:#fff;font-weight:600">Synergetics</span>
-        <div style="font-size: 13px; color: #666">Standard Edition</div>
+        <span class="tag-accent">Quadray</span>
+        <span class="tag-dark">IVM Synergetics</span>
+        <span class="sub-header">Professional Edition</span>
     </header>
 
     <div class="game-canvas">
         <canvas id="c"></canvas>
 
+        <!-- Left panels: Colony stats -->
         <div class="overlay">
-            <div class="panel">
-                <h3>Yellow Colony (You)</h3>
-                <div class="stat-row"><span>Food</span> <span id="yFood" class="yellow">0</span></div>
-                <div class="stat-row"><span>Ants</span> <span id="yPop" class="yellow">0</span></div>
-                <div class="stat-row" style="font-size:12px; margin-top:5px; opacity:0.7">Queens: <span
-                        id="yQueen">1</span></div>
+            <div class="panel panel-glow">
+                <h3>🟡 Yellow Colony (You)</h3>
+                <div class="stat-row"><span class="stat-label">Food</span> <span id="yFood" class="yellow">0</span>
+                </div>
+                <div class="stat-row"><span class="stat-label">Ants</span> <span id="yPop" class="yellow">0</span></div>
+                <div class="stat-row stat-mini"><span>Queen</span> <span id="yQueen">Alive</span></div>
+                <div class="stat-row stat-mini"><span>Income</span> <span id="yIncome">+0</span></div>
+                <h3 class="panel-sep">Colony Health</h3>
+                <div class="health-bar">
+                    <div id="yHealthBar" class="health-fill" style="width:50%;background:var(--accent)"></div>
+                </div>
             </div>
 
             <div class="panel">
-                <h3>Red Colony (AI)</h3>
-                <div class="stat-row"><span>Food</span> <span id="rFood" class="red">0</span></div>
-                <div class="stat-row"><span>Ants</span> <span id="rPop" class="red">0</span></div>
-            </div>
-
-            <div class="panel">
-                <h3>Synergetics</h3>
-                <div class="stat-row"><span>World TV</span> <span id="syTV" class="yellow">--</span></div>
-                <div class="stat-row"><span>Tunnel Fill</span> <span id="syFill" class="yellow">--</span></div>
-                <div class="stat-row"><span>Colony CoM</span> <span id="syCom" class="yellow">--</span></div>
-                <div class="stat-row"><span>Ant Spread</span> <span id="sySpread" class="yellow">--</span></div>
-                <div class="stat-row"><span>Forage Radius</span> <span id="syForage" class="yellow">--</span></div>
-                <div style="margin-top:8px">
-                    <button onclick="verifySynergetics()" style="font-size:11px;padding:5px 10px">Verify Math</button>
-                    <div id="verifyResult" style="font-size:10px;margin-top:4px;color:#886"></div>
+                <h3>🔴 Red Colony (AI)</h3>
+                <div class="stat-row"><span class="stat-label">Food</span> <span id="rFood" class="red">0</span></div>
+                <div class="stat-row"><span class="stat-label">Ants</span> <span id="rPop" class="red">0</span></div>
+                <div class="stat-row stat-mini"><span>Queen</span> <span id="rQueen">Alive</span></div>
+                <h3 class="panel-sep">Colony Health</h3>
+                <div class="health-bar">
+                    <div id="rHealthBar" class="health-fill" style="width:50%;background:var(--red)"></div>
                 </div>
             </div>
         </div>
 
-        <div class="combat-log" id="combatLog">
-            <h3>Combat Log</h3>
-            <div id="combatEntries"><div class="log-entry">No combat yet...</div></div>
+        <!-- Right panels: Synergetics + Combat + Quadray Geometry -->
+        <div class="right-panel">
+            <div class="panel">
+                <h3>⬡ Quadray Geometry</h3>
+                <div class="axis-legend">
+                    <span class="axis-tag axis-a">a</span>
+                    <span class="axis-tag axis-b">b</span>
+                    <span class="axis-tag axis-c">c</span>
+                    <span class="axis-tag axis-d">d</span>
+                </div>
+                <div class="stat-row"><span class="stat-label">IVM Cells</span> <span id="syVolume"
+                        class="yellow">--</span></div>
+                <div class="stat-row"><span class="stat-label">World TV</span> <span id="syTV" class="yellow">--</span>
+                </div>
+                <div class="stat-row"><span class="stat-label">Tunnels</span> <span id="syFill" class="yellow">--</span>
+                </div>
+                <div class="stat-row"><span class="stat-label">T:O:C Ratio</span> <span id="syRatios"
+                        class="yellow">1:4:20</span></div>
+                <div class="stat-row"><span class="stat-label">S₃ Factor</span> <span id="syS3" class="yellow">--</span>
+                </div>
+                <div class="stat-row"><span class="stat-label">Colony CoM</span> <span id="syCom"
+                        class="yellow">--</span></div>
+                <div class="stat-row"><span class="stat-label">Forage Rad</span> <span id="syForage"
+                        class="yellow">--</span></div>
+                <div class="stat-row"><span class="stat-label">Ant Spread</span> <span id="sySpread"
+                        class="yellow">--</span></div>
+                <div>
+                    <button class="verify-btn" onclick="verifySynergetics()">Verify Identities</button>
+                    <div id="verifyResult" class="verify-res"></div>
+                </div>
+            </div>
+
+            <div class="panel">
+                <h3>⚔ Combat Stats</h3>
+                <div class="kd-row">
+                    <span class="yellow">Y: <span id="yKills">0</span>K</span>
+                    <span class="yellow"><span id="yDeaths">0</span>D</span>
+                    <span class="red">R: <span id="rKills">0</span>K</span>
+                    <span class="red"><span id="rDeaths">0</span>D</span>
+                </div>
+            </div>
         </div>
 
+        <!-- Combat Log -->
+        <div class="combat-log" id="combatLog">
+            <h3>📜 Combat Log</h3>
+            <div id="combatEntries">
+                <div class="log-entry">Awaiting contact...</div>
+            </div>
+        </div>
+
+        <!-- Controls -->
         <div class="controls">
-            <button onclick="buy('worker')">Hatch Worker (10 Food)</button>
-            <button onclick="buy('soldier')">Hatch Soldier (50 Food)</button>
-            <button id="pheroBtn" onclick="togglePheromones()">Toggle Pheromones</button>
-            <button onclick="game.reset()">Reset Game</button>
+            <div class="btn-group">
+                <button onclick="buy('worker')">Worker <span class="key">W</span></button>
+                <button onclick="buy('soldier')">Soldier <span class="key">S</span></button>
+                <button onclick="buy('scout')">Scout <span class="key">E</span></button>
+            </div>
+
+            <div class="separator"></div>
+
+            <div class="speed-group">
+                <button class="speed-btn" id="speed1" onclick="setSpeed('slow')">🐌<span class="key">1</span></button>
+                <button class="speed-btn active" id="speed2" onclick="setSpeed('normal')">▶<span
+                        class="key">2</span></button>
+                <button class="speed-btn" id="speed3" onclick="setSpeed('fast')">⚡<span class="key">3</span></button>
+            </div>
+
+            <div class="separator"></div>
+
+            <div class="btn-group">
+                <button id="pheroBtn" onclick="togglePheromones()">Trails<span class="key">T</span></button>
+                <button id="assistBtn" onclick="toggleAssist()">Auto<span class="key">A</span></button>
+                <button onclick="game.toggleMinimap()">Map<span class="key">M</span></button>
+                <button onclick="game.toggleLabels()">Labels<span class="key">L</span></button>
+                <button onclick="game.toggleGrid()">Grid<span class="key">G</span></button>
+                <button onclick="game.reset()">Reset<span class="key">R</span></button>
+            </div>
         </div>
     </div>
 
-    <div class="hud" id="hud" style="position:absolute;bottom:60px;left:50%;transform:translateX(-50%);font-family:'Outfit',monospace;font-size:0.85rem;color:#94a3b8;text-align:center;padding:10px 20px;background:rgba(15,23,42,0.6);border:1px solid rgba(255,255,255,0.06);border-radius:8px;backdrop-filter:blur(10px);z-index:2;min-width:400px;pointer-events:none;"></div>
+    <div class="hud-overlay" id="hud"></div>
 
-    <!-- Shared QuadCraft Modules (all 12) -->
+    <!-- Shared QuadCraft Modules -->
     <script src="../4d_generic/quadray.js"></script>
     <script src="../4d_generic/camera.js"></script>
     <script src="../4d_generic/projection.js"></script>
@@ -236,8 +519,9 @@
     <script src="../4d_generic/game_loop.js"></script>
     <script src="../4d_generic/input_controller.js"></script>
     <script src="../4d_generic/grid_utils.js"></script>
-    <script src="../4d_generic/base_board.js"></script>
     <script src="../4d_generic/pathfinding.js"></script>
+    <script src="../4d_generic/entity_system.js"></script>
+    <script src="../4d_generic/base_board.js"></script>
     <script src="../4d_generic/base_renderer.js"></script>
     <script src="../4d_generic/base_game.js"></script>
     <script src="../4d_generic/hud.js"></script>
@@ -260,7 +544,6 @@
             canvas.height = canvas.parentElement.clientHeight;
         }
         window.onresize = resize;
-
         resize();
         initialize();
 
@@ -270,36 +553,49 @@
             updateHUD();
         }
 
-        function buy(type) {
-            game.buyUnit(type);
-            updateHUD();
-        }
+        function buy(type) { game.buyUnit(type); }
+        function togglePheromones() { game.togglePheromones(); }
+        function toggleAssist() { game.toggleAssist(); }
 
-        function togglePheromones() {
-            if (!game || !game.renderer || !game.renderer.pheromoneViz) return;
-            const viz = game.renderer.pheromoneViz;
-            viz.enabled = !viz.enabled;
-            const btn = document.getElementById('pheroBtn');
-            if (btn) {
-                btn.classList.toggle('active', viz.enabled);
-            }
+        function setSpeed(speed) {
+            game.setSpeed(speed);
+            document.querySelectorAll('.speed-btn').forEach(b => b.classList.remove('active'));
+            const btnMap = { slow: 'speed1', normal: 'speed2', fast: 'speed3' };
+            const btn = document.getElementById(btnMap[speed]);
+            if (btn) btn.classList.add('active');
         }
 
         function updateHUD() {
-            if (!game) return;
+            if (!game) { requestAnimationFrame(updateHUD); return; }
             const b = game.board;
-            document.getElementById('yFood').innerText = Math.floor(b.foodStored[0]);
-            document.getElementById('rFood').innerText = Math.floor(b.foodStored[1]);
+            const meta = b.getMetadata();
 
-            const yAnts = b.ants.filter(a => a.faction === 0 && a.alive).length;
-            const rAnts = b.ants.filter(a => a.faction === 1 && a.alive).length;
+            document.getElementById('yFood').innerText = meta.yellowFood;
+            document.getElementById('rFood').innerText = meta.redFood;
+            document.getElementById('yPop').innerText = `${meta.yellowAnts}/${meta.popCap}`;
+            document.getElementById('rPop').innerText = `${meta.redAnts}/${meta.popCap}`;
 
-            document.getElementById('yPop').innerText = yAnts;
-            document.getElementById('rPop').innerText = rAnts;
+            document.getElementById('yQueen').innerText = meta.yellowQueenAlive ? "Alive" : "DEAD";
+            document.getElementById('yQueen').style.color = meta.yellowQueenAlive ? '#4ade80' : '#f87171';
+            document.getElementById('rQueen').innerText = meta.redQueenAlive ? "Alive" : "DEAD";
+            document.getElementById('rQueen').style.color = meta.redQueenAlive ? '#4ade80' : '#f87171';
 
-            document.getElementById('yQueen').innerText = b.queens[0] && b.queens[0].alive ? "Alive" : "DEAD";
+            // Colony health bars
+            document.getElementById('yHealthBar').style.width = meta.yellowHealth + '%';
+            document.getElementById('yHealthBar').style.background = meta.yellowHealth > 60 ? 'var(--accent)' : meta.yellowHealth > 30 ? '#ddaa00' : '#ff4444';
+            document.getElementById('rHealthBar').style.width = meta.redHealth + '%';
+            document.getElementById('rHealthBar').style.background = meta.redHealth > 60 ? 'var(--red)' : meta.redHealth > 30 ? '#dd6600' : '#880000';
 
-            // Update combat log
+            // Food income
+            document.getElementById('yIncome').innerText = (parseFloat(meta.foodIncome[0]) >= 0 ? '+' : '') + meta.foodIncome[0] + '/t';
+
+            // Combat stats
+            document.getElementById('yKills').innerText = meta.stats.yellowKills;
+            document.getElementById('rKills').innerText = meta.stats.redKills;
+            document.getElementById('yDeaths').innerText = meta.stats.yellowDeaths;
+            document.getElementById('rDeaths').innerText = meta.stats.redDeaths;
+
+            // Combat log
             if (typeof CombatSystem !== 'undefined' && CombatSystem.log.length > 0) {
                 const entries = document.getElementById('combatEntries');
                 if (entries) {
@@ -309,6 +605,12 @@
                 }
             }
 
+            // Assist button state
+            const assistBtn = document.getElementById('assistBtn');
+            if (assistBtn) {
+                assistBtn.classList.toggle('active', b.yellowAssistEnabled);
+            }
+
             requestAnimationFrame(updateHUD);
         }
 
@@ -316,50 +618,67 @@
             if (!game || !game.board) { requestAnimationFrame(updateSynergetics); return; }
             const b = game.board;
             const yAnts = b.ants.filter(a => a.faction === 0 && a.alive);
-            // World Tetravolume
-            const totalCells = b.grid.length;
-            const tunnelCells = b.grid.filter(c => c === 0).length;
-            document.getElementById('syTV').textContent = (totalCells * SYNERGETICS.S3).toFixed(0);
-            document.getElementById('syFill').textContent = ((tunnelCells / totalCells) * 100).toFixed(1) + '%';
+
+            // Static IVM info
+            document.getElementById('syVolume').textContent = b.size + '⁴ = ' + b.volume;
+            document.getElementById('syTV').textContent = (b.volume * SYNERGETICS.S3).toFixed(0) + ' TV';
+            document.getElementById('syS3').textContent = SYNERGETICS.S3.toFixed(4);
+
+            // Tunnel fill
+            let tunnelCells = 0;
+            for (let i = 0; i < b.grid.length; i++) {
+                if (b.grid[i] === 0) tunnelCells++;
+            }
+            document.getElementById('syFill').textContent = ((tunnelCells / b.volume) * 100).toFixed(1) + '% (' + tunnelCells + ')';
+
             // Colony center of mass
             if (yAnts.length > 0) {
-                let sx = 0, sy = 0, sz = 0, sw = 0;
-                for (const a of yAnts) { sx += a.x; sy += a.y; sz += a.z; sw += a.w; }
+                let sa = 0, sb = 0, sc = 0, sd = 0;
+                for (const a of yAnts) { sa += a.a; sb += a.b; sc += a.c; sd += a.d; }
                 const n = yAnts.length;
-                document.getElementById('syCom').textContent = `(${(sx/n).toFixed(1)},${(sy/n).toFixed(1)},${(sz/n).toFixed(1)},${(sw/n).toFixed(1)})`;
-                // Ant spread
+                document.getElementById('syCom').textContent = `(${(sa / n).toFixed(1)},${(sb / n).toFixed(1)},${(sc / n).toFixed(1)},${(sd / n).toFixed(1)})`;
+
+                // Ant spread (mean distance between ants)
                 if (yAnts.length >= 2) {
                     let totalDist = 0, count = 0;
-                    const sample = yAnts.slice(0, 20);
+                    const sample = yAnts.slice(0, 15);
                     for (let i = 0; i < sample.length; i++) {
                         for (let j = i + 1; j < sample.length; j++) {
-                            const q1 = new Quadray(sample[i].x, sample[i].y, sample[i].z, sample[i].w);
-                            const q2 = new Quadray(sample[j].x, sample[j].y, sample[j].z, sample[j].w);
-                            totalDist += Quadray.distance(q1, q2); count++;
+                            totalDist += Quadray.distance(
+                                new Quadray(sample[i].a, sample[i].b, sample[i].c, sample[i].d),
+                                new Quadray(sample[j].a, sample[j].b, sample[j].c, sample[j].d)
+                            );
+                            count++;
                         }
                     }
-                    document.getElementById('sySpread').textContent = (totalDist / count).toFixed(2);
+                    document.getElementById('sySpread').textContent = (totalDist / count).toFixed(2) + ' QD';
                 }
-                // Foraging radius
+
+                // Foraging radius (max distance from nest)
                 const nest = b.nests[0];
                 if (nest) {
                     let maxDist = 0;
-                    const nq = new Quadray(nest.x, nest.y, nest.z, nest.w);
+                    const nq = new Quadray(nest.a, nest.b, nest.c, nest.d);
                     for (const a of yAnts) {
-                        const aq = new Quadray(a.x, a.y, a.z, a.w);
-                        maxDist = Math.max(maxDist, Quadray.distance(nq, aq));
+                        maxDist = Math.max(maxDist, Quadray.distance(nq, new Quadray(a.a, a.b, a.c, a.d)));
                     }
-                    document.getElementById('syForage').textContent = maxDist.toFixed(2) + ' TV';
+                    document.getElementById('syForage').textContent = maxDist.toFixed(2) + ' QD';
                 }
+            } else {
+                document.getElementById('syCom').textContent = '--';
+                document.getElementById('sySpread').textContent = '--';
+                document.getElementById('syForage').textContent = '--';
             }
+
             requestAnimationFrame(updateSynergetics);
         }
         updateSynergetics();
 
         function verifySynergetics() {
             const r = verifyGeometricIdentities();
-            document.getElementById('verifyResult').innerHTML = r.checks.map(c => `${c.passed ? '✅' : '❌'} ${c.name}`).join('<br>');
-            document.getElementById('verifyResult').style.color = r.allPassed ? '#44ff44' : '#ff4444';
+            const el = document.getElementById('verifyResult');
+            el.innerHTML = r.checks.map(c => `${c.passed ? '✅' : '❌'} ${c.name}`).join('<br>');
+            el.style.color = r.allPassed ? '#4ade80' : '#ff4444';
         }
     </script>
 </body>

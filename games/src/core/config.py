@@ -47,7 +47,6 @@ ALL_SHARED_MODULES = SHARED_MODULES + OPTIONAL_SHARED_MODULES
 # ─── Required files per game directory ──────────────────────────────────────
 REQUIRED_FILES = [
     "index.html",
-    "run.sh",
     "AGENTS.md",
 ]
 

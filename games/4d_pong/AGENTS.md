@@ -7,7 +7,7 @@ Paddle-ball game in tetrahedral 4D space. Standalone browser application built o
 ## Quick Commands
 
 ```bash
-# Run tests (8 tests)
+# Run tests (19 tests)
 node tests/test_pong.js
 
 # Open in browser
@@ -46,7 +46,7 @@ Load in this order to avoid reference errors:
 
 | File | Tests | Coverage |
 |------|-------|----------|
-| `test_pong.js` | 8 | Board creation, cell operations, reset |
+| `test_pong.js` | 19 | Board creation, cell operations, reset |
 | `test.html` | — | Browser test runner |
 
 ## Game Rules Summary

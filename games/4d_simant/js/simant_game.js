@@ -1,8 +1,15 @@
 /**
- * simant_game.js — 4D SimAnt Game Controller
+ * simant_game.js — 4D SimAnt Game Controller — Enhanced
  *
  * Extends BaseGame for lifecycle, camera sync, input, and HUD management.
  * Integrates HUD, ScoreManager, and AI colony with Quadray-native evaluation.
+ *
+ * Features:
+ * - 3 speed settings (Slow/Normal/Fast) via 1/2/3 keys
+ * - Win condition — enemy queen dies
+ * - Auto-assist toggle (A key)
+ * - Colony management with real-time stats
+ * - Particle effects on events
  *
  * Uses:
  *   - BaseGame: init, togglePause, reset, _syncCamera, _updateHUD, _setupBaseInput
@@ -17,7 +24,13 @@
  *   R           : Reset
  *   W           : Buy worker
  *   S           : Buy soldier
+ *   E           : Buy scout
  *   T           : Toggle pheromone viz
+ *   A           : Toggle auto-assist
+ *   M           : Toggle minimap
+ *   L           : Toggle coordinate labels
+ *   G           : Toggle IVM grid/tunnels
+ *   1/2/3       : Speed (Slow/Normal/Fast)
  *   Shift+drag  : Rotate camera
  *
  * @module SimAntGame
@@ -29,10 +42,18 @@ class SimAntGame extends BaseGame {
         const renderer = new SimAntRenderer(canvas, board);
         super(canvas, hudElement, board, renderer, {
             name: 'SimAntGame',
-            tickRate: 150,          // Simulation — 150ms per tick (~6.7 tps)
+            tickRate: 150,          // Normal speed — 150ms per tick (~6.7 tps)
             zoomOpts: { min: 10, max: 60 },
             cameraMode: 'shift-drag',
         });
+
+        // Speed settings
+        this.speeds = {
+            slow: 300,
+            normal: 150,
+            fast: 50,
+        };
+        this.currentSpeed = 'normal';
 
         // Score tracking via ScoreManager
         this.scoring = new ScoreManager({
@@ -43,6 +64,10 @@ class SimAntGame extends BaseGame {
 
         // Track food collected for scoring
         this._lastFoodStored = this.board.foodStored[0];
+
+        // Track events for particles
+        this._lastYellowAnts = this.board.ants.filter(a => a.faction === 0 && a.alive).length;
+        this._lastRedAnts = this.board.ants.filter(a => a.faction === 1 && a.alive).length;
 
         // Startup integrity check
         this._runGeometricVerification();
@@ -73,7 +98,15 @@ class SimAntGame extends BaseGame {
     _setupGameInput() {
         this.input.bind(['w'], () => this.buyUnit('worker'));
         this.input.bind(['s'], () => this.buyUnit('soldier'));
+        this.input.bind(['e'], () => this.buyUnit('scout'));
         this.input.bind(['t'], () => this.togglePheromones());
+        this.input.bind(['a'], () => this.toggleAssist());
+        this.input.bind(['m'], () => this.toggleMinimap());
+        this.input.bind(['l'], () => this.toggleLabels());
+        this.input.bind(['g'], () => this.toggleGrid());
+        this.input.bind(['1'], () => this.setSpeed('slow'));
+        this.input.bind(['2'], () => this.setSpeed('normal'));
+        this.input.bind(['3'], () => this.setSpeed('fast'));
     }
 
     /**
@@ -98,36 +131,82 @@ class SimAntGame extends BaseGame {
             this.scoring.addScore(Math.floor(gained));
         }
         this._lastFoodStored = currentFood;
+
+        // Spawn particles for combat events
+        this._checkForEvents();
+    }
+
+    /** Check for events to generate particle effects */
+    _checkForEvents() {
+        const yAnts = this.board.ants.filter(a => a.faction === 0 && a.alive).length;
+        const rAnts = this.board.ants.filter(a => a.faction === 1 && a.alive).length;
+
+        // Ant died — emit particles
+        if (yAnts < this._lastYellowAnts && this.renderer) {
+            const cx = this.canvas.width / 2 + (Math.random() - 0.5) * 100;
+            const cy = this.canvas.height / 2 + (Math.random() - 0.5) * 100;
+            for (let i = 0; i < 5; i++) this.renderer.addParticle(cx, cy, '#ffaa44');
+        }
+        if (rAnts < this._lastRedAnts && this.renderer) {
+            const cx = this.canvas.width / 2 + (Math.random() - 0.5) * 100;
+            const cy = this.canvas.height / 2 + (Math.random() - 0.5) * 100;
+            for (let i = 0; i < 5; i++) this.renderer.addParticle(cx, cy, '#ff4444');
+        }
+
+        this._lastYellowAnts = yAnts;
+        this._lastRedAnts = rAnts;
     }
 
     /** Override BaseGame.reset() — also reset scoring and combat log. */
     reset() {
         this.scoring.reset();
-        // Clear combat log on reset
         if (typeof CombatSystem !== 'undefined') {
             CombatSystem.log = [];
+            CombatSystem.resetStats();
         }
         super.reset();
         this._lastFoodStored = this.board.foodStored[0];
+        this._lastYellowAnts = this.board.ants.filter(a => a.faction === 0 && a.alive).length;
+        this._lastRedAnts = this.board.ants.filter(a => a.faction === 1 && a.alive).length;
+        this.currentSpeed = 'normal';
+        this.loop.tickRate = this.speeds.normal;
     }
 
     // UI Commands
     buyUnit(type) {
-        // Find queen
         const q = this.board.queens[0]; // 0 = Yellow
         if (!q || !q.alive) {
             console.log("Queen is dead!");
             return;
         }
 
-        const cost = (type === 'soldier') ? 50 : 10;
+        let cost, caste;
+        switch (type) {
+            case 'soldier': cost = 50; caste = CASTE_SOLDIER; break;
+            case 'scout': cost = 15; caste = CASTE_SCOUT; break;
+            default: cost = 10; caste = CASTE_WORKER; break;
+        }
+
+        if (this.board.atPopCap(FACTION_YELLOW)) {
+            console.log(`Population cap reached (${MAX_ANTS_PER_FACTION})!`);
+            return;
+        }
+
         if (this.board.foodStored[0] >= cost) {
             this.board.foodStored[0] -= cost;
-            const caste = (type === 'soldier') ? CASTE_SOLDIER : CASTE_WORKER;
-            this.board.spawnAnt(q.x, q.y, q.z, q.w, FACTION_YELLOW, caste);
+            this.board.spawnAnt(q.a, q.b, q.c, q.d, FACTION_YELLOW, caste);
             console.log(`Bought ${type}`);
         } else {
             console.log("Not enough food!");
+        }
+    }
+
+    /** Set simulation speed */
+    setSpeed(speed) {
+        if (this.speeds[speed]) {
+            this.currentSpeed = speed;
+            this.loop.tickRate = this.speeds[speed];
+            console.log(`Speed: ${speed} (${this.speeds[speed]}ms/tick)`);
         }
     }
 
@@ -140,6 +219,37 @@ class SimAntGame extends BaseGame {
         if (btn) {
             btn.classList.toggle('active', viz.enabled);
         }
+    }
+
+    /** Toggle Yellow assist AI */
+    toggleAssist() {
+        this.board.yellowAssistEnabled = !this.board.yellowAssistEnabled;
+        console.log(`Yellow Assist AI: ${this.board.yellowAssistEnabled ? 'ON' : 'OFF'}`);
+        const btn = document.getElementById('assistBtn');
+        if (btn) {
+            btn.classList.toggle('active', this.board.yellowAssistEnabled);
+        }
+    }
+
+    /** Toggle minimap */
+    toggleMinimap() {
+        if (!this.renderer) return;
+        this.renderer.showMinimap = !this.renderer.showMinimap;
+    }
+
+    /** Toggle coordinate labels on ants */
+    toggleLabels() {
+        if (!this.renderer) return;
+        this.renderer.showLabels = !this.renderer.showLabels;
+        console.log(`Labels: ${this.renderer.showLabels ? 'ON' : 'OFF'}`);
+    }
+
+    /** Toggle IVM grid and tunnel visualization */
+    toggleGrid() {
+        if (!this.renderer) return;
+        this.renderer.showIVMGrid = !this.renderer.showIVMGrid;
+        this.renderer.showTunnels = !this.renderer.showTunnels;
+        console.log(`IVM Grid: ${this.renderer.showIVMGrid ? 'ON' : 'OFF'}`);
     }
 
     /** Bind mouse move for hover detection in renderer. */
@@ -159,17 +269,25 @@ class SimAntGame extends BaseGame {
         const b = this.board;
         const meta = b.getMetadata();
         const scoreLabel = ` | Score: ${this.scoring.score}`;
+        const speedLabel = ` | ⚡${this.currentSpeed.toUpperCase()}`;
 
         if (b.gameOver) {
+            if (b.winner === 0) {
+                return {
+                    text: `🏆 VICTORY! Enemy queen defeated! | Tick: ${meta.tick}${scoreLabel} | Press R to restart`,
+                    color: '#4ade80',
+                };
+            }
             return {
-                text: `COLONY LOST! Queen is dead. | Tick: ${meta.tick}${scoreLabel} | Press R to restart`,
+                text: `💀 COLONY LOST! Queen is dead. | Tick: ${meta.tick}${scoreLabel} | Press R to restart`,
                 color: '#f87171',
             };
         }
 
+        const assistLabel = b.yellowAssistEnabled ? ' | 🤖AUTO' : '';
         const yQueenStatus = meta.yellowQueenAlive ? 'Alive' : 'DEAD';
         return {
-            text: `Tick: ${meta.tick} | Yellow: ${meta.yellowAnts} ants, ${meta.yellowFood} food | Red: ${meta.redAnts} ants | Queen: ${yQueenStatus}${scoreLabel}`,
+            text: `Tick: ${meta.tick} | Y:${meta.yellowAnts} ants R:${meta.redAnts} | Food:${meta.yellowFood} | Queen:${yQueenStatus}${scoreLabel}${speedLabel}${assistLabel}`,
             color: '#ffaa44',
         };
     }

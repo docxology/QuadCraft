@@ -1,8 +1,10 @@
 # Games — Agent Instructions
 
+> **Note on 4D Geometry & Nomenclature**: Throughout QuadCraft, whenever we refer to **"4D"**, we strictly mean **Synergetics** geometry. This entails **Quadray 4D tetrahedral coordinates** deployed on an **Isotropic Vector Matrix (IVM)** of close-packed spheres, where the Quadray coordinates of the 12 neighboring balls are strictly defined by all permutations of `(0, 1, 1, 2)`. Cartesian (XYZ) analogies are secondary to this true Synergetics foundation.
+
 ## Overview
 
-The `games/` directory contains the QuadCraft game portfolio — **22 standalone 4D games** built on Quadray coordinates. Each game is self-contained with its own `index.html`, JavaScript modules, and tests. Shared math, camera, and projection code lives in `4d_generic/`.
+The `games/` directory contains the QuadCraft game portfolio — **30 standalone 4D games** built on Quadray coordinates. Each game is self-contained with its own `index.html`, JavaScript modules, and tests. Shared math, camera, and projection code lives in `4d_generic/`.
 
 > **📋 Full portfolio index:** [GAMES_INDEX.md](GAMES_INDEX.md)
 
@@ -14,9 +16,8 @@ python3 run_games.py --all
 
 # Launch specific game(s)
 python3 run_games.py --game chess doom
-./4d_chess/run.sh
 
-# Run all unit tests (1,060 passing)
+# Run all unit tests (1,147 passing)
 python3 run_games.py --test
 
 # Run tests for specific game
@@ -56,6 +57,14 @@ python3 run_games.py --list
 | bomberman | 4D Bomberman | `4d_bomberman/` | 22 | 8119 |
 | connect_four | 4D Connect Four | `4d_connect_four/` | 70 | 8120 |
 | minesweeper | 4D Minesweeper | `4d_minesweeper/` | 23 | 8121 |
+| sokoban | 4D Sokoban | `4d_sokoban/` | 8 | 8122 |
+| 2048 | 4D 2048 | `4d_2048/` | 8 | 8123 |
+| rogue | 4D Rogue | `4d_rogue/` | 8 | 8124 |
+| go | 4D Go | `4d_go/` | 8 | 8125 |
+| hex | 4D Hex | `4d_hex/` | 8 | 8126 |
+| memory | 4D Memory | `4d_memory/` | 8 | 8127 |
+| sudoku | 4D Sudoku | `4d_sudoku/` | 8 | 8128 |
+| lights_out | 4D Lights Out | `4d_lights_out/` | 8 | 8129 |
 
 ## Launch System
 

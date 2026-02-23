@@ -1,5 +1,8 @@
 # Game Template — Standard Directory Structure
 
+> **Note on 4D Geometry & Nomenclature**: Throughout QuadCraft, whenever we refer to **"4D"**, we strictly mean **Synergetics** geometry. This entails **Quadray 4D tetrahedral coordinates** deployed on an **Isotropic Vector Matrix (IVM)** of close-packed spheres, where the Quadray coordinates of the 12 neighboring balls are strictly defined by all permutations of `(0, 1, 1, 2)`.
+
+
 > Canonical structure, naming conventions, and required patterns for every QuadCraft game.
 
 ---
@@ -10,7 +13,6 @@
 games/4d_<game>/
 ├── index.html                    # Entry point — imports shared + game modules
 ├── AGENTS.md                     # Game-specific agent instructions
-├── run.sh                        # Standalone launch script
 ├── js/
 │   ├── <game>_board.js           # Board / world state logic
 │   ├── <game>_renderer.js        # Canvas rendering

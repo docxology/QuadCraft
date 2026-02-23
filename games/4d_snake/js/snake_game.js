@@ -9,7 +9,7 @@
  *   - HUD: set, gameOver, paused, playing, warning
  *   - ScoreManager: addScore, reset, toJSON
  *   - verifyGeometricIdentities: startup integrity check
- *   - GridUtils: key, parseKey, DIRECTIONS_8
+ *   - GridUtils: key, parseKey, DIRECTIONS
  *   - Quadray: distance, distanceTo, toKey, normalized, clone
  *
  * Controls:

@@ -1,5 +1,7 @@
 # Scripts Reference — `scripts/`
 
+> **Note on 4D Geometry & Nomenclature**: Throughout QuadCraft, whenever we refer to **"4D"**, we strictly mean **Synergetics** geometry. This entails **Quadray 4D tetrahedral coordinates** deployed on an **Isotropic Vector Matrix (IVM)** of close-packed spheres, where the Quadray coordinates of the 12 neighboring balls are strictly defined by all permutations of `(0, 1, 1, 2)`.
+
 > Maintenance and automation scripts for the QuadCraft game portfolio.
 
 ---
@@ -8,8 +10,8 @@
 
 ```text
 scripts/
-├── _run_template.sh           # Shell script template for per-game launchers
-├── regenerate_scripts.py      # Generate/update all per-game run.sh files
+├── _run_template.sh           # Launcher wrapper template (delegates to run_games.py)
+├── regenerate_scripts.py      # Generate launcher wrapper scripts from template
 ├── generate_test_html.py      # Generate browser-based test HTML pages
 ├── ensure_agents_md.py        # Ensure every game has an AGENTS.md
 ├── audit_docs.py              # Audit documentation completeness
@@ -24,7 +26,7 @@ scripts/
 
 ### `regenerate_scripts.py`
 
-**Purpose:** Generate or update `run.sh` files for all registered games.
+**Purpose:** Generate or update launcher wrapper scripts for all registered games.
 
 ```bash
 python3 games/scripts/regenerate_scripts.py
@@ -32,24 +34,22 @@ python3 games/scripts/regenerate_scripts.py
 
 - Reads the `GAMES` dict from `src/core/registry.py`
 - Applies `_run_template.sh` with game-specific substitutions
-- Creates `4d_<game>/run.sh` for each registered game
+- Creates `games/run_<game>.sh` wrapper scripts that delegate to `run_games.py`
 - **When to run:** After adding a new game to the registry
 
 ---
 
 ### `_run_template.sh`
 
-**Purpose:** Template for per-game `run.sh` scripts.
+**Purpose:** Template for launcher wrapper scripts that delegate to `run_games.py`.
 
 Provides:
 
-- Game directory detection
+- Game key resolution
 - Port configuration (from command-line arg or default)
-- Python HTTP server launch serving the parent `games/` directory
-- Browser auto-open
-- Signal handling for clean shutdown
+- Delegation to centralized `run_games.py --game` launcher
 
-**Template variables:** `{GAME_DIR}`, `{GAME_NAME}`, `{DEFAULT_PORT}`
+**Template variables:** `GAMENAME`, `DISPLAYNAME`, `GAMEDIR`, `DEFAULTPORT`
 
 ---
 

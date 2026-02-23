@@ -2,7 +2,7 @@
 games.src.registry — Central game registry and config loading.
 
 Maps short game keys (e.g. 'chess') to directory names, display names,
-and port offsets for all 22 QuadCraft games. Used by launcher, testing,
+and port offsets for all 30 QuadCraft games. Used by launcher, testing,
 validation, and analytics modules.
 """
 
@@ -36,6 +36,15 @@ GAMES: Dict[str, Dict[str, Union[str, int]]] = {
     "bomberman":     {"dir": "4d_bomberman",     "name": "4D Bomberman",     "port_offset": 19},
     "connect_four":  {"dir": "4d_connect_four",  "name": "4D Connect Four",  "port_offset": 20},
     "minesweeper":   {"dir": "4d_minesweeper",   "name": "4D Minesweeper",   "port_offset": 21},
+    # ── Wave 3 / Wave 4 ────────────────────────────────────────────────────
+    "sokoban":       {"dir": "4d_sokoban",       "name": "4D Sokoban",       "port_offset": 22},
+    "2048":          {"dir": "4d_2048",          "name": "4D 2048",          "port_offset": 23},
+    "rogue":         {"dir": "4d_rogue",         "name": "4D Rogue",         "port_offset": 24},
+    "go":            {"dir": "4d_go",            "name": "4D Go",            "port_offset": 25},
+    "hex":           {"dir": "4d_hex",           "name": "4D Hex",           "port_offset": 26},
+    "memory":        {"dir": "4d_memory",        "name": "4D Memory",        "port_offset": 27},
+    "sudoku":        {"dir": "4d_sudoku",        "name": "4D Sudoku",        "port_offset": 28},
+    "lights_out":    {"dir": "4d_lights_out",    "name": "4D Lights Out",    "port_offset": 29},
 }
 
 logger.debug("[Registry] Loaded %d games", len(GAMES))

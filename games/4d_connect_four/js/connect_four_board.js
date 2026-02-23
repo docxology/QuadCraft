@@ -507,6 +507,24 @@ class ConnectFourBoard extends BaseBoard {
         };
     }
 
+    /**
+     * Undo the last move. Removes piece from grid, decrements moveCount,
+     * clears win/gameOver state, and reverses the turn.
+     * @returns {{ player: number, quadray: Quadray, cellType: string }|null}
+     */
+    undoLastMove() {
+        const entry = this.turnManager.undo();
+        if (!entry) return null;
+        const move = entry.move;
+        this.grid.delete(move.quadray.toKey());
+        this.moveCount--;
+        this.winner = 0;
+        this.gameOver = false;
+        this.winLine = [];
+        console.log(`[ConnectFourBoard] Undo move #${move.moveNum} by P${entry.player} at ${move.quadray.toString()}`);
+        return { player: entry.player, quadray: move.quadray, cellType: move.cellType };
+    }
+
     /** Reset board to initial state. */
     reset() {
         this.grid = new Map();

@@ -167,49 +167,98 @@ class PacManRenderer extends BaseRenderer {
      */
     _drawGhost(e, r, time) {
         const { ctx } = this;
-        ctx.fillStyle = e.scared ? '#3b82f6' : e.color;
-        if (e.scared) {
-            ctx.shadowColor = '#60a5fa';
-            ctx.shadowBlur = 10;
-        } else {
-            ctx.shadowColor = e.color;
-            ctx.shadowBlur = 8;
+
+        let color = e.color;
+        let shadow = e.color;
+
+        // Flashing logic if power timer is running out (handled in game state ideally, but we'll do simple timing here)
+        // Check game state from board for power timer
+        const isFrightened = e.state === 'frightened';
+        const isEaten = e.state === 'eaten';
+        const powerTimer = this.board.powerTimer;
+
+        if (isFrightened) {
+            // Flash white/blue when timer < 10
+            if (powerTimer < 10 && Math.floor(time / 200) % 2 === 0) {
+                color = '#ffffff';
+                shadow = '#ffffff';
+            } else {
+                color = '#3b82f6'; // Blue
+                shadow = '#60a5fa';
+            }
         }
 
-        // Ghost body shape
-        ctx.beginPath();
-        ctx.arc(e.px, e.py - r * 0.4, r, Math.PI, 0);
-        ctx.lineTo(e.px + r, e.py + r);
-        // Wavy bottom
-        const waveSize = r / 3;
-        for (let i = 1; i <= 6; i++) {
-            ctx.lineTo(e.px + r - i * waveSize, e.py + r - (i % 2) * waveSize * 0.5);
+        if (!isEaten) {
+            ctx.fillStyle = color;
+            ctx.shadowColor = shadow;
+            ctx.shadowBlur = isFrightened ? 10 : 8;
+
+            // Ghost body shape
+            ctx.beginPath();
+            ctx.arc(e.px, e.py - r * 0.4, r, Math.PI, 0);
+            ctx.lineTo(e.px + r, e.py + r);
+            // Wavy bottom
+            const waveSize = r / 3;
+            for (let i = 1; i <= 6; i++) {
+                ctx.lineTo(e.px + r - i * waveSize, e.py + r - (i % 2) * waveSize * 0.5);
+            }
+            ctx.lineTo(e.px - r, e.py + r);
+            ctx.closePath();
+            ctx.fill();
         }
-        ctx.lineTo(e.px - r, e.py + r);
-        ctx.closePath();
-        ctx.fill();
 
         // Eyes
         const eyeOffsetX = r * 0.35;
-        const eyeOffsetY = -r * 0.4;
+        const eyeOffsetY = isEaten ? 0 : -r * 0.4;
         const eyeSize = r * 0.3;
 
         ctx.fillStyle = '#fff';
+        ctx.shadowBlur = 0; // Clear blur for eyes
         ctx.beginPath();
         ctx.arc(e.px - eyeOffsetX, e.py + eyeOffsetY, eyeSize, 0, Math.PI * 2);
         ctx.arc(e.px + eyeOffsetX, e.py + eyeOffsetY, eyeSize, 0, Math.PI * 2);
         ctx.fill();
 
-        // Pupils
+        // Pupils (scared ghosts have special pupils)
         ctx.fillStyle = '#000';
         const pupilSize = eyeSize * 0.5;
-        const lx = Math.sin(time * 0.002) * 2;
-        const ly = Math.cos(time * 0.002) * 2;
 
-        ctx.beginPath();
-        ctx.arc(e.px - eyeOffsetX + lx, e.py + eyeOffsetY + ly, pupilSize, 0, Math.PI * 2);
-        ctx.arc(e.px + eyeOffsetX + lx, e.py + eyeOffsetY + ly, pupilSize, 0, Math.PI * 2);
-        ctx.fill();
+        if (isFrightened) {
+            // Little frightened face lines instead of normal pupils
+            ctx.beginPath();
+            const w = pupilSize * 0.8;
+            ctx.rect((e.px - eyeOffsetX) - w / 2, (e.py + eyeOffsetY), w, w / 2);
+            ctx.rect((e.px + eyeOffsetX) - w / 2, (e.py + eyeOffsetY), w, w / 2);
+            ctx.fill();
+
+            // Wavy mouth
+            ctx.strokeStyle = '#f87171'; // Red mouth
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(e.px - r * 0.5, e.py + r * 0.2);
+            ctx.lineTo(e.px - r * 0.25, e.py + r * 0.1);
+            ctx.lineTo(e.px, e.py + r * 0.2);
+            ctx.lineTo(e.px + r * 0.25, e.py + r * 0.1);
+            ctx.lineTo(e.px + r * 0.5, e.py + r * 0.2);
+            ctx.stroke();
+        } else {
+            // Normal drifting eyes
+            let lx = 0; let ly = 0;
+            if (!isEaten) {
+                // Determine direction ghost is moving roughly by drifting eyes
+                lx = Math.sin(time * 0.002) * 2;
+                ly = Math.cos(time * 0.002) * 2;
+            } else {
+                // Eaten eyes head straight for home
+                const dx = (this.board.ghostHouse.a + this.board.ghostHouse.b) - (e.a + e.b); // extremely rough proxy
+                lx = dx > 0 ? 1 : (dx < 0 ? -1 : 0);
+            }
+
+            ctx.beginPath();
+            ctx.arc(e.px - eyeOffsetX + lx, e.py + eyeOffsetY + ly, pupilSize, 0, Math.PI * 2);
+            ctx.arc(e.px + eyeOffsetX + lx, e.py + eyeOffsetY + ly, pupilSize, 0, Math.PI * 2);
+            ctx.fill();
+        }
     }
 
     /**
