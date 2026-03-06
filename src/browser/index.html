@@ -3384,7 +3384,7 @@ function draw(){ //todo rename this to nextGameState
 		return;
 	}
 	
-	console.log('draw(), Object.keys(NS.CCP.pu).length='+Object.keys(NS.CCP.pu).length);
+	//console.log('draw(), Object.keys(NS.CCP.pu).length='+Object.keys(NS.CCP.pu).length);
 
 	//let dt = 1/60; //TODO measure and clamp it
 	let now = time();
@@ -4202,7 +4202,12 @@ var QuadcraftSparseJsonState = (minWriteTimeFromBrowser,minReadTimeFromTomcat)=>
 	//minTime is for reading from tomcat, but before that you can write any times you want it keeps newest. TODO rename it to minReadTime.
 	//let minReadTime = -1234; //slightly before year 1970, include everything even if its t is 0
 	let stateMap = State({
-		query: vr=>(minWriteTimeFromBrowser<=vr.t),
+		//query: vr=>(minWriteTimeFromBrowser<=vr.t),
+		query: vr=>(
+			(minWriteTimeFromBrowser<=vr.t) &&
+			//exclude some temp var names found in balls, to save memory. They can be recomputed.
+			(!/^(Red|Green|Blue|IsHitCCP|IsHitHardOtherBall|IsHitOtherBall)$/.test(vr.name))
+		),
 	}); //see Var.js for other options such as excludeBig and flatPu
 	if(stateMap == null){
 		throw new Error('nothing to return, stateMap is null. FIXME if theres nothing to update, that could happen, so dont throw.');
