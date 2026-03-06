@@ -1,5 +1,5 @@
 //Var*.js, opensource/Apache2 (versions before Bellsack256/2025-8-3 are MIT) by Ben F Rayfield.
-//This version was copied from Bellsack 418 (a script tag containing Var*.js) 2025-12-31 then slightly modified.
+//This version was copied from Bellsack 464 (a script tag containing Var*.js) 2026-3-6.
 
 console.error('TODO O1_ O2_ O3_ O4_ (objects)... P_ Ps_ (Ptrs) L_ Ls_ (Lits) by ORing, to compute Var.po as true or false');
 //copied (then maybe modified) from VarTree_002.html 2025-7-5.
@@ -248,8 +248,9 @@ const Var = function(optionalParentVar, optionalName, optionalBig, optionalGob){
 	//but this is where it snaps to a particular edjoint or null for none.
 	this.ej = null;
 	
-	
+	//TODO change the prototype or Proxy (that is prototype of Var class) so we dont have to store these when null. 
 	this.path_ = null; //cache of this.path(), lazyEvaled
+	this.nath_ = null; //cache of this.nath(), lazyEvaled
 };
 
 //experimental 2025-12-21, to deal with that position accelerates by -accelMul*gradient(lossFunc,position),
@@ -671,6 +672,7 @@ Var.prototype.copyLocalFrom = function(copyMe){
 	this.pr = copyMe.pr;
 	this.ps = copyMe.ps;
 	this.cv = copyMe.cv;
+	//FIXME include edjoint/ej which exists in Dagball from years ago but not in Bellsack or Var as of 2026-2-23
 };
 
 Var.prototype.Mn = function(val){
@@ -703,6 +705,7 @@ Var.prototype.ns = function(){
 	return this.up.ns();
 };
 
+/*specific to Blob Monsters Game
 //gets the Game (like V.testnet.game) of the namespace, even if this is like V.testnet.someGob555
 Var.prototype.getGameVar = function(){
 	return this.ns().game; //TODO multiple views, each a Game instance.
@@ -710,7 +713,7 @@ Var.prototype.getGameVar = function(){
 
 Var.prototype.getGame = function(){
 	return this.getGameVar().getOb(); //Game instance
-};
+};*/
 
 //added 2025-7-5, not tested
 Var.prototype.z = function(){
@@ -836,8 +839,6 @@ Var.prototype.getOb = function(){
 //which is likely to be a far future upgrade.
 Var.prototype.loadMap = function(map, opt={}){ //opt can contain isAutoEval=true andOr keepNewest=true (compare by .t) or neither.
 
-	//FIXME if its flatPu theres no map.pu
-
 	let replaceSelf = !opt.keepNewest || ((map.t!==undefined) && (this.t < map.t));
 	if(replaceSelf){
 		this.p = map.p || 0; //position
@@ -849,7 +850,7 @@ Var.prototype.loadMap = function(map, opt={}){ //opt can contain isAutoEval=true
 		if(map.cv!== undefined) this.cv = map.cv; //base velocity decay
 		//FIXME copy .big here? .name is supposed to be derived from it deterministicly if it exists, and since this (Var) already exists, it should already have that and it cant change. "childVar = this[big];" in the code below does that. so it should work.
 	}
-	if(map.pu){ //childs of any names. This is the !flatPu way.
+	/*if(map.pu){ //childs of any names. This is the !flatPu way.
 		for(let id in map.pu){
 			let childMap = map.pu[id];
 			//let childVar = this[id]; //reuses if exist, else creates using varProxyHandler as Var is a js Proxy object.
@@ -864,9 +865,26 @@ Var.prototype.loadMap = function(map, opt={}){ //opt can contain isAutoEval=true
 			}
 			childVar.loadMap(childMap, opt);
 		}
+	}*/
+	let incoming = map.pu || map; //map if flatPu, else map.pu
+	for(let id in incoming){
+		if((incoming==map.pu) || isChildName(id)){ //isChildName(id) should always be true if its map.pu, but if its map it can have map.p map.v etc in it too.
+			let childMap = incoming[id];
+			//let childVar = this[id]; //reuses if exist, else creates using varProxyHandler as Var is a js Proxy object.
+			let childVar = this.pu[id];
+			if(!childVar){
+				let big = childMap.big || id;
+				childVar = this[big];
+				if(childVar.name != id){
+					Err('Wrong hash. big did not generate expected id of '+id+', from big='+big);
+					//you could just do this[id] but that wouldnt create this[id].big which id is derived from.
+				}
+			}
+			childVar.loadMap(childMap, opt);
+		}
 	}
 	if(opt.isAutoEval){
-		console.log('Var.eval() cuz opt.isAutoEval='+opt.isAutoEval+', '+this.path());
+		//console.log('Var.eval() cuz opt.isAutoEval='+opt.isAutoEval+', '+this.path());
 		this.eval();
 	}
 };
@@ -922,13 +940,16 @@ var StateSearch = (query,excludeBig)=>V.toJson({excludeBig: !!excludeBig, });
 		name = 'blobMonstersGame_'+time();
 	}
 	if(!name.includes('.')) name += '.vartree';
-	let json = State();
+	let json = State(stateOptions);
 	
 };*/
 
+//State(stateOptions) => {...}
+var stateOptions = {excludeBig: false, flatPu: true};
+
 var quicksave = function(name){
 	console.log('quicksave '+name);
-	localStorage.setItem('monst.'+name, State());
+	localStorage.setItem('monst.'+name, State(stateOptions));
 };
 
 var quickload = function(name){
@@ -953,6 +974,48 @@ var saveFile = (fileName, contentType, text)=>{
 	}
 };
 
+//for the "Open (file)" button. This was copied by ben from blobMonstersGame_2025-3-27.html 2026-1-16 then todo slightly modified.
+var createFileEvents = ()=>{
+	let openFileInput = document.getElementById('openFileInput');
+	openFileInput.addEventListener('change', function(event){
+		console.log('asdfasdfsdfCA file load button A');
+		//openFileInput.style.backgroundColor = dagball.colorStr(Math.random(),Math.random(),Math.random()); //FIXME remove this. it changes color of file load button randomly when click it
+		const file = event.target.files[0];
+		if(file){
+			//dagball.doAsap(()=>{
+				console.log('asdfasdfsdfCB file load button B');
+				const reader = new FileReader();
+				reader.onload = function(e){
+					console.log('asdfasdfsdfCC file load button C');
+					const fileContentAsString = e.target.result;
+					//dagball.loadGameStateFromJson(fileContentAsString);
+					console.log('got son from file, length='+fileContentAsString.length);
+					Load(fileContentAsString);
+					console.log('asdfasdfsdfCD file load button D');
+					//setTimeout(function(){
+					//	openFileInput.value = null; //so if you click it and load the same file again, it will get the event and do it
+					//}, 3000);
+					let s = openFileInput.value;
+					if(s.includes('\\')){
+						s = s.substring(s.lastIndexOf('\\')+1);
+					}else if(s.includes('/')){
+						s = s.substring(s.lastIndexOf('/')+1);
+					}
+					if(s.length > 50){
+						s = s.substring(0,25)+'...'+s.substring(s.length-25);
+					}
+					//document.getElementById('lastFilenameLoaded').innerHTML = 'Last file loaded: '+s;
+					//TODO? document.getElementById('lastFilenameLoaded').innerHTML = s;
+					console.log('lastFilenameLoaded='+s);
+					openFileInput.value = null; //so if you click it and load the same file again, it will get the event and do it
+					//throws: openFileInput.value += '(opened)'; //so if you click it and load the same file again, it will get the event and do it
+				};
+				reader.readAsText(file);
+			//});
+		}
+	});
+};
+
 
 //This existed in Blob Monsters Game before Bellsack but seems too specific to one game,
 //so commenting out its contents. Maybe later this should be a place to hook in plugins.
@@ -972,7 +1035,9 @@ Var.prototype.eval = function(){
 	}else{
 		console.warn('TODO how to load Var='+this.path());
 	}*/
-	console.warn('Ignoring attempted Var.eval of '+this.path());
+	//console.warn('Ignoring attempted Var.eval of '+this.path());
+	
+	//do nothing
 };
 
 /*//path height. V is height 0. V.testnet aka namespace is height 1. and so on.
@@ -1022,11 +1087,11 @@ Var.prototype.toMap = function(excludeBig_or_optionsMap){
 	//always: if(this.t){
 		ret.t = this.t; //UTC time updated. not all code will use this. but each Var is a time-series of 2 numbers: position and velocity.
 	//}
-	if(this.pr){
-		ret.pr = this.pr; //target position to spring toward
-	}
 	if(this.ps){
 		ret.ps = this.ps; //spring strength of p toward pr
+		if(this.pr){ //only include target spring position if it would have an effect, aka if spring strength is nonzero
+			ret.pr = this.pr; //target position to spring toward
+		}
 	}
 	if(this.cv){
 		ret.cv = this.cv; //base velocity decay, which kv is reset to in Var.nextState(dt)
@@ -1254,7 +1319,7 @@ Var.prototype.searchYXRGoal = function(y, x, r, goal, maxResults){
 	}, maxResults);
 };
 
-Var.prototype.if0 = function(newP){
+Var.prototype.if0 = function(newP){ //instant, unlike .set
 	if(!this.p) this.p = newP;
 	return this;
 };
@@ -1304,6 +1369,12 @@ const isLowercase = c=>(c >= 'a' && c <= 'z');
 //It is if first char is capital letter, its a valid js var name, and is short enuf.
 var isVarLit = nameOrBig=>(
 	nameOrBig.length <= MaxLiteralNameLen && /^[A-Z_$][a-zA-Z0-9_$]*$/.test(nameOrBig));
+	
+/*var isChildName = possibleName=>(isVarLit(possibleName) ||
+	(possibleName.startsWith('ns.') && isVarLit(possibleName.substring('ns.'.length)))
+	(possibleName.startsWith('v.') && isVarLit(possibleName.substring('v.'.length)));
+*/
+var isChildName = possibleName=>(isVarLit(possibleName) || isVarPath(possibleName));
 
 const MaxVarPathLen = 512; //including paths in paths, see isVarPath
 
@@ -1323,9 +1394,9 @@ ns.Odos.Lone.Ghosts.Lone.Waves.WavyBell200.Ptrs$fn['v.Bellsack.Room1.Shape.Sak$N
 'V.Bellsack.Room1.Odos.Lone.Ghosts.Lone.Waves.WavyBell200.Ptrs$fn.v.Bellsack.Room1.Shape.Sak$NUrpaxxk7jDslEyguqyMLn4YUqCAC8gOIXmsf2DbzHB'
 should have made v.Bellsack.Room1.Shape.Sak$NUrpaxxk7jDslEyguqyMLn4YUqCAC8gOIXmsf2DbzHB display inline.
 */
-var isVarPath = s => {
+var isVarPath = s=>{
     if (s.length > MaxVarPathLen) return false;
-    if (!(s.startsWith('ns.') || s.startsWith('v.'))) return false;
+    if (!(s.startsWith('ns.') || s.startsWith('v.') || s.startsWith('V.'))) return false; //TODO convert V to v?
 
     // quick reject any whitespace
     if (/\s/.test(s)) return false;
@@ -1347,7 +1418,7 @@ Var.prototype.pU = function(nameOrBig){
 	if(isVarLit(nameOrBig) || isVarPath(nameOrBig)){ //isVarLit already verifies isLowercase(nameOrBig[0])
 		ret = this.pu[nameOrBig] || new Var(this, nameOrBig, null, this.ob||null); //auto puts it in this.pu[string]
 	}else{
-		if(isLowercase(nameOrBig[0])){
+		if(isLowercase(nameOrBig[0]) && !nameOrBig.startsWith('ns.') && !nameOrBig.startsWith('v.')){ //ns. and v. are prefixes for use with Ptr$anything Ptrs$anything etc.
 			Err('This often happens when you try to add a new function or field to the Var class at runtime. Put it in Var.prototype or in the Var constructor this.theField = null; or = undefined; so the Proxy (prototype of prototype of each Var instance) is not touched. One prototype deep is where you put class functions. Child Vars cant start with lowercase letter, such as toString p v or you gave: '+nameOrBig);
 		}
 		//let hash = hashStringToHex(nameOrBig);
@@ -1534,26 +1605,29 @@ Var.prototype.popEpsilon = function(){
 	this.prevP = 0;
 };
 
-//TODO test this.
+//This is called when you do new Float32Array([V.Thing,V.Other.Thing2]) which becomes [V.Thing.p,V.Other.Thing2.p]
 Var.prototype.valueOf = function(){ //the position, this.p, though calling this.p is probably more efficient.
 	return this.p;
 };
 
-var singleQuoteEscape = str=>{ //FIXME this has been appearing in anyVar.path() cuz of the syntax change, now is 2025-11-13
-	return "'FIXMEESCAPE_"+str+"'";
+var singleQuoteEscape = str=>{
+	return "'"+str.replace(/\\/g,"\\\\").replace(/'/g,"\\'").replace(/\r/g,"\\r").
+		replace(/\n/g,"\\n").replace(/\u2028/g,"\\u2028").replace(/\u2029/g,"\\u2029")+"'";
 };
 
-//if doAbbrev, then if the path is the current ns (such as v.Bellsack.Room5) returns 'ns', else full path.
-Var.prototype.path = function(doAbbrev){
+//removed doAbbrev, moved that to nath, cuz .path_ cache interfered with that: //if doAbbrev, then if the path is the current ns (such as v.Bellsack.Room5) returns 'ns', else full path.
+//FIXME dont cache it in path_ if its the ns one?
+Var.prototype.path = function(){
 	if(!this.path_){
 		//return this.up ? this.up.path()+'.'+this.name : this.name;
 		if(!this.up){
 			this.path_ = this.name; //likely is 'v' the root, or previously (before 2025-10-30) was 'V'.
-		}else if(doAbbrev && (this == ns)){
-			this.path_ = 'ns';
+		//}else if(doAbbrev && (this == ns)){
+		//	this.path_ = 'ns';
 		}else{
-			let upPath = this.up.path(doAbbrev);
-			if(isVarPath(this.name)){
+			let upPath = this.up.path();
+			//if(isVarPath(this.name)){ //this is wrong cuz its a .name not the whole path
+			if(isVarLit(this.name)){
 				this.path_ = upPath+'.'+this.name;
 			}else{
 				this.path_ = upPath+'['+singleQuoteEscape(this.name)+']';
@@ -1563,8 +1637,28 @@ Var.prototype.path = function(doAbbrev){
 	return this.path_;
 };
 
+//returns the ns. path if its in the ns, else returns path from v.
+Var.prototype.nath = function(){
+	if(!this.nath_){
+		if(!this.up){
+			this.nath_ = this.name; //likely is 'v' the root, or previously (before 2025-10-30) was 'V'.
+		}else if(this == ns){
+			this.nath_ = 'ns';
+		}else{
+			let upNath = this.up.nath();
+			if(isVarLit(this.name)){
+				this.nath_ = upNath+'.'+this.name;
+			}else{
+				this.nath_ = upNath+'['+singleQuoteEscape(this.name)+']';
+			}
+		}
+	}
+	return this.nath_;
+};
+
 Var.prototype.toString = function(){
-	return this.path();//return this.up ? this.up.toString()+'.'+this.name : this.name;
+	return this.nath();
+	//return this.path();//return this.up ? this.up.toString()+'.'+this.name : this.name;
 	//return '{type:"vox_var",p:'+this.p+',v:'+this.v+',kv:'+this.kv+',dp:'+this.dp+',dv:'+this.dv+',mn:'+this.mn+',mx:'+this.mx+'}';
 };
 
@@ -1743,10 +1837,15 @@ Var.prototype.fieldEditor = function(field, isForMenu){
 			hardMax = .02;
 		}else if(this.name=='AddToDensityForTesting'){
 			//FIXME stop hard-coding these slider ranges. find a standard place to put it outside Var*.js
-			add = 0; //FIXME?
+			/*add = 0; //FIXME?
 			mul = .01; //FIXME?
 			hardMin = -.1;
 			hardMax = .1;
+			*/
+			add = 0; //FIXME?
+			mul = .7; //FIXME?
+			hardMin = -2;
+			hardMax = 2;
 		}else if(this.name=='SignedDistanceNewtonIterations'){
 			//FIXME stop hard-coding these slider ranges. find a standard place to put it outside Var*.js
 			add = 0; //FIXME?
