@@ -1,7 +1,12 @@
 //Var*.js, opensource/Apache2 (versions before Bellsack256/2025-8-3 are MIT) by Ben F Rayfield.
-//This version was copied from Bellsack 464 (a script tag containing Var*.js) 2026-3-6.
+//This version was copied 2026-5-26 from Bellsack492.html and can be referred to as VarFromBellsack492.js or Var.js
+//
+//and a slight change to fix a bug loading older files without a .t: this.t = Math.max(this.t||0, map.t||0); //in case !opt.keepNewest, dont want to put in a lower t from map.
 
 console.error('TODO O1_ O2_ O3_ O4_ (objects)... P_ Ps_ (Ptrs) L_ Ls_ (Lits) by ORing, to compute Var.po as true or false');
+if(window.v !== undefined) throw new Error('Theres already a v global var, which is the root like v.Bellsack.Room5.Hello.World');
+if(window.q !== undefined) throw new Error('Theres already a q global var, like q.Hello.World might mean v.Bellsack.Room5.Hello.World');
+
 //copied (then maybe modified) from VarTree_002.html 2025-7-5.
 //Var class was copied 2025-4-16 from blobMonstersGame_2025-3-27.html then modified TODO...
 //
@@ -22,7 +27,7 @@ console.error('TODO O1_ O2_ O3_ O4_ (objects)... P_ Ps_ (Ptrs) L_ Ls_ (Lits) by 
 //position and velocity) and generate whatever pic you want based on that. The params will automatically
 //change so the pics come to life.
 //
-const Var = function(optionalParentVar, optionalName, optionalBig, optionalGob){
+const Var = function(optionalParentVar, optionalName, optionalBig, optionalGob){ //TODO remove optionalGob, those should go in a Map or something, not Var. Its not using that in Bellsack but did use it in Blob Monsters Game.
 	/*TODO[[[explained in https://chatgpt.com/g/g-p-67e3e1532ca08191983aad7a25c9c520-bellsack/c/691b4fcb-b89c-8327-85b6-ee2d9b5cd5ab 2025-11-17
 	1 . Prefix vocabulary
 	prefix	“look-back” distance d	semantics of .p
@@ -142,7 +147,7 @@ const Var = function(optionalParentVar, optionalName, optionalBig, optionalGob){
 	this.poten = 0;
 	this.prevP = 0; //stores the prev value of this.p while an epsilon is added to this.p during a gradient calculation, then restore it
 	this.epsilon = DefaultEpsilon; //FIXME, replacement for indexToEpsilon
-	this.accelMul = 1; //FIXME, replacement for indexToAccelMul
+	this.accelMul = 1; //FIXME, replacement for indexToAccelMul. mass may be 1/accelMul, experimental code may use mass. see Var.mass().
 	//use this.brain instead: this.evaled = null; //eval of this.big || this.name, a js lambda whose params are all Var objects, those in this.influence.vars or gob.vars
 	
 	/* A tighter security copy of this.p, that may differ from this.p like by game.sparseUpdate() or game.tryEval(string) etc.
@@ -207,7 +212,7 @@ const Var = function(optionalParentVar, optionalName, optionalBig, optionalGob){
 		return this[fieldName]!==undefined ? this[fieldName] : this.pU(fieldName); //creates fieldName
 	};*/
 	
-	//spring at-rest has one of its ends here (meaniung this.p is attracted to it by positive ps,
+	//spring at-rest (taRget) has one of its ends here (meaning this.p is attracted to it by positive ps,
 	//and you should probably not have negative ps cuz it will repel this.p toward positive or
 	//negative infinity unless you have other physics forces preventing that).
 	//has no effect if ps==0. position taRget, like in dagball.Ed having a target ave and strength as a parabola
@@ -215,7 +220,16 @@ const Var = function(optionalParentVar, optionalName, optionalBig, optionalGob){
 	//spring strength. strength of p toward pr, as pr and ps define a parabola of poten
 	this.ps = 0;
 	
+	
 	this.cv = 0; //base kv. its cv+kv, not just kv, but kv is set by code dynamicly, and cv is set in the Var.
+	
+	//TODO? not timeSpeed cuz its supposed to be by velocityDecay cuz timeSpeed
+	//makes things not work right if time varies in speed from one side of the object vs the other side, in theory,
+	//"call it vv for timeVelocity, naming it similar to cv (base velocity decay) and kv (runtime velocity decay that starts at cv+vv)"
+	this.vv = 0;
+	
+	//this.cv+this.vv == (except roundoff) starting value of this.kv just after each physics cycle starts.
+	
 	
 	//Set of functions like (ancestorVar,selfVar,map)=>{...code...} called when .p or .v changed or sometimes called
 	//when nothing changed (just make sure not to miss when it does change, firing too much when it hasnt changed is ok).
@@ -251,6 +265,14 @@ const Var = function(optionalParentVar, optionalName, optionalBig, optionalGob){
 	//TODO change the prototype or Proxy (that is prototype of Var class) so we dont have to store these when null. 
 	this.path_ = null; //cache of this.path(), lazyEvaled
 	this.nath_ = null; //cache of this.nath(), lazyEvaled
+};
+
+//chill out, stop moving around so much.
+Var.prototype.chill = function(){ //set position (.p;) to target spring position (.pr), if spring strength (.ps) is nonzero. Either way set .v velocity to 0.
+	if(this.ps){
+		this.p = this.pr;
+	}
+	this.v = 0;
 };
 
 //experimental 2025-12-21, to deal with that position accelerates by -accelMul*gradient(lossFunc,position),
@@ -395,8 +417,8 @@ Var.prototype.listen = function(listener){
 };
 
 //opposite of Var.listen(listener)
-//Test this by deleting the top panel containing ns.Opt.IsGraphicsDebug checkbox
-//and verify ns.Opt.IsGraphicsDebug.listeners doesnt contain its listener anymore
+//Test this by deleting the top panel containing q.Opt.IsGraphicsDebug checkbox
+//and verify q.Opt.IsGraphicsDebug.listeners doesnt contain its listener anymore
 //but did before the deletion. Successful test 2025-11-16-930aET.
 Var.prototype.unlisten = function(listener){
 	console.log(this.path()+'.unlisten('+listener+')');
@@ -481,6 +503,7 @@ Var.prototype.isDirtyByList = function(){
 //This does not check .pr .ps (spring holding .p in a parabola shaped
 //energy well) or Edjoints/Lit_ej/Ej_/Lit$ej/Ej$.
 Var.prototype.isDirtyByContent = function(){
+	//FIXME this.kv!=this.cv should be this.kv!=(this.cv+this.vv) but that could have roundoff
 	return this.v || this.dp || this.dv || (this.kv!=this.cv) || (this.mn!=-Infinity) || (this.mx!=Infinity);
 };
 
@@ -697,6 +720,7 @@ Var.prototype.set = function(val){
 };
 
 //get namespace
+//TODO "2026-4-15 considering using 'q' instead of 'ns' such as v.Bellsack.Room5.Abc might be named q.Abc"?
 Var.prototype.ns = function(){
 	if(this.h <= 1){
 		if(this.h == 0) throw Error('This is root Var, which namespaces are childs of.');
@@ -843,7 +867,7 @@ Var.prototype.loadMap = function(map, opt={}){ //opt can contain isAutoEval=true
 	if(replaceSelf){
 		this.p = map.p || 0; //position
 		this.v = map.v || 0; //velocity
-		this.t = Math.max(this.t, map.t); //in case !opt.keepNewest, dont want to put in a lower t from map.
+		this.t = Math.max(this.t||0, map.t||0); //in case !opt.keepNewest, dont want to put in a lower t from map.
 		if(map.gp!== undefined) this.gp = map.gp;
 		if(map.pr!== undefined) this.pr = map.pr; //spring at-rest length
 		if(map.ps!== undefined) this.ps = map.ps; //spring strength, or 0 to not use spring
@@ -960,8 +984,9 @@ var quickload = function(name){
 	}
 };
 
-var saveFile = (fileName, contentType, text)=>{
-	var blob = new Blob([text], {type: contentType});
+var saveFile = (fileName, contentType, stringOrUint8Array)=>{
+	console.log('Save file: '+fileName);
+	var blob = new Blob([stringOrUint8Array], {type: contentType});
 	if(window.navigator.msSaveOrOpenBlob){
 		window.navigator.msSaveBlob(blob, fileName);
 	}else{
@@ -1662,7 +1687,7 @@ Var.prototype.toString = function(){
 	//return '{type:"vox_var",p:'+this.p+',v:'+this.v+',kv:'+this.kv+',dp:'+this.dp+',dv:'+this.dv+',mn:'+this.mn+',mx:'+this.mx+'}';
 };
 
-console.error('TODO this VarVM.next should be called instead of lamglLoopBody andOr VarGradientGL etc calling nextState on specificly the Vars it modified (ball states, bell5 states, etc), and do move opt={} into ns.Opt. The rule is, as in Var.makeDirty(), a Var is dirty if it has nonzero .v or has been modified, and nextState should be called on ALL Vars that are dirty. If it remains dirty after nextState(dt), such as its velocity has not yet run down by velocityDecay/kv/cv then it becomes dirty again and that happens again next cycle too. We wont have to directly call Var.touch() or the other 2 like it. VarVM.next Var.makeDirty Var.set .');
+console.error('TODO this VarVM.next should be called instead of lamglLoopBody andOr VarGradientGL etc calling nextState on specificly the Vars it modified (ball states, bell5 states, etc), and do move opt={} into q.Opt. The rule is, as in Var.makeDirty(), a Var is dirty if it has nonzero .v or has been modified, and nextState should be called on ALL Vars that are dirty. If it remains dirty after nextState(dt), such as its velocity has not yet run down by velocityDecay/kv/cv then it becomes dirty again and that happens again next cycle too. We wont have to directly call Var.touch() or the other 2 like it. VarVM.next Var.makeDirty Var.set .');
 VarVM.next = function(dt){
 	let list =  VarVM.dirtHead;				// capture current queue
 	VarVM.dirtHead = null;					// new dirties start next list
@@ -1733,7 +1758,7 @@ Var.prototype.nextState = function(dt){
 		this.v = nextV;
 	}
 	//this.kv = this.dp = this.dv = this.gr = this.poten = 0;
-	this.kv = this.cv; //cv is base kv. velocity decay per second continuously.
+	this.kv = this.cv+this.vv; //this.kv = this.cv; //cv is base kv. velocity decay per second continuously. See .vv field added (timeVelocity for sparse game worlds to make velocity reach 0 so dont have to simulate them and do so for things far away, make sure cv, vv, and kv are always nonnegative, different than timeSpeedOfVar func in Bellsack).
 	this.dp = this.dv = this.poten = 0; //OLD: leave this.gr as is, since its not a sum, is just set all at once in one of the doPhysics funcs.
 	this.prevGr = this.gr; //for debugging. has no effect on physics. previous gradient.
 	this.gr = 0; //cuz in blobMonstersGame gr was set in doPhysicsA, but here we dont have that func.
@@ -1876,13 +1901,20 @@ Var.prototype.fieldEditor = function(field, isForMenu){
 			mul = 50; //FIXME?
 			hardMin = 0;
 			hardMax = 1000;
+		}else if(this.name=='StartStrongRecoveryWhenBallPenetrateTerrainMoreThan'){
+			//FIXME stop hard-coding these slider ranges. find a standard place to put it outside Var*.js
+			add = 0;
+			mul = 1.3;
+			hardMin = -5;
+			hardMax = 5;
 		}else{
 			/*//TODO should i remove is and do since those start with lowercase?
 			//Var childs must start Capital, but its not just for childs.
 			if((field.startsWith('is')||field.startsWith('Is') || field.startsWith('do')||field.startsWith('Do')) && (this.p===0 || this.p===1)){
 				return new CheckboxVarEditor(this); //like for V.testnet.game.doRps
 			}*/
-			if((this.name.startsWith('Is') || this.name.startsWith('Do')) && (this.p===0 || this.p===1)){
+			if((this.name.startsWith('Is') || this.name.startsWith('Do') || this.name.startsWith('Enable') || this.name.startsWith('Always'))
+					&& (this.p===0 || this.p===1)){
 				return new CheckboxVarEditor(this); //like for v.Bellsack.Room5.Opt.IsGraphicsDebug.p
 			}
 			//add = this.p;
@@ -1968,7 +2000,7 @@ Var.prototype.fieldEditors = function(){
 	return [
 		//FIXME theres no "game.isDisplayFullVarNamesInTable" in bellsack. but dont want to
 		//break compatibility. check if it exists anyways, but dont assume the 'game' var
-		//even exists. we would do that as ns.Opt.NameOfOption.p in bellsack.
+		//even exists. we would do that as q.Opt.NameOfOption.p in bellsack.
 		this.fieldEditor(game.isDisplayFullVarNamesInTable.p ? 'path' : 'name'),
 		
 		this.fieldEditor('v',false), //false not isForMenu, cuz is for the 2d grid on the bottom right controlled by "vars" checkbox.
@@ -1996,7 +2028,7 @@ var NumEditor = function(get, set){
 //wrapMe is a NumEditor such as wrapping a raw Var.ps or Var.p or Var.kv
 var SigmoidNumEditor = function(wrapMe, optionalAdd, optionalMul, optionalMin, optionalMax){
 	//FIXME put in event to unlisten in Var, and set slider state, similar to
-	//how CheckboxVarEditor did it, cuz I changed ns.Opt.SignedDistanceNewtonIterations .
+	//how CheckboxVarEditor did it, cuz I changed q.Opt.SignedDistanceNewtonIterations .
 	this.add = optionalAdd || 0;
 	this.mul = optionalMul || 1;
 	this.min = optionalMin || (-(2**30));
