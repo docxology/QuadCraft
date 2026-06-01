@@ -136,7 +136,8 @@ fillGridByFunc(selq, 5, q=>{
 			</nobr>
 		</td><td>
 			6 forward directions (or keyboard)<br>
-			<input type="checkbox" id="directionsButtonsMoveCam" checked><label for="directionsButtonsMoveCam">directionsButtonsMoveCam </label>
+			<input type="checkbox" id="directionsButtonsMoveCam" checked><label for="directionsButtonsMoveCam">directionsButtonsMoveCam</label>
+			<label><input id="forNetworkSync_isBeforeFirstReceiveFromTomcat" type="checkbox" title="for adjusting Var.t in network sync related to tomcatSparseSaveAndLoad func. Starts checked. After first tomcatSparseSaveAndLoad becomes unchecked, just leave it that way unless ur testing the network. 2026-6-1 im about to try making this change on first recieve from tomcat, instead of first send to tomcat. All Var.t get set to 0 just before first send to Tomcat. After first receive from Tomcat, everywhere to everywhere is just keep the max Var.t per Var, and to break ties dont update if theres a tie." checked>forNetworkSync_isBeforeFirstReceiveFromTomcat</label>
 		</td><td>
 			<label id=camQuadLabel></label>
 		</td></tr></table>
@@ -163,6 +164,8 @@ var Game = null; //const Game = V.QuadCraft;
 //It auto creates childs when you say http://V.Quadcraft.Whatever.You.Want .
 
 var NS = null; //var Room = Game.Room1; //var Room = null; //var Room = Game.Room1;
+var q = null; //same as NS. v is root of Var tree. q is room. This is how its organized in some advanced uses of Var.js that include paths, but u dont technically have to use those names.
+var v = null; //same as V.
 //put balls here like Ball.B500.X.p is the x position
 //of V.Quadcraft.Room1.Ball.B500, and similarly .Y and .Z
 //and whatever other vars you want to put in a ball.
@@ -178,7 +181,8 @@ const ballRadius = 1;
 var resetVars = ()=>{
 	V.clear(); //built into Var.js
 	Game = V.QuadCraft;
-	NS = Game.Room1;
+	v = V;
+	q = NS = Game.Room1;
 	Ball = NS.Ball;
 	Opt = NS.Opt;
 	
@@ -204,7 +208,8 @@ var resetVars = ()=>{
 	Opt.NewBallExtraDownAccel.p = 5;
 	//Opt.NewBallExtraDownAccel.if0(20);
 
-	Opt.DeleteBallsIfLowerThanY.p = -50;
+	//Opt.DeleteBallsIfLowerThanY.p = -50;
+	Opt.DeleteBallsIfLowerThanY.p = -1000; //2026-3-6 switching to Opt.MaxRollBalls so newOrExistingBallAtXYZ moves the lowest ball to where the new ball goes if theres too many balls
 
 	//This in theory should fix the balls going inside CCPBallGrid shapes, crossing their surface.
 	//Opt.RepelBallsUsingPenetrationDepth_mul.p = 1; //FIXME
@@ -250,6 +255,9 @@ var resetVars = ()=>{
 	//Opt.IsHitHardOtherBall_howManyRadiusIsTooMuchOverlap.if0(1.5); //FIXME why isnt this enuf? is IsHitHardOtherBall_howManyRadiusIsTooMuchOverlap buggy? 2 should be max possible overlap but at 1.5 I see them turning red with a slight touch.
 	
 	Opt.LogCreateAndDeleteBalls.p = 0; //0 no 1 yes
+	
+	//Opt.MaxRollBalls.p = 100; //normal
+	Opt.MaxRollBalls.p = 5; //test
 
 };
 //delay til window.onload: resetVars();
@@ -3291,8 +3299,8 @@ var doGameLogic = (now,dt)=>{
 			randRange(-randVelCubeSide/2,randVelCubeSide/2),
 			randRange(-randVelCubeSide/2,randVelCubeSide/2)-Opt.NewBallExtraDownAccel.p,
 			randRange(-randVelCubeSide/2,randVelCubeSide/2)
-		]
-		let ball = newBallAtXYZ(newBallPositionXYZ, newBallVelocityXYZ);
+		];
+		let ball = newOrExistingBallAtXYZ(Opt.MaxRollBalls.p, newBallPositionXYZ, newBallVelocityXYZ);
 		timeCreateNextBall += Opt.BallCreateInterval.p;
 		if(timeCreateNextBall+Opt.BallCreateInterval.p < now){
 			timeCreateNextBall = now; //dont accumulate balls to create while paused or delayed such as during loading a new game level
@@ -3831,9 +3839,7 @@ var nextBallNameSuffix = 1;
 
 var newBallName = ()=>('B'+(nextBallNameSuffix++));
 
-//creates in V/Var tree
-var newBallAtXYZ = (xyz,optionalVelocityXYZ)=>{
-	let ball = Ball[newBallName()];
+var modBallToBeLikeNew = (ball,xyz,optionalVelocityXYZ)=>{
 	ball.X.p = xyz[0];
 	ball.Y.p = xyz[1];
 	ball.Z.p = xyz[2];
@@ -3849,8 +3855,33 @@ var newBallAtXYZ = (xyz,optionalVelocityXYZ)=>{
 	//ball.X.cv = ball.Y.cv = ball.Z.cv = .31; //base velocity decay. .kv adds to this and is where u add dynamic velocity decay.
 	//ball.X.cv = ball.Y.cv = ball.Z.cv = 2.31;
 	ball.X.cv = ball.Y.cv = ball.Z.cv = 5.31;
+};
+
+//creates in V/Var tree
+var newBallAtXYZ = (xyz,optionalVelocityXYZ)=>{
+	let ball = Ball[newBallName()];
+	modBallToBeLikeNew(ball,xyz,optionalVelocityXYZ);
 	if(Opt.LogCreateAndDeleteBalls.p) console.log('Created ball '+ball.path()); //path() is its V/Var tree id
 	return ball;
+};
+
+
+//like newBallAtXYZ except if theres some max number of balls it moves an existing ball and returns it.
+//This simplifies the server code not to have to delete balls, which would have been when ball.p==0, but for network sync
+//it would have to store balls for longer or remember which to tell others to delete, and its just simpler to reuse existing balls.
+//Var.js networking parts are experimental as of 2026-3-6.
+var newOrExistingBallAtXYZ = (maxBalls,xyz,optionalVelocityXYZ)=>{
+	let balls = getAllRollBalls();
+	if(maxBalls <= 0) throw new Error('maxBalls must be a positive integer (such as 100) but is '+maxBalls);
+	if(balls.length < maxBalls){
+		return newBallAtXYZ(maxBalls,xyz,optionalVelocityXYZ);
+	}else{
+		let lowestBall = balls[0];
+		for(let ball of balls) if(ball.Y.p < lowestBall.Y.p) lowestBall = ball;
+		modBallToBeLikeNew(lowestBall,xyz,optionalVelocityXYZ);
+		if(Opt.LogCreateAndDeleteBalls.p) console.log('Moved lowestBall='+lowestBall.path()); //path() is its V/Var tree id
+		return lowestBall;
+	}
 };
 
 var TestBall = null;
@@ -4174,7 +4205,7 @@ var quadCraftAjax = (json, returnHere)=>{
 	fetch("QuadCraftAjax.jsp", {
 		method: "POST",
 		headers: {
-			"Content-Type": "text/plain"
+			"Content-Type": "application/json"
 		},
 		body: json   // already a string?
 	})
@@ -4193,10 +4224,10 @@ var QuadcraftWholeJsonState = ()=>{
 //This function is not really specific to QuadCraft, is more general Var.js stuff as that library is incomplete.
 var QuadcraftSparseJsonState = (minWriteTimeFromBrowser,minReadTimeFromTomcat)=>{
 	if(minWriteTimeFromBrowser === undefined){
-		minWriteTimeFromBrowser = -1234; //all, since thats near the end of year 1969. 0 is exactly the start of 1970 by UTC time.
+		minWriteTimeFromBrowser = 0; //all, since thats the start of year 1970 UTC
 	}
 	if(minReadTimeFromTomcat === undefined){
-		minReadTimeFromTomcat = -1234; //all, since thats near the end of year 1969
+		minReadTimeFromTomcat = 0; //all, since thats the start of year 1970 UTC
 	}
 	//FIXME only get partial state not the whole thing, do similar thing with Var.t as did in the JSP in tomcat, but do it here in html/js.
 	//minTime is for reading from tomcat, but before that you can write any times you want it keeps newest. TODO rename it to minReadTime.
@@ -4249,19 +4280,48 @@ If that works, I open another browser tab and click TomcatSparseSaveAndLoad and 
 
 //the more advanced way (than tomcatSave) that does live multiplayer gaming.
 var tomcatSparseSaveAndLoad = function(){
+	console.log('tomcatSparseSaveAndLoad');
 	V.touchIfTpvRecursive(); //update Var.t for all Var that changed since last call of touchIfTpvRecursive
+	let forNetworkSync_isBeforeFirstReceiveFromTomcat = Dom('forNetworkSync_isBeforeFirstReceiveFromTomcat');
+	let isBeforeFirstReceiveFromTomcat = forNetworkSync_isBeforeFirstReceiveFromTomcat.checked;
+	if(isBeforeFirstReceiveFromTomcat){
+		let setT = 0;
+		console.log(' first-sparse: set t→'+setT);
+		//Set all Var.t in the room (such as v.QuadCraft.Room435) to long ago (UTC time -5000)
+		//so any update to them from any computers in network will replace that, and this wont replace any of them
+		//unless theres no other copy of any time on the server.
+		//FIXME then how does server get the first copy of those that arent updated after this?
+		//
+		//dont do this cuz negatives dont get synced: setVarTouchTime(q,-5000,true);
+		//
+		//0 is UTC time first moment of year 1970 and the minimum time that can sync.
+		//It will only overwrite if its the first to write that var as t=0 cuz ties dont change value.
+		//setVarTouchTime(q,0,true);
+		//setVarTouchTime(q,setT,true);
+		//Var.touch(optionalT) and Var.touchRecur(optionalT) replacing setVarTouchTime 2026-6-1
+		q.touchRecur(setT);
+		
+		//dont uncheck it here. Uncheck when received from tomcat. forNetworkSync_isBeforeFirstReceiveFromTomcat.checked = false; //uncheck the checkbox
+	}
 	let vrStateStr = QuadcraftSparseJsonState();
 	console.log('START tomcatSparseSaveAndLoad, saving: '+vrStateStr);
 	quadCraftAjax(vrStateStr, function(vrResp){
 		useLastReceivedResponseTo_tomcatSparseSaveAndLoad_jsonReceived = vrResp;
 		console.log("tomcatSparseSaveAndLoad finished, got response:", vrResp);
-		//TODO load that response
+		let forNetworkSync_isBeforeFirstReceiveFromTomcat = Dom('forNetworkSync_isBeforeFirstReceiveFromTomcat');
+		if(forNetworkSync_isBeforeFirstReceiveFromTomcat.checked){
+			console.log('Auto unchecking checkbox forNetworkSync_isBeforeFirstReceiveFromTomcat, then will call useLastReceivedResponseTo_tomcatSparseSaveAndLoad().');
+			forNetworkSync_isBeforeFirstReceiveFromTomcat.checked = false;
+		}
+		useLastReceivedResponseTo_tomcatSparseSaveAndLoad();
+		console.log('useLastReceivedResponseTo_tomcatSparseSaveAndLoad ended.');
 	});
 };
 
 var useLastReceivedResponseTo_tomcatSparseSaveAndLoad_jsonReceived = null;
 
 var useLastReceivedResponseTo_tomcatSparseSaveAndLoad = ()=>{
+	console.log('useLastReceivedResponseTo_tomcatSparseSaveAndLoad');
 	if(!useLastReceivedResponseTo_tomcatSparseSaveAndLoad_jsonReceived) throw new Error('no useLastReceivedResponseTo_tomcatSparseSaveAndLoad_jsonReceived, run tomcatSparseSaveAndLoad and wait for response (.01 second for example if on same computer) then call this.');
 	QuadcraftSparseJsonLoad(useLastReceivedResponseTo_tomcatSparseSaveAndLoad_jsonReceived);
 };

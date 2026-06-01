@@ -9,7 +9,8 @@
 	//if theres just a few players so dont worry about it for now.
 	//Also, immutable may make threading easier
 	//since you can many-read but one-write.
-	static NavigableMap V = JsonDS.map("p",0., "v",0., "t",10000.); //root of V tree
+	static volatile NavigableMap V = JsonDS.map("p",0., "v",0., "t",10000.); //root of V tree
+	static final Object VLock = new Object();
 	
 	static boolean testedOccamsJsonDS = false;
 	
@@ -25,14 +26,14 @@
 	}
 	
 	static String stringInStringOut(String i){
-		System.out.println("\n\n\n\n\n\n\n\n");
+		System.out.println("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nSTART===============================================================================================================================================================================================\n\n\n\n\n");
 		if(!testedOccamsJsonDS){
 			System.out.println("START: test json");
 			TestJsonDS.main(new String[0]);
 			System.out.println("END: test json. Look at output, it doesnt throw if its broken, but its been working.");
 			testedOccamsJsonDS = true;
 		}
-		System.out.println("in length = "+i);
+		System.out.println("in length = "+i.length());
 		Object ob = jsonToOb(i); //probably a NavigableMap as json {}
 		String action = (String)((NavigableMap)ob).get("action");
 		if(action == null){
@@ -67,7 +68,11 @@
 				if(incoming == null){
 					throw new Error("No map.V but action is writeSparse");
 				}
-				V = mergeMaps(V,(NavigableMap)incoming); //update shared state on sever that multiple remote browsers sync with or parts of
+				synchronized(VLock){
+					//in case 2 threads try to mod the tree at once. The tree is immutable (or at least used that way) but
+					//we dont want other threads changes to get ignored. Keep the newest of each Var by Var.t.
+					V = mergeMaps(V,(NavigableMap)incoming); //update shared state on sever that multiple remote browsers sync with or parts of
+				}
 				if(!isReadWriteSparse){
 					o = "{\"action\":\"ok\"}";
 					break;
@@ -84,7 +89,10 @@
 			break;default:
 				throw new Error("Unknown action="+action);
 		}
-		System.out.println("stringInStringOut\nIN: "+i+"\nOUT: "+o);
+		System.out.println("stringInStringOut\nIN: "+i);
+		System.out.println("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nIN_Above_OUT_Below%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%\n\n\n\n\n");
+		System.out.println("OUT: "+o);
+		System.out.println("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nEND----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------\n\n\n\n\n");
 		return o;
 	}
 	

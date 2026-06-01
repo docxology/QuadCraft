@@ -650,8 +650,18 @@ var DefaultGp = 0;
 //var DefaultGp = 15.5;
 
 console.error('TODO merge Var.prototype.touch into Var.prototype.makeDirty but dont call TimeId() that often cuz system clock could be the bottleneck in modding vars in that case. Instead only call TimeId() in lamglLoopBody once and call ...');
-Var.prototype.touch = function(){
-	this.t = TimeId(); //a unique time, increments by at least 1 ULP.
+Var.prototype.touchRecur = function(optionalT){
+	this.touch(optionalT);
+	for(const k in this.pu){
+		this.pu[k].touchRecur(optionalT);
+	}
+	return this; //for chaining calls
+};
+Var.prototype.touch = function(optionalT){
+	//TimeId() returns a unique time, increments by at least 1 ULP.
+	this.t  = optionalT!==undefined ? optionalT : TimeId();
+	this.tp = this.p; //tp is value of p, and tv is value of v, the last time t was updated.
+	this.tv = this.v;
 	return this; //for chaining calls
 };
 
@@ -659,9 +669,7 @@ Var.prototype.touch = function(){
 //and set tp and tv to the current values.
 Var.prototype.touchIfTpv = function(){
 	if((this.p != this.tp) || (this.v != this.tv)){
-		this.tp = this.p;
-		this.tv = this.v;
-		this.t = TimeId(); //a unique time, increments by at least 1 ULP.
+		this.touch();
 	}
 };
 
@@ -862,17 +870,17 @@ Var.prototype.getOb = function(){
 //Another way to limit that risk is to use wikibinator203 instead of javascript as the model of gob.brain code
 //which is likely to be a far future upgrade.
 Var.prototype.loadMap = function(map, opt={}){ //opt can contain isAutoEval=true andOr keepNewest=true (compare by .t) or neither.
-
-	let replaceSelf = !opt.keepNewest || ((map.t!==undefined) && (this.t < map.t));
+	let replaceSelf = !opt.keepNewest || opt.internal_mapWinsTimeTies || ((map.t!==undefined) && (this.t < map.t));
 	if(replaceSelf){
 		this.p = map.p || 0; //position
 		this.v = map.v || 0; //velocity
-		this.t = Math.max(this.t||0, map.t||0); //in case !opt.keepNewest, dont want to put in a lower t from map.
 		if(map.gp!== undefined) this.gp = map.gp;
 		if(map.pr!== undefined) this.pr = map.pr; //spring at-rest length
 		if(map.ps!== undefined) this.ps = map.ps; //spring strength, or 0 to not use spring
 		if(map.cv!== undefined) this.cv = map.cv; //base velocity decay
 		//FIXME copy .big here? .name is supposed to be derived from it deterministicly if it exists, and since this (Var) already exists, it should already have that and it cant change. "childVar = this[big];" in the code below does that. so it should work.
+		//this.t = Math.max(this.t||0, map.t||0); //in case !opt.keepNewest, dont want to put in a lower t from map.
+		this.touch(Math.max(this.t||0, map.t||0)); //sets this.t to that param, this.tp to this.p, and this.tv to this.v, meaning the values of p and v last time t changed.
 	}
 	/*if(map.pu){ //childs of any names. This is the !flatPu way.
 		for(let id in map.pu){
@@ -896,15 +904,21 @@ Var.prototype.loadMap = function(map, opt={}){ //opt can contain isAutoEval=true
 			let childMap = incoming[id];
 			//let childVar = this[id]; //reuses if exist, else creates using varProxyHandler as Var is a js Proxy object.
 			let childVar = this.pu[id];
+			opt.internal_mapWinsTimeTies = false; //keep Var.p Var.v etc if Var.t==incomingData.t
 			if(!childVar){
 				let big = childMap.big || id;
 				childVar = this[big];
+				opt.internal_mapWinsTimeTies = true; //cuz just now created childVar, take the values from map if tied. Var.t will start at 0 and tie at 0 if we dont do this.
 				if(childVar.name != id){
 					Err('Wrong hash. big did not generate expected id of '+id+', from big='+big);
 					//you could just do this[id] but that wouldnt create this[id].big which id is derived from.
 				}
 			}
-			childVar.loadMap(childMap, opt);
+			try{
+				childVar.loadMap(childMap, opt);
+			}finally{
+				delete opt.internal_mapWinsTimeTies;
+			}
 		}
 	}
 	if(opt.isAutoEval){
