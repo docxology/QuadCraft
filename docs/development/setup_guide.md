@@ -211,7 +211,7 @@ For Windows with Visual Studio, you can run directly from the IDE with F5 or the
 
 ### Running Browser Games
 
-The 12 standalone browser games require no build step:
+The 30 standalone browser games require no build step:
 
 ```bash
 # Open any game directly
@@ -223,7 +223,7 @@ cd games
 
 # Or use the Python launcher
 python3 games/run_games.py --game chess    # Single game
-python3 games/run_games.py --all           # All 12 games
+python3 games/run_games.py --all           # All 30 games
 python3 games/run_games.py --test          # Run all unit tests
 ```
 
@@ -401,7 +401,7 @@ Now that your development environment is set up, here are some suggestions for g
 
 ## Contributing
 
-We welcome contributions to QuadCraft! Please see the [CONTRIBUTING.md](../../CONTRIBUTING.md) file for guidelines on how to contribute.
+We welcome contributions to QuadCraft! Please see the [Contributing Guide](../../games/doc/contributing.md) for guidelines on how to contribute.
 
 ## License
 

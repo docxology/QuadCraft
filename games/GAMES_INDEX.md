@@ -12,7 +12,7 @@
 | Metric | Value |
 |--------|-------|
 | **Implemented Games** | 30 |
-| **Total Unit Tests** | 1,253 (all passing ✅) |
+| **Total Unit Tests** | 1,781 (all passing ✅) |
 | **Shared Modules** | 17 (12 core + 4 extended + hud-style.css) |
 | **Architecture** | Standalone HTML + `4d_generic/` shared modules |
 | **Last Validated** | 2026-02-23 |
@@ -27,25 +27,25 @@
 
 | # | Game | Dir | Complete | Tests | Players | Grid | AI | Input | Camera | Key Mechanic |
 |---|------|-----|----------|-------|---------|------|-----|-------|--------|-------------|
-| 1 | ♟️ **4D Chess** | [`4d_chess/`](4d_chess/) | 80% | 91 | 2 | 8⁴ discrete | Minimax | Click | Shift-drag | Turn-based strategy, check/checkmate |
-| 2 | 🏁 **4D Checkers** | [`4d_checkers/`](4d_checkers/) | 70% | 11 | 2 | 8⁴ discrete | Rule-based | Click | Left-drag | Diagonal capture + promotion |
-| 3 | ⚫ **4D Reversi** | [`4d_reversi/`](4d_reversi/) | 80% | 34 | 2 | 8⁴ discrete | Greedy AI | Click | Shift-drag | Disc flipping + AI opponent |
-| 4 | 🎲 **4D Backgammon** | [`4d_backgammon/`](4d_backgammon/) | 60% | 29 | 2 | 24-point spiral | Dice-driven | Click | Shift-drag | 24-point 4D spiral track + dice |
-| 5 | 🏝️ **4D Catan** | [`4d_catan/`](4d_catan/) | 40% | 43 | 2-4 | 19-hex tile | Trade AI | Click | Shift-drag | 19 tiles, resources, settlements |
+| 1 | ♟️ **4D Chess** | [`4d_chess/`](4d_chess/) | 80% | 91 | 2 | 8⁴ discrete | None (2-player human) | Click | Shift-drag | Turn-based strategy, check/checkmate |
+| 2 | 🏁 **4D Checkers** | [`4d_checkers/`](4d_checkers/) | 70% | 11 | 2 | 4⁴ discrete | Rule-based | Click | Left-drag | Diagonal capture + promotion |
+| 3 | ⚫ **4D Reversi** | [`4d_reversi/`](4d_reversi/) | 80% | 34 | 2 | 4⁴ discrete | Greedy AI | Click | Shift-drag | Disc flipping + AI opponent |
+| 4 | 🎲 **4D Backgammon** | [`4d_backgammon/`](4d_backgammon/) | 60% | 30 | 2 | 24-point spiral | Dice-driven | Click | Shift-drag | 24-point 4D spiral track + dice |
+| 5 | 🏝️ **4D Catan** | [`4d_catan/`](4d_catan/) | 40% | 56 | 2 (1 human + 1 AI) | 19-hex tile | Trade AI | Click | Shift-drag | 19 tiles, resources, settlements |
 | 6 | 🀄 **4D Mahjong** | [`4d_mahjong/`](4d_mahjong/) | 80% | 33 | 1 | 4-layer stack | — | Click | Shift-drag | 144-tile 4-layer matching |
-| 7 | 🔴 **4D Connect Four** | [`4d_connect_four/`](4d_connect_four/) | 90% | 114 | 2 | 7⁴ gravity | Lookahead | Click | Shift-drag | Gravity-drop 4-in-a-row detection |
-| 8 | ⚪ **4D Go** | [`4d_go/`](4d_go/) | 60% | 31 | 2 | Liberties Grid | Minimax/Greedy | Click | Shift-drag | Go liberties on IVM |
-| 9 | ⬡ **4D Hex** | [`4d_hex/`](4d_hex/) | 70% | 28 | 2 | Hex/IVM connection | Path AI | Click | Shift-drag | Topological connection |
+| 7 | 🔴 **4D Connect Four** | [`4d_connect_four/`](4d_connect_four/) | 90% | 124 | 2 | 6×5×3×3 gravity | Lookahead | Click | Shift-drag | Gravity-drop 4-in-a-row detection |
+| 8 | ⚪ **4D Go** | [`4d_go/`](4d_go/) | 60% | 31 | 2 | Liberties Grid | None (2-player human) | Click | Shift-drag | Go liberties on IVM |
+| 9 | ⬡ **4D Hex** | [`4d_hex/`](4d_hex/) | 70% | 29 | 2 | Hex/IVM connection | Path AI | Click | Shift-drag | Topological connection |
 
 ### Arcade & Action (5)
 
 | # | Game | Dir | Complete | Tests | Players | Grid | AI | Input | Camera | Key Mechanic |
 |---|------|-----|----------|-------|---------|------|-----|-------|--------|-------------|
 | 10 | 🚀 **4D Asteroids** | [`4d_asteroids/`](4d_asteroids/) | 50% | 67 | 1 | Continuous wrap | — | Keyboard | Shift-drag | Continuous motion + wrap-around |
-| 11 | 🏓 **4D Pong** | [`4d_pong/`](4d_pong/) | 50% | 51 | 1-2 | Continuous | Tracking | Keyboard | Shift-drag | Paddle-ball in tetrahedral space |
+| 11 | 🏓 **4D Pong** | [`4d_pong/`](4d_pong/) | 50% | 52 | 1-2 | Continuous | Tracking | Keyboard | Shift-drag | Paddle-ball with Quadray-labeled coordinates |
 | 12 | 🧨 **4D Breakout** | [`4d_breakout/`](4d_breakout/) | 60% | 20 | 1 | Brick grid | — | Keyboard | Shift-drag | Brick-breaking with Quadray physics |
 | 13 | 👽 **4D Space Invaders** | [`4d_space_invaders/`](4d_space_invaders/) | 65% | 43 | 1 | Formation grid | Formation | Keyboard | Shift-drag | Shield system + wave shooting |
-| 14 | 💣 **4D Bomberman** | [`4d_bomberman/`](4d_bomberman/) | 65% | 22 | 1 | Destructible grid | Patrol | Keyboard | Shift-drag | Grid bombs, destructible walls |
+| 14 | 💣 **4D Bomberman** | [`4d_bomberman/`](4d_bomberman/) | 65% | 22 | 1 | Destructible grid | Random walk | Keyboard | Shift-drag | Grid bombs, destructible walls |
 
 ### Maze & Navigation (3)
 
@@ -61,9 +61,9 @@
 |---|------|-----|----------|-------|---------|------|-----|-------|--------|-------------|
 | 18 | 🧱 **4D Tetris** | [`4d_tetris/`](4d_tetris/) | 70% | 18 | 1 | Falling-piece | — | Keyboard | Shift-drag | Falling tetrominoes on IVM grid |
 | 19 | 💥 **4D Minesweeper** | [`4d_minesweeper/`](4d_minesweeper/) | 90% | 23 | 1 | Discrete reveal | — | Click | Shift-drag | Mine-counting with IVM neighbors |
-| 20 | 🔢 **4D Sudoku** | [`4d_sudoku/`](4d_sudoku/) | 80% | 29 | 1 | 4⁴ constraint | — | Click | Shift-drag | Constraint-satisfaction in 4D regions |
+| 20 | 🔢 **4D Sudoku** | [`4d_sudoku/`](4d_sudoku/) | 80% | 31 | 1 | 4⁴ constraint | — | Click | Shift-drag | Constraint-satisfaction in 4D regions |
 | 21 | 💡 **4D Lights Out** | [`4d_lights_out/`](4d_lights_out/) | 90% | 45 | 1 | Toggle grid | — | Click | Shift-drag | Pattern toggle on IVM neighbors |
-| 22 | 🎰 **4D 2048** | [`4d_2048/`](4d_2048/) | 80% | 28 | 1 | 4⁴ merge grid | — | Keyboard | Shift-drag | Tile merging in 4 directions |
+| 22 | 🎰 **4D 2048** | [`4d_2048/`](4d_2048/) | 80% | 28 | 1 | 4⁴ merge grid | — | Keyboard | Shift-drag | Tile merging in 12 IVM directions |
 | 23 | 🧩 **4D Sokoban** | [`4d_sokoban/`](4d_sokoban/) | 75% | 34 | 1 | Discrete push | — | Keyboard | Shift-drag | Box-pushing across IVM grid |
 | 24 | 🎴 **4D Memory** | [`4d_memory/`](4d_memory/) | 85% | 27 | 1-2 | Pair grid | — | Click | Shift-drag | Flip-match pairs in tetrahedral layout |
 
@@ -73,22 +73,22 @@
 |---|------|-----|----------|-------|---------|------|-----|-------|--------|-------------|
 | 25 | 🧬 **4D Life** | [`4d_life/`](4d_life/) | 80% | 43 | — | Cellular automaton | CA rules | — | Shift-drag | Pattern presets + CA with 4D wrapping |
 | 26 | 🐜 **4D SimAnt** | [`4d_simant/`](4d_simant/) | 55% | 148 | 1 | Pheromone grid | Swarm | Mouse + KB | Shift-drag | Pheromone trails, foraging AI |
-| 27 | ⛏️ **4D Minecraft** | [`4d_minecraft/`](4d_minecraft/) | 40% | 49 | 1 | Voxel chunks | — | Keyboard + Click | Shift-drag | Terrain gen, trees, block inventory |
+| 27 | ⛏️ **4D Minecraft** | [`4d_minecraft/`](4d_minecraft/) | 40% | 124 | 1 | 8⁴ discrete | — | Keyboard + Click | Shift-drag | Terrain gen, trees, block inventory |
 
 ### RPG & Adventure (1)
 
 | # | Game | Dir | Complete | Tests | Players | Grid | AI | Input | Camera | Key Mechanic |
 |---|------|-----|----------|-------|---------|------|-----|-------|--------|-------------|
-| 28 | ⚔️ **4D Rogue** | [`4d_rogue/`](4d_rogue/) | 50% | 108 | 1 | Dungeon rooms | Wander/chase | Keyboard | Shift-drag | Procedural dungeon, permadeath |
+| 28 | ⚔️ **4D Rogue** | [`4d_rogue/`](4d_rogue/) | 50% | 120 | 1 | Dungeon rooms | Wander/chase | Keyboard | Shift-drag | Procedural dungeon, permadeath |
 
 ### Tower Defense & FPS (2)
 
 | # | Game | Dir | Complete | Tests | Players | Grid | AI | Input | Camera | Key Mechanic |
 |---|------|-----|----------|-------|---------|------|-----|-------|--------|-------------|
-| 29 | 🏰 **4D Tower Defense** | [`4d_tower_defense/`](4d_tower_defense/) | 60% | 225 | 1 | Path grid | Spawn waves | Click | Shift-drag | Waves, auto-targeting towers, gold |
+| 29 | 🏰 **4D Tower Defense** | [`4d_tower_defense/`](4d_tower_defense/) | 60% | 217 | 1 | Path grid | Spawn waves | Click | Shift-drag | Waves, auto-targeting towers, gold |
 | 30 | 👹 **4D Doom** | [`4d_doom/`](4d_doom/) | 50% | 116 | 1 | Raycasted 3D | Pursuit | Keyboard + Mouse | FPS Mouselook | Hitscan FPS, enemy AI pursuit |
 
-**Total: 30 games, 1,253 unit tests, all passing ✅**
+**Total: 30 games, 1,781 unit tests, all passing ✅**
 
 ---
 
@@ -121,8 +121,8 @@ All games import from `4d_generic/`. The **Core 12** modules are used by every g
 |--------|----------|-------------|---------|-------------|
 | `base_board.js` | Engine | Grid ops, distances, integrity checks, metadata | **29/30** | All except Doom |
 | `turn_manager.js` | Engine | Player rotation, undo/redo stack | **11/30** | Chess, Checkers, Reversi, Backgammon, Catan, Connect Four, Go, Hex, Memory, Rogue, Sudoku |
-| `entity_system.js` | Engine | QuadrayEntity + EntityManager (collision, wrapping) | **6/30** | Asteroids, Bomberman, Frogger, SimAnt, Space Invaders, Tower Defense |
-| `pathfinding.js` | Engine | BFS, A*, flood fill, line-of-sight | **5/30** | Bomberman, Pac-Man, Rogue, SimAnt, Tower Defense |
+| `entity_system.js` | Engine | QuadrayEntity + EntityManager (collision, wrapping) | **3/30** | Asteroids, SimAnt, Space Invaders |
+| `pathfinding.js` | Engine | BFS, A*, flood fill, line-of-sight | **3/30** | Pac-Man, Rogue, SimAnt |
 
 ### Additional Shared Assets
 
@@ -149,9 +149,9 @@ Legend: ● = imported | — = not applicable
 | Pong | ● | ● | ● | ● | ● | ● | ● | ● | ● | ● | ● | ● | ● | — | — | — |
 | Breakout | ● | ● | ● | ● | ● | ● | ● | ● | ● | ● | ● | ● | ● | — | — | — |
 | Space Invaders | ● | ● | ● | ● | ● | ● | ● | ● | ● | ● | ● | ● | ● | ● | — | — |
-| Bomberman | ● | ● | ● | ● | ● | ● | ● | ● | ● | ● | ● | ● | ● | ● | — | ● |
+| Bomberman | ● | ● | ● | ● | ● | ● | ● | ● | ● | ● | ● | ● | ● | — | — | — |
 | Pac-Man | ● | ● | ● | ● | ● | ● | ● | ● | ● | ● | ● | ● | ● | — | — | ● |
-| Frogger | ● | ● | ● | ● | ● | ● | ● | ● | ● | ● | ● | ● | ● | ● | — | — |
+| Frogger | ● | ● | ● | ● | ● | ● | ● | ● | ● | ● | ● | ● | ● | — | — | — |
 | Snake | ● | ● | ● | ● | ● | ● | ● | ● | ● | ● | ● | ● | ● | — | — | — |
 | Tetris | ● | ● | ● | ● | ● | ● | ● | ● | ● | ● | ● | ● | ● | — | — | — |
 | Minesweeper | ● | ● | ● | ● | ● | ● | ● | ● | ● | ● | ● | ● | ● | — | — | — |
@@ -164,7 +164,7 @@ Legend: ● = imported | — = not applicable
 | SimAnt | ● | ● | ● | ● | ● | ● | ● | ● | ● | ● | ● | ● | ● | ● | — | ● |
 | Minecraft | ● | ● | ● | ● | ● | ● | ● | ● | ● | ● | ● | ● | ● | — | — | — |
 | Rogue | ● | ● | ● | ● | ● | ● | ● | ● | ● | ● | ● | ● | ● | — | ● | ● |
-| Tower Defense | ● | ● | ● | ● | ● | ● | ● | ● | ● | ● | ● | ● | ● | ● | — | ● |
+| Tower Defense | ● | ● | ● | ● | ● | ● | ● | ● | ● | ● | ● | ● | ● | — | — | — |
 | Doom | ● | ● | ● | — | ● | — | — | — | — | — | — | — | — | — | — | — |
 
 > **Column key:** QR=quadray, SY=synergetics, GU=grid_utils, CA=camera, PR=projection, ZM=zoom, BR=base_renderer, GL=game_loop, BG=base_game, SM=score_manager, IC=input_controller, HD=hud, **bb=base_board, es=entity_system, tm=turn_manager, pf=pathfinding**
@@ -175,14 +175,14 @@ Legend: ● = imported | — = not applicable
 
 | Genre | Games | Tests | % of Portfolio |
 |-------|-------|-------|---------------|
-| Strategy & Board | 9 | 414 | 30% |
+| Strategy & Board | 9 | 439 | 30% |
 | Arcade & Action | 5 | 203 | 17% |
 | Maze & Navigation | 3 | 116 | 10% |
 | Puzzle & Logic | 7 | 206 | 23% |
-| Simulation & World | 3 | 240 | 10% |
-| RPG & Adventure | 1 | 108 | 3% |
-| Tower Defense & FPS | 2 | 341 | 7% |
-| **Total** | **30** | **1,253** | **100%** |
+| Simulation & World | 3 | 315 | 10% |
+| RPG & Adventure | 1 | 120 | 3% |
+| Tower Defense & FPS | 2 | 333 | 7% |
+| **Total** | **30** | **1,781** | **100%** |
 
 ---
 
@@ -254,7 +254,7 @@ python3 run_games.py --game chess doom life    # Multiple games
 python3 run_games.py --all                     # All 30 simultaneously
 python3 run_games.py --all --base-port 9000    # Custom port range
 python3 run_games.py --config games_config.json # From config file
-python3 run_games.py --test                    # Run all 1,253 unit tests
+python3 run_games.py --test                    # Run all 1,781 unit tests
 python3 run_games.py --validate                # Structural validation (30/30)
 ```
 
@@ -331,16 +331,20 @@ All games import shared modules from `4d_generic/` via `<script>` tags:
 
 ## 🌟 Enhancements for Existing Games
 
-To fully leverage the Synergetics engine, existing games can be upgraded in the following ways to deepen their Quadray### 1. Simple Games (Arcade/Abstract)
+To fully leverage the Synergetics engine, existing games can be upgraded in the following ways to deepen their Quadray integration.
+
+### 1. Simple Games (Arcade/Abstract)
 
 | Game | Path | Grid/Space | Dimensions | Rendering | Control Scheme | Physics | Complete |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **4D Snake** | `4d_snake` | Discrete IVM | 4D (a,b,c,d) | 2D Canvas Projection | Keyboard (WASDQEZX) | Grid-locked | 70% |
+| **4D Snake** | `4d_snake` | Discrete IVM | 4D (a,b,c,d) | 2D Canvas Projection | Arrow keys + W/S/Q/E | Grid-locked | 55% |
 | **4D Pong** | `4d_pong` | Continuous Quadray | 4D (a,b,c,d) | 2D Canvas Projection | Keyboard (W/S & Up/Down) | Bouncing Ray | 60% |
-| **4D Tetris** | `4d_tetris` | Discrete IVM | 4D (a,b,c,d) | 2D Canvas Projection | Keyboard | Gravity, Collision | 60% |
-| **4D Breakout** | `4d_breakout` | Continuous Quadray | 4D (a,b,c,d) | 2D Canvas Projection | Mouse | Bouncing Ray, Collision | 50% |
-| **4D Pac-Man** | `4d_pacman` | Discrete IVM | 4D (a,b,c,d) | 2D Canvas Projection | Keyboard (WASDQEZX) | Grid-locked, Pathfinding | 100% |
-| **4D Asteroids** | `4d_asteroids` | Continuous Quadray | 4D (a,b,c,d) | 2D Canvas Projection | Thrust/Rotate, Wrapping | Inertia, Wrapping | 100% | **4D Doom** | Expand with multiple levels, new weapon types, and WebRTC multiplayer | High |
+| **4D Tetris** | `4d_tetris` | Discrete IVM | 4D (a,b,c,d) | 2D Canvas Projection | Keyboard | Gravity, Collision | 70% |
+| **4D Breakout** | `4d_breakout` | Continuous Quadray | 4D (a,b,c,d) | 2D Canvas Projection | Keyboard | Bouncing Ray, Collision | 50% |
+| **4D Pac-Man** | `4d_pacman` | Discrete IVM | 4D (a,b,c,d) | 2D Canvas Projection | Keyboard (WASDQEZX) | Grid-locked | 50% |
+| **4D Asteroids** | `4d_asteroids` | Continuous Quadray | 4D (a,b,c,d) | 2D Canvas Projection | Thrust/Rotate, Wrapping | Inertia, Wrapping | 100% |
+
+**Proposed enhancement idea:** **4D Doom** — expand with multiple levels, new weapon types, and WebRTC multiplayer (priority: High).
 
 ---
 

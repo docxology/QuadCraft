@@ -1,5 +1,8 @@
 # QuadCraft Modding Guide
 
+> [!IMPORTANT]
+> **Design Specification Status**: This document outlines a *proposed* modding SDK. No mod-loading infrastructure currently exists in the codebase — `grep -rln 'IQuadCraftMod\|namespace quadcraft\|ModAPI' src/ games/` returns zero matches. The real (and only) engine namespace is `QuadCraft` (capital C, e.g. `src/core/coordinate/Quadray.h:8`), not the lowercase `quadcraft::` namespace used throughout the examples below. Treat this guide as a design proposal for developers considering building a modding layer, not as documentation of a shipped feature.
+
 This document provides a comprehensive guide for developers who want to create mods for QuadCraft. It explains how to extend or modify the game's functionality while working with its unique tetrahedral geometry.
 
 ## Introduction to QuadCraft Modding
@@ -42,7 +45,7 @@ graph TD
 
 Before you begin creating mods for QuadCraft, you'll need:
 
-1. A development environment with C++ toolchain (see the [setup guide](/docs/development/setup_guide.md))
+1. A development environment with C++ toolchain (see the [setup guide](setup_guide.md))
 2. QuadCraft Mod Development Kit (MDK)
 3. Familiarity with tetrahedral geometry and QuadCraft's coordinate systems
 
@@ -919,10 +922,10 @@ This guide introduces the fundamentals of creating mods for QuadCraft. By levera
 
 For more detailed information on specific topics, refer to the following resources:
 
-- [Tetrahedral Geometry Reference](/docs/mathematics/tetrahedral_geometry.md)
-- [Quadray Coordinate System](/docs/mathematics/quadray_coordinates.md)
-- [Entity Component System](/docs/development/entity_system.md)
-- [Chunk System Technical Details](/docs/development/chunk_system.md)
-- [Rendering Pipeline Documentation](/docs/development/rendering_system.md)
+- [Tetrahedral Geometry Reference](../mathematics/tetrahedral_geometry.md)
+- [Quadray Coordinate System](../mathematics/quadray_coordinates.md)
+- [Entity Component System](entity_system.md)
+- [Chunk System Technical Details](chunk_system.md)
+- [Rendering Pipeline Documentation](cone_plane_intersection_rendering.md)
 
 Remember that the tetrahedral nature of QuadCraft offers unique opportunities for creative mod development that aren't possible in traditional cubic voxel games. Embrace the tetrahedral paradigm and create experiences that showcase the mathematical beauty and gameplay potential of this innovative geometry. 

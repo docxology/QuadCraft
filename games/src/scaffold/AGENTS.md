@@ -2,7 +2,7 @@
 
 ## 🤖 Game Overview
 
-**{name}** is a 4D browser game built on the QuadCraft engine. It runs in the browser using [Quadray coordinates](../../docs/mathematics/quadray_coordinates.md) for 4D spatial logic.
+**{name}** is a 4D browser game built on the QuadCraft engine. It runs in the browser using [Quadray coordinates](../../../docs/mathematics/quadray_coordinates.md) for 4D spatial logic.
 
 ## 📂 Architecture
 

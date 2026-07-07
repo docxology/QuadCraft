@@ -29,6 +29,15 @@ import sys
 import time
 from pathlib import Path
 
+# QuadCraft's Python infrastructure (src/) uses PEP 604 syntax (e.g. `int | None`)
+# which requires CPython 3.10+. Fail early with a clear message on older interpreters.
+if sys.version_info < (3, 10):
+    sys.stderr.write(
+        f"QuadCraft requires Python 3.10+ (found {sys.version.split()[0]}).\n"
+        "Upgrade your interpreter or run with `python3.11 run_games.py ...`.\n"
+    )
+    sys.exit(2)
+
 # Import from our new src package
 from src.core.registry import GAMES, load_config
 from src.server.launcher import GameServer

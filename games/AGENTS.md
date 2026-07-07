@@ -17,7 +17,7 @@ python3 run_games.py --all
 # Launch specific game(s)
 python3 run_games.py --game chess doom
 
-# Run all unit tests (1,147 passing)
+# Run all unit tests (1,781 passing)
 python3 run_games.py --test
 
 # Run tests for specific game
@@ -37,34 +37,34 @@ python3 run_games.py --list
 
 | chess | 4D Chess | `4d_chess/` | 91 | 8100 |
 | checkers | 4D Checkers | `4d_checkers/` | 11 | 8101 |
-| reversi | 4D Reversi | `4d_reversi/` | 11 | 8102 |
-| life | 4D Life | `4d_life/` | 8 | 8103 |
-| asteroids | 4D Asteroids | `4d_asteroids/` | 12 | 8104 |
-| simant | 4D SimAnt | `4d_simant/` | 10 | 8105 |
-| backgammon | 4D Backgammon | `4d_backgammon/` | 8 | 8106 |
-| minecraft | 4D Minecraft | `4d_minecraft/` | 74 | 8107 |
-| catan | 4D Catan | `4d_catan/` | 10 | 8108 |
-| tower_defense | 4D Tower Defense | `4d_tower_defense/` | 98 | 8109 |
+| reversi | 4D Reversi | `4d_reversi/` | 34 | 8102 |
+| life | 4D Life | `4d_life/` | 43 | 8103 |
+| asteroids | 4D Asteroids | `4d_asteroids/` | 67 | 8104 |
+| simant | 4D SimAnt | `4d_simant/` | 148 | 8105 |
+| backgammon | 4D Backgammon | `4d_backgammon/` | 30 | 8106 |
+| minecraft | 4D Minecraft | `4d_minecraft/` | 124 | 8107 |
+| catan | 4D Catan | `4d_catan/` | 56 | 8108 |
+| tower_defense | 4D Tower Defense | `4d_tower_defense/` | 217 | 8109 |
 | doom | 4D Doom | `4d_doom/` | 116 | 8110 |
-| mahjong | 4D Mahjong | `4d_mahjong/` | 7 | 8111 |
+| mahjong | 4D Mahjong | `4d_mahjong/` | 33 | 8111 |
 | tetris | 4D Tetris | `4d_tetris/` | 18 | 8112 |
 | snake | 4D Snake | `4d_snake/` | 15 | 8113 |
-| pong | 4D Pong | `4d_pong/` | 19 | 8114 |
+| pong | 4D Pong | `4d_pong/` | 52 | 8114 |
 | breakout | 4D Breakout | `4d_breakout/` | 20 | 8115 |
-| pacman | 4D Pac-Man | `4d_pacman/` | 19 | 8116 |
-| space_invaders | 4D Space Invaders | `4d_space_invaders/` | 22 | 8117 |
-| frogger | 4D Frogger | `4d_frogger/` | 23 | 8118 |
+| pacman | 4D Pac-Man | `4d_pacman/` | 74 | 8116 |
+| space_invaders | 4D Space Invaders | `4d_space_invaders/` | 43 | 8117 |
+| frogger | 4D Frogger | `4d_frogger/` | 27 | 8118 |
 | bomberman | 4D Bomberman | `4d_bomberman/` | 22 | 8119 |
-| connect_four | 4D Connect Four | `4d_connect_four/` | 70 | 8120 |
+| connect_four | 4D Connect Four | `4d_connect_four/` | 124 | 8120 |
 | minesweeper | 4D Minesweeper | `4d_minesweeper/` | 23 | 8121 |
-| sokoban | 4D Sokoban | `4d_sokoban/` | 8 | 8122 |
-| 2048 | 4D 2048 | `4d_2048/` | 8 | 8123 |
-| rogue | 4D Rogue | `4d_rogue/` | 8 | 8124 |
-| go | 4D Go | `4d_go/` | 8 | 8125 |
-| hex | 4D Hex | `4d_hex/` | 8 | 8126 |
-| memory | 4D Memory | `4d_memory/` | 8 | 8127 |
-| sudoku | 4D Sudoku | `4d_sudoku/` | 8 | 8128 |
-| lights_out | 4D Lights Out | `4d_lights_out/` | 8 | 8129 |
+| sokoban | 4D Sokoban | `4d_sokoban/` | 34 | 8122 |
+| 2048 | 4D 2048 | `4d_2048/` | 28 | 8123 |
+| rogue | 4D Rogue | `4d_rogue/` | 120 | 8124 |
+| go | 4D Go | `4d_go/` | 31 | 8125 |
+| hex | 4D Hex | `4d_hex/` | 29 | 8126 |
+| memory | 4D Memory | `4d_memory/` | 27 | 8127 |
+| sudoku | 4D Sudoku | `4d_sudoku/` | 31 | 8128 |
+| lights_out | 4D Lights Out | `4d_lights_out/` | 45 | 8129 |
 
 ## Launch System
 

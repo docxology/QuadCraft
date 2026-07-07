@@ -16,6 +16,21 @@
 set -e
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
+# ── Resolve a Python 3.10+ interpreter ──
+# QuadCraft's src/ uses PEP 604 syntax (e.g. `int | None`), so it needs CPython 3.10+.
+# Prefer an explicitly-new interpreter; fall back to `python3` (validated at runtime by run_games.py).
+PY_BIN=""
+for candidate in python3.14 python3.13 python3.12 python3.11 python3.10 python3; do
+    if command -v "$candidate" >/dev/null 2>&1; then
+        PY_BIN="$candidate"
+        break
+    fi
+done
+if [ -z "$PY_BIN" ]; then
+    echo "❌ No Python interpreter found (need 3.10+). Install Python 3.10 or newer."
+    exit 1
+fi
+
 # ── Resolve game key → directory ──
 game_dir() {
     case "$1" in
@@ -81,9 +96,9 @@ if [[ "$1" == "--test" || "$1" == "-t" || \
     if [ -f "$SCRIPT_DIR/run_games.py" ]; then
         if [ "$#" -eq 0 ]; then
             echo "🚀 Launching all games via run_games.py..."
-            python3 "$SCRIPT_DIR/run_games.py" --all
+            "$PY_BIN" "$SCRIPT_DIR/run_games.py" --all
         else
-            python3 "$SCRIPT_DIR/run_games.py" "$@"
+            "$PY_BIN" "$SCRIPT_DIR/run_games.py" "$@"
         fi
     else
         echo "❌ run_games.py not found in $SCRIPT_DIR"
@@ -114,5 +129,5 @@ if [ ${#VALID_KEYS[@]} -eq 0 ]; then
 fi
 
 # Delegate to the centralized Python launcher
-python3 "$SCRIPT_DIR/run_games.py" --game "${VALID_KEYS[@]}"
+"$PY_BIN" "$SCRIPT_DIR/run_games.py" --game "${VALID_KEYS[@]}"
 

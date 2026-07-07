@@ -10,6 +10,7 @@ and per-game tests (games/4d_*/tests/).
 """
 import re
 import subprocess
+import sys
 import logging
 from pathlib import Path
 from ..core.registry import GAMES
@@ -17,7 +18,7 @@ from ..core.registry import GAMES
 logger = logging.getLogger(__name__)
 
 # Regex to parse the standardized results line
-RESULTS_RE = re.compile(r'Results:\s*(\d+)\s*passed,\s*(\d+)\s*failed')
+RESULTS_RE = re.compile(r'Results:\s*(\d+)\s*passed,\s*(\d+)\s*failed', re.IGNORECASE)
 
 
 def _run_test_file(tf: Path, cwd: Path, label: str) -> tuple[int, int]:
@@ -46,6 +47,11 @@ def _run_test_file(tf: Path, cwd: Path, label: str) -> tuple[int, int]:
             lines = result.stdout.split('\n')
             test_count = sum(1 for l in lines if '✅' in l and 'Results' not in l)
             fail_count = sum(1 for l in lines if '❌' in l and 'Results' not in l)
+
+            # A crash before any structured/emoji output must never report
+            # (0, 0) — that would silently drop the failure from the totals.
+            if result.returncode != 0 and test_count == 0 and fail_count == 0:
+                fail_count = 1
 
         status = "✅" if result.returncode == 0 and fail_count == 0 else "❌"
         detail = f"{test_count} passed"
@@ -88,7 +94,7 @@ def _run_python_test(tf: Path, cwd: Path, label: str) -> tuple[int, int]:
         # We run from repo root so imports like 'games.src...' work
         # Assumption: repo_root has 'games' module
         result = subprocess.run(
-            ["python3", str(tf)],
+            [sys.executable, str(tf)],
             capture_output=True, text=True, cwd=str(cwd), env=env,
             timeout=30
         )
