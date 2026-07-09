@@ -10,7 +10,7 @@ Unlike cubes, tetrahedrons naturally form 60-degree slopes. This means:
 
 - **Natural Pyramids**: Stacking blocks creates perfect pyramids without stepping.
 - **Diagonal Walls**: Walls naturally lean or zigzag depending on orientation.
-- **Arches**: Creating arches requires alternating block orientations (Type Z and Type C).
+- **Arches**: Creating arches requires alternating `tetra`/`octa` IVM cells (see `games/4d_generic/quadray.js` `Quadray.cellType()` — no "Type Z"/"Type C" naming exists in the code).
 
 ### Structural Integrity
 
@@ -56,5 +56,4 @@ Tunneling follows the quadray axes (a, b, c, d).
 ## Tips for Master Builders
 
 1. **Think in Triangles**: Sketch your floor plans using triangles, not squares.
-2. **Use the Grid**: Toggle the Quadray Grid overlay (F2) to see buildable nodes.
-3. **Symmetry**: Tetrahedral symmetry is 4-fold, not 6-fold like cubes. Rotate your view often.
+2. **Symmetry**: Tetrahedral symmetry is 4-fold, not 6-fold like cubes. Rotate your view often (shift+drag or right-click drag per `games/4d_generic/camera.js`).

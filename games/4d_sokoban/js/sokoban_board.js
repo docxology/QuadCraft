@@ -45,7 +45,13 @@ class SokobanBoard extends BaseBoard {
         console.log(`[SokobanBoard] Level with ${this.boxes.length} boxes, ${this.goals.length} goals, 12 IVM directions`);
     }
 
-    /** Generate a solvable Sokoban level. */
+    /**
+     * Generate a random Sokoban level.
+     *
+     * NOTE: this places the player, boxes, and goals via a shuffled
+     * interior-cell list — it does not run a reachability/deadlock
+     * check, so solvability is not guaranteed.
+     */
     _generateLevel() {
         const s = this.size;
         const allCells = GridUtils.generateGrid(s);
@@ -71,8 +77,18 @@ class SokobanBoard extends BaseBoard {
         const interior = allCells.filter(c => !this.walls.has(this.key(c.a, c.b, c.c, c.d)));
         GridUtils.shuffle(interior);
 
-        // Place player
-        this.player = interior[0];
+        // Place player — must land on a cell with at least one in-bounds,
+        // non-wall neighbor along the 12 IVM directions, otherwise the
+        // player starts already stuck with zero legal moves (directions
+        // are one-sided permutations of (0,1,1,2), so cells near the far
+        // corner of the grid can have no valid step at all).
+        const hasStep = (cell) => GridUtils.DIRECTIONS.some(([da, db, dc, dd]) => {
+            const t = { a: cell.a + da, b: cell.b + db, c: cell.c + dc, d: cell.d + dd };
+            return GridUtils.inBounds(t.a, t.b, t.c, t.d, s) && !this.walls.has(this.key(t.a, t.b, t.c, t.d));
+        });
+        const playerIdx = Math.max(0, interior.findIndex(hasStep));
+        this.player = interior[playerIdx];
+        interior.splice(playerIdx, 1);
         this.setCell(this.player, CELL.PLAYER);
 
         // Place boxes and goals (3 pairs for size 5)
@@ -81,8 +97,8 @@ class SokobanBoard extends BaseBoard {
         this.goals = [];
 
         for (let i = 0; i < numBoxes; i++) {
-            const boxPos = interior[1 + i * 2];
-            const goalPos = interior[2 + i * 2];
+            const boxPos = interior[i * 2];
+            const goalPos = interior[i * 2 + 1];
             this.boxes.push(boxPos);
             this.goals.push(goalPos);
             this.setCell(boxPos, CELL.BOX);

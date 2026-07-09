@@ -10,7 +10,13 @@ class HexBoard extends BaseBoard {
     constructor(size = 5) {
         super(size, { name: 'HexBoard', verify: true });
         this.turns = new TurnManager(['red', 'blue']);
-        this.cells = GridUtils.generateGrid(size);
+        // Canonicalize to min-component==0 representatives only: GridUtils.generateGrid()
+        // enumerates every raw (a,b,c,d) in [0,size)^4, but many of those tuples are the
+        // SAME physical IVM lattice point re-offset by a uniform (k,k,k,k) shift (e.g.
+        // (1,1,1,1) is the same point as (0,0,0,0)). Without this filter, ~41% of the
+        // board at size=5 is degenerate duplicate cells that are unreachable by
+        // GridUtils.boundedNeighbors() and can silently hold independent state.
+        this.cells = GridUtils.generateGrid(size).filter(c => Math.min(c.a, c.b, c.c, c.d) === 0);
         this.moveCount = 0; this.winner = null;
         for (const c of this.cells) this.setCell(c, HEX.EMPTY);
     }

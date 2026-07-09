@@ -25,7 +25,11 @@ function runTests() {
     console.log("Running 4D Tower Defense Tests...\n");
 
     // ─── Board Initialization ───
-    const b = new TowerDefenseBoard(6);
+    // Seeded so the procedurally-generated path length (and therefore the
+    // per-waypoint assertion loops below) is fully deterministic and
+    // reproducible instead of depending on whichever length Math.random()
+    // happens to produce this run.
+    const b = new TowerDefenseBoard(6, { seed: 1 });
     assert(b.path.length >= 10, `Path has >= 10 waypoints (got ${b.path.length})`);
     assert(b.lives === 20, "Starts with 20 lives");
     assert(b.gold === 100, "Starts with 100 gold");
@@ -135,7 +139,7 @@ function runTests() {
     assert(swarmletCreep.goldValue < normalCreep.goldValue, "Swarmlet gives less gold");
 
     // ─── Regen Healing ───
-    const bRegen = new TowerDefenseBoard(6);
+    const bRegen = new TowerDefenseBoard(6, { seed: 2 });
     bRegen.spawnWave();
     // Manually inject a regen creep and damage it
     const rc = new TDCreep('regen', 1);
@@ -152,7 +156,7 @@ function runTests() {
     assert(rc.hp <= rcMaxHp, "Regen does not exceed maxHp");
 
     // ─── Swarm Split ───
-    const bSwarm = new TowerDefenseBoard(6);
+    const bSwarm = new TowerDefenseBoard(6, { seed: 3 });
     const sc = new TDCreep('swarm', 1);
     sc.delay = 0;
     sc.segmentIndex = 2;
@@ -165,7 +169,7 @@ function runTests() {
     assert(swarmlets[0].segmentIndex === 2, "Swarmlets inherit segment index");
 
     // ─── Wave Spawning ───
-    const b2 = new TowerDefenseBoard(6);
+    const b2 = new TowerDefenseBoard(6, { seed: 4 });
     b2.spawnWave();
     assert(b2.wave === 1, "Wave 1 spawned");
     assert(b2.creeps.length > 0, "Creeps spawned");
@@ -183,7 +187,7 @@ function runTests() {
     assert(hasBoss, "Wave 5 has a boss creep");
 
     // ─── Tick Updates ───
-    const b3 = new TowerDefenseBoard(6);
+    const b3 = new TowerDefenseBoard(6, { seed: 5 });
     b3.spawnWave();
     for (let i = 0; i < 10; i++) b3.update();
     assert(b3.tick === 10, "Tick increments correctly");
@@ -195,7 +199,7 @@ function runTests() {
     assert(b3.tick === tickBefore + 3, "3x speed does 3 ticks per update");
 
     // ─── Creep Position ───
-    const b4 = new TowerDefenseBoard(6);
+    const b4 = new TowerDefenseBoard(6, { seed: 6 });
     b4.spawnWave();
     const creep = b4.creeps[0];
     creep.delay = 0;
@@ -229,7 +233,7 @@ function runTests() {
     assert(CREEP_TYPES.swarmlet !== undefined, "Swarmlet creep type exists");
 
     // ─── Gold Math ───
-    const b5 = new TowerDefenseBoard(6);
+    const b5 = new TowerDefenseBoard(6, { seed: 7 });
     b5.gold = 500;
     b5.placeTower(new Quadray(50, 50, 0, 0), 'tetra');
     b5.placeTower(new Quadray(51, 51, 0, 0), 'octa');
@@ -257,8 +261,8 @@ function runTests() {
     assert(meta.cuboCount === 1, "Metadata tracks cubo count");
 
     // ─── Procedural Path Regeneration ───
-    const b6 = new TowerDefenseBoard(6);
-    const b7 = new TowerDefenseBoard(6);
+    const b6 = new TowerDefenseBoard(6, { seed: 8 });
+    const b7 = new TowerDefenseBoard(6, { seed: 9 });
     // Paths should be different (randomized) -- check origin is same
     assert(b6.path[0].a === 0 && b6.path[0].b === 0, "Path always starts at origin");
     assert(b7.path[0].a === 0 && b7.path[0].b === 0, "Path always starts at origin");
@@ -274,7 +278,7 @@ function runExtendedTests() {
     console.log("\nRunning Extended Tests...\n");
 
     // ─── Board Reset ───
-    const b = new TowerDefenseBoard(6);
+    const b = new TowerDefenseBoard(6, { seed: 10 });
     const originalPathLen = b.path.length;
     b.gold = 500;
     b.placeTower(new Quadray(10, 10, 0, 0), 'tetra');
@@ -290,7 +294,7 @@ function runExtendedTests() {
     assert(b.path[0].a === 0 && b.path[0].b === 0, "Reset path starts at origin");
 
     // ─── Sniper Targeting (Highest HP) ───
-    const bSniper = new TowerDefenseBoard(6);
+    const bSniper = new TowerDefenseBoard(6, { seed: 11 });
     // Directly inject a rhombic tower near the path (bypass placeTower validation)
     const sniperPos = new Quadray(
         bSniper.path[2].a + 3, bSniper.path[2].b + 3,
@@ -321,7 +325,7 @@ function runExtendedTests() {
     assert(TOWER_TYPES.rhombic.range === 12.0, "Rhombic base range is 12.0");
 
     // ─── Creep Trail ───
-    const bTrail = new TowerDefenseBoard(6);
+    const bTrail = new TowerDefenseBoard(6, { seed: 12 });
     const trailCreep = new TDCreep('normal', 1);
     trailCreep.delay = 0;
     trailCreep.segmentIndex = 0;
@@ -333,7 +337,7 @@ function runExtendedTests() {
     assert(trailCreep.trail.length <= 6, "Creep trail capped at 6");
 
     // ─── Game Over Trigger ───
-    const bGO = new TowerDefenseBoard(6);
+    const bGO = new TowerDefenseBoard(6, { seed: 13 });
     bGO.lives = 1;
     const leaker = new TDCreep('normal', 1);
     leaker.delay = 0;
@@ -345,7 +349,7 @@ function runExtendedTests() {
     assert(bGO.lives <= 0, "Lives is 0 or below");
 
     // ─── Wave Countdown ───
-    const bWC = new TowerDefenseBoard(6);
+    const bWC = new TowerDefenseBoard(6, { seed: 14 });
     bWC.spawnWave();
     bWC.creeps = [];
     bWC.waveActive = true;
@@ -367,14 +371,14 @@ function runExtendedTests() {
     assert(speeds.boss < speeds.normal, "Boss < Normal speed");
 
     // ─── Volume Ratios ───
-    const bVR = new TowerDefenseBoard(6);
+    const bVR = new TowerDefenseBoard(6, { seed: 15 });
     assert(bVR.volumeRatios.tetra === 1, "Volume ratio tetra = 1");
     assert(bVR.volumeRatios.octa === 4, "Volume ratio octa = 4");
     assert(bVR.volumeRatios.cubo === 20, "Volume ratio cubo = 20");
     assert(bVR.volumeRatios.rhombic === 6, "Volume ratio rhombic = 6");
 
     // ─── Log Management ───
-    const bLog = new TowerDefenseBoard(6);
+    const bLog = new TowerDefenseBoard(6, { seed: 16 });
     for (let i = 0; i < 15; i++) bLog.addLog(`Test ${i}`);
     assert(bLog.log.length === 8, "Log capped at 8 entries");
     assert(bLog.log[bLog.log.length - 1].msg === "Test 14", "Most recent log entry is last");

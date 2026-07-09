@@ -48,7 +48,9 @@ GameScaffold(
 
 ## Generated File Structure
 
-Running `GameScaffold("puzzle", "4D Puzzle").create()` generates:
+> **Known bug:** `GameScaffold(...).create()` called with no explicit `games_dir` override writes into `GAMES_DIR` from `core/config.py`, which resolves to `{REPO_ROOT}/games` — but `REPO_ROOT` is already the `games/` directory itself, so the scaffold lands in a nested `games/games/4d_<key>/` path, not `games/4d_<key>/` as shown below. `run_games.py` sidesteps the same `REPO_ROOT`/`GAMES_DIR` ambiguity elsewhere by always resolving `games_dir = Path(__file__).parent.resolve()` (`run_games.py:73`) rather than importing `GAMES_DIR`; `GameScaffold` currently has no `games_dir` constructor parameter to do the same, so this needs a code fix (or manual `scaffold.game_dir` correction) before relying on the Quick Start example below as-is.
+
+Running `GameScaffold("puzzle", "4D Puzzle").create()` generates (assuming a correct `games_dir`):
 
 ```text
 games/4d_puzzle/
@@ -70,11 +72,11 @@ games/4d_puzzle/
 |------|-----------|-------------|
 | `index.html` | `_write_html()` | Full `<script>` tag block importing all 12 shared modules + 3 game modules |
 | `{key}_board.js` | `_write_board()` | `PuzzleBoard` class with grid array, `getCell()`/`setCell()`, `reset()` |
-| `{key}_renderer.js` | `_write_renderer()` | `PuzzleRenderer` extends `BaseRenderer`, `drawBoard()` with cell projection |
-| `{key}_game.js` | `_write_game()` | `PuzzleGame` extends `BaseGame`, `init()`/`update(dt)`/`render()` lifecycle |
-| `run.sh` | `_write_run_sh()` | From `_run_template.sh`, configured with game-specific paths |
+| `{key}_renderer.js` | `_write_renderer()` | `PuzzleRenderer` class (no inheritance), `render()` with `_project()` cell projection |
+| `{key}_game.js` | `_write_game()` | `PuzzleGame` class (no inheritance), `init()`/`update()` (no args)/`reset()`, `_setupInput()`/`_updateHUD()` helpers; rendering happens inline via the `GameLoop` render callback (`this.renderer.render()`), not a public `render()` method on the game class |
+| `run.sh` | `_write_run_sh()` | Standalone bash script built inline as a Python f-string (no `_run_template.sh` file is read); serves the game directory itself on port 8080, which is document-root-incorrect relative to how `GameServer` serves the parent `games/` directory |
 | `AGENTS.md` | `_write_agents_md()` | Game-specific agent instructions with architecture notes |
-| `manifest.json` | `_write_manifest()` | `{key, name, grid_size, tick_rate, version}` |
+| `manifest.json` | `_write_manifest()` | `{key, name, dir, grid_size, tick_rate, shared_modules, optional_modules}` (no `version` field) |
 
 ### Class Naming Convention
 

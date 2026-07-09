@@ -1,30 +1,15 @@
 # Games Portfolio
 
-Overview documentation for the 12 standalone 4D browser games built on the QuadCraft Quadray coordinate system.
+Overview documentation for the 30 standalone 4D browser games built on the QuadCraft Quadray coordinate system.
 
 > [!TIP]
 > For launch scripts, per-game file structure, and the Python launcher, see [games/README.md](../games/README.md). For the canonical game index with metadata, see [games/GAMES_INDEX.md](../games/GAMES_INDEX.md).
 
 ## Portfolio Summary
 
-All 12 games are **standalone browser applications** — zero build step, zero server requirement. Each game runs from a single `index.html` file in `games/<name>/`.
+All 30 games are **standalone browser applications** — zero build step, zero server requirement. Each game runs from a single `index.html` file in `games/<name>/`.
 
-| # | Game | Key Mechanic | Quadray Usage | Tests |
-|---|------|-------------|--------------|-------|
-| 1 | ♟️ **4D Chess** | Turn-based strategy, check/checkmate | Board positions as quadray coordinates | 83 |
-| 2 | 🏁 **4D Checkers** | Diagonal capture + promotion | 4D diagonal movement vectors | 11 |
-| 3 | ⚫ **4D Reversi** | Disc flipping across 80 directions | 80 capture directions from IVM geometry | 11 |
-| 4 | 🧬 **4D Life** | Cellular automata, birth/survival | 4D wrapping neighbor lookup | 8 |
-| 5 | 🚀 **4D Asteroids** | Continuous motion, wrap-around | Quadray velocity vectors | 8 |
-| 6 | 🐜 **4D SimAnt** | Pheromone trails, foraging AI | Quadray-based ant navigation | 9 |
-| 7 | 🎲 **4D Backgammon** | 24-point spiral, dice + bearing-off | 4D spiral track layout | 8 |
-| 8 | ⛏️ **4D Minecraft** | Terrain gen, trees, block inventory | Tetrahedral voxels, IVM grid | 11 |
-| 9 | 🏝️ **4D Catan** | Resource production, settlements | Hex tile placement in 4D | 10 |
-| 10 | 🏰 **4D Tower Defense** | Path waves, auto-targeting towers | IVM pathfinding, cell parity | 9 |
-| 11 | 👹 **4D Doom** | Hitscan FPS, enemy AI pursuit | IVM cell parity, Synergetics constants | 7 |
-| 12 | 🀄 **4D Mahjong** | 144-tile 4-layer matching | 4D tile stacking | 7 |
-
-**Total: 12 games, 182+ unit tests, all passing ✅**
+**Total: 30 games** — see [games/GAMES_INDEX.md](../games/GAMES_INDEX.md) for the full genre-grouped list of all 30 games with per-game test counts, completion percentages, and key mechanics.
 
 ## Quick Start
 
@@ -38,7 +23,7 @@ cd games
 
 # Or use the Python launcher for multiple games
 python3 games/run_games.py --game chess doom life
-python3 games/run_games.py --all                  # All 12 simultaneously
+python3 games/run_games.py --all                  # All 30 simultaneously
 python3 games/run_games.py --test                 # Run all unit tests
 ```
 
@@ -48,9 +33,8 @@ Each game follows an identical self-contained structure:
 
 ```text
 games/<game_name>/
-├── index.html              # Entry point — open in browser
+├── index.html              # Entry point — open in browser; loads ../4d_generic/quadray.js
 ├── js/
-│   ├── quadray.js          # Own copy of 4D coordinate math
 │   ├── <game>_board.js     # Board / world state
 │   ├── <game>_renderer.js  # Canvas rendering
 │   └── <game>_game.js      # Controller + UI logic
@@ -68,19 +52,15 @@ games/<game_name>/
 
 ### Shared Math Foundation
 
-All games carry their own `quadray.js` implementing:
+All 30 games import the single canonical **`games/4d_generic/quadray.js`** module (loaded via `<script src="../4d_generic/quadray.js">` in each game's `index.html`) implementing:
 
 - Quadray coordinate class with `(a, b, c, d)` components
 - Cartesian ↔ Quadray conversion (same formulas as `src/core/coordinate/Quadray.h`)
 - Zero-minimum normalization
 - Distance calculations
-- IVM volume ratios and Synergetics constants (in enhanced versions)
+- IVM volume ratios and Synergetics constants
 
-To synchronize `quadray.js` after updating the math:
-
-```bash
-for dir in games/4d_*/js/; do cp games/4d_chess/js/quadray.js "$dir"; done
-```
+There is a single source of truth — updating `games/4d_generic/quadray.js` updates the math for every game with no per-game copies to keep in sync. (4D Doom uses ES Modules and imports through a thin `js/quadray.js` bridge file that re-exports from the shared module — see `games/4d_doom/js/quadray.js`.)
 
 ## Testing
 
@@ -93,8 +73,9 @@ python3 games/run_games.py --test
 # Run tests for specific games
 python3 games/run_games.py --test --game chess doom
 
-# Run individual test file directly
-node games/4d_chess/tests/test_quadray.js
+# Run a single game's suite directly (test_all.js is the runnable entry
+# point per game; lib_*.js files are shared helper modules, not standalone tests)
+node games/4d_chess/tests/test_all.js
 ```
 
 Test coverage includes:
@@ -116,7 +97,7 @@ flowchart TD
     end
 
     subgraph "Browser Games (JS)"
-        quadray_js["games/*/js/quadray.js"]
+        quadray_js["games/4d_generic/quadray.js"]
         game_board["*_board.js"]
         game_renderer["*_renderer.js"]
     end
@@ -129,7 +110,7 @@ flowchart TD
 ## Adding a New Game
 
 1. Create `games/<name>/` following the standalone structure
-2. Copy `quadray.js` from an existing game
+2. Load `../4d_generic/quadray.js` via `<script>` tag in `index.html` (do not copy it)
 3. Implement `<name>_board.js`, `<name>_renderer.js`, `<name>_game.js`
 4. Add tests in `tests/`
 5. Add entry to `GAMES` registry in `run_games.py`

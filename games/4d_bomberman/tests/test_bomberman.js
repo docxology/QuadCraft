@@ -73,11 +73,13 @@ assert('Enemy moved or alive', board5.enemies[0].alive);
 const board6 = new BombermanBoard();
 if (board6.enemies.length > 0) {
     const enemy = board6.enemies[0];
-    const ek = board6.key(enemy.a, enemy.b, enemy.c, enemy.d);
-    board6.explosions.add(ek);
+    // Place a bomb with timer=0 directly on the enemy so it detonates
+    // (populating `explosions`) within this same step() call.
+    board6.bombs = [{ a: enemy.a, b: enemy.b, c: enemy.c, d: enemy.d, timer: 0, range: 1 }];
+    board6.activeBombs = board6.bombs.length;
     board6.step();
     // Explosion presence at enemy location should kill it
-    assert('Bomb explosion mechanic exists', true);
+    assert('Bomb explosion mechanic exists', enemy.alive === false);
 }
 
 // ── Reset ──

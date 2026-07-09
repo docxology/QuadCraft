@@ -4,7 +4,7 @@
 
 Collection of **30 standalone 4D games** built on the QuadCraft Quadray coordinate system. Each game runs directly in the browser — no server, no build step.
 
-> **📋 Full portfolio index (30 games, 1,147 tests):** See [GAMES_INDEX.md](GAMES_INDEX.md)
+> **📋 Full portfolio index (30 games):** See [GAMES_INDEX.md](GAMES_INDEX.md) for the current per-game and total unit-test counts.
 
 ## Quick Start
 

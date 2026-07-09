@@ -356,7 +356,13 @@ class BackgammonBoard extends BaseBoard {
         const lane = Math.floor(i / 6);  // 0=A, 1=B, 2=C, 3=D
         const step = i % 6;
         const coords = [0, 0, 0, 0];
-        coords[lane] = step;
+        // +1 offset: step 0 of every lane must NOT collapse to the shared
+        // origin (0,0,0,0). Without it, points 0/6/12/18 (the first point
+        // of each lane) all map to the same Quadray, silently merging 4
+        // distinct board points into 1. Values now run 1..6 per lane, so
+        // every (lane, step) pair produces a coordinate with exactly one
+        // non-zero axis — always unique across all 24 points.
+        coords[lane] = step + 1;
         return new Quadray(...coords);
     }
 

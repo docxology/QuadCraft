@@ -31,6 +31,14 @@ Geometric foundation:
 - Shape relationships
 - Mesh generation math
 
+### ivm_synergetics.md
+
+IVM and Synergetics volume ratios:
+
+- Isotropic Vector Matrix (IVM) as closest-packed tetrahedra/octahedra
+- Synergetics mensuration (tetravolume-based volume ratios for tetrahedron, octahedron, cube, rhombic dodecahedron, cuboctahedron/VE)
+- Cuboctahedron (Vector Equilibrium) and 12-neighbor closest-packing properties
+
 ## Guidelines
 
 ### Formula Updates

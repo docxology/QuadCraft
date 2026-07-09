@@ -1,5 +1,8 @@
 # QuadCraft Multiplayer System
 
+> [!IMPORTANT]
+> **Design Specification Status**: This document outlines a *proposed* packet-based networking architecture (`NetworkManager`, `NetworkHost`, `NetworkPeer`, `Packet` subclasses, `NetworkEntitySystem`, etc.) — none of these classes exist in the codebase (`grep -rl` for each returns zero matches in `src/` and `games/`). The actual current server-side implementation is `src/server/tomcat/webapps/QuadCraft/QuadCraftAjax.jsp`, a ~185-line Tomcat JSP endpoint that mutates one shared JSON state tree via polled AJAX requests — there is no WebSocket/socket code and no packet framing. Treat this guide as a design proposal, not documentation of shipped behavior.
+
 This document details the multiplayer and networking architecture of QuadCraft, explaining how the game synchronizes players, blocks, and entities across a network while adapting to the unique challenges of a tetrahedral world.
 
 ## Networking Overview

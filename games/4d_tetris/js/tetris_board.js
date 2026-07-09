@@ -6,14 +6,11 @@
  * cycling Quadray components (tetrahedral symmetry).
  * Lines clear when an entire A-slice is filled.
  *
- * Deeply integrated with all Quadray/IVM shared modules:
- *   - Quadray: toKey, normalized, add, subtract, equals, distance,
- *              distanceTo, length, scale, toIVM, cellType, cellVolume,
- *              toCartesian, fromCartesian, clone, IVM_DIRECTIONS, BASIS
- *   - GridUtils: key, parseKey, neighbors, boundedNeighbors, inBounds,
- *                manhattan, euclidean, generateGrid, depthSort, shuffle
+ * Integrated with the Quadray/IVM shared modules it actually calls:
+ *   - Quadray: cellType, cellVolume (plus the base constructor)
+ *   - GridUtils: key, parseKey, neighbors, manhattan, euclidean
  *   - SYNERGETICS: constants, volume ratios
- *   - verifyRoundTrip, verifyGeometricIdentities, angleBetweenQuadrays
+ *   - verifyRoundTrip (startup integrity check)
  *
  * @module TetrisBoard
  */

@@ -1,5 +1,8 @@
 # Real-time Code Evaluation System
 
+> [!IMPORTANT]
+> **Design Specification Status**: This document outlines a *proposed* `CodeEditor` class with syntax highlighting and a sandboxed "Safe Execution Context" — neither exists in the codebase (`grep -rn 'class CodeEditor\|SafeExecution\|ErrorHandling'` over `src/` and `games/` returns zero matches). The actual current implementation, `src/js/experiments/QuadrayGrid4.html:42`, is a single unguarded `eval(jsCode)` call wired to a button's `onclick` handler — there is no editor UI, syntax highlighting, or sandboxing. Treat this guide as a design proposal, not documentation of shipped behavior.
+
 This document details the real-time JavaScript code evaluation system implemented in QuadCraft's JavaScript version, providing dynamic code execution capabilities that enable users to create custom patterns, behaviors, and interactions through live coding.
 
 ## Overview

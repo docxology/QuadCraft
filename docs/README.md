@@ -1,6 +1,6 @@
 # QuadCraft Documentation
 
-Welcome to the QuadCraft documentation. This comprehensive documentation suite covers all aspects of the QuadCraft project, from mathematical foundations to gameplay mechanics, the 12-game portfolio, and technical implementation.
+Welcome to the QuadCraft documentation. This comprehensive documentation suite covers all aspects of the QuadCraft project, from mathematical foundations to gameplay mechanics, the 30-game portfolio, and technical implementation.
 
 ```mermaid
 flowchart TD
@@ -23,7 +23,7 @@ flowchart TD
         ControlsNavigation["controls_and_navigation.md"]
     end
 
-    subgraph Games["Games Portfolio (12 Games)"]
+    subgraph Games["Games Portfolio (30 Games)"]
         GamesDoc["games.md"]
         ChessEtc["4D Chess, Checkers, Reversi, ..."]
     end
@@ -81,25 +81,10 @@ flowchart TD
 
 ### Games Portfolio
 
-- [Games Overview](games.md) - All 12 standalone 4D browser games built on the Quadray coordinate system.
+- [Games Overview](games.md) - All 30 standalone 4D browser games built on the Quadray coordinate system.
 
 > [!TIP]
-> See [games/README.md](../games/README.md) and [GAMES_INDEX.md](../games/GAMES_INDEX.md) for launch scripts, per-game details, and the standalone architecture.
-
-| Game | Description | Tests |
-|------|-------------|-------|
-| ♟️ [4D Chess](../games/4d_chess/) | Full chess with 6 piece types in 4D Quadray space | 83 |
-| 🏁 [4D Checkers](../games/4d_checkers/) | Diagonal capture + King promotion in 4D | 11 |
-| ⚫ [4D Reversi](../games/4d_reversi/) | Disc flipping across 80 directions in 4D | 11 |
-| 🧬 [4D Life](../games/4d_life/) | Conway's Game of Life with 4D wrapping neighbors | 8 |
-| 🚀 [4D Asteroids](../games/4d_asteroids/) | Continuous motion, wrap-around, asteroid splitting | 8 |
-| 🐜 [4D SimAnt](../games/4d_simant/) | Pheromone trails, foraging AI, colony simulation | 9 |
-| 🎲 [4D Backgammon](../games/4d_backgammon/) | 24-point track in 4D spiral, dice + bearing-off | 8 |
-| ⛏️ [4D Minecraft](../games/4d_minecraft/) | Terrain gen, trees, block place/remove, inventory | 11 |
-| 🏝️ [4D Catan](../games/4d_catan/) | 19 hex tiles, resource production, settlements | 10 |
-| 🏰 [4D Tower Defense](../games/4d_tower_defense/) | Path waves, auto-targeting towers, gold economy | 9 |
-| 👹 [4D Doom](../games/4d_doom/) | Hitscan FPS, enemy AI pursuit, wall collision | 7 |
-| 🀄 [4D Mahjong](../games/4d_mahjong/) | 144-tile 4-layer matching with hint system | 7 |
+> See [games/README.md](../games/README.md) and [GAMES_INDEX.md](../games/GAMES_INDEX.md) for launch scripts, the full 30-game list with per-game test counts, and the standalone architecture.
 
 ### User Interface
 
@@ -161,7 +146,7 @@ This documentation is designed to be read in multiple ways depending on your nee
 
 1. **For Players**: Start with the [Gameplay Overview](game_design/gameplay_overview.md) and [Controls and Navigation](game_design/controls_and_navigation.md) sections to understand the core gameplay mechanics.
 
-2. **For Game Enthusiasts**: Try the [Games Portfolio](#games-portfolio) — all 12 games run directly in the browser with zero build step. See [Quick Start](../games/README.md#quick-start) for launch instructions.
+2. **For Game Enthusiasts**: Try the [Games Portfolio](#games-portfolio) — all 30 games run directly in the browser with zero build step. See [Quick Start](../games/README.md#quick-start) for launch instructions.
 
 3. **For World Builders**: Explore the [Block System](game_design/block_system.md) and [World Generation](game_design/world_generation.md) sections to understand how to create and manipulate the tetrahedral world.
 

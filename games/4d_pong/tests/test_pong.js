@@ -73,10 +73,16 @@ board5.step();
 assert('Game ends at max score', board5.score1 >= 11 ? board5.gameOver === true : true);
 
 // 9. AI movement
+// aiMove() has a random reaction-lag chance (up to 30% at Easy difficulty)
+// that intentionally skips movement some frames. Stub Math.random so this
+// assertion is deterministic instead of an intermittently-failing flaky test.
 const board6 = new PongBoard(10);
 board6.ball = { a: 8, b: 7, c: 3, d: 6 };
 const p2Before = { ...board6.paddle2 };
+const realRandom = Math.random;
+Math.random = () => 1; // always exceeds lagChance, guaranteeing a move this call
 board6.aiMove();
+Math.random = realRandom;
 assert('AI paddle moves toward ball', board6.paddle2.b !== p2Before.b || board6.paddle2.c !== p2Before.c);
 
 // 10. Reset ball

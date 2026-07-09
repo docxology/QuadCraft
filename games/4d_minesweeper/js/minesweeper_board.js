@@ -2,8 +2,10 @@
  * minesweeper_board.js — 4D Minesweeper on IVM (Quadray) Lattice
  *
  * Cells live at integer Quadray positions (a,b,c,d).
- * IVM adjacency: each cell has up to 80 neighbors (all +/-1 offsets in 4 coords).
- * Mine counts reflect the true 4D neighbor count.
+ * IVM adjacency: each cell has up to 12 neighbors (the canonical
+ * "12-around-one" cuboctahedron directions), via
+ * GridUtils.boundedNeighbors()/GridUtils.DIRECTIONS.
+ * Mine counts reflect the true IVM neighbor count.
  *
  * Deeply integrated with all Quadray/IVM shared modules:
  *   - Quadray: toKey, normalized, add, subtract, equals, distance,

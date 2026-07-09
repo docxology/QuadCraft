@@ -2,7 +2,7 @@
  * snake_board.js — 4D Snake on IVM (Quadray) Lattice
  *
  * Snake body is a list of Quadray positions moving along IVM adjacency directions.
- * 8 primary IVM directions: ±1 on each of 4 Quadray axes.
+ * 12 IVM cuboctahedron-neighbor directions (permutations of {0,1,1,2}), delegated to GridUtils.
  * Food spawns at random unoccupied Quadray positions.
  *
  * Deeply integrated with all Quadray/IVM shared modules:
@@ -42,7 +42,7 @@ if (typeof SYNERGETICS === 'undefined' && typeof require !== 'undefined') {
 }
 
 class SnakeBoard extends BaseBoard {
-    /** IVM axis-aligned directions: +/-1 on each Quadray axis, delegated to GridUtils. */
+    /** 12 IVM cuboctahedron-neighbor directions (permutations of {0,1,1,2}), delegated to GridUtils. */
     static get DIRECTIONS() {
         return GridUtils.DIRECTIONS.map((d, i) => ({
             da: d[0], db: d[1], dc: d[2], dd: d[3],

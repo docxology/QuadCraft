@@ -2,16 +2,16 @@
 
 ## Overview
 
-Test suite for 4D Quadray Chess (83 tests, 100% pass rate).
+Test suite for 4D Quadray Chess (91 tests, 100% pass rate).
 
 ## Files
 
 | File | Purpose |
 |------|---------|
-| test_all.js | Main test suite (all 83 tests) |
-| test_runner.js | Shared TestRunner class |
-| test_quadray.js | Quadray coordinate tests |
-| test_geometry.js | IVM verification tests |
+| test_all.js | Main, runnable test suite (all 91 tests — `node test_all.js`) |
+| lib_runner.js | Shared TestRunner class (helper, not run directly) |
+| lib_quadray.js | Quadray coordinate test helpers (helper, not run directly) |
+| lib_geometry.js | IVM verification helpers (helper, not run directly) |
 | test.html | Browser visual runner |
 
 ## Running Tests
@@ -28,14 +28,17 @@ open test.html
 
 | Module | Tests |
 |--------|-------|
-| Quadray | 17 |
-| Pieces | 13 |
-| Board | 13 |
+| Quadray | 17 (12 + 5 extended) |
+| Pieces | 13 (8 + 5 extended) |
+| Board | 13 (7 + 6 extended) |
+| Movement Rules | 4 |
+| Game State | 2 |
 | Geometry | 9 |
-| Analysis | 9 |
-| Storage | 6 |
+| Analysis | 9 (5 + 4 extended) |
+| Storage | 6 (3 + 3 extended) |
 | Edge Cases | 5 |
 | Math | 5 |
+| FPVRenderer | 8 |
 
 ## Adding Tests
 

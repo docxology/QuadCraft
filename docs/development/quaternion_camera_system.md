@@ -1,5 +1,8 @@
 # Quaternion Camera System
 
+> [!NOTE]
+> **Implementation shape differs from this document**: the quaternion camera feature is real (`src/js/experiments/QuadrayGrid4.html`), but the code examples below present it as an OOP `class Quaternion` with instance methods. The actual implementation represents a quaternion as a plain 4-element array (e.g. `camQ = [x, y, z, w]`, see `QuadrayGrid4.html:2625`) manipulated via free functions such as `createQuaternion(axis, angle)` and `multiplyQuaternions(q1, q2)` (`QuadrayGrid4.html:2884-2894`) — there is no `Quaternion` class. Treat the class-based API below as an illustrative/proposed refactor, not the current implementation's shape.
+
 This document details the advanced quaternion-based camera system implemented in QuadCraft's JavaScript version, providing smooth 3D navigation, gimbal lock prevention, and sophisticated camera controls for tetrahedral space exploration.
 
 ## Overview

@@ -103,6 +103,23 @@ const CREEP_TYPES = {
     boss: { name: 'Boss', speedMul: 0.3, hpMul: 6.0, goldMul: 5.0, color: '#ff4444', symbol: '\u2605' }
 };
 
+/**
+ * Create a seeded pseudo-random generator (Mulberry32) — deterministic,
+ * fast, and good enough for gameplay-quality randomness. Returns a
+ * function with the same signature/range as Math.random() ([0, 1)).
+ * @param {number} seed
+ * @returns {function(): number}
+ */
+function createSeededRng(seed) {
+    let s = seed >>> 0;
+    return function () {
+        s |= 0; s = (s + 0x6D2B79F5) | 0;
+        let t = Math.imul(s ^ (s >>> 15), 1 | s);
+        t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+}
+
 // ─── Creep ──────────────────────────────────────────────────────────────────
 class TDCreep {
     constructor(type = 'normal', wave = 1) {
@@ -178,10 +195,22 @@ class TowerDefenseBoard extends BaseBoard {
 
     /**
      * @param {number} size - Grid dimension
+     * @param {{seed?: number}} [options] - Pass `seed` to make path
+     *   generation and wave/enemy-type generation fully deterministic
+     *   (used by tests to avoid depending on organically-generated
+     *   random state). Omitted in production, where generation uses
+     *   real Math.random().
      */
-    constructor(size = 6) {
+    constructor(size = 6, options = {}) {
         super(size, { name: 'TowerDefenseBoard', verify: false });
         this.size = size;
+
+        // Seedable RNG — every in-class source of randomness that feeds
+        // path/wave/enemy generation goes through this._rng() rather than
+        // calling Math.random() directly, so a fixed seed reproduces the
+        // exact same path and wave composition.
+        this._rng = (options.seed !== undefined) ? createSeededRng(options.seed) : Math.random;
+
         this.grid = new Map();          // GridUtils.key() -> cell data
         this.path = this.generateIVMPath();
         this.towers = [];
@@ -331,7 +360,7 @@ class TowerDefenseBoard extends BaseBoard {
         const path = [new Quadray(0, 0, 0, 0)];
         let current = path[0];
         const visited = new Set([GridUtils.key(0, 0, 0, 0)]);
-        const maxLen = 20 + Math.floor(Math.random() * 8);
+        const maxLen = 20 + Math.floor(this._rng() * 8);
 
         for (let i = 1; i < maxLen; i++) {
             let candidates = [];
@@ -349,7 +378,7 @@ class TowerDefenseBoard extends BaseBoard {
                 return d2 - d1; // Descending sum (moves away from origin)
             });
 
-            const chosen = (Math.random() < 0.7) ? candidates[0] : candidates[Math.floor(Math.random() * candidates.length)];
+            const chosen = (this._rng() < 0.7) ? candidates[0] : candidates[Math.floor(this._rng() * candidates.length)];
             path.push(chosen.q);
             visited.add(chosen.k);
             current = chosen.q;
@@ -412,13 +441,13 @@ class TowerDefenseBoard extends BaseBoard {
             let type = 'normal';
             if (isBossWave && i === 0) {
                 type = 'boss';
-            } else if (this.wave >= 6 && Math.random() < 0.15) {
+            } else if (this.wave >= 6 && this._rng() < 0.15) {
                 type = 'regen';
-            } else if (this.wave >= 4 && Math.random() < 0.2) {
+            } else if (this.wave >= 4 && this._rng() < 0.2) {
                 type = 'swarm';
-            } else if (this.wave >= 3 && Math.random() < 0.2) {
+            } else if (this.wave >= 3 && this._rng() < 0.2) {
                 type = 'fast';
-            } else if (this.wave >= 5 && Math.random() < 0.15) {
+            } else if (this.wave >= 5 && this._rng() < 0.15) {
                 type = 'armored';
             }
             const c = new TDCreep(type, this.wave);

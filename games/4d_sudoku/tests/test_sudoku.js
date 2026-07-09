@@ -66,6 +66,27 @@ assert('Reset clears won', !b3.won);
 assert('Reset clears gameOver', !b3.gameOver);
 assert('Givens preserved', b3.given.size > 0);
 
+console.log('\n— Generator soundness (IVM-neighbor conflicts) —');
+{
+    const TRIALS = 5;
+    let totalGivenConflicts = 0, totalSolutionConflicts = 0;
+    for (let i = 0; i < TRIALS; i++) {
+        const gb = new SudokuBoard(4);
+        for (const c of gb.cells) {
+            const v = gb.solution.get(gb.key(c.a, c.b, c.c, c.d));
+            const nbrs = GridUtils.boundedNeighbors(c.a, c.b, c.c, c.d, gb.size);
+            for (const n of nbrs) {
+                if (gb.solution.get(gb.key(n.a, n.b, n.c, n.d)) === v) {
+                    totalSolutionConflicts++;
+                    if (gb.isGiven(c) && gb.isGiven(n)) totalGivenConflicts++;
+                }
+            }
+        }
+    }
+    assert(`No given-given IVM-neighbor conflicts across ${TRIALS} generated boards`, totalGivenConflicts === 0);
+    assert(`No solution-wide IVM-neighbor conflicts across ${TRIALS} generated boards`, totalSolutionConflicts === 0);
+}
+
 console.log('\n— Synergetics —');
 assert('TETRA_VOL = 1', SYNERGETICS.TETRA_VOL === 1);
 assert('OCTA_VOL = 4', SYNERGETICS.OCTA_VOL === 4);

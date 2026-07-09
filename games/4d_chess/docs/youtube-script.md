@@ -138,7 +138,7 @@ Thanks for watching.
 - Clicking pieces to show valid moves (green circles)
 - Making a capture with particle effects
 - The math panel updating with Quadray values
-- Running the test suite (83 passing tests)
+- Running the test suite (91 passing tests)
 - The conversion formulas display
 - Auto-play mode running a full game
 

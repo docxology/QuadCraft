@@ -4,7 +4,8 @@
  * Features:
  * - Soldiers attack enemy ants within Quadray distance 1.5
  * - Morale bonus: +3 damage when 3+ allies nearby
- * - Terrain advantage: +5 damage defending in own tunnel network
+ * - Home bonus: +5 damage when attacking within distance 3 of your own nest
+ * - Tunnel defense: -3 damage taken when the defender is inside their tunnel network
  * - Combat statistics tracking (kills, losses per faction)
  * - Danger pheromone emission at combat locations
  * - Death tick tracking for renderer animations
@@ -74,13 +75,13 @@ class CombatSystem {
             for (const enemy of enemies) {
                 if (!enemy.alive) continue;
 
-                // Home territory bonus: +5 if within distance 3 of own nest
+                // Home territory bonus: attacker gets +5 if within distance 3 of own nest
                 const nestCoords = board.nests[ant.faction];
                 const nestQ = new Quadray(nestCoords.a, nestCoords.b, nestCoords.c, nestCoords.d);
                 const distToNest = Quadray.distance(antQ, nestQ);
                 const homeBonus = distToNest < 3 ? 5 : 0;
 
-                // Tunnel advantage: defender gets +3 if in own tunnel network
+                // Tunnel defense: defender takes -3 (reduced damage) if in own tunnel network
                 const defenderKey = GridUtils.key(enemy.a, enemy.b, enemy.c, enemy.d);
                 const tunnelBonus = board.tunnelSet && board.tunnelSet.has(defenderKey) ? -3 : 0; // Reduces attacker damage
 

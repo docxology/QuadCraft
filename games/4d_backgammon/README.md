@@ -24,7 +24,7 @@ open http://localhost:8106
 ## Game Mechanics
 
 - **4D Geometry**: Board coordinates (a, b, c, d) map to tetrahedral space.
-- **Standalone**: Zero dependencies. Open `index.html` to play.
+- **No install step**: No build tooling or package manager needed. Open `index.html` (via a local server) to play — it loads the shared `../4d_generic/` modules (Quadray, camera, grid utils, etc.) plus this game's own 3 scripts; see Architecture below.
 - **Tests**: Unit tests in `tests/` ensure logic correctness.
 
 ## Key Controls
@@ -37,14 +37,19 @@ open http://localhost:8106
 
 ```
 games/4d_backgammon/
-├── index.html           # Entry point
+├── index.html           # Entry point (loads 14 shared ../4d_generic/ scripts, then the 3 below)
 ├── js/
-│   ├── quadray.js       # 4D Coordinate Math
-│   ├── backgammon_board.js  # Game State & Logic
+│   ├── backgammon_board.js  # Game State & Logic (uses shared Quadray/GridUtils/etc.)
 │   ├── backgammon_renderer.js # Canvas Visualization
 │   └── backgammon_game.js   # Controller
 └── tests/
     └── test_backgammon.js   # Node.js Unit Tests
+
+../4d_generic/            # Shared modules used by this game (and 29 others):
+├── quadray.js            # 4D Coordinate Math
+├── camera.js, projection.js, zoom.js, synergetics.js, game_loop.js,
+│   input_controller.js, grid_utils.js, base_board.js, turn_manager.js,
+│   base_renderer.js, base_game.js, hud.js, score_manager.js
 ```
 
 ---

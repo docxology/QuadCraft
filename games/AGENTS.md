@@ -17,7 +17,7 @@ python3 run_games.py --all
 # Launch specific game(s)
 python3 run_games.py --game chess doom
 
-# Run all unit tests (1,781 passing)
+# Run all unit tests (1,782 passing)
 python3 run_games.py --test
 
 # Run tests for specific game

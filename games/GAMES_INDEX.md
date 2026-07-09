@@ -12,7 +12,7 @@
 | Metric | Value |
 |--------|-------|
 | **Implemented Games** | 30 |
-| **Total Unit Tests** | 1,781 (all passing ✅) |
+| **Total Unit Tests** | 1,782 (all passing ✅) |
 | **Shared Modules** | 17 (12 core + 4 extended + hud-style.css) |
 | **Architecture** | Standalone HTML + `4d_generic/` shared modules |
 | **Last Validated** | 2026-02-23 |
@@ -88,7 +88,7 @@
 | 29 | 🏰 **4D Tower Defense** | [`4d_tower_defense/`](4d_tower_defense/) | 60% | 217 | 1 | Path grid | Spawn waves | Click | Shift-drag | Waves, auto-targeting towers, gold |
 | 30 | 👹 **4D Doom** | [`4d_doom/`](4d_doom/) | 50% | 116 | 1 | Raycasted 3D | Pursuit | Keyboard + Mouse | FPS Mouselook | Hitscan FPS, enemy AI pursuit |
 
-**Total: 30 games, 1,781 unit tests, all passing ✅**
+**Total: 30 games, 1,782 unit tests, all passing ✅**
 
 ---
 
@@ -182,7 +182,7 @@ Legend: ● = imported | — = not applicable
 | Simulation & World | 3 | 315 | 10% |
 | RPG & Adventure | 1 | 120 | 3% |
 | Tower Defense & FPS | 2 | 333 | 7% |
-| **Total** | **30** | **1,781** | **100%** |
+| **Total** | **30** | **1,782** | **100%** |
 
 ---
 
@@ -254,7 +254,7 @@ python3 run_games.py --game chess doom life    # Multiple games
 python3 run_games.py --all                     # All 30 simultaneously
 python3 run_games.py --all --base-port 9000    # Custom port range
 python3 run_games.py --config games_config.json # From config file
-python3 run_games.py --test                    # Run all 1,781 unit tests
+python3 run_games.py --test                    # Run all 1,782 unit tests
 python3 run_games.py --validate                # Structural validation (30/30)
 ```
 

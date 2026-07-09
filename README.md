@@ -20,7 +20,7 @@ QuadCraft is an experimental voxel game that uses tetrahedral elements (instead 
 
 | Project | Description | Status |
 |---------|-------------|--------|
-| 🎮 [4D Chess](games/4d_chess/) | 4D chess using Quadray coordinates | ✅ Complete |
+| 🎮 [Games Portfolio](games/GAMES_INDEX.md) | 30 standalone 4D browser games (chess, minecraft, doom, and more) using Quadray coordinates | ✅ Complete |
 | 🌍 QuadCraft Core | Tetrahedral voxel engine | 🚧 In Progress |
 
 ### Pic
@@ -156,11 +156,11 @@ QuadCraft/
 │   ├── game_design/             # Game design documents
 │   ├── mathematics/             # Mathematical foundations
 │   └── reference/               # Reference materials
-├── 4d_chess/                    # 4D Chess subproject (complete)
-│   ├── js/                      # 7 JavaScript modules
-│   ├── docs/                    # 10 documentation files
-│   └── tests/                   # 83 passing tests
-└── assets/                      # Game assets
+└── games/                       # Games portfolio (30 standalone 4D browser games)
+    ├── run_games.py             # Python launcher (--game, --all, --test, --validate)
+    ├── GAMES_INDEX.md           # Canonical per-game index and test counts
+    ├── 4d_generic/              # Shared JS modules (quadray.js, camera.js, ...)
+    └── 4d_<game>/               # One dir per game (e.g. 4d_chess/, 4d_doom/)
 ```
 
 ## Implementation Details

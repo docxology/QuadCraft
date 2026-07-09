@@ -13,21 +13,16 @@ class SudokuBoard extends BaseBoard {
         this._generatePuzzle();
     }
     _generatePuzzle() {
-        // Fill with a valid solution using random placement
+        // Fill with a valid solution using backtracking IVM-neighbor graph coloring
         for (const c of this.cells) { this.setCell(c, 0); this.solution.set(this.key(c.a, c.b, c.c, c.d), 0); }
         this.given.clear();
-        // Simple approach: assign values 1..size to each cell s.t. no two IVM neighbors share a value
-        const maxVal = Math.min(this.size, 12); // Max neighbors is 12
-        const order = [...this.cells]; GridUtils.shuffle(order);
-        for (const c of order) {
-            const nbrs = GridUtils.boundedNeighbors(c.a, c.b, c.c, c.d, this.size);
-            const used = new Set();
-            for (const n of nbrs) { const v = this.solution.get(this.key(n.a, n.b, n.c, n.d)); if (v > 0) used.add(v); }
-            let val = 1; while (used.has(val) && val <= maxVal) val++;
-            if (val > maxVal) val = 1; // Fallback
-            this.solution.set(this.key(c.a, c.b, c.c, c.d), val);
-        }
+        // Assign values 1..size to each cell s.t. no two IVM neighbors share a value.
+        // A single-pass greedy assignment cannot guarantee this (a cell can have up to
+        // 12 IVM neighbors, far more than `size` colors), so this backtracks instead of
+        // silently falling back to a conflicting value.
+        this._colorSolution(this.size);
         // Reveal ~40% as givens
+        const order = [...this.cells]; GridUtils.shuffle(order);
         for (const c of order) {
             if (Math.random() < 0.4) {
                 const k = this.key(c.a, c.b, c.c, c.d);
@@ -35,6 +30,42 @@ class SudokuBoard extends BaseBoard {
                 this.given.add(k);
             }
         }
+    }
+    _colorSolution(maxVal) {
+        // GridUtils.boundedNeighbors() is not symmetric (A can list B as a neighbor
+        // without B listing A back), so a coloring that only checks each cell's own
+        // neighbor list can still leave conflicts visible from the other cell's side.
+        // Build the symmetric closure once and backtrack over that — a solution that
+        // is conflict-free under the symmetric relation is also conflict-free under
+        // the (weaker) one-directional relation place()/_checkWin() enforce at runtime.
+        const adj = new Map();
+        for (const c of this.cells) adj.set(this.key(c.a, c.b, c.c, c.d), new Set());
+        for (const c of this.cells) {
+            const k = this.key(c.a, c.b, c.c, c.d);
+            for (const n of GridUtils.boundedNeighbors(c.a, c.b, c.c, c.d, this.size)) {
+                const nk = this.key(n.a, n.b, n.c, n.d);
+                adj.get(k).add(nk); adj.get(nk).add(k);
+            }
+        }
+        // Most-constrained-first ordering speeds up the backtracking search.
+        const order = [...adj.keys()]; GridUtils.shuffle(order);
+        order.sort((x, y) => adj.get(y).size - adj.get(x).size);
+        const assign = (i) => {
+            if (i === order.length) return true;
+            const k = order[i];
+            const used = new Set();
+            for (const nk of adj.get(k)) { const v = this.solution.get(nk); if (v > 0) used.add(v); }
+            const candidates = [];
+            for (let v = 1; v <= maxVal; v++) if (!used.has(v)) candidates.push(v);
+            GridUtils.shuffle(candidates);
+            for (const v of candidates) {
+                this.solution.set(k, v);
+                if (assign(i + 1)) return true;
+                this.solution.set(k, 0);
+            }
+            return false;
+        };
+        if (!assign(0)) throw new Error('SudokuBoard: failed to generate a conflict-free IVM coloring');
     }
     place(pos, value) {
         const k = this.key(pos.a, pos.b, pos.c, pos.d);

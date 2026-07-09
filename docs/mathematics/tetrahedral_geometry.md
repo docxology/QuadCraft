@@ -132,7 +132,9 @@ graph TD
 
 ### Vertex Positions
 
-For a regular tetrahedron centered at origin with edge length 2, the vertices in Cartesian coordinates are:
+For a regular tetrahedron centered at origin using alternate vertices of a
+cube with edge length 2 (coordinates ±1 on each axis), the vertices in
+Cartesian coordinates are:
 
 ```mermaid
 graph LR
@@ -143,6 +145,13 @@ graph LR
         V4["V4: (-1, -1, 1)"]
     end
 ```
+
+The tetrahedron's own edge length is the enclosing cube's **face
+diagonal**, not the cube's edge: |V1 − V2| = √(0² + 2² + 2²) = √8 = **2√2**,
+not 2. (This is a different, larger tetrahedron than the one used to define
+the Quadray basis vectors in
+[Quadray Coordinates (Mathematics)](quadray_coordinates.md), which scales
+those same four sign-patterns by 1/√2 to get an edge length of exactly 2.)
 
 ## Navigation in Tetrahedral Space
 

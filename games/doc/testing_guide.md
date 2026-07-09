@@ -29,8 +29,8 @@ python3 run_games.py --test --game chess doom snake
 ### Single Test File (Direct)
 
 ```bash
-node games/4d_chess/tests/test_chess.js
-node games/tests/test_projection.js
+node games/4d_chess/tests/test_all.js
+node games/tests/shared/test_projection.js
 ```
 
 ---
@@ -59,27 +59,45 @@ graph TD
 
 | Location | Scope | Language | Runner |
 |----------|-------|----------|--------|
-| `games/tests/test_*.js` | Shared JS modules | JavaScript | Node.js via `_run_test_file()` |
 | `games/tests/test_*.py` | Python infrastructure | Python | `python3` via `_run_python_test()` |
+| `games/tests/shared/test_*.js` | Shared JS modules | JavaScript | **Not executed** — `run_tests()` globs `games/tests/test_*.js` non-recursively and never descends into `tests/shared/` |
 | `4d_generic/tests/test_*.js` | Generic module internal | JavaScript | Node.js via `_run_test_file()` |
 | `4d_<game>/tests/test_*.js` | Per-game logic | JavaScript | Node.js via `_run_test_file()` |
 
 ### Current Test Inventory
 
-**Shared Module Tests** (`games/tests/`):
+**Python infrastructure tests** (`games/tests/`, actually executed):
 
-| File | Tests | Subject |
-|------|-------|---------|
+| File | Subject |
+|------|---------|
+| `test_config.py` | `core/config.py` constants |
+| `test_registry.py` | `core/registry.py` (`GAMES`, `load_config`, `get_port`) |
+| `test_validation.py` | `qa/validation.py` structural checks |
+
+**Shared JS module tests** (`games/tests/shared/`) — **dead code, not run by `run_tests()`** because it only globs `games/tests/test_*.js` directly, not the `shared/` subdirectory:
+
+| File | Subject |
+|------|---------|
 | `test_projection.js` | `projectQuadray()`, `drawQuadrayAxes()` |
 | `test_camera.js` | `CameraController` |
 | `test_zoom.js` | `setupZoom()` |
 | `test_grid_utils.js` | `GridUtils` (grid, neighbors, distance) |
 | `test_base_game.js` | `BaseGame` lifecycle |
 | `test_base_renderer.js` | `BaseRenderer` canvas operations |
+| `test_base_board.js` | `BaseBoard` (optional shared module) |
+| `test_entity_system.js` | Entity system (optional shared module) |
+| `test_turn_manager.js` | Turn manager (optional shared module) |
+| `test_pathfinding.js` | Pathfinding helpers (optional shared module) |
 | `test_hud.js` | `HUD` state display |
 | `test_score_manager.js` | `ScoreManager` persistence |
-| `test_all_shared.js` | Integration runner (skipped by test harness) |
-| `test_infrastructure.py` | Python `src/` module imports |
+| `test_all_shared.js` | Integration runner (also skipped by name even where the harness does scan a directory) |
+
+**`4d_generic/tests/`** (actually executed — 2 files, e.g. `test_quadray.js`, `test_synergetics.js`):
+
+| File | Subject |
+|------|---------|
+| `test_quadray.js` | `Quadray` coordinate class |
+| `test_synergetics.js` | IVM constants + geometric identity verification |
 
 ---
 
@@ -193,32 +211,42 @@ if __name__ == '__main__':
 
 ## Test Coverage by Game
 
+> **Note:** these per-game counts are a snapshot from live `python3 run_games.py --test` runs (2026-07-07, 35+ consecutive runs sampled across this session). **Rogue and Tower Defense were fixed this session** (both now seed their internal RNG for test construction and are fully deterministic — 120 and 217 respectively, confirmed stable across 10+ direct runs each). **Still genuinely non-deterministic, unfixed:** Sokoban intermittently fails 2 assertions (32 vs. 34 passed — no reachability/deadlock check on generated levels), 2048 varies by 2 (26 vs. 28), and SimAnt has been observed to drop 1 assertion roughly once per ~10–15 full-suite runs (137/138 vs. 138/138) despite never failing in 15+ isolated `--game simant` runs — the trigger appears tied to running the full 30-game sequence, not SimAnt's own logic in isolation, and was not root-caused this session. Treat this table as directional and re-run the command above for the authoritative current count rather than trusting a hardcoded number.
+
 | Game | Tests | Key Areas Covered |
 |------|-------|-------------------|
-| Chess | 91 | Piece movement, check/checkmate, legal moves |
-| Tower Defense | 98 | Wave spawning, tower targeting, pathfinding |
+| Tower Defense | 217 (deterministic, seeded — see note above) | Wave spawning, tower targeting, pathfinding |
+| Rogue | 120 (deterministic, seeded — see note above) | Procedural dungeon, combat |
 | Doom | 116 | Raycasting, enemy AI, collision, weapons |
-| Minecraft | 74 | Terrain gen, block placement, inventory |
-| Connect Four | 70 | Gravity drop, 4-in-a-row detection |
-| Frogger | 23 | Lane mechanics, collision |
+| SimAnt | ~137–148 (2 files, rare unresolved flake — see note above) | Pheromone trails, foraging |
+| Connect Four | 124 | Gravity drop, 4-in-a-row detection |
+| Minecraft | ~124 (2 files) | Terrain gen, block placement, inventory |
+| Chess | 91 | Piece movement, check/checkmate, legal moves |
+| Pac-Man | 74 | Ghost AI, maze navigation |
+| Asteroids | 67 | Wrap-around, splitting |
+| Pong | 52 | Paddle/ball physics |
+| Lights Out | 45 | Cell toggling, solvability |
+| Life | 43 | Neighbor counting, wrapping |
+| Space Invaders | 43 | Formation movement, shooting |
+| Reversi | 34 | Disc flipping, 8-direction check |
+| Sokoban | ~32–34 | Box pushing, goal detection |
+| Mahjong | 33 | Tile matching, layers |
+| Go | 31 | Stone placement, capture, territory |
+| Backgammon | 30 | Dice, bearing off |
+| Sudoku | 31 | Cell validity, solve check |
+| Frogger | 27 | Lane mechanics, collision |
+| Memory | 27 | Card matching, pairs |
+| 2048 | ~26–28 | Tile merging, spawn logic |
+| Hex | 29 | Connection detection |
 | Minesweeper | 23 | Mine placement, neighbor counting |
-| Space Invaders | 22 | Formation movement, shooting |
 | Bomberman | 22 | Bomb blast, wall destruction |
 | Breakout | 20 | Ball physics, brick breaking |
-| Pac-Man | 19 | Ghost AI, maze navigation |
-| Pong | 19 | Paddle/ball physics |
 | Tetris | 18 | Piece rotation, line clearing |
 | Snake | 15 | Growth, self-collision |
-| Asteroids | 12 | Wrap-around, splitting |
 | Checkers | 11 | Capture, king promotion |
-| Reversi | 11 | Disc flipping, 80-direction check |
-| Catan | 10 | Resource production, settlements |
-| SimAnt | 10 | Pheromone trails, foraging |
-| Life | 8 | Neighbor counting, wrapping |
-| Backgammon | 8 | Dice, bearing off |
-| Mahjong | 7 | Tile matching, layers |
+| Catan | 56 | Resource production, settlements |
 
-**Total: 1,147 tests across 30 games**
+**Total (live snapshot, 20+ consecutive `python3 run_games.py --test` runs): ~1,752–1,787**, printed by the runner's own `Total:` line — this figure already *includes* the 48 shared-module tests below (5 from the 3 `games/tests/*.py` files + 43 from the 2 `4d_generic/tests/*.js` files), it is not additive on top of them. Do not treat an all-green total as current fact — confirm with a live run.
 
 ---
 

@@ -17,9 +17,10 @@ This document provides a reference for the core C++ API of QuadCraft.
 
 | Class | Header | Description |
 | --- | --- | --- |
-| `Entity` | [src/core/entity/Entity.h](../../src/core/entity/Entity.h) | Base entity class |
 | `Camera` | [src/core/entity/Camera.h](../../src/core/entity/Camera.h) | Camera and view management |
-| `EntityManager` | [src/core/entity/EntityManager.h](../../src/core/entity/EntityManager.h) | Entity lifecycle management |
+
+> [!NOTE]
+> `Entity.h` and `EntityManager.h` are planned but not yet implemented — see [Entity System (Design Spec)](entity_system.md). `Camera.h` is the only existing header in `src/core/entity/`.
 
 ### Coordinate System
 
@@ -36,8 +37,8 @@ This document provides a reference for the core C++ API of QuadCraft.
 #include "core/world/World.h"
 
 // Get the block at a specific coordinate
-Block GetBlockAt(World* world, int x, int y, int z) {
-    return world->getBlock(x, y, z);
+Block::BlockID GetBlockAt(World* world, const Quadray& worldPos) {
+    return world->getBlock(worldPos);
 }
 ```
 

@@ -45,10 +45,11 @@ Jump over an adjacent enemy piece to an empty square beyond it, removing the cap
 4d_checkers/
 ├── index.html              # Game entry point (premium dark UI)
 ├── js/
-│   ├── quadray.js          # 4D tetrahedral coordinates
 │   ├── checkers_board.js   # Board logic, pieces, move generation
 │   ├── checkers_game.js    # Game controller & interaction
 │   └── checkers_renderer.js# Canvas 3D rendering & HUD
+│   (quadray.js is loaded from ../4d_generic/quadray.js — shared 4D
+│   tetrahedral coordinate module, not a local file)
 ├── tests/
 │   ├── test_checkers.js    # Node.js unit tests (11 tests)
 │   └── test.html           # Browser test runner

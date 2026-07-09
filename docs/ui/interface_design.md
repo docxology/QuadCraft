@@ -2,6 +2,8 @@
 
 This document details the user interface design of QuadCraft, covering both the visual aesthetics and technical implementation of the UI system.
 
+> **Scope note:** the component architecture, hotbar, tetrahedral compass, coordinate display, mobile adaptations, and localization system described below are a design specification for a planned core-engine UI. None of it is implemented in the actual browser games — each of the 30 standalone games under `games/<name>/` has its own minimal HTML/Canvas UI instead (see [README.md — Game-Specific UIs](README.md#game-specific-uis)). For example, `games/4d_generic/hud.js` is a 93-line status-text class (`set`, `gameOver`, `paused`, `playing`, `warning`) with no containers, buttons, animation classes, theming, compass, coordinate panel, or localization, and `games/4d_generic/input_controller.js` only binds keyboard `keydown`/`keyup` events — no hotbar slot selection, scroll-wheel cycling, or touch/gesture input.
+
 ## Design Philosophy
 
 The QuadCraft UI system follows these core design principles:

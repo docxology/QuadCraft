@@ -66,7 +66,6 @@ class PacManBoard extends BaseBoard {
         this.score = 0;
         this.lives = 3;
         this.gameOver = false;
-        this.won = false;
         this.powerTimer = 0;
         this.pelletsEaten = 0;
         this.ghostsEaten = 0;
@@ -296,7 +295,6 @@ class PacManBoard extends BaseBoard {
         this.score = 0;
         this.lives = 3;
         this.gameOver = false;
-        this.won = false;
         this.powerTimer = 0;
         this.pelletsEaten = 0;
         this.ghostsEaten = 0;
@@ -341,7 +339,7 @@ class PacManBoard extends BaseBoard {
             this.powerPellets.delete(pk);
             this.score += 50;
             this.powerTimer = 30;
-            this.ghosts.forEach(g => g.scared = true);
+            this.ghosts.forEach(g => { if (g.state !== 'eaten') g.state = 'frightened'; });
         }
 
         // Check fruit collection
@@ -579,7 +577,6 @@ class PacManBoard extends BaseBoard {
             ghostsEaten: this.ghostsEaten,
             powerTimer: this.powerTimer,
             gameOver: this.gameOver,
-            won: this.won,
             fruit: this.fruit ? this.fruit.type.name : null,
             fruitEaten: this.fruitEaten,
             tetraCount,

@@ -244,65 +244,31 @@ classDiagram
 - **Flammability**: How the block interacts with fire
 - **Growth Properties**: For blocks that can grow or spread
 
-## Block Orientation
+## Block Orientation — verified: tetra/octa parity typing
 
-Tetrahedral blocks can have different orientations, which affects their appearance and connections:
-
-```mermaid
-graph TD
-    subgraph "Block Orientation"
-        Rotations["Rotations"]
-        Orientations["Four Base Orientations"]
-        Symmetry["Rotational Symmetry"]
-    end
-    
-    Rotations --> AxisRotation["Rotation Around Axis"]
-    Rotations --> FaceFlip["Face Flip"]
-    
-    Orientations --> Orientation1["Orientation 1"]
-    Orientations --> Orientation2["Orientation 2"]
-    Orientations --> Orientation3["Orientation 3"]
-    Orientations --> Orientation4["Orientation 4"]
-    
-    Symmetry --> C3["3-fold Symmetry"]
-    Symmetry --> TetrahedralGroup["Tetrahedral Symmetry Group"]
-```
-
-Orientation features:
-- **Four Base Orientations**: A tetrahedron can be placed in four fundamentally different ways
-- **Rotation System**: A consistent system for specifying and changing block orientations
-- **Placement Rules**: How block orientation is determined during placement
-- **Orientation-Dependent Textures**: Blocks can have different textures based on orientation
-- **Connectivity Rules**: How orientation affects connections between blocks
-
-### Orientation Representation
-
-Block orientation is represented internally using this system:
+> **Correction (verified against `games/4d_generic/quadray.js`):** the
+> shipped code does not implement a "Four Base Orientations" model or a
+> "Type Z" / "Type C" naming scheme. Instead, every `games/` implementation
+> distinguishes exactly two IVM cell types by the parity of the sum of the
+> integer Quadray coordinates:
 
 ```mermaid
 graph TD
-    subgraph "Orientation Representation"
-        Reference["Reference Vertex"]
-        UpDirection["Up Direction"]
-        Storage["Compact Storage"]
+    subgraph "Real IVM Cell Typing (Quadray.cellType)"
+        Sum["sum = round(a)+round(b)+round(c)+round(d)"]
+        Even["sum % 2 === 0 -> 'tetra'"]
+        Odd["sum % 2 !== 0 -> 'octa'"]
     end
-    
-    Reference --> Vertex0["Vertex 0"]
-    Reference --> Vertex1["Vertex 1"]
-    Reference --> Vertex2["Vertex 2"]
-    Reference --> Vertex3["Vertex 3"]
-    
-    UpDirection --> FaceNormal["Face Normal"]
-    UpDirection --> EdgeVector["Edge Vector"]
-    
-    Storage --> TwoBits["2-bit Representation"]
-    Storage --> LookupTable["Orientation Lookup Table"]
+    Sum --> Even
+    Sum --> Odd
 ```
 
-The orientation system allows:
-- **Compact Storage**: Efficient representation of orientation in memory
-- **Fast Rotation**: Quick calculation of new orientations during rotation
-- **Intuitive Placement**: Natural orientation based on player position and target face
+`Quadray.cellType(a, b, c, d)` (`games/4d_generic/quadray.js`):
+- Computes `sum = round(a) + round(b) + round(c) + round(d)`
+- Returns `'tetra'` when `sum % 2 === 0`
+- Returns `'octa'` when `sum % 2 !== 0`
+- There is no 2-bit orientation field, no orientation lookup table, and no
+  four-way rotation system in the shipped `games/` code
 
 ## Block Interactions
 

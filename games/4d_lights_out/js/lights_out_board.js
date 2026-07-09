@@ -128,17 +128,27 @@ class LightsOutBoard extends BaseBoard {
         this.won = false;
         this.gameOver = false;
 
-        // Perform random toggles to guarantee solvability
+        // Perform random toggles to guarantee solvability.
+        // toggle() no-ops once this.won is true (by design — it blocks player
+        // input on a solved board), but the random walk below can incidentally
+        // pass through the all-off state mid-loop and flip won=true via
+        // _checkWin(). Left alone, that silently no-ops every remaining
+        // toggle in this loop *and* the all-off correction below, leaving the
+        // board permanently stuck blank with won stuck true. Reset the flag
+        // after every toggle here — randomize() owns the board until it
+        // returns and must not let mid-loop win detection block itself.
         const n = numToggles || Math.max(3, Math.floor(this.cells.length * 0.15));
         for (let i = 0; i < n; i++) {
             const idx = Math.floor(Math.random() * this.cells.length);
             this.toggle(this.cells[idx]);
+            this.won = false;
         }
         this.moveCount = 0; // Reset move count after setup
 
         // If we randomly got all-off, toggle one more
         if (this.litCount() === 0) {
             this.toggle(this.cells[0]);
+            this.won = false;
             this.moveCount = 0;
         }
 

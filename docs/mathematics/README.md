@@ -41,5 +41,5 @@ The space-filling grid of alternating tetrahedra and octahedra that underlies Qu
 ## Cross-References
 
 - [Quadray implementation in QuadCraft](../quadray_coordinates.md) — engine-level overview
-- [Games Portfolio](../games.md) — all 12 games use quadray coordinates
+- [Games Portfolio](../games.md) — all 30 games use quadray coordinates
 - [Glossary](../reference/glossary.md) — definitions for IVM, Synergetics, S3, etc.

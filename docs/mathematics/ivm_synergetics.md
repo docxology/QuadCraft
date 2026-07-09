@@ -60,13 +60,20 @@ flowchart LR
     T --> C --> O --> RD --> VE
 ```
 
-| Polyhedron | Tetravolumes | XYZ Volume | Ratio (Synergetics/XYZ) |
-| ---------- | ------------ | ---------- | ----------------------- |
-| Tetrahedron | 1 | √2/12 ≈ 0.1178 | S3 |
-| Cube | 3 | 1 (by definition for edge = √2) | S3 |
-| Octahedron | 4 | √2/3 ≈ 0.4714 | S3 |
-| Rhombic Dodecahedron | 6 | √2 ≈ 1.4142 | S3 |
-| Cuboctahedron (VE) | 20 | 5√2/3 ≈ 2.357 | S3 |
+| Polyhedron | Tetravolumes | XYZ Volume | Tetravolume ÷ XYZ Volume |
+| ---------- | ------------ | ---------- | ------------------------ |
+| Tetrahedron | 1 | √2/12 ≈ 0.1178 | 12/√2 = 6√2 ≈ 8.485 |
+| Cube | 3 | 1 (by definition for edge = 1) | 3 |
+| Octahedron | 4 | √2/3 ≈ 0.4714 | 12/√2 = 6√2 ≈ 8.485 |
+| Rhombic Dodecahedron | 6 | √2 ≈ 1.4142 | 6/√2 = 3√2 ≈ 4.243 |
+| Cuboctahedron (VE) | 20 | 5√2/3 ≈ 2.357 | 12/√2 = 6√2 ≈ 8.485 |
+
+> **Note:** These per-row ratios are *not* the S3 constant — dividing this
+> table's own Tetravolumes by its own XYZ Volumes never yields S3
+> (≈1.06066); it yields 6√2 (≈8.485) for the tetrahedron, octahedron, and
+> cuboctahedron (which all use the edge-1 convention), 3√2 (≈4.243) for the
+> rhombic dodecahedron, and 3 for the cube. S3 is a distinct constant with
+> its own derivation — see below.
 
 ### The S3 Constant
 
@@ -74,11 +81,16 @@ The constant **S3** converts between XYZ cubic volumes and Synergetics tetravolu
 
 $$S_3 = \sqrt{\frac{9}{8}} \approx 1.06066$$
 
-**Derivation**: A regular tetrahedron with edge length 1 has:
+**Derivation**: S3 is *not* the ratio for a unit-edge (edge = 1) tetrahedron
+— that ratio is 12/√2 = 6√2 ≈ 8.485 (see the table above), not S3. S3 comes
+from the tetrahedron QuadCraft actually uses as its computational IVM unit:
+the tetrahedron formed by the four Quadray basis vectors, which — per
+[Quadray Coordinates (Mathematics)](quadray_coordinates.md) — has **edge
+length 2**, not 1:
 
-- XYZ volume = √2/12
-- Synergetics tetravolume = 1 (by definition)
-- The ratio between the Synergetics unit volume and XYZ unit volume for a unit-edge tetrahedron yields S3
+- XYZ volume of a regular tetrahedron with edge 2: V = 2³ × √2/12 = 8√2/12 = 2√2/3 ≈ 0.9428
+- Synergetics tetravolume = 1 (by definition — this is the unit cell)
+- Ratio: Synergetics volume ÷ XYZ volume = 1 ÷ (2√2/3) = 3/(2√2) = 3√2/4 = √(9/8) = **S3** ✓
 
 In code:
 
@@ -111,7 +123,7 @@ Given a quadray coordinate `(a, b, c, d)` (normalized), the cell parity can be d
 ```javascript
 function cellParity(a, b, c, d) {
     const sum = a + b + c + d;
-    // Integer sum → tetrahedron; half-integer sum → octahedron
+    // Even coordinate sum → tetrahedron; odd coordinate sum → octahedron
     return Math.round(sum) % 2 === 0 ? 'tetra' : 'octa';
 }
 ```

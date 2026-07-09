@@ -72,10 +72,10 @@ games/
 ├── GAMES_INDEX.md               # Canonical game portfolio index
 │
 ├── src/                         # Layer 2 — Python infrastructure
-│   ├── __init__.py              # Unified public API (35 exports)
+│   ├── __init__.py              # Unified public API (54 exports)
 │   ├── core/                    # Core configuration and registry
 │   │   ├── config.py            # Shared constants (ports, paths, lists)
-│   │   └── registry.py          # GAMES dict + load_config()
+│   │   └── registry.py          # GAMES dict + load_config() + get_port()
 │   ├── server/                  # HTTP serving
 │   │   └── launcher.py          # GameServer (HTTP + browser open)
 │   ├── qa/                      # Quality Assurance tools
@@ -84,9 +84,10 @@ games/
 │   ├── scaffold/                # GameScaffold (new game generator)
 │   ├── analytics/               # GameAnalytics + health scoring
 │   ├── shared/                  # ModuleRegistry + JSModule metadata
+│   ├── board/                   # BoardAudit + BoardCatalog (migration tracking, board inventory)
 │   └── space/                   # Quadray / IVM / XYZ / geometry
 │
-├── 4d_generic/                  # Layer 1 — Shared JS modules (13 files)
+├── 4d_generic/                  # Layer 1 — Shared JS modules (17 files: 12 core + 4 optional + 1 CSS)
 │   ├── quadray.js               # Quadray coordinate class
 │   ├── camera.js                # CameraController (drag rotation)
 │   ├── projection.js            # projectQuadray() + drawQuadrayAxes()
@@ -99,6 +100,10 @@ games/
 │   ├── grid_utils.js            # GridUtils (IVM grid operations)
 │   ├── hud.js                   # HUD overlay manager
 │   ├── score_manager.js         # ScoreManager (localStorage)
+│   ├── base_board.js            # (optional) BaseBoard class
+│   ├── entity_system.js         # (optional) Entity system
+│   ├── turn_manager.js          # (optional) Turn-based game manager
+│   ├── pathfinding.js           # (optional) Pathfinding helpers
 │   └── hud-style.css            # Shared HUD stylesheet
 │
 ├── 4d_<game>/                   # Layer 3 — Per-game (×30)
@@ -112,7 +117,7 @@ games/
 │       └── test_<game>.js       # Node.js test file
 │
 ├── scripts/                     # Maintenance automation
-├── tests/                       # Shared module tests (12 files)
+├── tests/                       # Python infra tests (3 .py files) + tests/shared/ (13 JS files) + tests/space/ (1 .py file)
 └── doc/                         # ← This documentation hub
 ```
 

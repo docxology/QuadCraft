@@ -1,5 +1,8 @@
 # QuadCraft Tetrahedral Chunk System
 
+> [!IMPORTANT]
+> **Design Specification Status**: This document outlines the *architectural design* and *planned implementation* of an extended chunk subsystem. As of the current version, none of `TetrahedralChunk`, `ChunkManager`, `ChunkCoord`, `ChunkCache`, `ChunkGenerator`, `ChunkSerializer`, `ChunkMemoryManager`, `ChunkCompressionLayer`, `ChunkStorage`, `ChunkEventSystem`, `ChunkLODSystem`, `ChunkRenderer`, or `ChunkLightingSystem` exist in the codebase (verified via `grep -rln 'class <Name>\b' src/`, 0 matches for all thirteen). The only real chunk class is `TetraChunk` (`src/core/world/TetraChunk.h`), which has none of the caching, compression, LOD, lighting, or event-system machinery described below. This guide serves as a design proposal, not documentation of current behavior.
+
 This document details the chunk system in QuadCraft, explaining how the tetrahedral world is divided into manageable chunks and how these chunks are processed, stored, and rendered.
 
 ## Chunk System Overview

@@ -2,12 +2,12 @@
 
 ## Project Overview
 
-4D Mahjong simulates the classic tile-matching game in a 4-layered 3D layout (conceptually 4D). Players match identical free tiles to clear the board. **Production-ready** with 7 passing tests.
+4D Mahjong simulates the classic tile-matching game in a 4-layered 3D layout (conceptually 4D). Players match identical free tiles to clear the board. **Production-ready** with 33 passing tests.
 
 ## Quick Commands
 
 ```bash
-# Run all tests (7 tests, 100% pass)
+# Run all tests (33 tests, 100% pass)
 node tests/test_mahjong.js
 
 # Open in browser
@@ -22,7 +22,7 @@ open games/4d_mahjong/index.html
 | Directory | Files | Purpose |
 |-----------|-------|---------|
 | `js/` | 3 modules | Core logic (Quadray, Board, Renderer, Game) |
-| `tests/` | 1 file | Test suite (7 tests) |
+| `tests/` | 1 file | Test suite (33 tests) |
 
 ## Shared Modules
 
@@ -53,13 +53,17 @@ Load in this order:
 
 | File | Tests | Coverage |
 |------|-------|----------|
-| `test_mahjong.js` | 7 | Tile freedom rules, matching pairs, win condition |
+| `test_mahjong.js` | 33 | Tile freedom rules, matching pairs, win condition |
 
 ## Key Mechanics
 
 ### Freedom Rule
 
-A tile is "free" if it has no tile on top (Layer + 1) AND has at least one side (Left or Right) open.
+A tile is "free" (selectable) if it has no other tile stacked on top of it
+(Layer + 1, within Quadray distance < 2.0) — see `isExposed()` in
+`js/mahjong_board.js`. The classic Mahjong Solitaire left/right side-open
+condition is **not** implemented; lateral neighbors do not block
+selection.
 
 ### 4D Layering
 

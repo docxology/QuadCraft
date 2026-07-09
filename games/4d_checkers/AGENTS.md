@@ -45,9 +45,9 @@ Load in this order to avoid reference errors:
 
 | File | Lines | Key Exports |
 |------|-------|-------------|
-| `checkers_board.js` | 196 | `CheckersBoard`, `CheckersPiece`, `PlayerColor`, `PieceType` |
-| `checkers_renderer.js` | 258 | `Renderer` class with grid, pieces, HUD |
-| `checkers_game.js` | 148 | `CheckersGame` controller with win detection |
+| `checkers_board.js` | 397 | `CheckersBoard`, `CheckersPiece`, `PlayerColor`, `PieceType` |
+| `checkers_renderer.js` | 317 | `Renderer` class with grid, pieces, HUD |
+| `checkers_game.js` | 292 | `CheckersGame` controller with win detection |
 
 ### Tests (`tests/`)
 

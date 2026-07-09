@@ -341,7 +341,7 @@
 
         // Verify Math button
         document.getElementById('verifyBtn').addEventListener('click', () => {
-            const results = verifyGeometricIdentities(game.board);
+            const results = verifyGeometricIdentitiesWithBoard(game.board);
             const panel = document.getElementById('verifyResults');
             const list = document.getElementById('verifyList');
             list.innerHTML = '';

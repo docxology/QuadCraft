@@ -51,7 +51,7 @@ CombatSystem, RedColonyAI, YellowAssistAI, PheromoneVisualizer
 - **Queen auto-spawn**: Workers hatched when food > 15
 - **Colony health**: Composite of queen HP, population, food, combat K/D
 - **Win condition**: Game won when enemy queen dies
-- **Tunnel tracking**: Set-based connectivity for terrain bonus
+- **Tunnel tracking**: Set-based connectivity for the -3 tunnel-defense damage reduction (home-nest proximity, not tunnel occupancy, drives the +5 home bonus)
 - **4 ant castes**: Queen (200 HP), Soldier (50 HP), Worker (20 HP), Scout (15 HP)
 
 ## Verification

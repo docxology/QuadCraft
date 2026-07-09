@@ -137,10 +137,12 @@ for (let d = 0; d < 12; d++) {
         }
     }
 }
-if (attacked) {
-    assert('Combat occurred (HP may have changed or enemy killed)',
-        b3.enemies.length < initialEnemyCount || b3.hp < initialHP || b3.combatLog.length > 0);
-}
+// Gating this assert on `attacked` (whether random dungeon gen placed an
+// enemy adjacent to the player within 12 directions this run) made the
+// total assertion count non-deterministic (120 vs 121 across runs).
+// Fold the gate into the condition so the assert always fires.
+assert('Combat occurred when an adjacent enemy was found (vacuously true otherwise)',
+    !attacked || b3.enemies.length < initialEnemyCount || b3.hp < initialHP || b3.combatLog.length > 0);
 assert('Combat log is populated', b3.combatLog.length > 0);
 
 // ─── 7. Damage Calculation ──────────────────────────────────────────
@@ -184,6 +186,7 @@ assert('XP threshold increased', b6.xpToLevel === 30);
 // ─── 10. Item Pickup ─────────────────────────────────────────────────
 console.log('\n— Item Pickup —');
 const b7 = new RogueBoard(6);
+b7.items = []; // isolate from randomly-generated dungeon items at the same coords
 const goldPos = { a: 0, b: 0, c: 0, d: 0 };
 b7.setCell(goldPos, TILE.GOLD);
 b7.items.push({ pos: goldPos, type: 'gold', data: { amount: 50 } });
@@ -193,6 +196,7 @@ assert('Gold picked up', b7.gold === 50);
 // ─── 11. Weapon Equip ───────────────────────────────────────────────
 console.log('\n— Weapon Equip —');
 const b8 = new RogueBoard(6);
+b8.items = []; // isolate from randomly-generated dungeon items at the same coords
 const wpnPos = { a: 1, b: 0, c: 0, d: 0 };
 b8.setCell(wpnPos, TILE.WEAPON);
 b8.items.push({ pos: wpnPos, type: 'weapon', data: { name: 'Axe', bonus: 3 } });
@@ -212,8 +216,11 @@ assert('Armor name is Plate', b8.armor.name === 'Plate');
 assert('Armor bonus is 4', b8.armor.bonus === 4);
 
 // ─── 13. Dungeon Connectivity ────────────────────────────────────────
+// Seeded so the dungeon layout (and therefore this assertion) is fully
+// deterministic and reproducible instead of depending on whichever
+// organic layout Math.random() happens to produce this run.
 console.log('\n— Dungeon Connectivity —');
-const b9 = new RogueBoard(8);
+const b9 = new RogueBoard(8, { seed: 7 });
 const allCells9 = GridUtils.generateGrid(b9.size);
 const stairsCell = allCells9.find(c => b9.getCell(c) === TILE.STAIRS);
 assert('Stairs exist in dungeon', stairsCell !== undefined);
@@ -222,6 +229,18 @@ if (stairsCell) {
     const path = QuadrayPathfinder.bfs(b9.player, stairsCell, isWalkable, b9.size);
     assert('Stairs reachable from player via BFS', path !== null && path.length > 0);
 }
+// Postcondition sweep: _generateDungeon() must place reachable stairs on
+// every level it builds, not just on the one seed sampled above. This
+// directly tests the generation algorithm's own guarantee (deterministic
+// per seed, so any regression here reproduces identically every run).
+const stairsMissingSeeds = [];
+for (let seed = 0; seed < 25; seed++) {
+    const bSeeded = new RogueBoard(8, { seed });
+    const hasStairs = bSeeded.cells.some(c => bSeeded.getCell(c) === TILE.STAIRS);
+    if (!hasStairs) stairsMissingSeeds.push(seed);
+}
+assert(`Stairs generated across 25 seeds (missing: ${stairsMissingSeeds.join(',') || 'none'})`,
+    stairsMissingSeeds.length === 0);
 
 // ─── 14. Death and Game Over ─────────────────────────────────────────
 console.log('\n— Death and Game Over —');
@@ -336,16 +355,23 @@ b15.useScroll('teleport');
 assert('Teleport consumes scroll', b15.scrolls.teleport === 0);
 
 // Test Fireball
+// fbEnemyPos depends on organic (non-seeded) dungeon generation around the
+// player, so it's occasionally undefined — gating the two asserts below on
+// it made the total assertion count non-deterministic across runs (same
+// class of bug as the Combat System block above). Fold the gate into each
+// condition so both asserts always fire.
 const fbEnemyPos = GridUtils.boundedNeighbors(b15.player.a, b15.player.b, b15.player.c, b15.player.d, b15.size).find(c => b15.getCell(c) === TILE.FLOOR);
 if (fbEnemyPos) {
     b15.enemies.push({ pos: fbEnemyPos, type: 'goblin', hp: 5, maxHp: 5, xp: 5, def: 0, name: 'Target', atk: 1 });
     b15.setCell(fbEnemyPos, TILE.ENEMY);
     b15._computeFOV();
     b15.useScroll('fireball');
-    const targetAlive = b15.enemies.find(e => e.name === 'Target');
-    assert('Fireball damages/kills visible enemy', !targetAlive || targetAlive.hp < 5);
-    assert('Fireball consumes scroll', b15.scrolls.fireball === 0);
 }
+const targetAlive = b15.enemies.find(e => e.name === 'Target');
+assert('Fireball damages/kills visible enemy (vacuously true if no floor neighbor found)',
+    !fbEnemyPos || !targetAlive || targetAlive.hp < 5);
+assert('Fireball consumes scroll (vacuously true if no floor neighbor found)',
+    !fbEnemyPos || b15.scrolls.fireball === 0);
 
 // Test Mapping
 const expBefore = b15.explored.size;
@@ -354,32 +380,38 @@ assert('Mapping scroll reveals map', b15.explored.size > expBefore);
 assert('Mapping consumes scroll', b15.scrolls.mapping === 0);
 
 // ─── 25. Doors and Traps ─────────────────────────────────────────────
+// Seeded so the player's position (and therefore which directions are
+// in-bounds) is fully deterministic and reproducible instead of
+// depending on wherever organic dungeon generation happens to drop the
+// player this run. Door/trap directions are also picked directly off a
+// single neighbor list (checked in-bounds) rather than computed from
+// one neighbor function and re-matched by coordinate against a second
+// — collapsing that indirection to a single source of truth removes a
+// whole class of "which list disagrees with which" bugs even though the
+// dungeon layout itself is no longer the variable at fault once seeded.
 console.log('\n— Doors and Traps —');
-const b16 = new RogueBoard(6);
-const dtNbrsPos = GridUtils.boundedNeighbors(b16.player.a, b16.player.b, b16.player.c, b16.player.d, b16.size);
-const doorPos = dtNbrsPos[0];
-b16.setCell(doorPos, TILE.DOOR);
+const b16 = new RogueBoard(6, { seed: 11 });
+b16.enemies = []; // isolate door/trap mechanics from enemy-turn side effects
 
-const allNbrs = GridUtils.neighbors(b16.player.a, b16.player.b, b16.player.c, b16.player.d);
-let dirIndexDoor = -1;
-for (let i = 0; i < allNbrs.length; i++) {
-    if (allNbrs[i].a === doorPos.a && allNbrs[i].b === doorPos.b && allNbrs[i].c === doorPos.c && allNbrs[i].d === doorPos.d) {
-        dirIndexDoor = i; break;
+const dtAllNbrs = GridUtils.neighbors(b16.player.a, b16.player.b, b16.player.c, b16.player.d);
+const dtInBoundsIdx = [];
+for (let i = 0; i < dtAllNbrs.length && dtInBoundsIdx.length < 2; i++) {
+    if (GridUtils.inBounds(dtAllNbrs[i].a, dtAllNbrs[i].b, dtAllNbrs[i].c, dtAllNbrs[i].d, b16.size)) {
+        dtInBoundsIdx.push(i);
     }
 }
+assert('Player has at least 2 in-bounds neighbors for door/trap setup', dtInBoundsIdx.length === 2);
+const [dirIndexDoor, dirIndexTrap] = dtInBoundsIdx;
+const doorPos = dtAllNbrs[dirIndexDoor];
+const trapPos = dtAllNbrs[dirIndexTrap];
+
+b16.setCell(doorPos, TILE.DOOR);
 const resultDoor = b16.move(dirIndexDoor);
 assert('Moving into door opens it', resultDoor === 'door');
 assert('Door tile becomes FLOOR', b16.getCell(doorPos) === TILE.FLOOR);
 
 // Test Trap
-const trapPos = dtNbrsPos[1];
 b16.setCell(trapPos, TILE.TRAP);
-let dirIndexTrap = -1;
-for (let i = 0; i < allNbrs.length; i++) {
-    if (allNbrs[i].a === trapPos.a && allNbrs[i].b === trapPos.b && allNbrs[i].c === trapPos.c && allNbrs[i].d === trapPos.d) {
-        dirIndexTrap = i; break;
-    }
-}
 const hpBeforeTrap = b16.hp;
 const resultTrap = b16.move(dirIndexTrap);
 assert('Moving into trap triggers it', resultTrap === 'moved' || resultTrap === 'dead');

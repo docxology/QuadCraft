@@ -2,6 +2,21 @@
 
 This document describes the procedural world generation system used in QuadCraft, focusing on the creation of tetrahedral landscapes and structures.
 
+> **Scope note (verified against the live tree):** the noise/biome/chunking
+> content below describes an aspirational design that does not match any
+> shipped `games/` implementation. The only real world-generation code —
+> `games/4d_minecraft/js/minecraft_board.js` `generateTerrain()` — has no
+> noise functions, no biome map, no L-systems, no Voronoi diagrams, and no
+> chunking: it is a fixed 3-layer stack (`c===0` stone, `c===1` dirt,
+> `c===2` grass at 70% probability) over a bounded, non-chunked `size=8`
+> IVM grid (`new MinecraftBoard(size = 8)`, logged as `8^4 IVM voxel
+> grid`), plus exactly 4 randomly-placed trees and 2 hardcoded diamond
+> blocks. There is no player-position concept in this game (only a
+> rotatable/zoomable camera per `games/4d_minecraft/js/minecraft_renderer.js`),
+> so "dynamic loading based on player position" and "infinite worlds"
+> below do not apply. Treat sections below other than this note as an
+> unimplemented design spec, not current `games/` behavior.
+
 ## Overview
 
 QuadCraft's world generation system creates diverse tetrahedral environments using procedural generation techniques adapted for tetrahedral space. The generation process follows a multi-layered approach to create coherent, interesting, and playable worlds.
@@ -370,12 +385,18 @@ classDiagram
     ChunkManager --> WorldGenerator
 ```
 
-Chunk management features:
+Chunk management features (aspirational — not implemented in `games/`):
 - **Tetrahedral Chunking**: Division of the world into tetrahedral chunks
 - **Dynamic Loading**: Loading and unloading chunks based on player position
 - **Generation Priority**: Prioritizing generation of visible chunks
 - **Chunk Serialization**: Saving and loading chunks to/from disk
 - **Chunk Boundaries**: Special handling of block connections at chunk boundaries
+
+**Verified real behavior:** `games/4d_minecraft/js/minecraft_board.js`
+`MinecraftBoard` holds the entire world as a single, fully-resident `Map`
+over a bounded `size=8` (`8^4`) grid with no chunk manager, no
+loading/unloading, and no player-position dependency (there is no player
+position at all — only a camera).
 
 ### Chunk Coordinate System
 
@@ -403,11 +424,15 @@ graph TD
     Conversion --> LocalToGlobal["Local to Global"]
 ```
 
-The coordinate system allows for:
+The coordinate system allows for (aspirational — not implemented in `games/`):
 - **Efficient Indexing**: Quick lookup of blocks within the world
 - **Spatial Partitioning**: Dividing the world into manageable chunks
 - **Level of Detail**: Potential for multi-resolution chunk representation
 - **Infinite Worlds**: Support for theoretically infinite world sizes
+
+**Verified real behavior:** the real world is a small, fixed `size=8`
+(`8^4`) grid (`games/4d_minecraft/js/minecraft_board.js` `constructor(size
+= 8)`), not an infinite or dynamically-loaded world.
 
 ## World Generation Implementation
 

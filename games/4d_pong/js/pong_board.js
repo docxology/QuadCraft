@@ -1,16 +1,16 @@
 /**
- * pong_board.js — 4D Pong in Quadray Space
+ * pong_board.js — 4D Pong with Quadray-labeled coordinates
  *
- * Ball has continuous position and velocity as Quadray vectors.
- * Two paddles on opposite tetrahedral faces.
- * Ball bounces off walls using Quadray reflection.
+ * Ball and paddle positions are plain {a,b,c,d} objects labeled with
+ * Quadray axis names; physics runs as ordinary per-axis arithmetic on
+ * a 4D hyper-rectangular court, not as Quadray vector operations.
+ * Two paddles sit at opposite b/c/d-aligned court faces.
+ * Ball bounces off walls via axis-aligned (per-component) reflection.
  *
- * Deeply integrated with all Quadray/IVM shared modules:
- *   - Quadray: toKey, normalized, add, toCartesian, distance, distanceTo,
- *              length, scale, toIVM, cellType, cellVolume, clone, BASIS
- *   - GridUtils: key, parseKey, neighbors, manhattan, euclidean
- *   - SYNERGETICS: constants, volume ratios
- *   - verifyRoundTrip, verifyGeometricIdentities, angleBetweenQuadrays
+ * Uses these Quadray/IVM shared-module functions directly:
+ *   - Quadray.cellType, Quadray.cellVolume
+ *   - GridUtils.manhattan
+ *   - verifyRoundTrip (round-trip integrity check, run at construction)
  *
  * @module PongBoard
  */

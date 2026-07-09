@@ -26,13 +26,18 @@ assert('Tiles are 2 or 4', tiles.every(c => [2, 4].includes(b.getCell(c))));
 
 console.log('\n— Slide —');
 const b2 = new Twenty48Board(3);
+// Deterministic setup: clear the randomly-spawned tiles and place a single
+// tile at the origin. All 12 IVM direction deltas are permutations of
+// (0,1,1,2) — non-negative components in [0,2] — so from (0,0,0,0) every
+// direction lands in-bounds on a size-3 grid, guaranteeing a move regardless
+// of RNG (avoids a previously flaky assertion count across runs).
+for (const c of b2.cells) b2.setCell(c, 0);
+b2.setCell({ a: 0, b: 0, c: 0, d: 0 }, 2);
 let moved = false;
 for (let d = 0; d < 12; d++) { if (b2.slide(d)) { moved = true; break; } }
-assert('Can slide in some direction', moved || b2.cells.filter(c => b2.getCell(c) > 0).length >= 2);
-if (moved) {
-    assert('Move counted after slide', b2.moveCount >= 1);
-    assert('Tiles exist after slide', b2.cells.filter(c => b2.getCell(c) > 0).length >= 2);
-}
+assert('Can slide in some direction', moved);
+assert('Move counted after slide', b2.moveCount >= 1);
+assert('Tiles exist after slide', b2.cells.filter(c => b2.getCell(c) > 0).length >= 2);
 
 console.log('\n— Invalid slides —');
 assert('Negative dir rejected', !b2.slide(-1));

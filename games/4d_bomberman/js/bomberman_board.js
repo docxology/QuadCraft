@@ -7,9 +7,8 @@
  * Explosion range configurable. Power-ups in destroyed walls.
  *
  * Deeply integrated with all Quadray/IVM shared modules:
- *   - Quadray: toKey, normalized, add, subtract, equals, distance,
- *              distanceTo, length, scale, toIVM, cellType, cellVolume,
- *              toCartesian, fromCartesian, clone, IVM_DIRECTIONS, BASIS
+ *   - Quadray: subtract, distance, distanceTo, cellType, cellVolume,
+ *              toCartesian, ORIGIN
  *   - GridUtils: key, parseKey, neighbors, boundedNeighbors, inBounds,
  *                manhattan, euclidean, generateGrid, depthSort, shuffle
  *   - SYNERGETICS: constants, volume ratios

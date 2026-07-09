@@ -45,6 +45,17 @@ assert('Point 0 has Quadray', q0 instanceof Quadray);
 const q23 = b.pointToQuadray(23);
 assert('Point 23 has Quadray', q23 instanceof Quadray);
 
+// Regression: all 24 points must map to distinct Quadray coordinates.
+// (Previously points 0/6/12/18 — the first point of each lane — all
+// collapsed to the shared origin (0,0,0,0); see backgammon_board.js
+// _computeQuadray() for the fix.)
+const quadrayKeys = new Set();
+for (let i = 0; i < 24; i++) {
+    const q = b.pointToQuadray(i);
+    quadrayKeys.add(`${q.a},${q.b},${q.c},${q.d}`);
+}
+assert('All 24 points map to distinct Quadray coordinates', quadrayKeys.size === 24);
+
 console.log('\n— Lanes —');
 assert('Point 0 lane A (0)', b.getLane(0) === 0);
 assert('Point 6 lane B (1)', b.getLane(6) === 1);

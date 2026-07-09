@@ -277,7 +277,7 @@ class PacManRenderer extends BaseRenderer {
             lines.push(`POWER: ${b.powerTimer}`);
         }
         if (b.gameOver) {
-            lines.push(b.won ? 'YOU WIN!' : 'GAME OVER');
+            lines.push('GAME OVER');
         }
         this._drawHUD(lines, { color: 'rgba(148, 163, 184, 0.7)', fontSize: 12 });
     }

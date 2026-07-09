@@ -10,7 +10,8 @@
  *   - Round-trip conversions
  *   - Synergetics constants verification
  *   - Geometric identity verification
- *   - AI move generation + immediate win/block detection
+ *   - wouldWinAt() turn-independent win/block simulation (used by the
+ *     AI's immediate win/block check in connect_four_game.js)
  *   - ScoreManager integration
  *   - Undo support
  *   - Draw detection
@@ -346,6 +347,57 @@ const boardDraw = new ConnectFourBoard(1, 1, 1, 1); // 1 slot
 boardDraw.dropPiece(0, 0, 0); // P1 fills the only slot
 assert('Single-slot board results in draw or gameover', boardDraw.gameOver === true);
 assert('No winner in draw', boardDraw.winner === 0);
+
+// ─── 33. wouldWinAt — Turn-Independent Win/Block Simulation (AI) ─────
+// Regression test for the bug where the AI never blocked the
+// opponent's immediate winning move: dropPiece() always attributes a
+// placed piece to `currentPlayer`, so simulating "what if player 1
+// dropped here?" while it is actually player 2's turn was previously
+// impossible. wouldWinAt(b, c, d, player) must answer that question
+// correctly regardless of whose turn it actually is.
+console.log('\n— wouldWinAt (AI win/block simulation) —');
+const boardAI = new ConnectFourBoard(6, 5, 3, 3);
+// Build player 1's 3-in-a-row along the B axis at a=0,c=0,d=0:
+// (b=0,c=0,d=0), (b=1,c=0,d=0), (b=2,c=0,d=0) — with a player-2 filler
+// drop after each so it stays player 1's pieces on the bottom row and
+// it becomes player 2's turn again before the check.
+boardAI.dropPiece(0, 0, 0); // P1 at b=0
+boardAI.dropPiece(4, 0, 0); // P2 filler
+boardAI.dropPiece(1, 0, 0); // P1 at b=1
+boardAI.dropPiece(4, 0, 0); // P2 filler (stacks)
+boardAI.dropPiece(2, 0, 0); // P1 at b=2 — three in a row, P1: b=0,1,2
+assert('It is player 2\'s turn (AI to move)', boardAI.currentPlayer === 2);
+assert('Player 1 does NOT already have 4 in a row', boardAI.gameOver === false);
+assert(
+    'wouldWinAt detects player 1\'s block threat at b=3 while it is player 2\'s turn',
+    boardAI.wouldWinAt(3, 0, 0, 1) === true
+);
+assert(
+    'wouldWinAt returns false for a non-threat column (b=4, already occupied at a=0/1 but not a win)',
+    boardAI.wouldWinAt(4, 0, 0, 1) === false
+);
+assert(
+    'wouldWinAt(..., 2) is false at b=3 — that square only wins for player 1, not player 2',
+    boardAI.wouldWinAt(3, 0, 0, 2) === false
+);
+assert('wouldWinAt does not mutate board state (gameOver still false)', boardAI.gameOver === false);
+assert('wouldWinAt does not mutate board state (b=3 column still empty)', !boardAI.grid.has(Quadray.toIVM(new Quadray(0, 3, 0, 0)).toKey()));
+assert('wouldWinAt out-of-bounds column returns false', boardAI.wouldWinAt(99, 0, 0, 1) === false);
+
+// End-to-end: replicate ConnectFourGame._findImmediateWin's loop (the
+// exact call the AI makes each turn) directly against the board to
+// confirm the block move is found.
+function findImmediateWin(board, moves, player) {
+    for (const move of moves) {
+        if (board.wouldWinAt(move.b, move.c, move.d, player)) return move;
+    }
+    return null;
+}
+const aiValidMoves = boardAI.getValidMoves();
+const blockMove = findImmediateWin(boardAI, aiValidMoves, 1);
+assert('AI block-move search finds the b=3 column', !!blockMove && blockMove.b === 3 && blockMove.c === 0 && blockMove.d === 0);
+const winMoveForP2 = findImmediateWin(boardAI, aiValidMoves, 2);
+assert('AI win-move search finds no immediate win for player 2 in this position', winMoveForP2 === null);
 
 // ─── Summary ─────────────────────────────────────────────────────────
 console.log(`\n=== Results: ${passed} passed, ${failed} failed (${total} total) ===`);

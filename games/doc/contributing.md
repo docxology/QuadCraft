@@ -52,7 +52,7 @@ games/4d_my_game/
 
 ### 2. Register in the Game Registry
 
-Add an entry to `src/registry.py`:
+Add an entry to `src/core/registry.py`:
 
 ```python
 GAMES = {
@@ -231,7 +231,7 @@ Add to `games_config.json`:
 
 ```text
 [ ] 1. Scaffold game           — GameScaffold("my_game", "4D My Game").create()
-[ ] 2. Register in registry    — Add to GAMES dict in src/registry.py
+[ ] 2. Register in registry    — Add to GAMES dict in src/core/registry.py
 [ ] 3. Implement game logic    — js/my_game_{board,renderer,game}.js
 [ ] 4. Write tests             — tests/test_my_game.js
 [ ] 5. Validate structure      — python3 run_games.py --validate

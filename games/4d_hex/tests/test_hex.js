@@ -16,7 +16,9 @@ console.log('=== 4D Hex — Comprehensive Tests ===\n');
 
 console.log('— Construction —');
 const b = new HexBoard(5);
-assert('625 cells (5^4)', b.cells.length === 625);
+// 369 canonical (min-component==0) cells at size=5, not the raw 5^4=625 —
+// HexBoard dedupes degenerate same-point tuples like (1,1,1,1)==(0,0,0,0).
+assert('369 canonical cells (size 5)', b.cells.length === 369);
 assert('Red first', b.turns.currentPlayer === 'red');
 assert('No winner', b.winner === null);
 assert('MoveCount 0', b.moveCount === 0);
@@ -41,17 +43,39 @@ const allEmpty = b3.cells.every(c => b3.getCell(c) === HEX.EMPTY);
 assert('All cells empty', allEmpty);
 
 console.log('\n— Win detection —');
-// Red connects a=0 to a=size-1
+// Red connects a=0 to a=size-1. Build a *genuine* IVM-adjacent path (via
+// GridUtils.boundedNeighbors, the same traversal _checkWin uses) rather than
+// an arbitrary a=0,1,2 column — those three cells are not necessarily
+// 12-neighbor-adjacent under the (0,1,1,2)-permutation direction set.
 const b4 = new HexBoard(3);
-// Fill column for red (a=0..2, b=0, c=0, d=0)
-for (let a = 0; a < 3; a++) {
-    const cell = b4.cells.find(c => c.a === a && c.b === 0 && c.c === 0 && c.d === 0);
-    if (cell) {
-        if (b4.turns.currentPlayer !== 'red') b4.place(b4.cells.find(c => b4.getCell(c) === HEX.EMPTY && c.a !== a));
-        b4.place(cell);
+const key4 = (c) => b4.key(c.a, c.b, c.c, c.d);
+const cellSet4 = new Set(b4.cells.map(key4));
+const start4 = b4.cells.find(c => c.a === 0 && c.b === 0 && c.c === 0 && c.d === 0);
+const parent4 = new Map();
+const visited4 = new Set([key4(start4)]);
+const queue4 = [start4];
+let end4 = null;
+while (queue4.length) {
+    const cur = queue4.shift();
+    if (cur.a === b4.size - 1) { end4 = cur; break; }
+    for (const n of GridUtils.boundedNeighbors(cur.a, cur.b, cur.c, cur.d, b4.size)) {
+        const k = key4(n);
+        if (cellSet4.has(k) && !visited4.has(k)) { visited4.add(k); parent4.set(k, cur); queue4.push(n); }
     }
 }
-assert('Win possible with path', b4.winner === 'red' || b4.moveCount > 0);
+const path4 = [];
+for (let c = end4; c; c = parent4.get(key4(c))) path4.unshift(c);
+const pathKeys4 = new Set(path4.map(key4));
+for (const redCell of path4) {
+    if (b4.winner) break;
+    if (b4.turns.currentPlayer !== 'red') {
+        const blueCell = b4.cells.find(c => b4.getCell(c) === HEX.EMPTY && !pathKeys4.has(key4(c)));
+        b4.place(blueCell);
+    }
+    b4.place(redCell);
+}
+assert('Genuine IVM-adjacent path found', path4.length > 1 && end4 !== null);
+assert('Red wins by connecting a=0 to a=size-1', b4.winner === 'red');
 
 console.log('\n— Metadata —');
 const meta = b.getMetadata();

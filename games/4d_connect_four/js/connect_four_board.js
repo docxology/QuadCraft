@@ -270,6 +270,48 @@ class ConnectFourBoard extends BaseBoard {
     }
 
     /**
+     * Simulate dropping a piece for a specific `player` — independent of
+     * whose turn it actually is — and report whether it would win.
+     * Used by AI lookahead to test the opponent's blocking threats
+     * (dropPiece() always attributes the piece to `this.currentPlayer`,
+     * which makes it impossible to ask "would player X win here?" when
+     * it is not player X's turn).
+     * @param {number} b
+     * @param {number} c
+     * @param {number} d
+     * @param {number} player
+     * @returns {boolean}
+     */
+    wouldWinAt(b, c, d, player) {
+        if (this.gameOver) return false;
+        if (b < 0 || b >= this.width || c < 0 || c >= this.depthC || d < 0 || d >= this.depthD) {
+            return false;
+        }
+
+        let landingRow = -1;
+        for (let a = 0; a < this.height; a++) {
+            const pos = Quadray.toIVM(new Quadray(a, b, c, d));
+            if (!this.grid.has(pos.toKey())) {
+                landingRow = a;
+                break;
+            }
+        }
+        if (landingRow === -1) return false;
+
+        const landingQuadray = Quadray.toIVM(new Quadray(landingRow, b, c, d));
+        const parity = Quadray.cellType(landingQuadray.a, landingQuadray.b, landingQuadray.c, landingQuadray.d);
+        const key = landingQuadray.toKey();
+
+        const savedWinLine = this.winLine;
+        this.grid.set(key, { player, quadray: landingQuadray, cellType: parity, moveNum: this.moveCount + 1 });
+        const isWin = this._checkWin(landingQuadray);
+        this.grid.delete(key);
+        this.winLine = savedWinLine;
+
+        return isWin;
+    }
+
+    /**
      * Get all placed cells for rendering.
      * Each cell includes its Quadray, cellType, Cartesian coordinates,
      * distance from origin, and whether it's part of the win line.

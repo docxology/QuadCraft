@@ -32,7 +32,8 @@ Real IVM-neighbor diffusion spreads pheromones through the 12-around-one topolog
 ### Combat
 
 - **Morale**: +3 damage when 3+ allies nearby
-- **Terrain**: +5 bonus defending in own tunnel network
+- **Home bonus**: +5 damage when attacking within distance 3 of your own nest
+- **Tunnel defense**: -3 damage taken when the defender is inside your tunnel network
 - **Danger pheromone** emitted at combat locations
 - Queens deal 50 damage to nearby hostiles
 

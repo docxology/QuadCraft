@@ -70,7 +70,7 @@ class Board extends BaseBoard {
 
         console.log(`[Board] ${size}x${size}x${size}x${size} IVM grid`);
         console.log(`[Board] Cell volume: ${this.cellVolumeUnit}, S3: ${this.s3Constant}`);
-        console.log(`[Board] Volume ratios T:O:C = ${this.volumeRatios.tetra}:${this.volumeRatios.octa}:${this.volumeRatios.cubo}`);
+        console.log(`[Board] Volume ratios T:O:C = ${this.volumeRatios.TETRA_VOL}:${this.volumeRatios.OCTA_VOL}:${this.volumeRatios.CUBO_VOL}`);
     }
 
     /**

@@ -10,14 +10,15 @@ class Twenty48Renderer extends BaseRenderer {
         this.tileColors = { 0:'#1e293b', 2:'#fef3c7', 4:'#fde68a', 8:'#fdba74', 16:'#fb923c', 32:'#f87171', 64:'#ef4444', 128:'#fbbf24', 256:'#f59e0b', 512:'#d97706', 1024:'#b45309', 2048:'#92400e' };
         this.textColors = { 0:'transparent', 2:'#1e293b', 4:'#1e293b', 8:'#fff', 16:'#fff', 32:'#fff', 64:'#fff', 128:'#fff', 256:'#fff', 512:'#fff', 1024:'#fff', 2048:'#fff' };
     }
-    render(ctx, camera) {
-        const W = ctx.canvas.width, H = ctx.canvas.height;
+    render() {
+        const ctx = this.ctx;
+        const W = this.canvas.width, H = this.canvas.height;
         ctx.clearRect(0, 0, W, H);
         const bg = ctx.createRadialGradient(W/2,H/2,0,W/2,H/2,W*0.7);
         bg.addColorStop(0,'#1a1a2e'); bg.addColorStop(1,'#0a0a14');
         ctx.fillStyle = bg; ctx.fillRect(0,0,W,H);
         if (!this.board) return;
-        const projected = this._projectAll(this.board.cells, camera);
+        const projected = this._projectAll(this.board.cells);
         projected.sort((a,b) => a.pScale - b.pScale);
         for (const p of projected) {
             const val = this.board.getCell(p) || 0;
@@ -33,12 +34,10 @@ class Twenty48Renderer extends BaseRenderer {
                 ctx.fillText(val, p.px, p.py);
             }
         }
-        this.drawAxes(ctx, W, H, camera);
+        this._drawAxes();
     }
-    _projectAll(cells, camera) {
-        if (typeof projectQuadray !== 'function') return [];
-        const W = this.canvas.width, H = this.canvas.height;
-        return cells.map(c => { const p = projectQuadray(c.a,c.b,c.c,c.d,W,H,camera); return {...c, px:p.x, py:p.y, pScale:p.scale}; });
+    _projectAll(cells) {
+        return cells.map(c => { const p = this._project(c.a, c.b, c.c, c.d); return {...c, px:p.x, py:p.y, pScale:p.scale}; });
     }
 }
 if (typeof module !== 'undefined' && module.exports) { module.exports = { Twenty48Renderer }; }

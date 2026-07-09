@@ -133,10 +133,10 @@ D = √((a² + b² + c² + d²) / 2)
 │   └── quadray-math.md    # Mathematical foundations
 └── tests/
     ├── test.html       # Visual test runner
-    ├── test_all.js     # Unit test suite (83 tests)
-    ├── test_runner.js  # Shared test runner class
-    ├── test_quadray.js # Quadray coordinate tests
-    └── test_geometry.js # IVM geometry verification
+    ├── test_all.js     # Unit test suite (91 tests) — the runnable entry point
+    ├── lib_runner.js   # Shared test runner class (helper, not run directly)
+    ├── lib_quadray.js  # Quadray coordinate test helpers (helper, not run directly)
+    └── lib_geometry.js # IVM geometry verification helpers (helper, not run directly)
 ```
 
 ## Math Display Features

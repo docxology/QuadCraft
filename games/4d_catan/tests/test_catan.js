@@ -146,10 +146,13 @@ const cardsCode = fs.readFileSync(path.join(__dirname, '../js/catan_cards.js'), 
 const robberCode = fs.readFileSync(path.join(__dirname, '../js/catan_robber.js'), 'utf8');
 
 // Inject constants into global scope for eval
-const { DevCardType, BUILD_COSTS, ResourceType } = require('../js/catan_board.js');
+const { DevCardType, BUILD_COSTS, TurnPhase, canAfford, deductCost } = require('../js/catan_board.js');
 globalThis.DevCardType = DevCardType;
 globalThis.BUILD_COSTS = BUILD_COSTS;
 globalThis.ResourceType = ResourceType;
+globalThis.TurnPhase = TurnPhase;
+globalThis.canAfford = canAfford;
+globalThis.deductCost = deductCost;
 
 eval(tradingCode);
 eval(cardsCode);

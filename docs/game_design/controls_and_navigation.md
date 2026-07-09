@@ -2,6 +2,19 @@
 
 This document details the control scheme and navigation mechanics in QuadCraft, explaining how players interact with and move through tetrahedral space.
 
+> **Scope note (verified against the live tree):** the "Basic Movement
+> Controls" and "Function Keys" sections below described the legacy
+> first-person `src/game` C++/GLFW engine (WASD + mouse-look camera,
+> jump/fly/sprint, F1-F8 debug toggles — see `src/game/Input.h`), which is
+> a separate, unmaintained implementation approach (`src/README.md`) and
+> does not correspond to any of the 30 real games under `games/`. They have
+> been corrected below to describe the actual `games/` control scheme.
+> Sections further down this document (Vehicle Controls, Gamepad Support,
+> Mobile Controls, wall-climbing/gliding, etc.) describe additional
+> features that were not found in any `games/*/js/*.js` file at time of
+> writing and should be treated as aspirational/unimplemented design
+> ideas, not current behavior.
+
 ## Control Philosophy
 
 QuadCraft's control system is designed to make navigation in tetrahedral space feel intuitive despite the unfamiliar geometry. The controls follow familiar first-person conventions while adding specialized functionality for tetrahedral navigation.
@@ -28,86 +41,48 @@ graph TD
     Adaptability --> CustomizableBindings["Customizable Bindings"]
 ```
 
-## Basic Movement Controls
+## Basic Movement Controls (real `games/` scheme)
 
-### Keyboard Movement
+### Shared camera and zoom
 
-The primary movement controls use the standard WASD layout:
-
-```mermaid
-graph TD
-    subgraph "Keyboard Movement"
-        W["W - Move Forward"]
-        A["A - Strafe Left"]
-        S["S - Move Backward"]
-        D["D - Strafe Right"]
-        Space["Space - Jump/Fly Up"]
-        Shift["Shift - Crouch/Fly Down"]
-        Ctrl["Ctrl - Sprint"]
-    end
-```
-
-| Key | Action | Description |
-|-----|--------|-------------|
-| W | Move Forward | Move in the direction you're facing |
-| A | Strafe Left | Move left relative to the direction you're facing |
-| S | Move Backward | Move opposite to the direction you're facing |
-| D | Strafe Right | Move right relative to the direction you're facing |
-| Space | Jump/Fly Up | Jump when on ground, move upward when flying |
-| Shift | Crouch/Fly Down | Crouch when on ground, move downward when flying |
-| Ctrl | Sprint | Move faster while held |
-
-### Mouse Controls
-
-The mouse controls the camera view and interaction:
+Most of the 30 games under `games/` share two `4d_generic/` input modules
+rather than a first-person WASD/mouse-look camera:
 
 ```mermaid
 graph TD
-    subgraph "Mouse Controls"
-        MouseMove["Mouse Movement - Look Around"]
-        LeftClick["Left Click - Break Block"]
-        RightClick["Right Click - Place Block/Use Item"]
-        MiddleClick["Middle Click - Pick Block"]
-        Scroll["Scroll Wheel - Change Selected Item"]
+    subgraph "Shared Camera and Zoom"
+        ShiftDrag["Shift+drag or right-click drag - Rotate camera (shift-drag mode)"]
+        LeftDrag["Left-click drag - Rotate camera (left-drag mode)"]
+        Scroll["Scroll Wheel - Zoom in/out"]
     end
 ```
 
-| Control | Action | Description |
-|---------|--------|-------------|
-| Mouse Movement | Look Around | Control the camera direction |
-| Left Click | Break Block | Remove the targeted block |
-| Right Click | Place Block/Use Item | Place block or use held item |
-| Middle Click | Pick Block | Select the type of block you're looking at |
-| Scroll Wheel | Change Selected Item | Cycle through hotbar items |
+| Control | Action | Source |
+|---------|--------|--------|
+| Shift+drag (or right-click drag) | Rotate camera — `shift-drag` mode, the default (e.g. Reversi, Minecraft pattern) | `games/4d_generic/camera.js` |
+| Left-click drag | Rotate camera — `left-drag` mode (e.g. Chess/Checkers pattern) | `games/4d_generic/camera.js` |
+| Scroll Wheel | Zoom (scales `renderer.scale` by ~1.08 in / ~0.92 out) | `games/4d_generic/zoom.js` |
+
+### Per-game action input
+
+There is no single movement/action scheme across all 30 games; each game's
+`Input` column in [`games/GAMES_INDEX.md`](../../games/GAMES_INDEX.md) is
+either `Click`-based (board/building games) or `Keyboard`-based (arcade
+games). Two concrete, verified examples:
+
+| Game | Control | Action | Source |
+|------|---------|--------|--------|
+| 4D Minecraft | Click | Place block above the hovered block (`+C` axis) | `games/4d_minecraft/js/minecraft_game.js` `_bindMouse()` |
+| 4D Minecraft | Alt+Click | Remove the hovered block | `games/4d_minecraft/js/minecraft_game.js` `_bindMouse()` |
+| 4D Minecraft | 1-8 | Select block type | `games/4d_minecraft/js/minecraft_game.js` module docstring |
+| 4D Doom | WASD (`KeyW` etc.) + mouse-move | First-person movement + look — the one FPS exception in the portfolio | `games/4d_doom/js/doom_main.js` |
 
 ## Function Keys
 
-Function keys provide access to special features and toggles:
-
-```mermaid
-graph TD
-    subgraph "Function Keys"
-        F1["F1 - Hide UI"]
-        F2["F2 - Take Screenshot"]
-        F3["F3 - Debug Information"]
-        F4["F4 - Coordinate Display"]
-        F5["F5 - Refresh Resources"]
-        F6["F6 - Wireframe Mode"]
-        F7["F7 - Grid Overlay"]
-        F8["F8 - Quadray Visualizer"]
-    end
-```
-
-| Key | Action | Description |
-|-----|--------|-------------|
-| F1 | Hide UI | Toggle visibility of the interface |
-| F2 | Take Screenshot | Capture and save a screenshot |
-| F3 | Debug Information | Show detailed game information |
-| F4 | Coordinate Display | Toggle coordinate system display |
-| F5 | Refresh Resources | Reload textures and resources |
-| F6 | Wireframe Mode | Toggle wireframe rendering |
-| F7 | Grid Overlay | Toggle tetrahedral grid visualization |
-| F8 | Quadray Visualizer | Toggle 3D quadray coordinate visualizer |
+No F-key (F1-F8) bindings exist anywhere in `games/` — confirmed by
+grepping every `games/*/js/*.js` file for F-key handlers. Per-game hotkeys
+(where they exist) are documented per game in `games/GAMES_INDEX.md`; there
+is no universal debug/screenshot/overlay toggle across the portfolio.
 
 ## Movement Mechanics
 
@@ -213,57 +188,34 @@ The tetrahedral compass helps with orientation:
 
 ## Block Interaction
 
-### Block Placement
+### Block Placement and Removal (verified: `games/4d_minecraft`)
 
-Placing blocks follows these rules:
-
-```mermaid
-sequenceDiagram
-    participant Player
-    participant InputSystem
-    participant Raycast
-    participant BlockSystem
-    
-    Player->>InputSystem: Right click
-    InputSystem->>Raycast: Cast ray from camera
-    Raycast->>BlockSystem: Find target face
-    BlockSystem->>BlockSystem: Check placement validity
-    BlockSystem->>BlockSystem: Determine block orientation
-    BlockSystem->>InputSystem: Place block
-    InputSystem->>Player: Update world and inventory
-```
-
-Block placement mechanics:
-- Blocks can only be placed on existing block faces
-- Block orientation is determined by the face being placed against
-- Cannot place blocks where the player is standing
-- Distance limit for block placement (configurable)
-
-### Block Breaking
-
-Breaking blocks follows these rules:
+4D Minecraft — the one `games/` title with Minecraft-style block
+placement — uses plain-click and Alt+click, not a left/right mouse-button
+distinction:
 
 ```mermaid
 sequenceDiagram
     participant Player
-    participant InputSystem
-    participant Raycast
-    participant BlockSystem
-    
-    Player->>InputSystem: Left click
-    InputSystem->>Raycast: Cast ray from camera
-    Raycast->>BlockSystem: Find target block
-    BlockSystem->>BlockSystem: Calculate break time
-    BlockSystem->>BlockSystem: Apply break progress
-    BlockSystem->>InputSystem: Block broken event
-    InputSystem->>Player: Update world and inventory
+    participant Canvas
+    participant Renderer
+    participant Board
+
+    Player->>Canvas: Click (no modifier)
+    Canvas->>Renderer: hitTest(mouseX, mouseY)
+    Renderer->>Board: placeBlock(a, b, c+1, d)
+    Board->>Player: Block placed above hovered block, score +1
+
+    Player->>Canvas: Alt+Click
+    Canvas->>Renderer: hitTest(mouseX, mouseY)
+    Renderer->>Board: removeBlock(a, b, c, d)
+    Board->>Player: Hovered block removed
 ```
 
-Block breaking mechanics:
-- Block hardness determines break time
-- Breaking animation shows progress
-- Distance limit for block breaking (configurable)
-- Broken blocks may drop items based on their type
+Block placement/removal mechanics (`games/4d_minecraft/js/minecraft_game.js` `_bindMouse()`):
+- Plain click places the selected block directly above the hovered block (fixed `+C`-axis offset), not against an arbitrary selected face
+- Alt+click removes the hovered block
+- There is no left/right mouse-button distinction, no raycast/break-time/hardness model, and no block-orientation-by-face logic in the shipped code
 
 ## Advanced Movement Techniques
 

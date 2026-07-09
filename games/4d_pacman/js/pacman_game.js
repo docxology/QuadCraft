@@ -119,9 +119,7 @@ class PacmanGame extends BaseGame {
             this.scoring.loseLife();
         }
 
-        if (result === 'win') {
-            console.log(`[PacmanGame] YOU WIN! Score: ${this.scoring.score} | ${JSON.stringify(this.scoring.toJSON())}`);
-        } else if (result === 'dead') {
+        if (result === 'dead') {
             console.log(`[PacmanGame] GAME OVER! Score: ${this.scoring.score} | ${JSON.stringify(this.scoring.toJSON())}`);
         }
     }
@@ -136,12 +134,6 @@ class PacmanGame extends BaseGame {
         const highLabel = this.scoring.highScore > 0 ? ` | Hi: ${this.scoring.highScore}` : '';
 
         if (b.gameOver) {
-            if (b.won) {
-                return {
-                    text: `YOU WIN! Score: ${b.score} | All pellets cleared!${highLabel} | Press N`,
-                    color: '#4ade80',
-                };
-            }
             return {
                 text: `GAME OVER -- Score: ${b.score}${highLabel} | Press N to restart`,
                 color: '#f87171',

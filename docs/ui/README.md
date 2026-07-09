@@ -36,7 +36,7 @@ UI design, components, and interaction documentation for QuadCraft.
 
 ## Game-Specific UIs
 
-Each of the 12 standalone browser games has its **own HTML/Canvas-based UI** independent of the core engine UI:
+Each of the 30 standalone browser games has its **own HTML/Canvas-based UI** independent of the core engine UI:
 
 - Games use HTML5 Canvas for rendering (no WebGL dependency)
 - Each game includes its own control panel, score display, and status indicators

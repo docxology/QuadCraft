@@ -75,10 +75,10 @@ Load in this order to avoid reference errors:
 
 | File | Tests | Coverage |
 |------|-------|----------|
-| test_all.js | 83 | Complete test suite |
-| test_runner.js | — | Shared TestRunner class |
-| test_quadray.js | 17 | Quadray coordinates |
-| test_geometry.js | 9 | IVM geometry verification |
+| test_all.js | 91 | Complete, runnable test suite (`node test_all.js`) |
+| lib_runner.js | — | Shared TestRunner class (helper, not run directly) |
+| lib_quadray.js | — | Quadray coordinate test helpers (helper, not run directly) |
+| lib_geometry.js | — | IVM geometry verification helpers (helper, not run directly) |
 | test.html | — | Browser runner |
 
 ## Code Standards

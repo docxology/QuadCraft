@@ -47,7 +47,7 @@ Enforced by `qa/validation.py` and `REQUIRED_FILES` in `core/config.py`:
 | `js/` directory | Game-specific JavaScript | Must exist |
 | `tests/` directory | Unit tests | Must contain `test_*.js` |
 | `AGENTS.md` | AI agent instructions | Must exist |
-| `run.sh` | Standalone launcher | Required by config |
+| `run.sh` | Standalone launcher | Not in `REQUIRED_FILES` (`["index.html", "AGENTS.md"]`) and not checked by any validator — recommended, not enforced |
 
 ---
 
@@ -127,7 +127,7 @@ From `REQUIRED_JS_PATTERNS` in `core/config.py`:
 | Rule | Severity | Detail |
 |------|----------|--------|
 | No local `quadray.js` copy | Error | Must use `../4d_generic/quadray.js` |
-| Shared module imports | Error | `index.html` must reference `quadray.js`, `camera.js`, `projection.js`, `zoom.js` |
+| Shared module imports | Error | `index.html` must reference all 12 `SHARED_MODULES` entries (`quadray.js`, `synergetics.js`, `grid_utils.js`, `camera.js`, `projection.js`, `zoom.js`, `base_renderer.js`, `game_loop.js`, `base_game.js`, `score_manager.js`, `input_controller.js`, `hud.js`) |
 | Board file ≥200 bytes | Error | Prevents scaffold stubs passing validation |
 | No `[scaffold]` markers | Error | Renderer and game files must be implemented |
 | No `TODO: Implement` stubs | Error | Scaffold TODOs must be replaced |

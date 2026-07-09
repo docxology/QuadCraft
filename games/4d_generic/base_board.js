@@ -65,7 +65,7 @@ class BaseBoard {
         // Synergetics constants (cached for children)
         if (typeof SYNERGETICS !== 'undefined') {
             this.volumeRatios = SYNERGETICS;
-            this.cellVolumeUnit = SYNERGETICS.TETRA_VOLUME;
+            this.cellVolumeUnit = SYNERGETICS.TETRA_VOL;
             this.s3Constant = SYNERGETICS.S3;
         }
 

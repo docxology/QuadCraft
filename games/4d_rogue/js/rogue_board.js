@@ -55,11 +55,40 @@ const ENEMY_TYPES = {
     dragon: { name: 'Dragon Boss', hp: 50, atk: 8, def: 4, xp: 150, speed: 1, symbol: 'D', color: '#c0392b', chaseRange: 12, boss: true },
 };
 
+/**
+ * Create a seeded pseudo-random generator (Mulberry32) — deterministic,
+ * fast, and good enough for gameplay-quality randomness. Returns a
+ * function with the same signature/range as Math.random() ([0, 1)).
+ * @param {number} seed
+ * @returns {function(): number}
+ */
+function createSeededRng(seed) {
+    let s = seed >>> 0;
+    return function () {
+        s |= 0; s = (s + 0x6D2B79F5) | 0;
+        let t = Math.imul(s ^ (s >>> 15), 1 | s);
+        t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+}
+
 class RogueBoard extends BaseBoard {
 
-    constructor(size = 8) {
+    /**
+     * @param {number} size - Grid dimension per axis.
+     * @param {{seed?: number}} [options] - Pass `seed` to make dungeon,
+     *   enemy, and item generation fully deterministic (used by tests to
+     *   avoid depending on organically-generated random state). Omitted
+     *   in production, where generation uses real Math.random().
+     */
+    constructor(size = 8, options = {}) {
         super(size, { name: 'RogueBoard', verify: true });
         this.turns = new TurnManager(['player', 'enemies']);
+
+        // Seedable RNG — every in-class source of randomness goes through
+        // this._rng() rather than calling Math.random() directly, so a
+        // fixed seed reproduces the exact same dungeon/enemies/items.
+        this._rng = (options.seed !== undefined) ? createSeededRng(options.seed) : Math.random;
 
         // Player state
         this.player = null;
@@ -119,13 +148,13 @@ class RogueBoard extends BaseBoard {
             this.setCell(cur, TILE.FLOOR);
 
             const nbrs = GridUtils.boundedNeighbors(cur.a, cur.b, cur.c, cur.d, this.size);
-            GridUtils.shuffle(nbrs);
-            const branches = Math.random() < 0.6 ? 3 : (Math.random() < 0.3 ? 4 : 2);
+            GridUtils.shuffle(nbrs, this._rng);
+            const branches = this._rng() < 0.6 ? 3 : (this._rng() < 0.3 ? 4 : 2);
             for (const n of nbrs.slice(0, branches)) queue.push(n);
         }
 
         const floors = this.cells.filter(c => this.getCell(c) === TILE.FLOOR);
-        GridUtils.shuffle(floors);
+        GridUtils.shuffle(floors, this._rng);
 
         if (floors.length < 5) {
             // Fallback: ensure minimum dungeon size
@@ -172,7 +201,7 @@ class RogueBoard extends BaseBoard {
 
         for (let i = 0; i < numEnemies && idx < floors.length; i++) {
             const pos = floors[idx++];
-            let typeName = enemyPool[Math.floor(Math.random() * enemyPool.length)];
+            let typeName = enemyPool[Math.floor(this._rng() * enemyPool.length)];
 
             if (hasBoss && i === 0) {
                 typeName = 'dragon';
@@ -223,11 +252,11 @@ class RogueBoard extends BaseBoard {
 
         for (let i = 0; i < itemCount && idx < floors.length; i++) {
             const pos = floors[idx++];
-            const roll = Math.random();
+            const roll = this._rng();
 
             if (roll < 0.3) {
                 // Gold pile
-                const amount = 5 + Math.floor(Math.random() * 10 * this.depth);
+                const amount = 5 + Math.floor(this._rng() * 10 * this.depth);
                 this.setCell(pos, TILE.GOLD);
                 this.items.push({ pos, type: 'gold', data: { amount } });
             } else if (roll < 0.5) {
@@ -237,19 +266,19 @@ class RogueBoard extends BaseBoard {
             } else if (roll < 0.7) {
                 // Scroll
                 const types = ['teleport', 'fireball', 'mapping'];
-                const type = types[Math.floor(Math.random() * types.length)];
+                const type = types[Math.floor(this._rng() * types.length)];
                 this.setCell(pos, TILE.SCROLL);
                 this.items.push({ pos, type: 'scroll', data: { type } });
             } else if (roll < 0.85) {
                 // Weapon
-                const bonus = 1 + Math.floor(Math.random() * this.depth);
+                const bonus = 1 + Math.floor(this._rng() * this.depth);
                 const names = ['Dagger', 'Short Sword', 'Mace', 'Axe', 'Halberd'];
                 const name = names[Math.min(bonus - 1, names.length - 1)];
                 this.setCell(pos, TILE.WEAPON);
                 this.items.push({ pos, type: 'weapon', data: { name, bonus } });
             } else {
                 // Armor
-                const bonus = 1 + Math.floor(Math.random() * Math.ceil(this.depth / 2));
+                const bonus = 1 + Math.floor(this._rng() * Math.ceil(this.depth / 2));
                 const names = ['Leather', 'Chain Mail', 'Plate', 'Dragon Scale'];
                 const name = names[Math.min(bonus - 1, names.length - 1)];
                 this.setCell(pos, TILE.ARMOR);
@@ -257,10 +286,13 @@ class RogueBoard extends BaseBoard {
             }
         }
 
-        // Place doors and traps
+        // Place doors and traps — skip cells already assigned to something
+        // else (notably STAIRS, which can land inside this index range and
+        // would otherwise be silently overwritten, softlocking the level).
         for (let i = idx; i < floors.length; i++) {
             const f = floors[i];
-            const r = Math.random();
+            if (this.getCell(f) !== TILE.FLOOR) continue;
+            const r = this._rng();
             if (r < 0.05) { // 5% chance for a trap
                 this.setCell(f, TILE.TRAP);
             } else if (r < 0.15) { // 10% chance for a door
@@ -532,7 +564,7 @@ class RogueBoard extends BaseBoard {
         if (type === 'teleport') {
             const floors = this.cells.filter(c => this.getCell(c) === TILE.FLOOR);
             if (floors.length > 0) {
-                const target = floors[Math.floor(Math.random() * floors.length)];
+                const target = floors[Math.floor(this._rng() * floors.length)];
                 this.setCell(this.player, TILE.FLOOR);
                 this.player = target;
                 this.setCell(target, TILE.PLAYER);
@@ -620,8 +652,8 @@ class RogueBoard extends BaseBoard {
                     enemy.pos.a, enemy.pos.b, enemy.pos.c, enemy.pos.d, this.size
                 );
                 const walkable = nbrs.filter(n => this.getCell(n) === TILE.FLOOR);
-                if (walkable.length > 0 && Math.random() < 0.3) {
-                    const dest = walkable[Math.floor(Math.random() * walkable.length)];
+                if (walkable.length > 0 && this._rng() < 0.3) {
+                    const dest = walkable[Math.floor(this._rng() * walkable.length)];
                     this.setCell(enemy.pos, TILE.FLOOR);
                     enemy.pos = dest;
                     this.setCell(dest, TILE.ENEMY);

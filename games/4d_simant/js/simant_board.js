@@ -326,6 +326,25 @@ class SimAntBoard extends BaseBoard {
         }
     }
 
+    /**
+     * True if (a,b,c,d) falls within a colony nest's dug-room footprint.
+     * Nests are dug with radius 2 in initWorld() (see digRoom's
+     * dist <= radius*1.5 threshold); food scattering must never overwrite
+     * that footprint, or a randomly-placed cluster can land food directly
+     * on a queen's nest tile — this was reproducible as a flaky test
+     * failure ("Yellow nest cell is EMPTY") whenever the random cluster
+     * center happened to coincide with (3,3,3,3).
+     */
+    isNestProtected(a, b, c, d) {
+        const NEST_DIG_RADIUS = 2;
+        for (const nest of this.nests) {
+            if (!nest) continue;
+            const dist = GridUtils.manhattan({ a, b, c, d }, nest);
+            if (dist <= NEST_DIG_RADIUS * 1.5) return true;
+        }
+        return false;
+    }
+
     scatterFoodClusters(count) {
         for (let c = 0; c < count; c++) {
             // Random center
@@ -334,6 +353,8 @@ class SimAntBoard extends BaseBoard {
             const cc = Math.floor(Math.random() * (this.size - 2)) + 1;
             const cd = Math.floor(Math.random() * (this.size - 2)) + 1;
 
+            if (this.isNestProtected(ca, cb, cc, cd)) continue; // never overwrite a nest
+
             // Cluster
             this.digRoom(ca, cb, cc, cd, 1); // Clear space for food
 
@@ -341,9 +362,11 @@ class SimAntBoard extends BaseBoard {
             if (i !== -1) this.grid[i] = TYPE_FOOD; // Center is food
 
             // Add neighbors using GridUtils
-            const neighbors = this.getNeighbors(ca, cb, cc, cd);
-            for (const ni of neighbors) {
-                if (Math.random() > 0.5) this.grid[ni] = TYPE_FOOD;
+            const neighborCoords = this.getNeighborCoords(ca, cb, cc, cd);
+            for (const nc of neighborCoords) {
+                if (this.isNestProtected(nc.a, nc.b, nc.c, nc.d)) continue;
+                const ni = this.idx(nc.a, nc.b, nc.c, nc.d);
+                if (ni !== -1 && Math.random() > 0.5) this.grid[ni] = TYPE_FOOD;
             }
         }
     }

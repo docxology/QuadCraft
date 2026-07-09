@@ -12,9 +12,9 @@ Gameplay mechanics, world generation, block system, and controls documentation f
 | [controls_and_navigation.md](controls_and_navigation.md) | Keyboard/mouse controls, camera movement |
 | [advanced_building_techniques.md](advanced_building_techniques.md) | Structural principles, patterns, and building tips |
 
-## Design in Practice: The 12 Games
+## Design in Practice: The 30 Games
 
-These design principles come to life in the 12 standalone browser games. Each applies tetrahedral geometry differently:
+These design principles come to life in the 30 standalone browser games under `games/` (see [`games/GAMES_INDEX.md`](../../games/GAMES_INDEX.md) for the live count and per-game breakdown). Each applies tetrahedral geometry differently:
 
 | Design Concept | Exemplified By |
 | -------------- | -------------- |
@@ -33,23 +33,32 @@ See [Games Overview](../games.md) for the full portfolio, launch instructions, a
 
 ### Core Controls
 
-| Key | Action |
-| --- | ------ |
-| WASD | Movement |
-| Mouse | Look around |
-| Left Click | Remove block |
-| Right Click | Place block |
-| 1-9 | Select block type |
-| F1 | Toggle debug info |
-| F2 | Toggle quadray grid |
-| Esc | Menu |
+Controls vary per game (see each game's `Input`/`Camera` columns in
+[`games/GAMES_INDEX.md`](../../games/GAMES_INDEX.md)), but most share the
+`4d_generic/` `CameraController` and `zoom.js` modules:
 
-### Block Types
+| Input | Action | Source |
+| --- | ------ | ------ |
+| Click | Primary action (place block, select piece, etc. — per game) | e.g. `games/4d_minecraft/js/minecraft_game.js` `_bindMouse()` |
+| Alt+Click | Secondary action (e.g. remove block) | `games/4d_minecraft/js/minecraft_game.js` `_bindMouse()` |
+| Shift+drag (or right-click drag) | Rotate camera (`shift-drag` mode — most games) | `games/4d_generic/camera.js` |
+| Left-click drag | Rotate camera (`left-drag` mode — chess/checkers-pattern games) | `games/4d_generic/camera.js` |
+| Scroll wheel | Zoom | `games/4d_generic/zoom.js` |
+| 1-8/1-9 | Select item/block type (board- and building-games) | e.g. `games/4d_minecraft/` |
+| Keyboard (WASD/arrows) | Movement (arcade titles: Asteroids, Snake, Pac-Man, Doom, etc.) | see `Input` column in `GAMES_INDEX.md` |
 
-| Type | Shape | Properties |
+There is no universal debug-overlay or menu key (F1/F2/Esc) across `games/`
+— no F-key bindings exist in any game's JS.
+
+### Block Cell Types
+
+QuadCraft's IVM grid distinguishes cells by coordinate-sum parity, not by a
+four-orientation lookup table:
+
+| Cell type | Rule | Source |
 | ---- | ----- | ---------- |
-| Type Z | Upward tetrahedron | Standard orientation |
-| Type C | Downward tetrahedron | Inverted orientation |
+| `tetra` | `(a+b+c+d) % 2 === 0` | `games/4d_generic/quadray.js` `Quadray.cellType()` |
+| `octa` | `(a+b+c+d) % 2 !== 0` | `games/4d_generic/quadray.js` `Quadray.cellType()` |
 
 ## Cross-References
 

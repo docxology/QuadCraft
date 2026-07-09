@@ -237,28 +237,17 @@ class ConnectFourGame extends BaseGame {
 
     /**
      * Check if any move results in an immediate win for `player`.
+     * Uses board.wouldWinAt(), which simulates the drop as `player`
+     * regardless of whose turn it actually is — required for the
+     * block check, which asks "would the OPPONENT win here?" while
+     * it is actually the AI's own turn.
      * @param {Array} moves
      * @param {number} player
      * @returns {Object|null} Winning move { b, c, d } or null
      */
     _findImmediateWin(moves, player) {
         for (const move of moves) {
-            const result = this.board.dropPiece(move.b, move.c, move.d);
-            const isWin = result.result === 'win';
-            this.board.undoLastMove();
-            // Only valid if it's that player's turn when dropped
-            if (isWin && this.board.currentPlayer === player) continue;
-            if (isWin) return move;
-        }
-        // Try again properly — we need to check from current player perspective
-        // If currentPlayer matches `player`, simulate directly
-        if (this.board.currentPlayer === player) {
-            for (const move of moves) {
-                const result = this.board.dropPiece(move.b, move.c, move.d);
-                const isWin = result.result === 'win';
-                this.board.undoLastMove();
-                if (isWin) return move;
-            }
+            if (this.board.wouldWinAt(move.b, move.c, move.d, player)) return move;
         }
         return null;
     }

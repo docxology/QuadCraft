@@ -26,6 +26,12 @@ assert('Score starts at 0', board.score === 0);
 // 2. 12 IVM directions defined
 assert('12 directions defined', SnakeBoard.DIRECTIONS.length === 12);
 
+// Food spawns at a random unoccupied cell (_spawnFood uses Math.random), so
+// steps 3-4 below could non-deterministically land on it and grow the snake,
+// flaking the "no food eaten" assertions. Pin food to an unreachable sentinel
+// key for the plain-movement steps; tests 6-8 set board.food explicitly.
+board.food = 'unreachable';
+
 // 3. Movement advances head
 const headBefore = board.head;
 board.step();

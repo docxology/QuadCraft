@@ -14,7 +14,7 @@ flowchart LR
     Core["Core\n- Coordinate System\n- World Management\n- Chunk System\n- Block System"]
     Rendering["Rendering\n- Mesh Generation\n- Shader System\n- Rendering Pipeline\n- Texture Management"]
     Game["Game\n- Input Handling\n- Game Logic\n- User Interface\n- Game Loop"]
-    Browser["Browser Games\n- 12 Standalone Apps\n- HTML5 Canvas\n- Quadray.js"]
+    Browser["Browser Games\n- 30 Standalone Apps\n- HTML5 Canvas\n- Quadray.js"]
     
     Core <--> Rendering
     Rendering <--> Game
@@ -76,10 +76,10 @@ The game components handle user interaction and game logic:
 
 ## Browser Games Layer
 
-The 12 standalone browser games share the Quadray coordinate math but are otherwise independent:
+The 30 standalone browser games share the Quadray coordinate math but are otherwise independent:
 
 - Each game is a **self-contained HTML5 application** in `games/<name>/`
-- Each carries its own `quadray.js` with identical coordinate math
+- All games load the single shared `games/4d_generic/quadray.js` module — there are no per-game copies
 - Games use HTML5 Canvas for rendering (no WebGL dependency)
 - See [games.md](games.md) for the full portfolio
 

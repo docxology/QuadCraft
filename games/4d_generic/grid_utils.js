@@ -158,11 +158,14 @@ class GridUtils {
      * Shuffle an array in-place (Fisher-Yates).
      * Useful for random mine placement, food spawning, etc.
      * @param {Array} arr
+     * @param {function(): number} [rngFn=Math.random] - Source of randomness
+     *   in [0, 1). Pass a seeded generator for deterministic, reproducible
+     *   shuffles (e.g. in tests); defaults to Math.random for normal play.
      * @returns {Array} — Same array, shuffled.
      */
-    static shuffle(arr) {
+    static shuffle(arr, rngFn = Math.random) {
         for (let i = arr.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
+            const j = Math.floor(rngFn() * (i + 1));
             [arr[i], arr[j]] = [arr[j], arr[i]];
         }
         return arr;

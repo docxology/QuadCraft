@@ -38,9 +38,9 @@ Load in this order to avoid reference errors:
 
 | File | Key Exports | Purpose |
 |------|-------------|---------|
-| `breakout_board.js` | `BreakoutBoard` | Brick grid, ball physics, paddle state, and power-up tracking |
+| `breakout_board.js` | `BreakoutBoard` | Brick grid, ball physics, and paddle state |
 | `breakout_renderer.js` | `BreakoutRenderer` | Projected bricks with depth coloring, ball trail, and paddle |
-| `breakout_game.js` | `BreakoutGame` | Level progression, power-up effects, lives, and game loop |
+| `breakout_game.js` | `BreakoutGame` | Level progression, lives, and game loop |
 
 ### Tests (`tests/`)
 
@@ -54,7 +54,6 @@ Load in this order to avoid reference errors:
 - Ball bounces off paddle and destroys bricks
 - Bricks arranged in 4D tetrahedral layers
 - Different brick types require multiple hits
-- Power-ups drop from destroyed bricks
 - Clear all bricks to advance to next level
 
 ## Code Standards

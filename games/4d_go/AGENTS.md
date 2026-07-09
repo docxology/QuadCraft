@@ -4,9 +4,9 @@ Territory-capturing strategy game using IVM 12-neighbor topology (permutations o
 ## Architecture
 | File | Class | Extends |
 |------|-------|---------|
-| `js/go_board.js` | `UgoBoard` | `BaseBoard` |
-| `js/go_renderer.js` | `UgoRenderer` | `BaseRenderer` |
-| `js/go_game.js` | `UgoGame` | `BaseGame` |
+| `js/go_board.js` | `GoBoard` | `BaseBoard` |
+| `js/go_renderer.js` | `GoRenderer` | `BaseRenderer` |
+| `js/go_game.js` | `GoGame` | `BaseGame` |
 ## Commands
 ```bash
 python3 ../../run_games.py --game go

@@ -148,7 +148,15 @@ class Quadray {
      * @returns {number}
      */
     static cellVolume() {
-        return 0.375; // S3^3 / sqrt(8) or similar synergetics constant
+        // Per-cell IVM volume in tetravolumes = (1/√2)^3 × S3 ≈ 0.375, where
+        // S3 = sqrt(9/8) is the XYZ→IVM volume-conversion constant (see the
+        // `S3` constant above). Verified: Math.pow(1/Math.sqrt(2), 3) * S3
+        // === 0.375. (The previously-noted "S3^3 / sqrt(8)" derivation is
+        // WRONG — it evaluates to ≈0.421875, not 0.375.) This derivation is
+        // corroborated by `4d_doom/js/doom_config.js` (IVM.CELL_TETRAVOLUME)
+        // and `4d_minecraft/js/minecraft_analysis.js` (perBlockTetravolume),
+        // which both compute the same formula independently.
+        return 0.375;
     }
 
     /**
@@ -239,9 +247,18 @@ Quadray.BASIS = [Quadray.A, Quadray.B, Quadray.C, Quadray.D];
 /** Origin */
 Quadray.ORIGIN = new Quadray(0, 0, 0, 0);
 
-/** IVM Directions (12 permutations of {±1,0,0,0} or just the 8 primary?) */
-// Actually synergetics often uses 12 neighbours for closest packing,
-// verifying what test expects: "IVM_DIRECTIONS has 8 entries"
+/**
+ * IVM_DIRECTIONS: the 8 signed unit-basis steps (±1 on exactly one of a/b/c/d).
+ * This is NOT the synergetics "twelve around one" closest-packing neighbor
+ * set (12 permutations of (0,1,1,2)) — that set lives at
+ * `GridUtils.DIRECTIONS` in grid_utils.js and is what every game's neighbor
+ * lookup / grid traversal actually uses. {±1,0,0,0} has exactly 8
+ * permutations, never 12, so there is no version of this constant that could
+ * hold 12 entries; nothing in this repo calls `Quadray.IVM_DIRECTIONS` for
+ * game logic (verified via grep across games/ on 2026-07-07) — the sole
+ * consumer is `4d_doom/tests/test_doom.js`, which pins its length to 8.
+ * Kept for that reason; prefer `GridUtils.DIRECTIONS` for any new code.
+ */
 Quadray.IVM_DIRECTIONS = [
     new Quadray(1, 0, 0, 0), new Quadray(-1, 0, 0, 0),
     new Quadray(0, 1, 0, 0), new Quadray(0, -1, 0, 0),

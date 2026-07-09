@@ -1,6 +1,6 @@
 # Testing Guide
 
-This guide covers the testing infrastructure for QuadCraft across both the C++ engine and the 12 standalone browser games.
+This guide covers the testing infrastructure for QuadCraft across both the C++ engine and the 30 standalone browser games. For the authoritative, structurally current per-game test inventory and runner internals, see [games/doc/testing_guide.md](../../games/doc/testing_guide.md) — this page gives a high-level summary and defers to that document rather than maintaining an independent table.
 
 ## Test Architecture Overview
 
@@ -18,7 +18,7 @@ flowchart TD
         PyLauncher["run_games.py --test"]
         NodeRunner["Node.js test runner"]
         PyLauncher --> NodeRunner
-        NodeRunner --> TestFiles["21 test files\n182+ assertions"]
+        NodeRunner --> TestFiles["34 test files\n~1,700 assertions (varies slightly per run)"]
     end
 ```
 
@@ -26,25 +26,11 @@ flowchart TD
 
 ### Overview
 
-All 12 games include Node.js-runnable test files in their `tests/` directory. These test quadray coordinate math, game logic, and (where applicable) IVM/Synergetics constants.
+All 30 games include Node.js-runnable test files in their `tests/` directory (one `test_all.js`-style entry point per game; 34 per-game test files total, verified via `find . -path '*/tests/test_*.js' | wc -l` under `games/`). These test quadray coordinate math, game logic, and (where applicable) IVM/Synergetics constants.
 
-### Test File Inventory
+> **Known issue**: the 4D Catan test file (`4d_catan/tests/test_catan.js`) currently crashes with a Node.js `SyntaxError: Identifier 'ResourceType' has already been declared` and reports 0 passed — see [games/doc/testing_guide.md](../../games/doc/testing_guide.md) for the live per-game test inventory and current pass/fail status.
 
-| Game | Test File | Assertions | Key Coverage |
-| ---- | --------- | ---------- | ------------ |
-| 4D Chess | `test_quadray.js`, `test_geometry.js`, `test_all.js` | 83 | Coordinate math, piece movement, check/checkmate |
-| 4D Checkers | `test_checkers.js` | 11 | Diagonal moves, capture, king promotion |
-| 4D Reversi | `test_reversi.js` | 11 | Disc flipping, 80-direction validation |
-| 4D Life | `test_life.js` | 8 | Birth/survival rules, neighbor wrapping |
-| 4D Asteroids | `test_asteroids.js` | 8 | Motion, collision, asteroid splitting |
-| 4D SimAnt | `test_simant.js` | 9 | Pheromone trails, foraging logic |
-| 4D Backgammon | `test_backgammon.js` | 8 | Move validation, bearing off |
-| 4D Minecraft | `test_minecraft.js`, `test_analysis.js` | 11 | Block placement, terrain generation |
-| 4D Catan | `test_catan.js` | 10 | Resource production, settlement placement |
-| 4D Tower Defense | `test_td.js` | 9 | Path finding, tower targeting, wave spawning |
-| 4D Doom | `test_doom.js` | 7 | Hitscan, enemy AI, Synergetics constants |
-| 4D Mahjong | `test_mahjong.js` | 7 | Tile matching, hint system |
-| Generic | `test_quadray.js`, `test_synergetics.js` | — | Core math, IVM volume ratio validation |
+For the per-game test-file names, assertion counts, and coverage table, see the "Current Test Inventory" and "Test Coverage by Game" sections of [games/doc/testing_guide.md](../../games/doc/testing_guide.md), which tracks the game/test structure more closely than the table this guide previously carried. Both guides can still drift from the live test run — re-run `python3 games/run_games.py --test` for current pass/fail counts rather than trusting either document's numbers verbatim.
 
 ### Running Tests
 
@@ -56,7 +42,7 @@ python3 games/run_games.py --test
 python3 games/run_games.py --test --game chess doom
 
 # Run a single test file directly
-node games/4d_chess/tests/test_quadray.js
+node games/4d_chess/tests/test_all.js
 
 # Run Synergetics validation suite
 node games/4d_generic/tests/test_synergetics.js

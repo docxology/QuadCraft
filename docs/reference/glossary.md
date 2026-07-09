@@ -214,6 +214,10 @@ The classification of each cell in the IVM grid as either a tetrahedron or an oc
 
 The nested sequence of polyhedra centered at the same origin in the Synergetics system: tetrahedron (1) → cube (3) → octahedron (4) → rhombic dodecahedron (6) → cuboctahedron (20), all measured in tetravolumes. See [IVM & Synergetics](../mathematics/ivm_synergetics.md).
 
+### Cuboctahedron / Vector Equilibrium (VE)
+
+The 20-tetravolume polyhedron formed by the centers of the 12 nearest neighbors around any sphere in the IVM's closest-packed arrangement. Fuller called it the "Vector Equilibrium" (VE) because all of its radial vectors are equal in length to its edge vectors. It sits at the top of the Concentric Hierarchy and is the shape a cuboctahedron collapses through during the Jitterbug Transformation. See [IVM & Synergetics](../mathematics/ivm_synergetics.md).
+
 ## Mathematics & Physics Terms
 
 ### Hitscan
@@ -252,7 +256,7 @@ A gameplay mechanic in 4D SimAnt where ants deposit virtual pheromones along the
 
 ### Run Script
 
-A shell script (`run_<game>.sh`) or Python launcher (`run_games.py`) used to start one or more of the 12 standalone browser games with a local HTTP server. See [Games Overview](../games.md).
+A shell script (`run_<game>.sh`) or Python launcher (`run_games.py`) used to start one or more of the 30 standalone browser games with a local HTTP server. See [Games Overview](../games.md).
 
 ### Standalone Architecture
 

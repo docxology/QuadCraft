@@ -10,10 +10,10 @@
 
 ```text
 src/
-├── __init__.py       # Unified public API (35 exports)
+├── __init__.py       # Unified public API (54 exports)
 ├── core/             # Core infrastructure
 │   ├── config.py     # Shared constants (ports, paths, module lists)
-│   └── registry.py   # GAMES dict + load_config()
+│   └── registry.py   # GAMES dict + load_config() + get_port()
 ├── server/           # Serving infrastructure
 │   └── launcher.py   # GameServer + QuietHTTPHandler
 ├── qa/               # Quality Assurance
@@ -22,6 +22,7 @@ src/
 ├── scaffold/         # GameScaffold code generator
 ├── analytics/        # GameAnalytics + health scoring
 ├── shared/           # ModuleRegistry + JSModule metadata
+├── board/            # BoardAudit + BoardCatalog (migration tracking, board inventory)
 └── space/            # Quadray / IVM / XYZ / geometry
 ```
 
@@ -34,7 +35,7 @@ src/
 | `REPO_ROOT` | `str` | Auto-detected | Repository root path |
 | `GAMES_DIR` | `str` | `{REPO_ROOT}/games` | Games directory |
 | `GENERIC_DIR` | `str` | `{GAMES_DIR}/4d_generic` | Shared JS modules |
-| `BASE_PORT` | `int` | `8400` | Default starting port |
+| `BASE_PORT` | `int` | `8100` | Default starting port |
 | `SHARED_MODULES` | `list[str]` | 12 filenames | Required JS modules from `4d_generic/` |
 | `REQUIRED_FILES` | `list[str]` | `[\"index.html\", \"AGENTS.md\"]` | Required files per game |
 | `REQUIRED_JS_PATTERNS` | `dict` | `{board, renderer, game}` | Expected `js/` file naming patterns |
@@ -67,6 +68,7 @@ GAMES = {
 | Function | Signature | Description |
 |----------|-----------|-------------|
 | `load_config` | `(config_path: str) → dict` | Load JSON config file with game selections |
+| `get_port` | `(game_key: str, base_port: int \| None = None) → int` | Compute a game's HTTP port (`base_port + port_offset`, defaults to `config.BASE_PORT`) |
 
 ---
 
@@ -130,7 +132,7 @@ Checks a single game for:
 | 1 | Directory exists | `4d_<key>/` must exist |
 | 2 | Required files | `index.html`, `js/`, `tests/` with `test_*.js` |
 | 3 | No local quadray.js | Should use shared from `4d_generic/` |
-| 4 | Shared imports | `index.html` must import `quadray.js`, `camera.js`, `projection.js`, `zoom.js` |
+| 4 | Shared imports | `index.html` must import all 12 `SHARED_MODULES` entries (`quadray.js`, `synergetics.js`, `grid_utils.js`, `camera.js`, `projection.js`, `zoom.js`, `base_renderer.js`, `game_loop.js`, `base_game.js`, `score_manager.js`, `input_controller.js`, `hud.js`) |
 | 5 | AGENTS.md | Must exist |
 | 6 | Board logic | `*_board.js` must exist and be ≥200 bytes |
 | 7 | Renderer not scaffold | No `[scaffold]` markers or TODO stubs |
@@ -150,19 +152,20 @@ Full validation: shared dir + all registered games. Prints formatted report.
 
 ## `__init__.py` — Public API
 
-All 35 exports are available from `from games.src import ...`:
+All 54 exports (`len(src.__all__)`) are available from `from games.src import ...`:
 
 | Category | Exports |
 |----------|---------|
-| Config | `REPO_ROOT`, `GAMES_DIR`, `GENERIC_DIR`, `BASE_PORT`, `SHARED_MODULES`, `REQUIRED_FILES`, `REQUIRED_JS_PATTERNS`, `LOG_PREFIX` |
-| Registry | `GAMES`, `load_config` |
+| Config | `REPO_ROOT`, `GAMES_DIR`, `GENERIC_DIR`, `SHARED_DIR_NAME`, `BASE_PORT`, `SHARED_MODULES`, `OPTIONAL_SHARED_MODULES`, `ALL_SHARED_MODULES`, `REQUIRED_FILES`, `REQUIRED_JS_PATTERNS`, `LOG_PREFIX` |
+| Registry | `GAMES`, `load_config`, `get_port` |
 | Launcher | `GameServer` |
 | Testing | `run_tests` |
-| Validation | `validate_game` |
+| Validation | `validate_game`, `audit_all` |
 | Scaffold | `GameScaffold` |
 | Analytics | `GameAnalytics`, `SuiteReport`, `GameMetrics` |
 | Shared | `ModuleRegistry`, `JSModule`, `resolve_module_path` |
-| Space | `Quadray`, `IVM`, `SYNERGETICS`, `quadray_to_xyz`, `xyz_to_quadray` |
+| Board | `BoardAudit`, `AuditResult`, `BoardCatalog`, `BoardInfo` |
+| Space | `Quadray`, `IVM`, `SYNERGETICS`, `quadray_to_xyz`, `xyz_to_quadray`, `project_quadray`, `rotate_xyz`, `ScreenPoint`, `project_basis_axes`, `IVMGrid`, `Jitterbug`, `angle_between`, `distance`, `manhattan_4d`, `euclidean_4d`, `verify_round_trip`, `verify_geometric_identities`, `CheckResult`, `VerificationReport`, `generate_grid`, `neighbors`, `bounded_neighbors`, `in_bounds`, `depth_sort`, `random_coord` |
 
 ---
 

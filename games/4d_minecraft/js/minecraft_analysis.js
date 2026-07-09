@@ -382,171 +382,42 @@ function calculateDistanceStatistics(blocks) {
 
 // ═══════════════════════════════════════════════════════════════════════════
 // GEOMETRIC VERIFICATION SUITE
+//
+// angleBetweenQuadrays, verifyRoundTrip, and the 8-check verifyGeometricIdentities
+// are the canonical shared implementations from 4d_generic/synergetics.js — this
+// file does NOT redeclare them (a prior local copy drifted from the shared one
+// and silently shadowed it in the browser; see docs/games.md "Shared Math
+// Foundation"). Only the board-specific 9th check lives here, layered on top of
+// the shared 8-check result via verifyGeometricIdentitiesWithBoard().
 // ═══════════════════════════════════════════════════════════════════════════
 
-/**
- * Calculate the angle between two Quadray vectors (in degrees).
- * @param {Quadray} q1
- * @param {Quadray} q2
- * @returns {number} Angle in degrees
- */
-function angleBetweenQuadrays(q1, q2) {
-    const c1 = q1.toCartesian();
-    const c2 = q2.toCartesian();
-    const dot = c1.x * c2.x + c1.y * c2.y + c1.z * c2.z;
-    const mag1 = Math.sqrt(c1.x ** 2 + c1.y ** 2 + c1.z ** 2);
-    const mag2 = Math.sqrt(c2.x ** 2 + c2.y ** 2 + c2.z ** 2);
-    if (mag1 === 0 || mag2 === 0) return 0;
-    const cosAngle = Math.max(-1, Math.min(1, dot / (mag1 * mag2)));
-    return Math.acos(cosAngle) * (180 / Math.PI);
+// Node.js compatibility: load the shared Synergetics functions if not already
+// in scope (in the browser, 4d_generic/synergetics.js is loaded via <script>
+// before this file — see index.html).
+if (typeof angleBetweenQuadrays === 'undefined' && typeof require !== 'undefined') {
+    /* eslint-disable no-global-assign */
+    const _s = require('../../4d_generic/synergetics.js');
+    globalThis.angleBetweenQuadrays = _s.angleBetweenQuadrays;
+    globalThis.verifyRoundTrip = _s.verifyRoundTrip;
+    globalThis.verifyGeometricIdentities = _s.verifyGeometricIdentities;
 }
 
-/**
- * Verify round-trip conversion (Quadray -> Cartesian -> Quadray).
- * @param {Quadray} q
- * @param {number} tolerance
- * @returns {{passed: boolean, error: number, original: Quadray, recovered: Quadray}}
- */
-function verifyRoundTrip(q, tolerance = 0.01) {
-    const cart = q.toCartesian();
-    const recovered = Quadray.fromCartesian(cart.x, cart.y, cart.z);
-    const error = Quadray.distance(q.normalized(), recovered.normalized());
-    return { passed: error < tolerance, error, original: q, recovered };
-}
+// Capture the canonical shared 8-check implementation into a local closure
+// binding NOW — before any consumer (e.g. a test harness re-pointing the
+// global at this module's own export) can reassign the mutable global of the
+// same name. verifyGeometricIdentitiesWithBoard() must always delegate to the
+// original shared checks, never to whatever currently occupies the global slot.
+const _sharedVerifyGeometricIdentities = verifyGeometricIdentities;
 
 /**
- * Comprehensive geometric identity verification — 8 checks.
- * Checks 1-6 ported from chess analysis.js, checks 7-8 are Synergetics-specific.
+ * Comprehensive geometric identity verification — the shared 8 checks from
+ * 4d_generic/synergetics.js, plus a 9th Minecraft-specific check that requires
+ * a board (all placed blocks have integer IVM coordinates).
+ * @param {MinecraftBoard|null} board
  * @returns {{timestamp: string, checks: Array, allPassed: boolean}}
  */
-function verifyGeometricIdentities(board = null) {
-    const TOLERANCE = 0.01;
-    const EXPECTED_TETRAHEDRAL_ANGLE = 109.4712;
-    const EXPECTED_BASIS_LENGTH = 1 / Math.sqrt(2);
-
-    const results = {
-        timestamp: new Date().toISOString(),
-        checks: [],
-        allPassed: true
-    };
-
-    // 1. Basis vector lengths = 0.7071
-    const basisLengths = Quadray.BASIS.map(b => b.length());
-    const check1 = {
-        name: 'Basis Vector Lengths',
-        description: 'All 4 basis vectors should have equal length (~0.707)',
-        expected: EXPECTED_BASIS_LENGTH.toFixed(4),
-        actual: basisLengths.map(l => l.toFixed(4)),
-        passed: basisLengths.every(l => Math.abs(l - EXPECTED_BASIS_LENGTH) < TOLERANCE)
-    };
-    results.checks.push(check1);
-    if (!check1.passed) results.allPassed = false;
-
-    // 2. Tetrahedral angles = 109.47 deg (all 6 pairs)
-    const anglePairs = [];
-    const labels = ['A', 'B', 'C', 'D'];
-    for (let i = 0; i < 4; i++) {
-        for (let j = i + 1; j < 4; j++) {
-            const angle = angleBetweenQuadrays(Quadray.BASIS[i], Quadray.BASIS[j]);
-            anglePairs.push({ pair: `${labels[i]}-${labels[j]}`, angle: angle.toFixed(2) });
-        }
-    }
-    const check2 = {
-        name: 'Tetrahedral Symmetry',
-        description: `All basis pairs should form ${EXPECTED_TETRAHEDRAL_ANGLE.toFixed(2)}° angles`,
-        expected: EXPECTED_TETRAHEDRAL_ANGLE.toFixed(2),
-        actual: anglePairs,
-        passed: anglePairs.every(p => Math.abs(parseFloat(p.angle) - EXPECTED_TETRAHEDRAL_ANGLE) < 1.0)
-    };
-    results.checks.push(check2);
-    if (!check2.passed) results.allPassed = false;
-
-    // 3. Origin identity (0,0,0,0) -> (0,0,0)
-    const originCart = Quadray.ORIGIN.toCartesian();
-    const check3 = {
-        name: 'Origin Identity',
-        description: 'Quadray origin (0,0,0,0) maps to Cartesian origin (0,0,0)',
-        expected: '{x: 0, y: 0, z: 0}',
-        actual: `{x: ${originCart.x.toFixed(4)}, y: ${originCart.y.toFixed(4)}, z: ${originCart.z.toFixed(4)}}`,
-        passed: Math.abs(originCart.x) < TOLERANCE && Math.abs(originCart.y) < TOLERANCE && Math.abs(originCart.z) < TOLERANCE
-    };
-    results.checks.push(check3);
-    if (!check3.passed) results.allPassed = false;
-
-    // 4. Round-trip conversion (6 test points, error < 0.01)
-    const testPoints = [
-        new Quadray(1, 0, 0, 0), new Quadray(0, 1, 0, 0),
-        new Quadray(0, 0, 1, 0), new Quadray(0, 0, 0, 1),
-        new Quadray(2, 1, 0, 1), new Quadray(3, 2, 1, 0)
-    ];
-    const roundTripResults = testPoints.map(q => verifyRoundTrip(q));
-    const check4 = {
-        name: 'Round-Trip Conversion',
-        description: 'Quadray -> Cartesian -> Quadray recovers original position',
-        expected: 'error < 0.01 for all test points',
-        actual: roundTripResults.map((r, i) => `Point ${i + 1}: error=${r.error.toFixed(4)}`),
-        passed: roundTripResults.every(r => r.passed)
-    };
-    results.checks.push(check4);
-    if (!check4.passed) results.allPassed = false;
-
-    // 5. Distance symmetry d(A,B) = d(B,A)
-    const qA = new Quadray(1, 0, 0, 0);
-    const qB = new Quadray(0, 1, 0, 0);
-    const d1 = Quadray.distance(qA, qB);
-    const d2 = Quadray.distance(qB, qA);
-    const check5 = {
-        name: 'Distance Symmetry',
-        description: 'distance(A, B) equals distance(B, A)',
-        expected: 'd1 === d2',
-        actual: `d1=${d1.toFixed(6)}, d2=${d2.toFixed(6)}`,
-        passed: Math.abs(d1 - d2) < 0.0001
-    };
-    results.checks.push(check5);
-    if (!check5.passed) results.allPassed = false;
-
-    // 6. Triangle inequality d(A,B)+d(B,C) >= d(A,C)
-    const qC = new Quadray(0, 0, 1, 0);
-    const dAB = Quadray.distance(qA, qB);
-    const dBC = Quadray.distance(qB, qC);
-    const dAC = Quadray.distance(qA, qC);
-    const check6 = {
-        name: 'Triangle Inequality',
-        description: 'd(A,B) + d(B,C) >= d(A,C) for all points',
-        expected: `${dAB.toFixed(4)} + ${dBC.toFixed(4)} >= ${dAC.toFixed(4)}`,
-        actual: `${(dAB + dBC).toFixed(4)} >= ${dAC.toFixed(4)}`,
-        passed: dAB + dBC >= dAC - TOLERANCE
-    };
-    results.checks.push(check6);
-    if (!check6.passed) results.allPassed = false;
-
-    // 7. NEW: S3 constant validation — S3 = sqrt(9/8)
-    const expectedS3 = Math.sqrt(9 / 8);
-    const check7 = {
-        name: 'S3 Constant Validation',
-        description: 'S3 = sqrt(9/8) = 1.0607 (XYZ-to-IVM volume conversion)',
-        expected: expectedS3.toFixed(6),
-        actual: S3.toFixed(6),
-        passed: Math.abs(S3 - expectedS3) < 0.0001
-    };
-    results.checks.push(check7);
-    if (!check7.passed) results.allPassed = false;
-
-    // 8. NEW: Synergetics volume ratios — Tetra:Octa:Cubo = 1:4:20
-    const tetraVol = 1;
-    const octaVol = 4;
-    const cuboVol = 20;
-    const ratioOT = octaVol / tetraVol;
-    const ratioCT = cuboVol / tetraVol;
-    const check8 = {
-        name: 'Synergetics Volume Ratios',
-        description: 'Tetra:Octa:Cubo = 1:4:20 in tetravolumes',
-        expected: 'T:O:C = 1:4:20',
-        actual: `T:O:C = ${tetraVol}:${octaVol}:${cuboVol} (O/T=${ratioOT}, C/T=${ratioCT})`,
-        passed: ratioOT === 4 && ratioCT === 20
-    };
-    results.checks.push(check8);
-    if (!check8.passed) results.allPassed = false;
+function verifyGeometricIdentitiesWithBoard(board = null) {
+    const results = _sharedVerifyGeometricIdentities();
 
     // 9. All Block Coordinates Integer (only when board is provided)
     if (board) {
@@ -628,7 +499,7 @@ if (typeof module !== 'undefined' && module.exports) {
         calculateDistanceStatistics,
         angleBetweenQuadrays,
         verifyRoundTrip,
-        verifyGeometricIdentities,
+        verifyGeometricIdentities: verifyGeometricIdentitiesWithBoard,
         computeAllAnalysis
     };
 }

@@ -11,8 +11,8 @@ docs/
 ├── README.md                # Documentation index (central hub)
 ├── architecture.md          # System architecture overview (summary)
 ├── quadray_coordinates.md   # Quadray implementation in QuadCraft
-├── games.md                 # 12-game portfolio overview
-├── development/             # Technical implementation guides (17 docs)
+├── games.md                 # 30-game portfolio overview
+├── development/             # Technical implementation guides (18 docs)
 │   ├── architecture.md      # Detailed technical architecture (846 lines)
 │   ├── chunk_system.md      # Tetrahedral chunk management
 │   ├── entity_system.md     # ECS architecture
@@ -20,7 +20,7 @@ docs/
 │   ├── javascript_implementation.md
 │   ├── setup_guide.md       # Dev environment setup
 │   ├── testing_guide.md     # Test infrastructure (C++ & JS)
-│   └── ...                  # 10 more guides
+│   └── ...                  # 11 more guides
 ├── game_design/             # Gameplay documentation (5 docs)
 ├── mathematics/             # Mathematical foundations (3 docs)
 │   ├── quadray_coordinates.md  # Detailed quadray math
@@ -35,7 +35,7 @@ docs/
 
 | Docs Area | Source Code | Games |
 |-----------|-----------|-------|
-| `mathematics/` | `src/core/coordinate/` | All 12 games (`games/*/js/quadray.js`) |
+| `mathematics/` | `src/core/coordinate/` | All 30 games (`games/4d_generic/quadray.js`, shared) |
 | `development/architecture.md` | `src/core/`, `src/render/`, `src/game/` | — |
 | `development/javascript_implementation.md` | `src/browser/`, `src/js/` | Browser games |
 | `game_design/` | `src/game/`, `src/browser/` | `games/4d_minecraft/` |

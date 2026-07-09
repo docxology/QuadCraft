@@ -647,7 +647,8 @@
     <!-- HUD Bar (managed by BaseGame + HUD module) -->
     <div class="hud" id="hud">4D Tower Defense | Loading...</div>
 
-    <!-- All 12 shared QuadCraft modules (same order as connect_four gold standard) -->
+    <!-- All 10 shared QuadCraft modules actually used (pathfinding.js and entity_system.js
+         removed: this game does not call QuadrayPathfinder or EntityManager/QuadrayEntity) -->
     <script src="../4d_generic/quadray.js"></script>
     <script src="../4d_generic/camera.js"></script>
     <script src="../4d_generic/projection.js"></script>
@@ -656,8 +657,6 @@
     <script src="../4d_generic/game_loop.js"></script>
     <script src="../4d_generic/input_controller.js"></script>
     <script src="../4d_generic/grid_utils.js"></script>
-    <script src="../4d_generic/pathfinding.js"></script>
-    <script src="../4d_generic/entity_system.js"></script>
     <script src="../4d_generic/base_board.js"></script>
 
     <script src="../4d_generic/base_renderer.js"></script>

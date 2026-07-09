@@ -297,7 +297,7 @@ class Renderer extends BaseRenderer {
     _drawBoardHUD(currentPlayer, isCheck) {
         const meta = this.board.getMetadata();
         const lines = [
-            `Tetra: ${meta.tetraCount} | Octa: ${meta.octaCount} | Vol T:O:C=${meta.volumeRatios.tetra}:${meta.volumeRatios.octa}:${meta.volumeRatios.cubo}`,
+            `Tetra: ${meta.tetraCount} | Octa: ${meta.octaCount} | Vol T:O:C=${meta.volumeRatios.TETRA_VOL}:${meta.volumeRatios.OCTA_VOL}:${meta.volumeRatios.CUBO_VOL}`,
             `W: ${meta.whitePieces} pcs | B: ${meta.blackPieces} pcs | Captured W:${meta.capturedWhite} B:${meta.capturedBlack}`,
         ];
         this._drawHUD(lines, { color: 'rgba(148, 163, 184, 0.7)', fontSize: 11 });

@@ -9,8 +9,6 @@
  *   - HUD: set, gameOver, paused, playing, warning
  *   - ScoreManager: addScore, reset, toJSON
  *   - verifyGeometricIdentities: startup integrity check
- *   - GridUtils: manhattan, euclidean, shuffle
- *   - Quadray: distance, distanceTo, toKey, normalized, clone
  *
  * Controls:
  *   Left/Right or A/D : Move piece along B axis

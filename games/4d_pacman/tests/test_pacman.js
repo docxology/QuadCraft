@@ -83,7 +83,7 @@ if (ppKey) {
     b5.step();
     assert('Power pellet consumed', b5.powerPellets.size < ppBefore);
     assert('Power timer set', b5.powerTimer > 0);
-    assert('Ghosts scared', b5.ghosts.some(g => g.scared));
+    assert('Ghosts frightened', b5.ghosts.every(g => g.state === 'frightened'));
     assert('Score increased by 50', b5.score >= 50);
 }
 
@@ -146,6 +146,16 @@ console.log('\n— Death / Game Over —');
 const b8 = new PacManBoard(5);
 b8.lives = 1;
 const mid = Math.floor(b8.size / 2);
+// Pac-Man's default spawn (1,1,1,1) doubles as a power-pellet cell; clear
+// it so this collision test isn't confounded by the power-pellet-eating
+// branch flipping ghost.state to 'frightened' (which also switches the
+// ghost's movement-speed gate from `score % ghostSpeedDivisor` to
+// `score % 2`, letting it dodge instead of staying put for the collision).
+b8.powerPellets.delete(b8.key(b8.pacman.a, b8.pacman.b, b8.pacman.c, b8.pacman.d));
+// Pin score to a value not divisible by the chase-speed divisor (4 at
+// level 1) so the ghost's movesThisTick gate stays closed and it holds
+// position on Pac-Man's cell for the collision check below.
+b8.score = 1;
 // Place a ghost on pacman
 b8.ghosts[0].a = b8.pacman.a;
 b8.ghosts[0].b = b8.pacman.b;

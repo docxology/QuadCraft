@@ -24,7 +24,7 @@ open http://localhost:8107
 ## Game Mechanics
 
 - **4D Geometry**: Board coordinates (a, b, c, d) map to tetrahedral space.
-- **Standalone**: Zero dependencies. Open `index.html` to play.
+- **Standalone**: Zero build step, zero server requirement — `index.html` loads its game logic plus the shared `../4d_generic/` Quadray/IVM modules directly via `<script>` tags (no bundler, no npm install).
 - **Tests**: Unit tests in `tests/` ensure logic correctness.
 
 ## Key Controls
@@ -37,15 +37,19 @@ open http://localhost:8107
 
 ```
 games/4d_minecraft/
-├── index.html           # Entry point
+├── index.html                # Entry point (loads ../4d_generic/ shared modules, then js/)
 ├── js/
-│   ├── quadray.js       # 4D Coordinate Math
-│   ├── minecraft_board.js  # Game State & Logic
+│   ├── minecraft_board.js    # Game State & Logic
+│   ├── minecraft_analysis.js # Synergetics Geometry Analysis & Verification
 │   ├── minecraft_renderer.js # Canvas Visualization
-│   └── minecraft_game.js   # Controller
+│   └── minecraft_game.js     # Controller
 └── tests/
-    └── test_minecraft.js   # Node.js Unit Tests
+    ├── test_minecraft.js     # Node.js Unit Tests
+    └── test_analysis.js      # Node.js Unit Tests (Synergetics analysis)
 ```
+
+4D Coordinate Math (`Quadray`) lives in the shared `../4d_generic/quadray.js` module,
+not inside this game's `js/` directory.
 
 ---
 *Part of the [QuadCraft](../../) project.*

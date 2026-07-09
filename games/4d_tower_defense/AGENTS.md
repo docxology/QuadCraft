@@ -22,12 +22,17 @@ python3 ../../run_games.py --game tower_defense
 | Directory | Files | Purpose |
 |-----------|-------|---------|
 | `js/` | 3 modules | Core logic (Board, Renderer, Game) |
-| `tests/` | 1 file | Test suite (core + extended, ~150 assertions) |
+| `tests/` | 1 file | Test suite (core + extended, ~200-225 assertions — `generateIVMPath()` uses `Math.random()` for path length, so the total varies run to run) |
 
 ## Shared Modules
 
 Imported via `<script>` tags in `index.html` from `../4d_generic/`:
-`quadray.js`, `camera.js`, `projection.js`, `zoom.js`, `synergetics.js`, `game_loop.js`, `input_controller.js`, `grid_utils.js`, `base_board.js`, `pathfinding.js`, `base_renderer.js`, `base_game.js`, `hud.js`, `score_manager.js`
+`quadray.js`, `camera.js`, `projection.js`, `zoom.js`, `synergetics.js`, `game_loop.js`, `input_controller.js`, `grid_utils.js`, `base_board.js`, `base_renderer.js`, `base_game.js`, `hud.js`, `score_manager.js`
+
+Note: `pathfinding.js` and `entity_system.js` are **not** imported — this game's
+procedural path generation (`TowerDefenseBoard.generateIVMPath()` in
+`js/td_board.js`) and creep/tower objects are hand-rolled and do not use
+`QuadrayPathfinder` or `EntityManager`/`QuadrayEntity`.
 
 ## Module Dependency Order
 

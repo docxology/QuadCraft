@@ -2,12 +2,12 @@
 
 ## Project Overview
 
-Paddle-ball game in tetrahedral 4D space. Standalone browser application built on Quadray coordinates.
+Paddle-ball game on a 4D hyper-rectangular court with positions labeled using Quadray coordinate names. Standalone browser application built on Quadray coordinates.
 
 ## Quick Commands
 
 ```bash
-# Run tests (19 tests)
+# Run tests (52 assertions)
 node tests/test_pong.js
 
 # Open in browser
@@ -46,13 +46,13 @@ Load in this order to avoid reference errors:
 
 | File | Tests | Coverage |
 |------|-------|----------|
-| `test_pong.js` | 19 | Board creation, cell operations, reset |
+| `test_pong.js` | 52 | Board creation, wall bounce, paddle hit, power-ups, AI difficulty, 2P mode, longest rally, metadata, synergetics constants |
 | `test.html` | — | Browser test runner |
 
 ## Game Rules Summary
 
 - Ball bounces in 4D Quadray space
-- Two paddles positioned at opposing tetrahedral faces
+- Two paddles positioned at opposing b/c/d-aligned court faces
 - Ball reflects off paddles and boundaries
 - Score when opponent misses the ball
 - First to 11 points wins

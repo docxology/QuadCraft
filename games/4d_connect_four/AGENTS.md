@@ -7,7 +7,7 @@ Gravity-drop 4-in-a-row in 4D Quadray/IVM space. Standalone browser application 
 ## Quick Commands
 
 ```bash
-# Run tests (69 tests)
+# Run tests (124 tests)
 node tests/test_connect_four.js
 
 # Open in browser
@@ -70,7 +70,7 @@ All loaded via `<script>` tags from `../4d_generic/`:
 
 | File | Tests | Coverage |
 |------|-------|----------|
-| `test_connect_four.js` | 69 | Board creation, Quadray storage, cellType, gravity, win detection, distances, neighbors, round-trip, synergetics, geometric identities, angles, metadata, AI eval, reset |
+| `test_connect_four.js` | 124 | Board creation, Quadray storage, cellType, gravity, win detection, distances, neighbors, round-trip, synergetics, geometric identities, angles, metadata, AI win/block simulation, reset |
 | `test.html` | — | Browser test runner (loads all 12 shared modules) |
 
 ## Game Controls
@@ -102,7 +102,7 @@ if (typeof module !== 'undefined' && module.exports) {
 
 ## Verification Checklist
 
-- [x] All 70 tests pass: `node tests/test_connect_four.js`
+- [x] All 124 tests pass: `node tests/test_connect_four.js`
 - [ ] Browser loads: `open index.html`
 - [ ] Game plays (click-to-drop with gravity)
 - [ ] Tetra/octa cell shapes render differently

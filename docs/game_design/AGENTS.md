@@ -44,6 +44,14 @@ Input handling:
 - Mouse controls
 - Navigation system
 
+### advanced_building_techniques.md
+
+Building in tetrahedral space:
+
+- Slope, angle, and structural-integrity principles for non-cubic voxels
+- Named building patterns (helix, geodesic dome, smooth tunnels)
+- Techniques for stable, aesthetically pleasing structures
+
 ## Guidelines
 
 ### Updating for Gameplay Changes

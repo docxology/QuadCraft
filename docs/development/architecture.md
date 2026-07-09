@@ -1,5 +1,8 @@
 # QuadCraft Technical Architecture
 
+> [!IMPORTANT]
+> **Design Specification Status**: The class diagrams below describe the *target* architecture, not all of it is implemented. Verified as of this revision: `src/core/entity/` contains only `Camera.h` — there is no `Entity`, `Player`, or `EntityManager` class anywhere in the codebase (see [Entity System](entity_system.md) for the disclosed status). The World System diagram's `Chunk`/`WorldGenerator` names have been corrected below to the real `TetraChunk`/`TerrainGenerator` classes, but their fields and methods are illustrative, not verbatim. Treat every class diagram in this document as a design target unless you have confirmed the class exists via `grep -rn 'class <Name>' src/`.
+
 This document describes the technical architecture of QuadCraft, detailing the system components, their interactions, and design patterns used throughout the codebase.
 
 ## System Overview
@@ -250,43 +253,38 @@ classDiagram
         +getFaces()
     }
     
-    class Chunk {
-        +std::vector<Block*> blocks
+    class TetraChunk {
+        +int chunkX, chunkY, chunkZ
         +Quadray position
-        +bool modified
-        +Mesh* mesh
-        +addBlock(Block*)
-        +removeBlock(Quadray position)
-        +getBlock(Quadray position)
-        +generateMesh()
-        +update()
-        +render(Shader shader)
+        +bool isDirty
+        +bool isGenerated
+        +bool isVisible
+        +setBlock(Quadray localPos, Block::BlockID id)
+        +getBlock(Quadray localPos)
     }
     
     class World {
-        +std::map<ChunkCoord, Chunk*> chunks
+        +std::map<ChunkCoord, TetraChunk*> chunks
         +Player* player
-        +WorldGenerator generator
+        +TerrainGenerator generator
         +initialize()
         +update(float deltaTime)
         +render()
-        +getBlock(Quadray position)
+        +getBlock(const Quadray& worldPos)
         +setBlock(Quadray position, BlockType type)
         +removeBlock(Quadray position)
         +getChunk(ChunkCoord coord)
         +generateChunk(ChunkCoord coord)
     }
     
-    class WorldGenerator {
-        +generateChunk(ChunkCoord coord)
-        +generateTerrainForChunk(Chunk* chunk)
-        +generateStructures(Chunk* chunk)
-        +float getNoise(float x, float y, float z)
+    class TerrainGenerator {
+        +generateChunk(TetraChunk& chunk, World& world)
+        +generateTetraElements(TetraChunk& chunk, const Vector3& position, float size)
     }
     
-    Block <-- Chunk
-    Chunk <-- World
-    World --> WorldGenerator
+    Block <-- TetraChunk
+    TetraChunk <-- World
+    World --> TerrainGenerator
 ```
 
 ### Physics System
