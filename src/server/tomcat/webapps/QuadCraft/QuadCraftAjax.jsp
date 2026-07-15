@@ -11,6 +11,9 @@
 	//since you can many-read but one-write.
 	static volatile NavigableMap V = JsonDS.map("p",0., "v",0., "t",10000.); //root of V tree
 	static final Object VLock = new Object();
+	static boolean sendTNetToBrowser = true;
+	static boolean includeTNetInShouldSendVar = true;
+	static double allowTimeTravellersOnlyThisManySecondsAhead = 0.1;
 	
 	static boolean testedOccamsJsonDS = false;
 	
@@ -71,7 +74,8 @@
 				synchronized(VLock){
 					//in case 2 threads try to mod the tree at once. The tree is immutable (or at least used that way) but
 					//we dont want other threads changes to get ignored. Keep the newest of each Var by Var.t.
-					V = mergeMaps(V,(NavigableMap)incoming); //update shared state on sever that multiple remote browsers sync with or parts of
+					double serverReceiveTime = utcSeconds();
+					V = mergeMaps(V,(NavigableMap)incoming,serverReceiveTime); //update shared state on sever that multiple remote browsers sync with or parts of
 				}
 				if(!isReadWriteSparse){
 					o = "{\"action\":\"ok\"}";
@@ -97,8 +101,59 @@
 	}
 	
 	static NavigableMap partsOfVTreeByMinTime(NavigableMap fromNode, double minTime){
-		Predicate<NavigableMap> keep = (NavigableMap node)->(minTime<=((Double)node.get("t")));
+		Predicate<NavigableMap> keep = (NavigableMap node)->(minTime<=sparseReadTime(node));
 		return partsOfVTree(fromNode, keep);
+	}
+
+	static double num(NavigableMap m, String key){
+		Object x = m.get(key);
+		return x instanceof Number ? ((Number)x).doubleValue() : 0.0;
+	}
+
+	static double sparseReadTime(NavigableMap m){
+		double t = num(m,"t");
+		return includeTNetInShouldSendVar ? Math.max(t,num(m,"tNet")) : t;
+	}
+
+	static double utcSeconds(){
+		return System.currentTimeMillis()*.001;
+	}
+
+	static boolean isIncomingTimeAllowed(NavigableMap node, double serverReceiveTime){
+		return num(node,"t") <= serverReceiveTime + allowTimeTravellersOnlyThisManySecondsAhead;
+	}
+
+	static NavigableMap stampAcceptedIncoming(NavigableMap node, double serverReceiveTime){
+		if(node==null)return null;
+		boolean localAccepted = isIncomingTimeAllowed(node,serverReceiveTime);
+		TreeMap out=new TreeMap(JsonDS.mapKeyComparator);
+		if(localAccepted){
+			for(Object k:node.keySet()){
+				if(k.equals("pu")||k.equals("tNet")) continue;
+				out.put(k,node.get(k));
+			}
+			double t=num(node,"t");
+			if(t>0) out.put("tNet",serverReceiveTime);
+		}else{
+			System.out.println("Rejecting future incoming node t="+num(node,"t")+" serverReceiveTime="+serverReceiveTime+" node="+obToJson(node));
+			out.put("p",0.);
+			out.put("v",0.);
+			out.put("t",0.);
+		}
+		NavigableMap pu=(NavigableMap)node.get("pu");
+		TreeMap newPu=null;
+		if(pu!=null){
+			for(Object k:pu.keySet()){
+				NavigableMap kept=stampAcceptedIncoming((NavigableMap)pu.get(k),serverReceiveTime);
+				if(kept!=null){
+					if(newPu==null)newPu=new TreeMap(JsonDS.mapKeyComparator);
+					newPu.put(k,kept);
+				}
+			}
+		}
+		if(!localAccepted && newPu==null)return null;
+		if(newPu!=null)out.put("pu",Collections.unmodifiableNavigableMap(newPu));
+		return Collections.unmodifiableNavigableMap(out);
 	}
 
 	/** Copies every node that satisfies keep.test(node) or
@@ -127,13 +182,14 @@
 		NavigableMap out=new TreeMap(JsonDS.mapKeyComparator);
 		for(Object k:node.keySet()){
 			if(k.equals("pu"))continue;
+			if(k.equals("tNet") && !sendTNetToBrowser)continue;
 			out.put(k,node.get(k));
 		}
 		if(newPu!=null)out.put("pu",Collections.unmodifiableNavigableMap(newPu));
 		return Collections.unmodifiableNavigableMap(out);
 	}
 	
-	static NavigableMap mergeMaps(NavigableMap a,NavigableMap b){
+	static NavigableMap mergeMaps(NavigableMap a,NavigableMap b,double serverReceiveTime){
 		Double ta=(Double)a.get("t");
 		Double tb=(Double)b.get("t");
 		if(ta==null||tb==null){
@@ -144,15 +200,25 @@
 				ret.t = this.t; //UTC time updated. not all code will use this. but each Var is a time-series of 2 numbers: position and velocity.
 			}*/
 		}
-		boolean bNewer=tb>ta;
+		boolean bTimeAllowed = isIncomingTimeAllowed(b,serverReceiveTime);
+		if(!bTimeAllowed){
+			System.out.println("Rejecting future incoming node t="+tb+" serverReceiveTime="+serverReceiveTime+" node="+obToJson(b));
+		}
+		boolean bNewer=bTimeAllowed && tb>ta;
 		NavigableMap newer=bNewer?b:a;
 
 		TreeMap out=new TreeMap(JsonDS.mapKeyComparator);
 		for(Object k:newer.keySet()){
-			if(k.equals("t")||k.equals("pu")) continue;
+			if(k.equals("t")||k.equals("tNet")||k.equals("pu")) continue;
 			out.put(k,newer.get(k));			//local scalars once
 		}
 		out.put("t",bNewer?tb:ta);				//write .t once
+		if(bNewer){
+			if(tb>0) out.put("tNet",serverReceiveTime);
+		}else{
+			double tNet=num(a,"tNet");
+			if(tNet!=0) out.put("tNet",tNet);
+		}
 
 		NavigableMap pa=(NavigableMap)a.get("pu");
 		NavigableMap pb=(NavigableMap)b.get("pu");
@@ -165,9 +231,10 @@
 			for(Object k:keys){
 				NavigableMap ca=pa==null?null:(NavigableMap)pa.get(k);
 				NavigableMap cb=pb==null?null:(NavigableMap)pb.get(k);
-				pu.put(k,ca==null?cb:(cb==null?ca:mergeMaps(ca,cb)));
+				NavigableMap c = ca==null ? stampAcceptedIncoming(cb,serverReceiveTime) : (cb==null ? ca : mergeMaps(ca,cb,serverReceiveTime));
+				if(c!=null) pu.put(k,c);
 			}
-			out.put("pu",Collections.unmodifiableNavigableMap(pu));
+			if(!pu.isEmpty()) out.put("pu",Collections.unmodifiableNavigableMap(pu));
 		}
 		return Collections.unmodifiableNavigableMap(out);
 	}

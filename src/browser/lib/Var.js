@@ -1,7 +1,5 @@
 //Var*.js, opensource/Apache2 (versions before Bellsack256/2025-8-3 are MIT) by Ben F Rayfield.
-//This version was copied 2026-5-26 from Bellsack492.html and can be referred to as VarFromBellsack492.js or Var.js
-//
-//and a slight change to fix a bug loading older files without a .t: this.t = Math.max(this.t||0, map.t||0); //in case !opt.keepNewest, dont want to put in a lower t from map.
+//This version of Var.js is from https://github.com/benrayfield/jsutils/blob/master/src/bellsack/Bellsack0575.02.cpuGraphicsForRingsAndEdlayLines_see_paintCpuEdjointsR5G5B5D9_etc.html where Var*.js exists in its own script tag.
 
 console.error('TODO O1_ O2_ O3_ O4_ (objects)... P_ Ps_ (Ptrs) L_ Ls_ (Lits) by ORing, to compute Var.po as true or false');
 if(window.v !== undefined) throw new Error('Theres already a v global var, which is the root like v.Bellsack.Room5.Hello.World');
@@ -50,6 +48,23 @@ const Var = function(optionalParentVar, optionalName, optionalBig, optionalGob){
 	//this.brain = null; //where compiled (this.big || this.name) goes, normally a js func of Var's to list/array of int voxels.
 	//this.vars = null;
 	
+	//string or list of strings to be joined by '\n'. If string, convert all \r\n to \n, then all \r to \n,
+	//then split by and not including \n and store as 1 line strings, so it tends to be readable as json.
+	//Use anyVar.bigSt() to get: anyVar.big if its a string, else anyVar.big.join('\n') if its a list, else anyVar.name.
+	//.name is derived from .big if .big exists. anyVar[G$AnyStringThatStartsWithCapitalAToZ]
+	//The first $ marks the end of the prefix such as "Json${a: 2.34, bList: [50,'word']}" or O2$cw.
+	//Some prefixes such as Json$ and O2$ and P$ and Ps$ have meanings, but you can make up prefixes
+	//like ThingamajigHorse33Blah$ or maybe Ed25519PubKey$ or whatever. Might go Ed$ for that and ED for ed448
+	//and maybe a sig goes in EdSig$ followed by 64 byte sig, thing signed, and pubkey,
+	//in some order of those 3 things.
+	//
+	//q.Abc.Defg33.Hello.World	Var/object reference
+	//G$hello world			string
+	//D$2.34				double
+	//True$				boolean true
+	//False$				boolean false
+	//
+	//
 	//If this.name is a hash id (or might be prefixed with something? todo), then its the hash of this.big which is probably a string of json (see Dagverse json norming, in dagball, TODO).
 	//This must be verifiable. Dont just make up a name and make up a big that cant prove that its name is the hash of that.
 	this.big = optionalBig || null; //can be a string or a list of strings to join by '\n' as lines.
@@ -127,6 +142,12 @@ const Var = function(optionalParentVar, optionalName, optionalBig, optionalGob){
 	this.p = 0; //position
 	this.v = 0; //velocity
 	
+	//2026-6-6: ok. lets boot in var constructor as t=0, but from loadMap use ||1.
+	//The rule will be, in json/map the default t is 1, and in Var it boots at t=0.
+	//Var always has all the fields (t p v etc). Json/map may leave out fields
+	//especially if its older data before those fields were added in the code.
+	//And when t<=0, all fields are their defaults (p=0 v=0 pr=0 ps=0 cv=0 accelMul=1 (might rename
+	//accelMul to am? or 1/accelMul rename to ma or m meaning mass?) mn=-Infinity mx=Infinity etc).
 	this.t = 0; //2025-1-9 starting to use it experimentally... not used as of 2025-2-20 even though some code copies it, maybe later? TODO actual current time //TODO? this.t = utc time as float64 so has at least microsecond precision for 100+ more years.
 	
 	//.p is often set directly. so it would tend to be unreliable cuz caller will forget to do that. Lets go with .tp and .tv meaning the last values of p and v when t was updated, and just poll it
@@ -147,6 +168,7 @@ const Var = function(optionalParentVar, optionalName, optionalBig, optionalGob){
 	this.poten = 0;
 	this.prevP = 0; //stores the prev value of this.p while an epsilon is added to this.p during a gradient calculation, then restore it
 	this.epsilon = DefaultEpsilon; //FIXME, replacement for indexToEpsilon
+	//console.log('TODO rename Var.accelMul to Var.am, and rename Var.mass() to Var.ma() which returns 1/this.accelMul. am can be 0 or positive. It never divides by 0 in physics, only multiplies by am. 0 means infinite mass aka doesnt move. I prefer to store it as am (not ma) cuz am is always finite, this.name='+this.name);
 	this.accelMul = 1; //FIXME, replacement for indexToAccelMul. mass may be 1/accelMul, experimental code may use mass. see Var.mass().
 	//use this.brain instead: this.evaled = null; //eval of this.big || this.name, a js lambda whose params are all Var objects, those in this.influence.vars or gob.vars
 	
@@ -261,10 +283,22 @@ const Var = function(optionalParentVar, optionalName, optionalBig, optionalGob){
 	//This can be reflected as a stochasticVector of Ptr$ej or maybe Ej$, Var childs,
 	//but this is where it snaps to a particular edjoint or null for none.
 	this.ej = null;
+	this.ejX = 0;
+	this.ejY = 0;
+	this.ejZ = 0;
 	
 	//TODO change the prototype or Proxy (that is prototype of Var class) so we dont have to store these when null. 
 	this.path_ = null; //cache of this.path(), lazyEvaled
 	this.nath_ = null; //cache of this.nath(), lazyEvaled
+
+	//TODO each individual Var should have local vs allowPublic (allowPublic not saying it will but that it might or that if someone else offers to do the bandwidth they can do so)
+	//So each Var needs local sharing policy.
+	//Direct field like .allowPublic, or encoded as a child Var?
+	//this.pub = 0; //default to local
+	//maybe path prefixes are better data structure for public vs private/local Var's?
+	//v.Private.AutomaticallyDontCopyThisStuff44.Hello.World for example.
+	//Might be better to name it sync modes. .isSyncDarknet isSyncPublic isSyncInBrowserCookie etc.
+	//The definition of a darknet is network nodes that may receive data but never emit data.
 };
 
 //chill out, stop moving around so much.
@@ -381,7 +415,8 @@ const EmptySimpleMap = Object.freeze(newVeryEmptyMap());
 
 //Any function (of Var param) added by this.listen(vr=>{ console.log('listened to '+vr.path()+'.p='+vr.p); }),
 //then fireEvents calls each of those on (fixme it should say "(anc,me,EmptySimpleMap)" where anc means
-//ancestor this.up.up.up or self aka this. ancestor or self. me param right after that is where
+//ancestor this.up.up.up for example) or self aka this.
+//ancestor or self. me param right after that is where
 //the Var event happened, such as a change of its .p or .v),
 //this Var. That sentence was too long, fixme. The event system does not create heap objects, but listeners may.
 Var.prototype.fireEvents = function(){
@@ -389,7 +424,12 @@ Var.prototype.fireEvents = function(){
 		for(let listener of this.listeners){
 			//listener(ancestorOrSelfVar,selfVar,{}) so possible future expansion of the event system to get events
 			//for changes in childs of childs... nomatter how deep, costing only height
-			//(number of someVar.up.up.up... before reaching v/V the root Var),
+			//(number of someVar.up.up.up... before reaching v/V the root Var,
+			//or at least down to q such as if q===v.Bellsack.Room55 was true in that case).
+			//This is supposed to be (TODO make sure thats how it was done else upgrade it)
+			//how anyVar.fieldEditor('p' or 'v' or 'pr' or 'kv' etc,isMenu) knows when to update itself on screen,
+			//such as if you make 2 fieldEditors for the same var and field (.p .v etc) then moving one
+			//with the mouse should cause both to move at equal value. Not well tested in Bellsack.
 			//but for now 2025-11-13 I'm just doing ancestorOrSelfVar===selfVar and not firing events of parent of parent..
 			listener(this,this,EmptySimpleMap); //calling it this way avoids heap allocation such as {Var:this}.
 		}
@@ -502,6 +542,8 @@ Var.prototype.isDirtyByList = function(){
 //same as if certain other fields are nonzero or do not equal certain constants etc.
 //This does not check .pr .ps (spring holding .p in a parabola shaped
 //energy well) or Edjoints/Lit_ej/Ej_/Lit$ej/Ej$.
+//(UPDATe: Lit$ej/Ej$ would be L$ej/Ej$ cuz Lit$ became L$ and Ptr$ became P$
+//and Lits$ became Ls$ and Ptrs$ became Ps$).
 Var.prototype.isDirtyByContent = function(){
 	//FIXME this.kv!=this.cv should be this.kv!=(this.cv+this.vv) but that could have roundoff
 	return this.v || this.dp || this.dv || (this.kv!=this.cv) || (this.mn!=-Infinity) || (this.mx!=Infinity);
@@ -703,7 +745,10 @@ Var.prototype.copyLocalFrom = function(copyMe){
 	this.pr = copyMe.pr;
 	this.ps = copyMe.ps;
 	this.cv = copyMe.cv;
-	//FIXME include edjoint/ej which exists in Dagball from years ago but not in Bellsack or Var as of 2026-2-23
+	this.ej = copyMe.ej;
+	this.ejX = Number.isFinite(copyMe.ejX) ? copyMe.ejX : 0;
+	this.ejY = Number.isFinite(copyMe.ejY) ? copyMe.ejY : 0;
+	this.ejZ = Number.isFinite(copyMe.ejZ) ? copyMe.ejZ : 0;
 };
 
 Var.prototype.Mn = function(val){
@@ -879,8 +924,12 @@ Var.prototype.loadMap = function(map, opt={}){ //opt can contain isAutoEval=true
 		if(map.ps!== undefined) this.ps = map.ps; //spring strength, or 0 to not use spring
 		if(map.cv!== undefined) this.cv = map.cv; //base velocity decay
 		//FIXME copy .big here? .name is supposed to be derived from it deterministicly if it exists, and since this (Var) already exists, it should already have that and it cant change. "childVar = this[big];" in the code below does that. so it should work.
+		console.log('FIXME copy the other fields if exist, Var got a few new fields, including Var.accelMul (might be too long a name might should rename it to .ma for mass and use 1/this.ma as accelMul). But we are only supposed to copy the ones that arent temp fields. if they can be derived (even if it has float roundoff) dont send those.');
 		//this.t = Math.max(this.t||0, map.t||0); //in case !opt.keepNewest, dont want to put in a lower t from map.
-		this.touch(Math.max(this.t||0, map.t||0)); //sets this.t to that param, this.tp to this.p, and this.tv to this.v, meaning the values of p and v last time t changed.
+		
+		//this.touch(Math.max(this.t||0, map.t||0)); //sets this.t to that param, this.tp to this.p, and this.tv to this.v, meaning the values of p and v last time t changed.
+		//See comment about t=0 vs t=1 search for "//2026-6-6: ok. lets boot in var constructor as t=0, but from loadMap use ||1."
+		this.touch(Math.max(this.t||1, map.t||1)); //sets this.t to that param, this.tp to this.p, and this.tv to this.v, meaning the values of p and v last time t changed.
 	}
 	/*if(map.pu){ //childs of any names. This is the !flatPu way.
 		for(let id in map.pu){
@@ -1178,34 +1227,37 @@ Var.prototype.allVars = function(optionalListToFill){
 	return list;
 };
 
-//returns a list of Var in descending (or is it ascending? is positive good or bad? choose one.) order of goal(theVar)
-//which returns a number for how good a match it is. Also limit by exclude negatives (or positives?) from if score is too low?
+//returns a list of Var in descending order of goal(theVar).
+//Higher goal score is better. If using a loss, pass -loss or use a loss-specific search func.
+//Finite negative scores are allowed.
 //Theres an optimization that if optionalMaxResults==1 it doesnt sort an array but just keeps the best in a loop,
 //but either way it calls goal on every Var reachable from here.
 //TODO optimize more in that case to not even create the array of all Var.
 Var.prototype.searchTree = function(goal, optionalMaxResults){
 	let maxResults = optionalMaxResults || DefaultMaxResults;
 	let vars = this.allVars();
+	let scores = new Map();
+	for(let v of vars) scores.set(v, goal(v));
 	if(maxResults == 1){ //n cost
-		let bestScore = -Infinity; //FIXME is this reversed from how i vars.sort it?
+		let bestScore = -Infinity;
 		let bestVar = null;
 		for(let v of vars){
-			let score = goal(v);
+			let score = scores.get(v);
 			if(bestScore < score){
-				score = bestScore;
+				bestScore = score;
 				bestVar = v;
 			}
 		}
 		return bestVar ? [bestVar] : [];
 	}else{ //n*log(n) cost
-		vars.sort((varA,varB)=>Math.sign(goal(varA)-goal(varB))); //FIXME is this reversed?
+		vars.sort((varA,varB)=>Math.sign(scores.get(varB)-scores.get(varA)));
 		while(vars.length > maxResults) vars.pop();
 		return vars;
 	}
 };
 
 //TODO rename search to searchChilds and have another func searchTree.
-//goal(anyVar)->score (FIXME or should it be loss which is -score or someConstant-score?
+//goal(anyVar)->score. Higher score is better and appears earlier.
 //As goal, any positive number passes, and any 0 or negative number does not match.
 //Sort by that descending, of those which pass.
 Var.prototype.search = function(goal, optionalMaxResults){
@@ -1223,8 +1275,8 @@ Var.prototype.search = function(goal, optionalMaxResults){
 	}
 	ret.sort((a,b)=>{
 		let scoreA = scores.get(a), scoreB = scores.get(b);
-		if(scoreA < scoreB) return -1;
-		if(scoreA > scoreB) return 1;
+		if(scoreA < scoreB) return 1;
+		if(scoreA > scoreB) return -1;
 		return 0;
 	});
 	while(ret.length > maxResults) ret.pop();
@@ -1305,41 +1357,11 @@ Var.prototype.delEmpties = function(){
 //if its on the line, is not included. Has to be less than r distance. This is cuz sorts by a relative distance, and 0 must not be included.
 Var.prototype.searchZYXR = function(z, y, x, r, maxResults){
 	if(r === undefined) r = DefaultRadiusResults;
-	//const rr = r*r;
+	const rr = r*r;
 	return this.search(
 		vr=>{
-			//return rr - ((vr.Y.p-y)**2 + (vr.X.p-x)**2);
 			let distSq = (vr.z()-z)**2 + (vr.y()-y)**2 + (vr.x()-x)**2;
-			let dist = Math.sqrt(distSq);
-			return dist;
-			
-			
-			
-			
-			
-			
-			
-			
-			
-			
-			
-			
-			
-			//FIXME this isnt cutting it off (by being 0 or less) at r aka radius.
-			
-			
-			
-			
-			
-			
-			
-			
-			
-			
-			
-			//let d = rr - ((vr.z()-z)**2 + (vr.y()-y)**2 + (vr.x()-x)**2);
-			//return d;
-			//return -d;
+			return rr - distSq; //positive within radius, higher means nearer.
 		},
 		maxResults);
 };
@@ -1401,6 +1423,19 @@ const hashIdLen = ('Gob$'.length+64); //64 hex chars. todo base58 or base64 or s
 //so u can know if its a hash or not by its length. or could check for any chars then $ like sha256$thehash.
 const MaxLiteralNameLen = hashIdLen-1;
 
+//let all else be capital, if it is neither capital nor lowercase cuz just some weird unicode symbol,
+//though this might create a problem if its a string of a nonnegative integer if thats a valid list/array index.
+//As of 2026-7-13 this has been working for making Var decide to create a child Var or use an existing field
+//in the Var instance itself, whose prototype of prototype is a Proxy, but itself is as efficient as ordinary js {}.
+//or maybe there should be an isCapital function so that it can be neither.
+//I should probably use a func named something like CanBeVarjsChildName(string)=bit. there is one: isValidVarName
+//but its calling isLowercase. which maybe is a thing that changes over time depending on browser version or settings?
+//I wouldnt want that to break compatibility across the use of Var.js as a data format. maybe *.varjs file,
+//or a *.json file that already exists, or *.jsonl you could have streaming 1 line updates of json exported from Var,
+//but more efficiently will be to list n var's and from then on just do .p .v updates on those in an array.
+//A few other fields in Var gotta be updated but less often or sometimes only once or never to take defaults,
+//such as .pr .ps to define an optional spring force to accelerate this.v velocity by negative gradient
+//so this.p position is updated, all at once by gradient and GPU optimizing stuff.
 const isLowercase = c=>(c >= 'a' && c <= 'z');
 
 //Can the string be a Var literal path part? If not it goes in theVar.big and theVar.name is hash of that,
@@ -1435,7 +1470,8 @@ should have made v.Bellsack.Room1.Shape.Sak$NUrpaxxk7jDslEyguqyMLn4YUqCAC8gOIXms
 */
 var isVarPath = s=>{
     if (s.length > MaxVarPathLen) return false;
-    if (!(s.startsWith('ns.') || s.startsWith('v.') || s.startsWith('V.'))) return false; //TODO convert V to v?
+	// q ns and NS mean the same thing. v and V mean the same thing. Going forward (2026-5-28+) use v. for root and q. for room.
+    if (!(s.startsWith('q.') || s.startsWith('ns.') || s.startsWith('v.') || s.startsWith('V.'))) return false; //TODO change V to v
 
     // quick reject any whitespace
     if (/\s/.test(s)) return false;
@@ -1677,12 +1713,12 @@ Var.prototype.path = function(){
 };
 
 //returns the ns. path if its in the ns, else returns path from v.
-Var.prototype.nath = function(){
+Var.prototype.nath = function(){ //TODO rename to qath?
 	if(!this.nath_){
 		if(!this.up){
 			this.nath_ = this.name; //likely is 'v' the root, or previously (before 2025-10-30) was 'V'.
-		}else if(this == ns){
-			this.nath_ = 'ns';
+		}else if(this == q){ //}else if(this == ns){
+			this.nath_ = 'q'; //this.nath_ = 'ns';
 		}else{
 			let upNath = this.up.nath();
 			if(isVarLit(this.name)){

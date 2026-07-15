@@ -49,7 +49,13 @@ fillGridByFunc(selq, 5, q=>{
 </textarea><br>
 		<input type=button onclick="let jsCode = Dom('textBoxToEval').value; console.log('evalling: '+jsCode); let ret = eval(jsCode); console.log('Returned: '+ret);" value="eval text box (see errors on browser console)"></input>
 	</td><td>
-		<input type=button value="TomcatSparseSaveAndLoad" onclick="tomcatSparseSaveAndLoad();">
+	
+		<nobr>
+			<input type=button value="TomcatSparseSaveAndLoad_sparseTimes" onclick="tomcatSparseSaveAndLoad_sparseTimes();">
+			<label><input id="TomcatSparse_autoSync" type=checkbox value="auto tomcat sync (keeps clicking TomcatSparseSaveAndLoad_sparseTimes)">auto tomcat sync</label>
+		</nobr><br>
+		<input type=button value="TomcatSparseSaveAndLoad_allTimes" onclick="tomcatSparseSaveAndLoad_allTimes();">
+		
 		<input type=button value="V.touchIfTpvRecursive()" onclick="V.touchIfTpvRecursive();">
 		<input type=button value="useLastReceivedResponseTo_tomcatSparseSaveAndLoad()" onclick="useLastReceivedResponseTo_tomcatSparseSaveAndLoad();">
 		<div id=saveLoadDiv>
@@ -3412,6 +3418,9 @@ function draw(){ //todo rename this to nextGameState
 	let partialNow = now;
 	for(let cyc=0; cyc<physicsCycles; cyc++){
 		doGameLogic(partialNow, partialDt); //for more accurate physics if more than 1 call of	this
+		if(Dom('TomcatSparse_autoSync').checked && !TomcatSparse_isAjaxPending){
+			tomcatSparseSaveAndLoad_sparseTimes();
+		}
 		partialNow += partialDt;
 	}
 
@@ -4278,8 +4287,28 @@ Then I click useLastReceivedResponseTo_tomcatSparseSaveAndLoad to load the balls
 If that works, I open another browser tab and click TomcatSparseSaveAndLoad and it should load that content.
 */
 
+//these 2 vars are updated (TODO) to only copy small relevant time ranges of var updates across network, so game runs faster.
+//If you dont want to do that, use TomcatSparseSaveAndLoad_allTimes instead but only for experiments cuz its slow as more data accumulates,
+//or use the various experimental Tomcat* buttons which were created before this, for debug purposes.
+var TomcatSparse_minWriteTimeFromBrowser = 0;
+var TomcatSparse_minReadTimeFromTomcat = 0;
+// Time-range sparse sync intentionally resends some overlap data. This avoids server-side
+// per-browser cursors or server-specific sequence numbers, but it can miss updates if the
+// overlap is too small because this browser does not observe server tNet/maxEffectiveTime.
+// Server tNet lets late-arriving old .t values be found only when the read minTime reaches
+// back far enough. Keep this bigger than local timer/network/server ordering jitter.
+var TomcatSparse_overlap = .05;
+var TomcatSparse_isAjaxPending = false;
+
+var tomcatSparseSaveAndLoad_sparseTimes = ()=>{
+	let minReadTimeFromTomcat = Math.max(0, TimeId() - TomcatSparse_overlap);
+	tomcatSparseSaveAndLoad(TomcatSparse_minWriteTimeFromBrowser, minReadTimeFromTomcat);
+};
+
+var tomcatSparseSaveAndLoad_allTimes = ()=>tomcatSparseSaveAndLoad();
+
 //the more advanced way (than tomcatSave) that does live multiplayer gaming.
-var tomcatSparseSaveAndLoad = function(){
+var tomcatSparseSaveAndLoad = function(minWriteTimeFromBrowser,minReadTimeFromTomcat){ //these 2 params may both be undefined (dont give them) for all data.
 	console.log('tomcatSparseSaveAndLoad');
 	V.touchIfTpvRecursive(); //update Var.t for all Var that changed since last call of touchIfTpvRecursive
 	let forNetworkSync_isBeforeFirstReceiveFromTomcat = Dom('forNetworkSync_isBeforeFirstReceiveFromTomcat');
@@ -4303,8 +4332,11 @@ var tomcatSparseSaveAndLoad = function(){
 		
 		//dont uncheck it here. Uncheck when received from tomcat. forNetworkSync_isBeforeFirstReceiveFromTomcat.checked = false; //uncheck the checkbox
 	}
-	let vrStateStr = QuadcraftSparseJsonState();
+	let maxLocalTimeCoveredByThisWrite = TimeId();
+	let vrStateStr = QuadcraftSparseJsonState(minWriteTimeFromBrowser,minReadTimeFromTomcat); //these 2 params may both be undefined (dont give them) for all data.
+	TomcatSparse_minWriteTimeFromBrowser = Math.max(0, maxLocalTimeCoveredByThisWrite - TomcatSparse_overlap);
 	console.log('START tomcatSparseSaveAndLoad, saving: '+vrStateStr);
+	TomcatSparse_isAjaxPending = true;
 	quadCraftAjax(vrStateStr, function(vrResp){
 		useLastReceivedResponseTo_tomcatSparseSaveAndLoad_jsonReceived = vrResp;
 		console.log("tomcatSparseSaveAndLoad finished, got response:", vrResp);
@@ -4314,6 +4346,8 @@ var tomcatSparseSaveAndLoad = function(){
 			forNetworkSync_isBeforeFirstReceiveFromTomcat.checked = false;
 		}
 		useLastReceivedResponseTo_tomcatSparseSaveAndLoad();
+		TomcatSparse_minReadTimeFromTomcat = Math.max(0, TimeId() - TomcatSparse_overlap);
+		TomcatSparse_isAjaxPending = false;
 		console.log('useLastReceivedResponseTo_tomcatSparseSaveAndLoad ended.');
 	});
 };
