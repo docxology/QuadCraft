@@ -1767,7 +1767,7 @@ Var.prototype.nextState = function(dt){
 	if(this.p != this.p){ //FIXME remove this, was added 2025-8-5 during isBallCacheOptimization cuz balls keep turning NaN after few seconds
 		this.p = (Math.random()-0.5)*30;
 		this.v = 0;
-		console.log('Var.nextState ugly hack just changed NaN p to '+this.p+' and v to '+this.v);
+		console.log('Var.nextState ugly hack just changed NaN p to '+this.p+' and v to '+this.v+' path='+this.path());
 	}
 	
 	

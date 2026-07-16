@@ -53,6 +53,8 @@ fillGridByFunc(selq, 5, q=>{
 		<nobr>
 			<input type=button value="TomcatSparseSaveAndLoad_sparseTimes" onclick="tomcatSparseSaveAndLoad_sparseTimes();">
 			<label><input id="TomcatSparse_autoSync" type=checkbox value="auto tomcat sync (keeps clicking TomcatSparseSaveAndLoad_sparseTimes)">auto tomcat sync</label>
+			<span id="TomcatSparse_lastResponseTime">no tomcat response yet</span>
+			<br><span id="TomcatSparse_lastDrawTime">no draw yet</span>
 		</nobr><br>
 		<input type=button value="TomcatSparseSaveAndLoad_allTimes" onclick="tomcatSparseSaveAndLoad_allTimes();">
 		
@@ -264,6 +266,19 @@ var resetVars = ()=>{
 	
 	//Opt.MaxRollBalls.p = 100; //normal
 	Opt.MaxRollBalls.p = 5; //test
+
+	Opt.IsLogDirections.p = 0;
+	//Opt.IsLogDirections.p = 1;
+
+	Opt.IsLogTomcatSaveAndLoadDetail.p = 0; //normal
+	//Opt.IsLogTomcatSaveAndLoadDetail.p = 1; //test
+
+	Opt.IsLog_useLastReceivedResponseTo_tomcatSparseSaveAndLoad.p = 0;
+
+	Opt.IsLogCcpRebuildSurface.p = 0;
+
+	Opt.IsLogPaint.p = 0;
+
 
 };
 //delay til window.onload: resetVars();
@@ -768,7 +783,7 @@ class CCPBallRange { //TODO rename ijk to asd
 	//call whenever neighbours may have changed
 	rebuildSurface(ccp){
 		this.countRebuilds++;
-		console.log('rebuildSurface this='+this+' countRebuilds='+this.countRebuilds);
+		if(Opt.IsLogCcpRebuildSurface.p) console.log('rebuildSurface this='+this+' countRebuilds='+this.countRebuilds);
 		const {i,j} = this;
 		this.surf.clear();
 		for(let k=this.k0;k<this.k1;k++){
@@ -1101,7 +1116,7 @@ class CCPBallGrid {
 
 	//only for if it gets out of sync, like in LoadMap.
 	rebuildSurface(){
-		console.log('ccp.rebuildSurface()');
+		if(Opt.IsLogCcpRebuildSurface.p) console.log('ccp.rebuildSurface()');
 		for(const litKey in NS.CCP.pu){
 			//without this loop (todo not working yet 2025-11-5-955a),
 			//it waits for a rollball to touch near a connected volume
@@ -1112,7 +1127,7 @@ class CCPBallGrid {
 			const [iStr, jStr] = litKey.slice(5).replaceAll('n','-').split('_');
 			let i = +iStr;
 			let j = +jStr;
-			console.log('map.V loading litKey['+litKey+'] i'+i+' j'+j+' about to ccp._get');
+			if(Opt.IsLogCcpRebuildSurface.p) console.log('ccp.rebuildSurface map.V loading litKey['+litKey+'] i'+i+' j'+j+' about to ccp._get');
 			ccp._get(i, j);     // _get() builds & rebuilds surfaces once
 		}
 	}
@@ -1501,17 +1516,17 @@ class CCPBallGrid {
 	}
 	
 	_updateSurfaceAround(i,j){
-		console.log('_updateSurfaceAround start i'+i+' j'+j);
+		if(Opt.IsLogCcpRebuildSurface.p) console.log('_updateSurfaceAround start i'+i+' j'+j);
 		for(let di=-1; di<=1; di++){
 			for(let dj=-1; dj<=1; dj++){
 				const list = this._get(i+di, j+dj);
 				for(const r of list){
-					console.log('_updateSurfaceAround i'+i+' j'+j+' rebuildSurface');
+					if(Opt.IsLogCcpRebuildSurface.p) console.log('_updateSurfaceAround i'+i+' j'+j+' rebuildSurface');
 					r.rebuildSurface(this);
 				}
 			}
 		}
-		console.log('_updateSurfaceAround end i'+i+' j'+j);
+		if(Opt.IsLogCcpRebuildSurface.p) console.log('_updateSurfaceAround end i'+i+' j'+j);
 	}
 	
 	clear(){
@@ -2597,7 +2612,7 @@ var toggleVolumeAtQuadray = q=>{
 
 //whatever is the selected paint tool, paints or unpaints with it
 var paint = (q, paintbrush, isPaintElseUnpaint)=>{
-	console.log('Paint at q='+q+' isPaintElseUnpaint='+isPaintElseUnpaint+' paintbrushKeys='+Object.keys(paintbrush));
+	if(Opt.IsLogPaint.p) console.log('Paint at q='+q+' isPaintElseUnpaint='+isPaintElseUnpaint+' paintbrushKeys='+Object.keys(paintbrush));
 	if(paintbrush.paintbrushNames){
 		let brushes = Object.values(paintbrushes);
 		let brush = brushes[randInt(brushes.length)];
@@ -2721,11 +2736,12 @@ var SimKeyPress = key=>{
 	}else if(key=='Shift'){
 		displayQgridDots = !displayQgridDots;
 	}else{
-		console.log('Directions['+key+']='+Directions[key]);
+		if(Opt.IsLogDirections.p) console.log('Directions['+key+']='+Directions[key]);
 	}
 	copyWorldStateToUiControls(); //in case selq changed
 };
 
+//setTimeout(()=>{ //test delaying this for 10 seconds so theres no key events, to see if thats causing the delay of fetch/ajax
 document.addEventListener("keydown", function(e){
 	if(e.target == Dom('textBoxToEval')){
 		return; //ignore game controls when in textarea. WARNING: if you add other things that take key presses, do this too,
@@ -2736,6 +2752,7 @@ document.addEventListener("keydown", function(e){
 	}
 	SimKeyPress(e.key);
 });
+//}, 10000);
 
 document.addEventListener("keyup", function(e){
 	delete Buttons[e.key];
@@ -3386,15 +3403,22 @@ function drawLineXYZ(aXYZ, bXYZ, stroke = '#00ffff'){
     ctx.stroke();
 }
 
+var scheduleAsap = funcOfNoParams=>{
+	setTimeout(()=>{
+		funcOfNoParams();
+	},1); //wait at least 1 millisecond so ajax and other things can take control, which may take longer than 1 millisecond but this waits on it, in theory. requestAnimationFrame might delay that?
+};
+
 function draw(){ //todo rename this to nextGameState
 	if(isLoadingMap){
 		console.log('Skip draw() cuz isLoadingMap');
 		return;
 	}
+	Dom('TomcatSparse_lastDrawTime').innerHTML = 'draw TimeId=' + TimeId();
 
 	if(!Opt){
 		console.log('Not draw() yet cuz no Opt aka Var*.js has not loaded yet');
-		requestAnimationFrame(draw);
+		scheduleAsap(draw);
 		return;
 	}
 	
@@ -3579,9 +3603,9 @@ function draw(){ //todo rename this to nextGameState
 	
 	//console.log('countQuadraysInDedupMap()='+countQuadraysInDedupMap());
 	
-	requestAnimationFrame(draw);
+	scheduleAsap(draw);
 }
-requestAnimationFrame(draw);
+scheduleAsap(draw);
 
 var SimKeyPresses = str=>{
 	console.log('SimKeyPresses str='+str);
@@ -4299,6 +4323,8 @@ var TomcatSparse_minReadTimeFromTomcat = 0;
 // back far enough. Keep this bigger than local timer/network/server ordering jitter.
 var TomcatSparse_overlap = .05;
 var TomcatSparse_isAjaxPending = false;
+var TomcatSparse_jsonSentLengths = [];
+var TomcatSparse_jsonReceivedLengths = [];
 
 var tomcatSparseSaveAndLoad_sparseTimes = ()=>{
 	let minReadTimeFromTomcat = Math.max(0, TimeId() - TomcatSparse_overlap);
@@ -4309,7 +4335,7 @@ var tomcatSparseSaveAndLoad_allTimes = ()=>tomcatSparseSaveAndLoad();
 
 //the more advanced way (than tomcatSave) that does live multiplayer gaming.
 var tomcatSparseSaveAndLoad = function(minWriteTimeFromBrowser,minReadTimeFromTomcat){ //these 2 params may both be undefined (dont give them) for all data.
-	console.log('tomcatSparseSaveAndLoad');
+	if(Opt.IsLogTomcatSaveAndLoadDetail.p) console.log('tomcatSparseSaveAndLoad');
 	V.touchIfTpvRecursive(); //update Var.t for all Var that changed since last call of touchIfTpvRecursive
 	let forNetworkSync_isBeforeFirstReceiveFromTomcat = Dom('forNetworkSync_isBeforeFirstReceiveFromTomcat');
 	let isBeforeFirstReceiveFromTomcat = forNetworkSync_isBeforeFirstReceiveFromTomcat.checked;
@@ -4334,12 +4360,15 @@ var tomcatSparseSaveAndLoad = function(minWriteTimeFromBrowser,minReadTimeFromTo
 	}
 	let maxLocalTimeCoveredByThisWrite = TimeId();
 	let vrStateStr = QuadcraftSparseJsonState(minWriteTimeFromBrowser,minReadTimeFromTomcat); //these 2 params may both be undefined (dont give them) for all data.
+	TomcatSparse_jsonSentLengths.push(vrStateStr.length);
 	TomcatSparse_minWriteTimeFromBrowser = Math.max(0, maxLocalTimeCoveredByThisWrite - TomcatSparse_overlap);
-	console.log('START tomcatSparseSaveAndLoad, saving: '+vrStateStr);
+	if(Opt.IsLogTomcatSaveAndLoadDetail.p) console.log('START tomcatSparseSaveAndLoad, saving: '+vrStateStr);
 	TomcatSparse_isAjaxPending = true;
 	quadCraftAjax(vrStateStr, function(vrResp){
+		TomcatSparse_jsonReceivedLengths.push(vrResp.length);
+		Dom('TomcatSparse_lastResponseTime').innerHTML = 'last tomcat response TimeId=' + TimeId();
 		useLastReceivedResponseTo_tomcatSparseSaveAndLoad_jsonReceived = vrResp;
-		console.log("tomcatSparseSaveAndLoad finished, got response:", vrResp);
+		if(Opt.IsLogTomcatSaveAndLoadDetail.p) console.log("tomcatSparseSaveAndLoad finished, got response:", vrResp);
 		let forNetworkSync_isBeforeFirstReceiveFromTomcat = Dom('forNetworkSync_isBeforeFirstReceiveFromTomcat');
 		if(forNetworkSync_isBeforeFirstReceiveFromTomcat.checked){
 			console.log('Auto unchecking checkbox forNetworkSync_isBeforeFirstReceiveFromTomcat, then will call useLastReceivedResponseTo_tomcatSparseSaveAndLoad().');
@@ -4348,14 +4377,14 @@ var tomcatSparseSaveAndLoad = function(minWriteTimeFromBrowser,minReadTimeFromTo
 		useLastReceivedResponseTo_tomcatSparseSaveAndLoad();
 		TomcatSparse_minReadTimeFromTomcat = Math.max(0, TimeId() - TomcatSparse_overlap);
 		TomcatSparse_isAjaxPending = false;
-		console.log('useLastReceivedResponseTo_tomcatSparseSaveAndLoad ended.');
+		if(Opt.IsLogTomcatSaveAndLoadDetail.p) console.log('useLastReceivedResponseTo_tomcatSparseSaveAndLoad ended.');
 	});
 };
 
 var useLastReceivedResponseTo_tomcatSparseSaveAndLoad_jsonReceived = null;
 
 var useLastReceivedResponseTo_tomcatSparseSaveAndLoad = ()=>{
-	console.log('useLastReceivedResponseTo_tomcatSparseSaveAndLoad');
+	if(Opt.IsLog_useLastReceivedResponseTo_tomcatSparseSaveAndLoad.p) console.log('useLastReceivedResponseTo_tomcatSparseSaveAndLoad');
 	if(!useLastReceivedResponseTo_tomcatSparseSaveAndLoad_jsonReceived) throw new Error('no useLastReceivedResponseTo_tomcatSparseSaveAndLoad_jsonReceived, run tomcatSparseSaveAndLoad and wait for response (.01 second for example if on same computer) then call this.');
 	QuadcraftSparseJsonLoad(useLastReceivedResponseTo_tomcatSparseSaveAndLoad_jsonReceived);
 };

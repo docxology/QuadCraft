@@ -14,8 +14,27 @@
 	static boolean sendTNetToBrowser = true;
 	static boolean includeTNetInShouldSendVar = true;
 	static double allowTimeTravellersOnlyThisManySecondsAhead = 0.1;
+	static boolean logRequestStartEnd = false;
+	static boolean logInputJson = false;
+	static boolean logOutputJson = false;
+	static boolean logUrl = false;
+	static boolean logAction = false;
+	static boolean logLengths = true;
+	static boolean logFutureRejects = true;
+	static boolean logMissingTimeErrors = true;
+	static boolean logJsonDsSelfTest = false;
+	static boolean echoInputWithoutParsing = false;
+	static final double timeAtStart = System.currentTimeMillis()*.001;
+	static final long nanoAtStart = System.nanoTime();
+	static boolean doSystemGcEveryNSeconds = true;
+	static double systemGcEveryNSeconds = 0.5;
+	static double lastSystemGcTime = 0;
 	
 	static boolean testedOccamsJsonDS = false;
+	
+	static void logIf(boolean shouldLog, String s){
+		if(shouldLog) System.out.println(s);
+	}
 	
 	//object such as NavigableMap, List, Double.
 	//May not have well tested true, false, and null,
@@ -29,20 +48,25 @@
 	}
 	
 	static String stringInStringOut(String i){
-		System.out.println("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nSTART===============================================================================================================================================================================================\n\n\n\n\n");
+		maybeSystemGc();
+		if(echoInputWithoutParsing){
+			return i;
+		}
+		logIf(logRequestStartEnd, "START QuadCraftAjax request");
 		if(!testedOccamsJsonDS){
-			System.out.println("START: test json");
-			TestJsonDS.main(new String[0]);
-			System.out.println("END: test json. Look at output, it doesnt throw if its broken, but its been working.");
+			if(logJsonDsSelfTest){
+				logIf(logJsonDsSelfTest, "START: test json");
+				TestJsonDS.main(new String[0]);
+				logIf(logJsonDsSelfTest, "END: test json. Look at output, it doesnt throw if its broken, but its been working.");
+			}
 			testedOccamsJsonDS = true;
 		}
-		System.out.println("in length = "+i.length());
 		Object ob = jsonToOb(i); //probably a NavigableMap as json {}
 		String action = (String)((NavigableMap)ob).get("action");
 		if(action == null){
 			action = "help";
 		}
-		System.out.println("action="+action);
+		logIf(logAction, "action="+action);
 		String o;
 		boolean isReadWriteSparse = false;
 		switch(action){
@@ -62,6 +86,7 @@
 			break; case "readWriteSparse":
 				isReadWriteSparse = true;
 				if(((NavigableMap)ob).get("minTime")==null){
+					logIf(logMissingTimeErrors, "No minTime in action=isReadWriteSparse");
 					throw new Error("No minTime in action=isReadWriteSparse");
 				}
 				//continue to writeSparse and then readSparse
@@ -74,7 +99,7 @@
 				synchronized(VLock){
 					//in case 2 threads try to mod the tree at once. The tree is immutable (or at least used that way) but
 					//we dont want other threads changes to get ignored. Keep the newest of each Var by Var.t.
-					double serverReceiveTime = utcSeconds();
+					double serverReceiveTime = time();
 					V = mergeMaps(V,(NavigableMap)incoming,serverReceiveTime); //update shared state on sever that multiple remote browsers sync with or parts of
 				}
 				if(!isReadWriteSparse){
@@ -84,6 +109,7 @@
 			case "readSparse": //maybe should be called readNewerThan (or readEqualTimeOrNewerThan).
 				Object minTimeOb = ((NavigableMap)ob).get("minTime");
 				if(minTimeOb == null){
+					logIf(logMissingTimeErrors, "No minTime but action is "+action);
 					throw new Error("No minTime but action is "+action);
 				}
 				double minTime = (Double)minTimeOb;
@@ -93,10 +119,10 @@
 			break;default:
 				throw new Error("Unknown action="+action);
 		}
-		System.out.println("stringInStringOut\nIN: "+i);
-		System.out.println("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nIN_Above_OUT_Below%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%\n\n\n\n\n");
-		System.out.println("OUT: "+o);
-		System.out.println("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nEND----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------\n\n\n\n\n");
+		logIf(logLengths, "action="+action+" inLen="+i.length()+" outLen="+o.length());
+		logIf(logInputJson, "IN: "+i);
+		logIf(logOutputJson, "OUT: "+o);
+		logIf(logRequestStartEnd, "END QuadCraftAjax request");
 		return o;
 	}
 	
@@ -115,8 +141,18 @@
 		return includeTNetInShouldSendVar ? Math.max(t,num(m,"tNet")) : t;
 	}
 
-	static double utcSeconds(){
-		return System.currentTimeMillis()*.001;
+	static double time(){
+		return timeAtStart + (System.nanoTime()-nanoAtStart)*1e-9;
+	}
+
+	static void maybeSystemGc(){
+		if(!doSystemGcEveryNSeconds) return;
+		double now = time();
+		if(lastSystemGcTime+systemGcEveryNSeconds <= now){
+			lastSystemGcTime = now;
+			System.gc();
+			logIf(true, "System.gc();");
+		}
 	}
 
 	static boolean isIncomingTimeAllowed(NavigableMap node, double serverReceiveTime){
@@ -135,7 +171,7 @@
 			double t=num(node,"t");
 			if(t>0) out.put("tNet",serverReceiveTime);
 		}else{
-			System.out.println("Rejecting future incoming node t="+num(node,"t")+" serverReceiveTime="+serverReceiveTime+" node="+obToJson(node));
+			logIf(logFutureRejects, "Rejecting future incoming node t="+num(node,"t")+" serverReceiveTime="+serverReceiveTime+" node="+obToJson(node));
 			out.put("p",0.);
 			out.put("v",0.);
 			out.put("t",0.);
@@ -193,8 +229,8 @@
 		Double ta=(Double)a.get("t");
 		Double tb=(Double)b.get("t");
 		if(ta==null||tb==null){
-			if(ta==null) System.out.println("no t in: ta="+obToJson(a));
-			if(tb==null) System.out.println("no t in: tb="+obToJson(b));
+			if(ta==null) logIf(logMissingTimeErrors, "no t in: ta="+obToJson(a));
+			if(tb==null) logIf(logMissingTimeErrors, "no t in: tb="+obToJson(b));
 			throw new RuntimeException("Every node must have .t");
 			/*This could be caused by t being 0 as in this code in Var*.js 2026-1-9: if(this.t){
 				ret.t = this.t; //UTC time updated. not all code will use this. but each Var is a time-series of 2 numbers: position and velocity.
@@ -202,7 +238,7 @@
 		}
 		boolean bTimeAllowed = isIncomingTimeAllowed(b,serverReceiveTime);
 		if(!bTimeAllowed){
-			System.out.println("Rejecting future incoming node t="+tb+" serverReceiveTime="+serverReceiveTime+" node="+obToJson(b));
+			logIf(logFutureRejects, "Rejecting future incoming node t="+tb+" serverReceiveTime="+serverReceiveTime+" node="+obToJson(b));
 		}
 		boolean bNewer=bTimeAllowed && tb>ta;
 		NavigableMap newer=bNewer?b:a;
@@ -246,6 +282,7 @@
 	if(body == null || body.trim().equals("")){
 		body = "{}";
 	}
+	logIf(logUrl, "url="+request.getRequestURL()+" method="+request.getMethod());
 	String i = body; //in
 	String o = stringInStringOut(i); //out
 	response.setContentType("application/json");
