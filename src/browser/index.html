@@ -3907,7 +3907,7 @@ var newOrExistingBallAtXYZ = (maxBalls,xyz,optionalVelocityXYZ)=>{
 	let balls = getAllRollBalls();
 	if(maxBalls <= 0) throw new Error('maxBalls must be a positive integer (such as 100) but is '+maxBalls);
 	if(balls.length < maxBalls){
-		return newBallAtXYZ(maxBalls,xyz,optionalVelocityXYZ);
+		return newBallAtXYZ(xyz,optionalVelocityXYZ);
 	}else{
 		let lowestBall = balls[0];
 		for(let ball of balls) if(ball.Y.p < lowestBall.Y.p) lowestBall = ball;
