@@ -26,7 +26,9 @@
 				onchange="recomputeBrushFromSelect()">
 			<!-- options filled by JS -->
 		</select>
-	</td><td>
+	</td><td valign="top">
+	Go to room online <input id="roomNameInput" type=text onblur="goToRoomFromInput();" onkeydown="if(event.key=='Enter'){ goToRoomFromInput(); this.blur(); }">
+	<br><br>
 	<input type=button value="Example code A" onclick="Dom('textBoxToEval').value = 'fillGridByFunc(selq, 5, q=>{\n	return q.toCartesian()[0]==0;\n});';">
 	<input type=button value="B" onclick="Dom('textBoxToEval').value = 'fillGridByFunc(selq, 8, q=>{\n	return q.toCartesian()[0]>1.5;\n});';">
 	<input type=button value="C" onclick="Dom('textBoxToEval').value = 'AddColoredDots(gridDotsNear(selq,5),\'green\');';">
@@ -185,12 +187,30 @@ var Opt = null; //var Opt = NS.Opt;
 
 const ballRadius = 1;
 
+var roomNameFromUrl = ()=>getUrlParams().room || 'Room1';
+var roomName = ()=>q.name;
+
+var makeSureRoomIsInUrl = ()=>{
+	let params = getUrlParams();
+	if(params.room === undefined){
+		params.room = roomNameFromUrl();
+		setUrlParams(params);
+	}
+};
+
+var goToRoomFromInput = ()=>{
+	let room = Dom('roomNameInput').value.trim() || 'Room1';
+	let url = new URL(location.href);
+	url.searchParams.set('room', room);
+	location.href = url.toString();
+};
+
 //reset the V/Var tree and pointers into it and defaults
 var resetVars = ()=>{
 	V.clear(); //built into Var.js
 	Game = V.QuadCraft;
 	v = V;
-	q = NS = Game.Room1;
+	q = NS = Game[roomNameFromUrl()];
 	Ball = NS.Ball;
 	Opt = NS.Opt;
 	
@@ -3393,6 +3413,21 @@ var potenOfRollballPair = (ballA, ballB, ballRadius = 1)=>{
 	return Opt.BallBounceForce.p * overlap * overlap; // quadratic penalty
 };
 
+let getUrlParams = ()=>{
+	let ret = {};
+	new URLSearchParams(window.location.search).forEach((v,k)=>(ret[k]=v));
+	return ret;
+};
+
+let setUrlParams = params=>{
+	let newUrl = window.location.href.split('?')[0];
+	for(let key in params){
+		newUrl += (newUrl.includes('?') ? '&' : '?')+key;
+		newUrl += '='+params[key];
+	}
+	history.replaceState(null, '', newUrl);
+};
+
 function drawLineXYZ(aXYZ, bXYZ, stroke = '#00ffff'){
     const a = project(aXYZ),  b = project(bXYZ);
     ctx.beginPath();
@@ -3692,12 +3727,65 @@ var checkboxesToMap = list=>{
 	return map;
 };
 
+var checkboxIdsNotToSaveAndLoad = new Set([
+	'TomcatSparse_autoSync',
+	'forNetworkSync_isBeforeFirstReceiveFromTomcat',
+]);
+
 var checkboxesToSaveAndLoad = ()=>{
 	//in case you want to exclude some
-	return allCheckboxes();
+	return allCheckboxes().filter(chk=>!checkboxIdsNotToSaveAndLoad.has(chk.id));
 };
 
 var allCheckboxes = ()=>Array.from(document.querySelectorAll("input[type=checkbox]"));
+
+var mapChild = (map,name)=>{
+	if(!map) return null;
+	if(map.pu && map.pu[name]) return map.pu[name];
+	return map[name] || null;
+};
+
+var mapChildNames = map=>{
+	let childs = (map && map.pu) ? map.pu : map;
+	return Object.keys(childs || {}).filter(name=>/^[A-Z]/.test(name));
+};
+
+var quadCraftMapFromVMap = vMap=>mapChild(vMap, 'QuadCraft');
+
+var currentRoomOnlyVMap = ()=>{
+	let gameMap = {p: Game.p, v: Game.v, t: Game.t, pu: {}};
+	gameMap.pu[q.name] = q.toMap();
+	return {p: V.p, v: V.v, t: V.t, pu: {QuadCraft: gameMap}};
+};
+
+var localRoomMapFromVMap = vMap=>{
+	let gameMap = quadCraftMapFromVMap(vMap);
+	if(!gameMap) throw new Error('No QuadCraft in V map.');
+	let currentRoomMap = mapChild(gameMap, q.name);
+	if(currentRoomMap) return currentRoomMap;
+	let rooms = mapChildNames(gameMap);
+	if(rooms.length == 1){
+		console.log('Loading saved room '+rooms[0]+' into current room '+q.name+'.');
+		return mapChild(gameMap, rooms[0]);
+	}
+	throw new Error('Loaded V map has rooms '+JSON.stringify(rooms)+' but current room is '+q.name+'. Refusing to guess which room to load.');
+};
+
+var networkRoomMapFromVMap = vMap=>{
+	let gameMap = quadCraftMapFromVMap(vMap);
+	if(!gameMap) throw new Error('No QuadCraft in V map.');
+	return mapChild(gameMap, q.name);
+};
+
+var isInOrAboveCurrentRoomVar = vr=>{
+	for(let ups=q; ups!=null; ups=ups.up){
+		if(vr === ups) return true;
+	}
+	for(let roomAndDowns=vr; roomAndDowns!=null; roomAndDowns=roomAndDowns.up){
+		if(roomAndDowns === q) return true;
+	}
+	return false;
+};
 
 var ClearShapes = ()=>{
 	for(let k in gameTris){
@@ -3735,7 +3823,7 @@ var StateMap = ()=>({
 	chk: checkboxesToMap(checkboxesToSaveAndLoad()), //{checkboxId: true, otherCheckboxId: false}
 	selectBrushNames: selectedBrushNames(), //list of strings
 	selectBrushNames: selectedBrushNames(), //list of strings
-	V: V.toMap(), //Var tree
+	V: currentRoomOnlyVMap(), //Var tree, current room only
 });
 
 var isLoadingMap = false;
@@ -3744,16 +3832,30 @@ var afterUpdateVarTree = ()=>{
 	ccp.rebuildSurface();
 };
 
+var uncheckForNetworkSyncIsBeforeFirstReceiveFromTomcat = reason=>{
+	let chk = Dom('forNetworkSync_isBeforeFirstReceiveFromTomcat');
+	if(chk && chk.checked){
+		console.log('Auto unchecking checkbox forNetworkSync_isBeforeFirstReceiveFromTomcat because '+reason+'.');
+		chk.checked = false;
+	}
+};
+
 //clears 
 var loadVMapOnly = vMap=>{
+	uncheckForNetworkSyncIsBeforeFirstReceiveFromTomcat('loading a V map');
+	let roomMap = localRoomMapFromVMap(vMap);
 	resetVars();
-	V.loadMap(vMap);
+	q.loadMap(roomMap);
+	q.touchRecur();
+	TomcatSparse_minWriteTimeFromBrowser = 1;
 	afterUpdateVarTree();
 };
 
 //Var.t time, keep newest per branch.
 var sparseLoadVMapOnly = vMap=>{
-	V.loadMap(vMap, {keepNewest: true});
+	let roomMap = networkRoomMapFromVMap(vMap);
+	if(!roomMap) return;
+	q.loadMap(roomMap, {keepNewest: true});
 	afterUpdateVarTree();
 };
 
@@ -3761,6 +3863,7 @@ var LoadMap = map=>{
 	try{
 		isLoadingMap = true;
 		console.log('START LoadMap');
+		uncheckForNetworkSyncIsBeforeFirstReceiveFromTomcat('loading a saved map');
 		//if(map.type !== 'quadcraft_quadraygrid4_state') return; //use older index*.html for this, todo make a separate one saying quadraygrid4 and put those saves in separate dir.
 		if(map.type !== 'quadcraft_quadraygrid5_state') return; //in the V/Var system
 		
@@ -3942,7 +4045,12 @@ var onloadHappened = false;
 var onload = ()=>{
 	if(!onloadHappened){
 		onloadHappened = true;
+		makeSureRoomIsInUrl();
 		resetVars();
+		Dom('roomNameInput').value = roomName();
+		if(location.protocol == 'http:' || location.protocol == 'https:'){
+			Dom('TomcatSparse_autoSync').checked = true;
+		}
 		populatePaintbrushSelect();
 		recomputeBrushFromSelect(); //build Brush at startup. Happens again when multiselect list of brushes is modified.
 		copyWorldStateToUiControls();
@@ -4247,7 +4355,7 @@ var quadCraftAjax = (json, returnHere)=>{
 };
 
 var QuadcraftWholeJsonState = ()=>{
-	return '{"action":"writeAll", "V":'+State()+'}';
+	return '{"action":"writeAll", "V":'+JSON.stringify(currentRoomOnlyVMap())+'}';
 };
 
 //in browser minWriteTime is whats collected from the V/Var tree to send to tomcat,
@@ -4268,6 +4376,7 @@ var QuadcraftSparseJsonState = (minWriteTimeFromBrowser,minReadTimeFromTomcat)=>
 	let stateMap = State({
 		//query: vr=>(minWriteTimeFromBrowser<=vr.t),
 		query: vr=>(
+			isInOrAboveCurrentRoomVar(vr) &&
 			(minWriteTimeFromBrowser<=vr.t) &&
 			//exclude some temp var names found in balls, to save memory. They can be recomputed.
 			(!/^(Red|Green|Blue|IsHitCCP|IsHitHardOtherBall|IsHitOtherBall)$/.test(vr.name))
@@ -4314,8 +4423,8 @@ If that works, I open another browser tab and click TomcatSparseSaveAndLoad and 
 //these 2 vars are updated (TODO) to only copy small relevant time ranges of var updates across network, so game runs faster.
 //If you dont want to do that, use TomcatSparseSaveAndLoad_allTimes instead but only for experiments cuz its slow as more data accumulates,
 //or use the various experimental Tomcat* buttons which were created before this, for debug purposes.
-var TomcatSparse_minWriteTimeFromBrowser = 0;
-var TomcatSparse_minReadTimeFromTomcat = 0;
+var TomcatSparse_minWriteTimeFromBrowser = 1;
+var TomcatSparse_minReadTimeFromTomcat = 1;
 // Time-range sparse sync intentionally resends some overlap data. This avoids server-side
 // per-browser cursors or server-specific sequence numbers, but it can miss updates if the
 // overlap is too small because this browser does not observe server tNet/maxEffectiveTime.
@@ -4327,7 +4436,8 @@ var TomcatSparse_jsonSentLengths = [];
 var TomcatSparse_jsonReceivedLengths = [];
 
 var tomcatSparseSaveAndLoad_sparseTimes = ()=>{
-	let minReadTimeFromTomcat = Math.max(0, TimeId() - TomcatSparse_overlap);
+	let minReadTimeFromTomcat = Dom('forNetworkSync_isBeforeFirstReceiveFromTomcat').checked ?
+		1 : Math.max(1, TimeId() - TomcatSparse_overlap);
 	tomcatSparseSaveAndLoad(TomcatSparse_minWriteTimeFromBrowser, minReadTimeFromTomcat);
 };
 
@@ -4361,7 +4471,7 @@ var tomcatSparseSaveAndLoad = function(minWriteTimeFromBrowser,minReadTimeFromTo
 	let maxLocalTimeCoveredByThisWrite = TimeId();
 	let vrStateStr = QuadcraftSparseJsonState(minWriteTimeFromBrowser,minReadTimeFromTomcat); //these 2 params may both be undefined (dont give them) for all data.
 	TomcatSparse_jsonSentLengths.push(vrStateStr.length);
-	TomcatSparse_minWriteTimeFromBrowser = Math.max(0, maxLocalTimeCoveredByThisWrite - TomcatSparse_overlap);
+	TomcatSparse_minWriteTimeFromBrowser = Math.max(1, maxLocalTimeCoveredByThisWrite - TomcatSparse_overlap);
 	if(Opt.IsLogTomcatSaveAndLoadDetail.p) console.log('START tomcatSparseSaveAndLoad, saving: '+vrStateStr);
 	TomcatSparse_isAjaxPending = true;
 	quadCraftAjax(vrStateStr, function(vrResp){
@@ -4375,7 +4485,7 @@ var tomcatSparseSaveAndLoad = function(minWriteTimeFromBrowser,minReadTimeFromTo
 			forNetworkSync_isBeforeFirstReceiveFromTomcat.checked = false;
 		}
 		useLastReceivedResponseTo_tomcatSparseSaveAndLoad();
-		TomcatSparse_minReadTimeFromTomcat = Math.max(0, TimeId() - TomcatSparse_overlap);
+		TomcatSparse_minReadTimeFromTomcat = Math.max(1, TimeId() - TomcatSparse_overlap);
 		TomcatSparse_isAjaxPending = false;
 		if(Opt.IsLogTomcatSaveAndLoadDetail.p) console.log('useLastReceivedResponseTo_tomcatSparseSaveAndLoad ended.');
 	});
@@ -4399,7 +4509,7 @@ var QuadcraftSparseJsonLoad = json=>{
 //to replace some with newer versions from anywhere, all computers to all computers thru tomcat.
 var QuadcraftSparseJsonLoad = json=>{
 	let vMap = JSON.parse(json).V;
-	if(!vMap.pu.QuadCraft){
+	if(!quadCraftMapFromVMap(vMap)){
 		throw new Error('No .pu.QuadCraft in json: '+json);
 	}
 	sparseLoadVMapOnly(vMap);
