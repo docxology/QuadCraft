@@ -267,9 +267,13 @@ var resetVars = ()=>{
 	
 	//Opt.BallCreateInterval.if0(.03);
 	//Opt.BallCreateInterval.p = 1;
-	//Opt.BallCreateInterval.p = .1; //normal
-	Opt.BallCreateInterval.p = 1; //test
+	Opt.BallCreateInterval.p = .1; //normal
+	//Opt.BallCreateInterval.p = 1; //test
 	//Opt.BallCreateInterval.p = .4;
+	//Opt.BallShootSpeed.p = 35;
+	//Opt.BallShootSpeed.p = 25;
+	Opt.BallShootSpeed.p = 125;
+	Opt.BallShootInterval.p = .1;
 	
 	Opt.PhysicsCyclesPerVideoFrame.p = 1; //Opt.PhysicsCyclesPerVideoFrame.if0(1); //must be at least 1 and an integer
 	//Opt.PhysicsCyclesPerVideoFrame.if0(4);
@@ -284,8 +288,8 @@ var resetVars = ()=>{
 	
 	Opt.LogCreateAndDeleteBalls.p = 0; //0 no 1 yes
 	
-	//Opt.MaxRollBalls.p = 100; //normal
-	Opt.MaxRollBalls.p = 5; //test
+	Opt.MaxRollBalls.p = 100; //normal
+	//Opt.MaxRollBalls.p = 5; //test
 
 	Opt.IsLogDirections.p = 0;
 	//Opt.IsLogDirections.p = 1;
@@ -3834,7 +3838,7 @@ var StateMap = ()=>({
 	chk: checkboxesToMap(checkboxesToSaveAndLoad()), //{checkboxId: true, otherCheckboxId: false}
 	selectBrushNames: selectedBrushNames(), //list of strings
 	selectBrushNames: selectedBrushNames(), //list of strings
-	V: currentRoomOnlyVMap(), //Var tree, current room only
+	root: currentRoomOnlyVMap(), //Var tree, current room only
 });
 
 var isLoadingMap = false;
@@ -3933,8 +3937,9 @@ var LoadMap = map=>{
 			selectBrushNames(map.selectBrushNames);
 		}
 		
-		if(map.V){
-			loadVMapOnly(map.V);
+		let rootMap = map.root || map.v || map.V;
+		if(rootMap){
+			loadVMapOnly(rootMap);
 		}
 
 		copyWorldStateToUiControls();
@@ -4000,8 +4005,9 @@ var modBallToBeLikeNew = (ball,xyz,optionalVelocityXYZ)=>{
 	//ball.Blue.p = randInt(150, 200); //blue
 	ball.Blue.p = 255;
 	//ball.X.cv = ball.Y.cv = ball.Z.cv = .31; //base velocity decay. .kv adds to this and is where u add dynamic velocity decay.
+	ball.X.cv = ball.Y.cv = ball.Z.cv = 1.7;
 	//ball.X.cv = ball.Y.cv = ball.Z.cv = 2.31;
-	ball.X.cv = ball.Y.cv = ball.Z.cv = 5.31;
+	//ball.X.cv = ball.Y.cv = ball.Z.cv = 5.31;
 };
 
 //creates in V/Var tree
@@ -4029,6 +4035,28 @@ var newOrExistingBallAtXYZ = (maxBalls,xyz,optionalVelocityXYZ)=>{
 		if(Opt.LogCreateAndDeleteBalls.p) console.log('Moved lowestBall='+lowestBall.path()); //path() is its V/Var tree id
 		return lowestBall;
 	}
+};
+
+var timeLastShotBall = 0;
+
+var shootBall = speed=>{
+	let camFwd = calculateForwardVector(camQ);
+	let camUp = calculateUpVector(camQ);
+	let startDistanceInFrontOfCam = 3*ballRadius;
+	let upFromCam = -1.5*ballRadius;
+	let newBallPositionXYZ = Add(
+		Add(camPos, VecMulScalar(camFwd,startDistanceInFrontOfCam)),
+		VecMulScalar(camUp,upFromCam)
+	);
+	let newBallVelocityXYZ = VecMulScalar(camFwd,speed);
+	newOrExistingBallAtXYZ(Opt.MaxRollBalls.p, newBallPositionXYZ, newBallVelocityXYZ);
+};
+
+var shootBallIfReady = ()=>{
+	let now = TimeId();
+	if(now-timeLastShotBall < Opt.BallShootInterval.p) return;
+	timeLastShotBall = now;
+	shootBall(Opt.BallShootSpeed.p);
 };
 
 var TestBall = null;
@@ -4135,26 +4163,43 @@ function updateFromGamepad(dt){
 	if(!gp) return;
 	let lx= gp.axes[0], ly= gp.axes[1];
 	let rx= gp.axes[2], ry= gp.axes[3];
-	const dead= 0.06;
+	let lt= gp.buttons[6]?.value || 0;
+	let rt= gp.buttons[7]?.value || 0;
+	const joystickDeadzone= 0.06;
+	const triggerDeadzone= 0.06;
 	//const dead= 0; //FIXME
 	let lLen= Math.hypot(lx,ly);
-	if(lLen>dead){
-		let leftover= lLen- dead;
+	if(lLen>joystickDeadzone){
+		let leftover= lLen- joystickDeadzone;
 		lx*= leftover/lLen;
 		ly*= leftover/lLen;
 	}else{ lx=0; ly=0; }
 	let rLen= Math.hypot(rx,ry);
-	if(rLen>dead){
-		let leftover2= rLen- dead;
+	if(rLen>joystickDeadzone){
+		let leftover2= rLen- joystickDeadzone;
 		rx*= leftover2/rLen;
 		ry*= leftover2/rLen;
 	}else{ rx=0; ry=0; }
+	if(lt>triggerDeadzone){
+		let leftover= lt-triggerDeadzone;
+		lt= leftover/(1-triggerDeadzone);
+	}else{
+		lt=0;
+	}
+	if(rt>triggerDeadzone){
+		let leftover= rt-triggerDeadzone;
+		rt= leftover/(1-triggerDeadzone);
+	}else{
+		rt=0;
+	}
 	ry*=-1;
 	rx *= turnSpd;
 	ry *= turnSpd;
-	rotateCamera(rx*dt, ry*dt);
+	let maxRollStep = Math.min(lt,rt)*turnSpd*dt;
+	let rz = Math.max(-maxRollStep, Math.min(maxRollStep, -getCamRoll()));
+	rotateCamera(rx*dt, ry*dt, rz);
 
-	let fwdVal= gp.buttons[7]?.value - gp.buttons[6]?.value;
+	let fwdVal= rt - lt;
 	let upDown= -ly;
 	let leftRight= lx;
 	//let moveSpd=2.0;
@@ -4164,13 +4209,17 @@ function updateFromGamepad(dt){
 	//camPos[2]+= (fwd[2]*fwdVal + upv[2]*upDown + rig[2]*leftRight)* moveSpd* dt;
 	moveCamera(fwdVal*moveSpd*dt, upDown*moveSpd*dt, leftRight*moveSpd*dt);
 	
-	let buttonLb = gp.buttons[4].value; //0 or 1
-	let buttonRb = gp.buttons[5].value; //0 or 1
+	let buttonA = gp.buttons[0]?.value || 0;
+	let buttonLb = gp.buttons[4]?.value || 0;
+	let buttonRb = gp.buttons[5]?.value || 0;
 	//if(buttonLb || buttonRb){
 		//toggleVolumeInFrontOfCam(12.3);
 	//}
 	if(buttonLb ^ buttonRb){
 		paintOrUnpaint(buttonRb); //buttonRb paints, buttonLb unpaints
+	}
+	if(buttonA){
+		shootBallIfReady();
 	}
 	
 	//viewChanged = true; //TODO only if changed camPos or camQ
@@ -4195,6 +4244,9 @@ function updateFromHoldingKeyboardButtons(dt){
 	if(Buttons['`'] || Buttons['1']){
 		paintOrUnpaint(Buttons['1']); //` unpaints, 1 paints. also has gamepad controls.
 	}
+	if(Buttons['2']){
+		shootBallIfReady();
+	}
 	let forwardBackward = ((Buttons.Control ? 1 : 0)-(Buttons.Insert ? 1 : 0))*mul;
 	let upDown = ((Buttons.ArrowUp ? 1 : 0)-(Buttons.ArrowDown ? 1 : 0))*mul;
 	let leftRight = ((Buttons.ArrowRight ? 1 : 0)-(Buttons.ArrowLeft ? 1 : 0))*mul;
@@ -4214,8 +4266,8 @@ function moveCamera(forwardBackward, upDown, leftRight){ //does not deal with de
 	}
 }
 
-function rotateCamera(rx, ry){ //does not deal with deadZone in joystick
-	if(rx || ry){
+function rotateCamera(rx, ry, rz=0){ //does not deal with deadZone in joystick
+	if(rx || ry || rz){
 		//const threshold= 0.001;
 		let fwd= calculateForwardVector(camQ);
 		let upv= calculateUpVector(camQ);
@@ -4235,10 +4287,27 @@ function rotateCamera(rx, ry){ //does not deal with deadZone in joystick
 			let pitchQ= createQuaternion(rig,pitchAngle);
 			combined= multiplyQuaternions(combined,pitchQ);
 		//}
+		let rollQ= createQuaternion(fwd,rz);
+		combined= multiplyQuaternions(rollQ,combined);
 		camQ = multiplyQuaternions(combined, camQ);
 		camQ = normalizeQuaternion(camQ);
 		viewChanged = true;
 	}
+}
+
+function getCamRoll(){
+	let fwd= calculateForwardVector(camQ);
+	let upv= calculateUpVector(camQ);
+	let rig= normalize(cross(fwd, upv));
+	upv = normalize(cross(rig, fwd));
+	let gravityY = Opt.GravityY.p || -1;
+	let worldUp = [0, gravityY<0 ? 1 : -1, 0];
+	let dot3 = (a,b)=>a[0]*b[0]+a[1]*b[1]+a[2]*b[2];
+	let flatWorldUp = Sub(worldUp, VecMulScalar(fwd,dot3(worldUp,fwd)));
+	let flatLen = Math.hypot(flatWorldUp[0], flatWorldUp[1], flatWorldUp[2]);
+	if(flatLen < 1e-6) return 0;
+	flatWorldUp = VecMulScalar(flatWorldUp, 1/flatLen);
+	return Math.atan2(-dot3(rig,flatWorldUp), dot3(upv,flatWorldUp));
 }
 
 function calculateForwardVector(q){
@@ -4366,7 +4435,7 @@ var quadCraftAjax = (json, returnHere)=>{
 };
 
 var QuadcraftWholeJsonState = ()=>{
-	return '{"action":"writeAll", "V":'+JSON.stringify(currentRoomOnlyVMap())+'}';
+	return '{"action":"writeAll", "root":'+JSON.stringify(currentRoomOnlyVMap())+'}';
 };
 
 //in browser minWriteTime is whats collected from the V/Var tree to send to tomcat,
@@ -4396,17 +4465,17 @@ var QuadcraftSparseJsonState = (minWriteTimeFromBrowser,minReadTimeFromTomcat)=>
 	if(stateMap == null){
 		throw new Error('nothing to return, stateMap is null. FIXME if theres nothing to update, that could happen, so dont throw.');
 	}
-	return '{"action":"readWriteSparse", "peer":{"main":{"tNetFrom": '+minReadTimeFromTomcat+'}}, "V":'+stateMap+'}';
+	return '{"action":"readWriteSparse", "game":"QuadCraft", "room":'+JSON.stringify(q.name)+', "peer":{"main":{"tNetFrom": '+minReadTimeFromTomcat+'}}, "root":'+stateMap+'}';
 };
 
 var QuadcraftSparseReadJsonState = minReadTimeFromTomcat=>{
-	return '{"action":"readSparse", "peer":{"main":{"tNetFrom": '+minReadTimeFromTomcat+'}}}';
+	return '{"action":"readSparse", "game":"QuadCraft", "room":'+JSON.stringify(q.name)+', "peer":{"main":{"tNetFrom": '+minReadTimeFromTomcat+'}}}';
 };
 
 var QuadcraftWholeJsonLoad = wholeFromTomcat=>{
-	JSON.parse(wholeFromTomcat).V;
-	//LoadMap(JSON.parse(wholeFromTomcat).V); //just get value of V
-	loadVMapOnly(JSON.parse(wholeFromTomcat).V); //just get value of V
+	let parsed = JSON.parse(wholeFromTomcat);
+	let rootMap = parsed.root || parsed.v || parsed.V;
+	loadVMapOnly(rootMap); //just get value of root
 };
 
 //experimental, use QuadcraftSparseJsonState and tomcatSparseSaveAndLoad instead todo when its working...
@@ -4508,7 +4577,8 @@ var QuadcraftSparseJsonLoad = json=>{
 //Load json likely received thru net from tomcat, keeping whichever Var's have the biggest Var.t when 2 overlap,
 //to replace some with newer versions from anywhere, all computers to all computers thru tomcat.
 var QuadcraftSparseJsonLoad = json=>{
-	let vMap = JSON.parse(json).V;
+	let parsed = JSON.parse(json);
+	let vMap = parsed.root || parsed.v || parsed.V;
 	if(!quadCraftMapFromVMap(vMap)){
 		console.log('No .pu.QuadCraft in sparse response, nothing to load.');
 		return;

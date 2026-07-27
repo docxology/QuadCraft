@@ -102,11 +102,13 @@
 				o = "{\"action\":\"sparseVSync\", \"comment\":\"TODO sparseVSync...\"}"; //FIXME
 			break; case "readWriteSparse":
 				isReadWriteSparse = true;
+				jsonGetElseThrow(ob,"game");
+				jsonGetElseThrow(ob,"room");
 				jsonGetDoubleElseThrow(ob,"peer","main","tNetFrom");
 				//continue to writeSparse and then readSparse
 			case "writeSparse":
 				//o = "{\"action\":\"writeSparse\", \"comment\":\"TODO writeSparse...\"}"; //FIXME
-				NavigableMap incoming = (NavigableMap)jsonGetElseThrow(ob,"V");
+				NavigableMap incoming = (NavigableMap)jsonGetElseThrow(ob,"root");
 				synchronized(VLock){
 					//in case 2 threads try to mod the tree at once. The tree is immutable (or at least used that way) but
 					//we dont want other threads changes to get ignored. Keep the newest of each Var by Var.t.
@@ -117,10 +119,20 @@
 					break;
 				}//else continue to readSparse
 			case "readSparse": //maybe should be called readNewerThan (or readEqualTimeOrNewerThan).
+				String game = (String)jsonGetElseThrow(ob,"game");
+				String room = (String)jsonGetElseThrow(ob,"room");
 				double tNetFrom = jsonGetDoubleElseThrow(ob,"peer","main","tNetFrom");
-				NavigableMap mapOut = partsOfVTreeByMinTNet(V,tNetFrom);
+				Object[] path = new Object[]{"pu",game,"pu",room};
+				NavigableMap roomNode = (NavigableMap)JsonDS.jsonGet(V,path);
+				NavigableMap filtered = partsOfVTreeByMinTNet(roomNode,tNetFrom);
 				double tNetTo = TimeId();
-				mapOut = JsonDS.map("action", "writeSparse", "V", mapOut, "comment", "This is the answer to a readSparse (action="+action+"), that should write into browser's V/Var tree.");
+				NavigableMap rootOut = JsonDS.map("p",num(V,"p"), "v",num(V,"v"), "t",num(V,"t"));
+				if(filtered != null){
+					Object[] pathAndValue = Arrays.copyOf(path,path.length+1);
+					pathAndValue[path.length] = filtered;
+					rootOut = (NavigableMap)JsonDS.jsonSet(rootOut,pathAndValue);
+				}
+				NavigableMap mapOut = JsonDS.map("action", "writeSparse", "game", game, "room", room, "root", rootOut, "comment", "This is the answer to a readSparse (action="+action+"), that should write into browser's V/Var tree.");
 				mapOut = (NavigableMap)JsonDS.jsonSet(mapOut,"peer","main","tNetFrom",tNetFrom);
 				mapOut = (NavigableMap)JsonDS.jsonSet(mapOut,"peer","main","tNetTo",tNetTo);
 				o = obToJson(mapOut);
