@@ -1,4 +1,18 @@
-<%@ page import="java.util.*,java.util.function.Predicate,immutable.occamsjsonds.*" %><%!
+<%@ page import="java.util.*,java.util.function.Predicate,java.util.concurrent.*,immutable.occamsjsonds.*" %><%!
+	/*
+	NETWORK SYNC DESIGN
+	- Var.js data still merges only by each Var's .t. Equal .t keeps the existing server value.
+	- Tomcat stores one newest Var value per path in V.
+	- Tomcat also stores server-only tNet beside each Var in that same server V tree.
+	- Browser V data must not upload per-Var tNet, and Tomcat must not download per-Var tNet to browsers by default.
+	- Sparse request selection is based on server-side per-Var tNet, not Var .t.
+	- readSparse and readWriteSparse require peer.main.tNetFrom. That value is inclusive.
+	- Tomcat returns peer.main.tNetFrom unchanged and peer.main.tNetTo from near the end of stringInStringOut.
+	- Browser should use nextUp(previous peer.main.tNetTo) as the next peer.main.tNetFrom.
+	- Tomcat stores no per-browser cursor or identity.
+	- tNet is updated only when the server's stored .t for that Var changes.
+	- If incoming .t is older or equal and does not replace server .t, do not refresh tNet.
+	*/
 	static String wholeState = "{\"QuadCraft\":{\"p\":0, \"v\":0}}";
 	
 	//one copy of parts of the V/Var tree.
@@ -11,7 +25,7 @@
 	//since you can many-read but one-write.
 	static volatile NavigableMap V = JsonDS.map("p",0., "v",0., "t",10000.); //root of V tree
 	static final Object VLock = new Object();
-	static boolean sendTNetToBrowser = true;
+	static boolean sendTNetPerVarToBrowser = false;
 	static boolean includeTNetInShouldSendVar = true;
 	static double allowTimeTravellersOnlyThisManySecondsAhead = 0.1;
 	static boolean logRequestStartEnd = false;
@@ -26,6 +40,7 @@
 	static boolean echoInputWithoutParsing = false;
 	static final double timeAtStart = System.currentTimeMillis()*.001;
 	static final long nanoAtStart = System.nanoTime();
+	static double timeIdPrev = 0;
 	static boolean doSystemGcEveryNSeconds = true;
 	static double systemGcEveryNSeconds = 0.5;
 	static double lastSystemGcTime = 0;
@@ -48,8 +63,10 @@
 	}
 	
 	static String stringInStringOut(String i){
+		double serverReceiveTime = TimeId();
 		maybeSystemGc();
 		if(echoInputWithoutParsing){
+			TimeId();
 			return i;
 		}
 		logIf(logRequestStartEnd, "START QuadCraftAjax request");
@@ -85,36 +102,27 @@
 				o = "{\"action\":\"sparseVSync\", \"comment\":\"TODO sparseVSync...\"}"; //FIXME
 			break; case "readWriteSparse":
 				isReadWriteSparse = true;
-				if(((NavigableMap)ob).get("minTime")==null){
-					logIf(logMissingTimeErrors, "No minTime in action=isReadWriteSparse");
-					throw new Error("No minTime in action=isReadWriteSparse");
-				}
+				jsonGetDoubleElseThrow(ob,"peer","main","tNetFrom");
 				//continue to writeSparse and then readSparse
 			case "writeSparse":
 				//o = "{\"action\":\"writeSparse\", \"comment\":\"TODO writeSparse...\"}"; //FIXME
-				Object incoming = ((NavigableMap)ob).get("V");
-				if(incoming == null){
-					throw new Error("No map.V but action is writeSparse");
-				}
+				NavigableMap incoming = (NavigableMap)jsonGetElseThrow(ob,"V");
 				synchronized(VLock){
 					//in case 2 threads try to mod the tree at once. The tree is immutable (or at least used that way) but
 					//we dont want other threads changes to get ignored. Keep the newest of each Var by Var.t.
-					double serverReceiveTime = time();
-					V = mergeMaps(V,(NavigableMap)incoming,serverReceiveTime); //update shared state on sever that multiple remote browsers sync with or parts of
+					V = mergeMaps(V,incoming,serverReceiveTime); //update shared state on sever that multiple remote browsers sync with or parts of
 				}
 				if(!isReadWriteSparse){
 					o = "{\"action\":\"ok\"}";
 					break;
 				}//else continue to readSparse
 			case "readSparse": //maybe should be called readNewerThan (or readEqualTimeOrNewerThan).
-				Object minTimeOb = ((NavigableMap)ob).get("minTime");
-				if(minTimeOb == null){
-					logIf(logMissingTimeErrors, "No minTime but action is "+action);
-					throw new Error("No minTime but action is "+action);
-				}
-				double minTime = (Double)minTimeOb;
-				NavigableMap mapOut = partsOfVTreeByMinTime(V,minTime);
+				double tNetFrom = jsonGetDoubleElseThrow(ob,"peer","main","tNetFrom");
+				NavigableMap mapOut = partsOfVTreeByMinTNet(V,tNetFrom);
+				double tNetTo = TimeId();
 				mapOut = JsonDS.map("action", "writeSparse", "V", mapOut, "comment", "This is the answer to a readSparse (action="+action+"), that should write into browser's V/Var tree.");
+				mapOut = (NavigableMap)JsonDS.jsonSet(mapOut,"peer","main","tNetFrom",tNetFrom);
+				mapOut = (NavigableMap)JsonDS.jsonSet(mapOut,"peer","main","tNetTo",tNetTo);
 				o = obToJson(mapOut);
 			break;default:
 				throw new Error("Unknown action="+action);
@@ -125,9 +133,29 @@
 		logIf(logRequestStartEnd, "END QuadCraftAjax request");
 		return o;
 	}
+
+	static Object jsonGetElseThrow(Object in,Object... path){
+		Object ret = JsonDS.jsonGet(in,path);
+		if(ret == null){
+			throw new Error("Missing required json path: "+Arrays.asList(path));
+		}
+		return ret;
+	}
+
+	static double jsonGetDoubleElseThrow(Object in,Object... path){
+		return (double)(Double)jsonGetElseThrow(in,path);
+	}
 	
 	static NavigableMap partsOfVTreeByMinTime(NavigableMap fromNode, double minTime){
 		Predicate<NavigableMap> keep = (NavigableMap node)->(minTime<=sparseReadTime(node));
+		return partsOfVTree(fromNode, keep);
+	}
+
+	static NavigableMap partsOfVTreeByMinTNet(NavigableMap fromNode, double tNetFrom){
+		Predicate<NavigableMap> keep = (NavigableMap node)->{
+			double tNet = num(node,"tNet");
+			return 0<tNet && tNetFrom<=tNet;
+		};
 		return partsOfVTree(fromNode, keep);
 	}
 
@@ -143,6 +171,14 @@
 
 	static double time(){
 		return timeAtStart + (System.nanoTime()-nanoAtStart)*1e-9;
+	}
+
+	static synchronized double TimeId(){
+		return timeIdPrev = Math.max(time(),Math.nextUp(timeIdPrev));
+	}
+
+	static synchronized double TimeIdNext(){
+		return timeIdPrev = Math.nextUp(timeIdPrev);
 	}
 
 	static void maybeSystemGc(){
@@ -169,7 +205,7 @@
 				out.put(k,node.get(k));
 			}
 			double t=num(node,"t");
-			if(t>0) out.put("tNet",serverReceiveTime);
+			if(t>0) out.put("tNet",TimeIdNext());
 		}else{
 			logIf(logFutureRejects, "Rejecting future incoming node t="+num(node,"t")+" serverReceiveTime="+serverReceiveTime+" node="+obToJson(node));
 			out.put("p",0.);
@@ -193,7 +229,7 @@
 	}
 
 	/** Copies every node that satisfies keep.test(node) or
-	that has at least one descendant that does. minT <= node.t
+	that has at least one descendant that does. minT <= node.t. minTime [replaced by tNet vars]
 	*/
 	static NavigableMap partsOfVTree(NavigableMap node, Predicate<NavigableMap> keep){
 		return filterBranch(node,keep);
@@ -218,7 +254,7 @@
 		NavigableMap out=new TreeMap(JsonDS.mapKeyComparator);
 		for(Object k:node.keySet()){
 			if(k.equals("pu"))continue;
-			if(k.equals("tNet") && !sendTNetToBrowser)continue;
+			if(k.equals("tNet") && !sendTNetPerVarToBrowser)continue;
 			out.put(k,node.get(k));
 		}
 		if(newPu!=null)out.put("pu",Collections.unmodifiableNavigableMap(newPu));
@@ -250,7 +286,7 @@
 		}
 		out.put("t",bNewer?tb:ta);				//write .t once
 		if(bNewer){
-			if(tb>0) out.put("tNet",serverReceiveTime);
+			if(tb>0) out.put("tNet",TimeIdNext());
 		}else{
 			double tNet=num(a,"tNet");
 			if(tNet!=0) out.put("tNet",tNet);
@@ -276,6 +312,28 @@
 	}
 
 
+	//If true, calls stringInStringOut in 1 shared thread so "static volatile NavigableMap V"
+	//only touches 1 CPU core's cache so is faster, in theory, than every thread touching it.
+	//Also we dont need to use synchronized or volatile on that if its single threaded.
+	static boolean stringInStringOut_happensInOtherThread = true;
+
+	//static final ExecutorService singleComputeThread = Executors.newSingleThreadExecutor(); //normal priority thread?
+	static final ExecutorService singleComputeThread = Executors.newSingleThreadExecutor(r->{ //high priority thread
+		Thread t = new Thread(r,"QuadCraftCompute");
+		t.setPriority(Thread.MAX_PRIORITY-1);
+		return t;
+	});
+
+	static String maybeAsync_stringInStringOut(String i){
+		if(!stringInStringOut_happensInOtherThread){
+			return stringInStringOut(i);
+		}
+		return CompletableFuture.supplyAsync(
+			()->stringInStringOut(i),
+			singleComputeThread
+		).join();
+	}
+
 
 %><%
 	String body = request.getReader().lines().reduce("", (a,b)->(a+b));
@@ -284,7 +342,7 @@
 	}
 	logIf(logUrl, "url="+request.getRequestURL()+" method="+request.getMethod());
 	String i = body; //in
-	String o = stringInStringOut(i); //out
+	String o = maybeAsync_stringInStringOut(i); //out
 	response.setContentType("application/json");
 	out.print(o);
 %>

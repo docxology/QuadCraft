@@ -691,7 +691,7 @@ var DefaultGp = 0;
 //var DefaultGp = 5.5;
 //var DefaultGp = 15.5;
 
-console.error('TODO merge Var.prototype.touch into Var.prototype.makeDirty but dont call TimeId() that often cuz system clock could be the bottleneck in modding vars in that case. Instead only call TimeId() in lamglLoopBody once and call ...');
+//console.error('TODO merge Var.prototype.touch into Var.prototype.makeDirty but dont call TimeId() that often cuz system clock could be the bottleneck in modding vars in that case. Instead only call TimeId() in lamglLoopBody once and call ...');
 Var.prototype.touchRecur = function(optionalT){
 	this.touch(optionalT);
 	for(const k in this.pu){
