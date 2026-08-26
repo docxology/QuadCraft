@@ -1,5 +1,5 @@
 //Var*.js, opensource/Apache2 (versions before Bellsack256/2025-8-3 are MIT) by Ben F Rayfield.
-//This version of Var.js is from https://github.com/benrayfield/jsutils/blob/master/src/bellsack/Bellsack0575.02.cpuGraphicsForRingsAndEdlayLines_see_paintCpuEdjointsR5G5B5D9_etc.html where Var*.js exists in its own script tag.
+//copied 2026-8-26 from the "Var*.js" script tag in https://github.com/benrayfield/jsutils/blob/master/src/bellsack/Bellsack0575.10.sharded.lamglLoopBodyB.worksWithGraphicsAndPhysics320BallsIn10PhysicsShardsAnd85GraphicsShardsAt60FPS.html
 
 console.error('TODO O1_ O2_ O3_ O4_ (objects)... P_ Ps_ (Ptrs) L_ Ls_ (Lits) by ORing, to compute Var.po as true or false');
 if(window.v !== undefined) throw new Error('Theres already a v global var, which is the root like v.Bellsack.Room5.Hello.World');
@@ -28,12 +28,12 @@ if(window.q !== undefined) throw new Error('Theres already a q global var, like 
 const Var = function(optionalParentVar, optionalName, optionalBig, optionalGob){ //TODO remove optionalGob, those should go in a Map or something, not Var. Its not using that in Bellsack but did use it in Blob Monsters Game.
 	/*TODO[[[explained in https://chatgpt.com/g/g-p-67e3e1532ca08191983aad7a25c9c520-bellsack/c/691b4fcb-b89c-8327-85b6-ee2d9b5cd5ab 2025-11-17
 	1 . Prefix vocabulary
-	prefix	“look-back” distance d	semantics of .p
+	prefix	â€œlook-backâ€ distance d	semantics of .p
 	O_	1	simple existence
 	OO_	2	simple existence
 	OOO_	3	simple existence
 	OOOO_	4	simple existence
-	(extendable)	d = # of O’s	
+	(extendable)	d = # of Oâ€™s	
 	P_ Ps_	1	exclusive / multi pointer
 	L_ Ls_	1	exclusive / multi literal
 	]]]*/
@@ -77,6 +77,7 @@ const Var = function(optionalParentVar, optionalName, optionalBig, optionalGob){
 	//should pk depend on namespace? be concat to that? or what? pk certainly should not depend on t/time.
 	this.name = optionalName || 'v'+(++generatedNameCounter);
 	this.cache = {}; //holds constY and constX if this wraps a tile (Blob Monsters Game, not used in Bellsack as of 2025-11-13 but leave the cache field here anyways for general use. So far its been used as {} of string to number).
+	this.ptr = null; //If this.name is a Var path, points to that Var. Own field so the Proxy never treats ptr as a child Var.
 	/*too specific to one game (Blob Monsters Game). Var*.js is supposed to be more general.
 	if(this.name.startsWith('tile')){
 		if(isTileString(this.name)){
@@ -226,7 +227,16 @@ const Var = function(optionalParentVar, optionalName, optionalBig, optionalGob){
 	//** iteration / filtering (thisParent.pu.child)								 */
 	if(this.up){
 		this.up.pu[this.name] = this;	 // existing behavior 2025-7-4 and earlier.
-		this.up[this.name]	= this;	 // new: direct, non-proxy hit, 2025-7-5+
+		Object.defineProperty(this.up,this.name,{
+			value: this,
+			writable: true,
+			enumerable: true,
+			configurable: true
+		}); //direct own-property creation; must not reach VarProxy.set
+	}
+	this.ptr = VarVM.getOrCreateVarElseNullIfInvalidString(this.name);
+	if(this.ptr){
+		this.ptr.inPtrsAdd(this);
 	}
 	
 	/*doesnt work, need Proxy: this.get = function(fieldName){
@@ -281,8 +291,8 @@ const Var = function(optionalParentVar, optionalName, optionalBig, optionalGob){
 	//this Var is joined to other Vars thru, that their .p and .v are held equal to other .p and .v,
 	//and physics forces (gr, poten, etc) are summed (not averaged) across edjoint.
 	//This can be reflected as a stochasticVector of Ptr$ej or maybe Ej$, Var childs,
-	//but this is where it snaps to a particular edjoint or null for none.
-	this.ej = null;
+	//but this is where it snaps to a particular EdJoint object. By default each Var is its own EdJoint.
+	this.ej = null; //TODO this.ej = shared EdJoint of whichever set of Var have same ejX ejY ejZ (unless all 3 are 0), but "new EdJoint(this);" is crashing ont he first Var v (root Var) at boot. null ej means it is its own edjoint.
 	this.ejX = 0;
 	this.ejY = 0;
 	this.ejZ = 0;
@@ -331,6 +341,23 @@ Var.prototype.opt = { //must be named opt instead of Opt cuz Opt would be a chil
 };
 
 const VarVM = Var.prototype.vm = new function(){}; //put things shared by all Var's here.
+VarVM.rootV = null;
+VarVM.rootQ = null;
+VarVM.countCallsOfVarProxy = 0;
+VarVM.decayingCountOfCallsOfVarProxy = 0;
+VarVM.countCallsOfVarProxy_atLastDecayUpdate = null;
+VarVM.saveProxyCallsHereIfIsListInsteadOfNull = [];
+VarVM.updateDecayingCountOfCallsOfVarProxy = function(dt){
+	let count = this.countCallsOfVarProxy;
+	if(this.countCallsOfVarProxy_atLastDecayUpdate === null){
+		this.countCallsOfVarProxy_atLastDecayUpdate = count;
+		return this.decayingCountOfCallsOfVarProxy;
+	}
+	let callsSinceLastUpdate = count-this.countCallsOfVarProxy_atLastDecayUpdate;
+	this.countCallsOfVarProxy_atLastDecayUpdate = count;
+	return this.decayingCountOfCallsOfVarProxy =
+		this.decayingCountOfCallsOfVarProxy*(1-dt)+callsSinceLastUpdate;
+};
 VarVM.dirtHead = null; //head of linkedlist of dirty/modified Var's that need theVar.nextState(dt) called even if dt is 0.
 //the second list used during processing VarVM.dirtyHead, in case Var.listeners cause Var's to be dirty.
 //FIXME If listeners cause Var's to become dirty aVar.makeDirty() during someOtherVar.nextState(dt), then
@@ -486,25 +513,25 @@ Bellsack353.html:2354 v['FIXMEESCAPE_Bellsack']['FIXMEESCAPE_Hello']['FIXMEESCAP
 undefined
 http://V.Bellsack.Hello.World.set(2)
                                              
-Var {big: null, t: 0, name: 'World', cache: {…}, up: Var, …}
+Var {big: null, t: 0, name: 'World', cache: {â€¦}, up: Var, â€¦}
 VM1364:1 me=v['FIXMEESCAPE_Bellsack']['FIXMEESCAPE_Hello']['FIXMEESCAPE_World'] p=2
 http://V.Bellsack.Hello.World.dp += 20
                                              
 20
 http://V.Bellsack.Hello.World.makeDirty()
                                              
-Var {big: null, t: 0, name: 'World', cache: {…}, up: Var, …}
+Var {big: null, t: 0, name: 'World', cache: {â€¦}, up: Var, â€¦}
 VM1364:1 me=v['FIXMEESCAPE_Bellsack']['FIXMEESCAPE_Hello']['FIXMEESCAPE_World'] p=2.3333333333333335
 
 
-Lambda Rick 🏴‍☠️/acc
+Lambda Rick ðŸ´â€â˜ ï¸/acc
 @benrayfield
-·
+Â·
 13s
 The event system in theory works the same nomatter the order of events in 1 video frame of the game. They get batched together and sum into temp vars then are merged.
-Lambda Rick 🏴‍☠️/acc
+Lambda Rick ðŸ´â€â˜ ï¸/acc
 @benrayfield
-·
+Â·
 14m
 It does not create heap objects for events so it can in theory handle many millions of events per second.
 */
@@ -723,13 +750,57 @@ Var.prototype.touchIfTpvRecursive = function(){
 };
 
 //delete me from the local V/Var tree
+Var.prototype.canDel = function(){
+	if(!this.up) return false;
+	for(let key in this.pu) return false;
+	return this.inPtrsSize() == 0;
+};
+
 Var.prototype.del = function(){
 	if(!this.up){
 		Err('Already is root V/Var, cant del: '+this.path());
 	}
+	for(let key in this.pu){
+		Err('Cant del Var with child '+key+', delete childs first or use delTree: '+this.path());
+	}
+	let inPtrCount = this.inPtrsSize();
+	if(inPtrCount){
+		Err('Cant del Var with '+inPtrCount+' incoming ptrs: '+this.path());
+	}
 	console.log('Deleting Var path='+this.path());
+	if(this.ptr){
+		this.ptr.inPtrsDel(this);
+		this.ptr = null;
+	}
 	delete this.up.pu[this.name];
+	delete this.up[this.name];
 	//FIXME this.up still exists, so if this.abc.def.ghi still exists then ghi.up.up... will still find this and parents.
+};
+
+Var.prototype.canDelTree = function(){
+	if(!this.up) return false;
+	if(this.inPtrsSize()) return false;
+	for(let key in this.pu){
+		if(!this.pu[key].canDelTree()) return false;
+	}
+	return true;
+};
+
+//2026-8-12: This does not special-case ptrs whose holder Var is also inside this
+//subtree. If any node in the subtree has incoming ptrs in cache.inPtrs, even from
+//another node in this same subtree, canDelTree() returns false and delTree() throws.
+Var.prototype.delTree = function(){
+	if(!this.canDelTree()){
+		Err('Cant delTree Var with root or incoming ptrs in subtree: '+this.path());
+	}
+	let childs = [];
+	for(let key in this.pu){
+		childs.push(this.pu[key]);
+	}
+	for(let child of childs){
+		child.delTree();
+	}
+	this.del();
 };
 
 //copy copyMe.p to this.p, copyMe.v to this.v, etc, but nothing in this.pu (childs) cuz thats not local.
@@ -745,7 +816,7 @@ Var.prototype.copyLocalFrom = function(copyMe){
 	this.pr = copyMe.pr;
 	this.ps = copyMe.ps;
 	this.cv = copyMe.cv;
-	this.ej = copyMe.ej;
+	this.ej = copyMe.ej instanceof EdJoint ? copyMe.ej : new EdJoint(this);
 	this.ejX = Number.isFinite(copyMe.ejX) ? copyMe.ejX : 0;
 	this.ejY = Number.isFinite(copyMe.ejY) ? copyMe.ejY : 0;
 	this.ejZ = Number.isFinite(copyMe.ejZ) ? copyMe.ejZ : 0;
@@ -1036,15 +1107,24 @@ var stateOptions = {excludeBig: false, flatPu: true};
 
 var quicksave = function(name){
 	console.log('quicksave '+name);
-	localStorage.setItem('monst.'+name, State(stateOptions));
+	localStorage.setItem('bellsack.'+name, State(stateOptions));
 };
 
 var quickload = function(name){
 	console.log('quickload '+name);
-	let json = localStorage.getItem('monst.'+name);
+	let json = localStorage.getItem('bellsack.'+name);
 	if(json){
 		Load(json);
 	}
+};
+
+var deleteLocalStorageKeysStartingWith = prefix=>{
+	let keys = Object.keys(localStorage).filter(key=>key.startsWith(prefix));
+	for(let key of keys){
+		localStorage.removeItem(key);
+	}
+	console.log('Deleted '+keys.length+' localStorage keys starting with '+JSON.stringify(prefix)+': '+keys.join(', '));
+	return keys;
 };
 
 var saveFile = (fileName, contentType, stringOrUint8Array)=>{
@@ -1227,15 +1307,26 @@ Var.prototype.allVars = function(optionalListToFill){
 	return list;
 };
 
+//includes Var and recurses if goalTree(vr)>0
+Var.prototype.searchTreeHard = function(goalTree, optionalListToFill){
+	let list = optionalListToFill || [];
+	if(goalTree(this) <= 0) return list;
+	list.push(this);
+	for(let childName in this.pu){
+		this.pu[childName].searchTreeHard(goalTree, list);
+	}
+	return list;
+};
+
 //returns a list of Var in descending order of goal(theVar).
-//Higher goal score is better. If using a loss, pass -loss or use a loss-specific search func.
-//Finite negative scores are allowed.
+//Higher goal score is better. If using a loss, pass someConstant-loss, not -loss.
+//Only positive scores match the goal. 0 or negative scores do not match at all.
 //Theres an optimization that if optionalMaxResults==1 it doesnt sort an array but just keeps the best in a loop,
 //but either way it calls goal on every Var reachable from here.
 //TODO optimize more in that case to not even create the array of all Var.
-Var.prototype.searchTree = function(goal, optionalMaxResults){
-	let maxResults = optionalMaxResults || DefaultMaxResults;
-	let vars = this.allVars();
+Var.prototype.searchTree = function(goal, optionalMaxResults, optionalGoalTree){
+	let maxResults = optionalMaxResults == null ? DefaultMaxResults : optionalMaxResults;
+	let vars = optionalGoalTree ? this.searchTreeHard(optionalGoalTree) : this.allVars();
 	let scores = new Map();
 	for(let v of vars) scores.set(v, goal(v));
 	if(maxResults == 1){ //n cost
@@ -1243,13 +1334,14 @@ Var.prototype.searchTree = function(goal, optionalMaxResults){
 		let bestVar = null;
 		for(let v of vars){
 			let score = scores.get(v);
-			if(bestScore < score){
+			if(score > 0 && bestScore < score){
 				bestScore = score;
 				bestVar = v;
 			}
 		}
 		return bestVar ? [bestVar] : [];
 	}else{ //n*log(n) cost
+		vars = vars.filter(v=>scores.get(v) > 0);
 		vars.sort((varA,varB)=>Math.sign(scores.get(varB)-scores.get(varA)));
 		while(vars.length > maxResults) vars.pop();
 		return vars;
@@ -1258,6 +1350,7 @@ Var.prototype.searchTree = function(goal, optionalMaxResults){
 
 //TODO rename search to searchChilds and have another func searchTree.
 //goal(anyVar)->score. Higher score is better and appears earlier.
+//If using a loss, pass someConstant-loss, not -loss.
 //As goal, any positive number passes, and any 0 or negative number does not match.
 //Sort by that descending, of those which pass.
 Var.prototype.search = function(goal, optionalMaxResults){
@@ -1409,19 +1502,59 @@ Var.prototype.setSpring = function(ps, optionalPr){
 	this.pr = pr;
 };
 
-//FIXME hashIdLen is not constant cuz they dont all have the same prefix.
+console.log(`FIX BUG TODO
+mmMain:varjsBug(hashIdLen)IsTooBigCuzItsUsingBase64NotHexSoAShorterHashCouldBeViewedAsNotAHashThereforeDuplicateAsRawNameWithoutBigVsTheOneWithContentAsBig_andExist
+_andExistingNamesInBellsackCouldGetHashedCuzOfReducing(hashIdLen)AndTheseAreOptFieldsIGottaRenameThemWhenFixingThisAlsoDontUse(Gob$)AsTheShortestPrefixUse($)Or(G$)AsShortestPrefix1Or2Chars
+about hashIdLen and MaxLiteralNameLen and q.Opt.IsCpuToGpuRgbdTest_CpuFillFloatArrayOnly1stDiv for example.
+If the string has a $ then whatever is before and including the first $ becomes the prefix,
+else its given a prefix such as Gob$ or i might change that to some other prefix later.
+Maybe in general G$ for string (dont want to use G cuz theyre all strings but not all are meant to be used as string, and then theres the splitting and putting \n between parts so its not even all possible strings).
+or V$ for var. But as it is now 2026-7-24 its Gob$ if you dont give a prefix and !isVarLit(theString).
+"IsCpuToGpuRgbdTest_CpuFillFloatArrayOnly1stDiv".length is 63. Hash length is ceil(256/6)=43 in base64. So hashIdLen should be either 44 or 45,
+depending if we allow $ as a prefix by itself vs require text before it such as Gob$ or G$ or Sak$ or Js$.
+If choose 45 then Anything that starts with $ must throw. isVarLit uses regex /^[A-Z_$][a-zA-Z0-9_$]*$/ so it could start with $ under current rules 2026-7-24.
+the rule I have been going with is its gotta be a valid js var name and theres a length limit.
+But I dislike starting with $ cuz thats the parsing char, and I use what comes before it as a type. Type Js in "Js$(a,b)=>Math.sqrt(a*a+b*b)" for example.
+Lets force first char to be A-Z, removing the _ $. Changing /^[A-Z_$][a-zA-Z0-9_$]*$/ to /^[A-Z][a-zA-Z0-9_$]*$/. Changed that.
+Now lets deal with the long opt names. and what if theres saved json files with long names?
 
-//const hashIdLen = ('sha256$'.length+64); //64 hex chars. todo base58 or base64 or something. have code in Dagverse.js.
-const hashIdLen = ('Gob$'.length+64); //64 hex chars. todo base58 or base64 or something. have code in Dagverse.js.
-//
-//FIXME theres gob$hash and tile9007199254595405$hash and tile9007199254595405$literalIfSmall,
-//so should hashIdLen be renamed to minHashIdLen?
+TODO rename these to be at most length 44 then change hashIdLen to MinHashIdLen=45 aka 'V$'.length+43,
+and change Gob$ to V$ for when theres no prefix given:
+See optRenameMapY2026M7D25.
+OR we could do, if the part after the $ is a length other than 43, but still gotta have some max length.
+`);
+
+//TODO since i ended up able to have longer var names, just not the exact suffix length 42 (after first $) when there exists any $, all or most of the original names are still valid. do: undo_optRenameMapY2026M7D25_makeThemLongAgain2026-8-12+
+var optRenameMapY2026M7D25 = { //renamed some long names in q.Opt cuz MinHashIdLen is shrinking to 45 so isVarLit is at most 44.
+	IsBallTerrainImpulseBouncesByGpuSignedDistancesThenCpuBounces_Recov: 'IsBalTerImpBouncByGpuSignDistThenCpuBoRecov',
+	IsBallTerrainImpulseBouncesByGpuSignedDistancesThenCpuBounces: 'IsBalTerImpBouncByGpuSignDistThenCpuBo',
+	IsCpuToGpuRgbdTest_SkipCpuFillFloatArrayIfAlreadyDoneItOnce: 'IsCpuToGpuRgbdTest_CpuFillFloatArrayOnly1st',
+	Is_Lamgl_makeSomeConstantsUniformsToPreventLoopUnrolling: 'Is_Lamgl_makeConstantsUniformsNoLoopUnroll',
+	StartStrongRecoveryWhenBallPenetrateTerrainMoreThan: 'StartStrongRecovWhenBallPenetrTerMoreThan',
+	SetUpMessageToCommandLineThruSaveFileToDownloadsDir: 'SetUpMsgToCmdLineThruSaveFileToDownloadsDir',
+	DisplayErrorsOnSurfaceInBrightGreenIfAbsMoreThan: 'DisplayErrsOnSurfInBrightGreenIfAbsMoreThan',
+	IsCpuToGpuRgbdTest_ReuseLastTensorAsSpeedTest: 'IsCpuToGpuRgbdTest_ReuseLastTsorAsSpeedTest',
+};
+
+const minPrefixLen = 'V$'.length;
+//const hashLenChars = 43;
+const hashLenChars = 42; //cuz cut off the last char (that only has 4 bits anyways) so its sha252 first 252 bits of sha256.
+
+const MinHashIdLen = minPrefixLen+hashLenChars;
 
 //TODO what should this limit be?
 //If its longer	than this, auto hashes it and uses the hash (prefixed by what, in case it starts with a digit etc?)
 //as the Var.name and the content hashed as the Var.big.
 //so u can know if its a hash or not by its length. or could check for any chars then $ like sha256$thehash.
-const MaxLiteralNameLen = hashIdLen-1;
+//
+//const MaxLiteralNameLen = hashIdLen-1; //44
+const MaxLiteralNameLen = 200; //except if [contains $ and its length after the first $ equals hashIdLen (42)], so if its an ed25519 pubkey u should pad it to 1 longer]
+//If you want to trigger hashing for a string shorter than this, include a char not in the base64 such as @ ! ? % ^ & / -, to save space.
+//
+//FIXME maybe Ill make this simply check if the part after the prefix is exactly 43 chars?
+//but then how would ed25519 pubkey or wikibinator203 fullId (self, left, and right, 3 ids of 256 bits each with some prefixes) fit?
+//I could make it 3 chars for hash. Var$343q45q345345 so Ed$435345654 woudld be ed25519 pubkey and 1 char less than Var$
+//or I could make a prefix Long$Ed$45252456245624356 that can have literal up to some length. ???
 
 //let all else be capital, if it is neither capital nor lowercase cuz just some weird unicode symbol,
 //though this might create a problem if its a string of a nonnegative integer if thats a valid list/array index.
@@ -1436,19 +1569,100 @@ const MaxLiteralNameLen = hashIdLen-1;
 //A few other fields in Var gotta be updated but less often or sometimes only once or never to take defaults,
 //such as .pr .ps to define an optional spring force to accelerate this.v velocity by negative gradient
 //so this.p position is updated, all at once by gradient and GPU optimizing stuff.
+//
+//FIXME does this and similar code work for isVarLit allowing these start chars A-Z_ in regex?
 const isLowercase = c=>(c >= 'a' && c <= 'z');
 
-//Can the string be a Var literal path part? If not it goes in theVar.big and theVar.name is hash of that,
+const varPrefixLen = nameOrBig=>(nameOrBig.indexOf('$')+1); //0 (-1 for not found + 1) if not found, else up to and including the first $
+
+const varSuffixLen = nameOrBig=>(nameOrBig.length-varPrefixLen(nameOrBig)); //length after the first $, or whole length if has no $
+
+//VarjsRedesignY2027M7D25:
+//A direct non-path segment. This is the cheap syntax part of isVarLit.
+//isVarLit also rejects hash-shaped ids so raw literals and generated hash ids do not overlap.
+const VarLitRegex = /^[A-Z_][a-zA-Z0-9_$]*$/;
+
+//VarjsRedesignY2027M7D25:
+//An already-derived Var hash id: Prefix$sha252Base64.
+//The prefix before the first $ starts A-Z_ and then uses only 0-9 A-Z _ a-z.
+//The suffix after the first $ is exactly 42 dvBase64 chars.
+//A 32-byte ed25519 pubkey encodes to 43 chars, so Ed$pubkey is not hash-shaped.
+const VarHashRegex = /^[A-Z_][0-9A-Z_a-z]*\$[$0-9A-Z_a-z]{42}$/;
+
+//VarjsRedesignY2027M7D25:
+//Valid prefix used when a raw big string is hashed into Prefix$hash42.
+//Includes the trailing $. Lowercase first char and punctuation are rejected.
+const VarHashPrefixRegex = /^[A-Z_][0-9A-Z_a-z]*\$$/;
+
+//VarjsRedesignY2027M7D25:
+//Bare lowercase identifiers are reserved for JS/Var fields and prototype methods
+//such as p, v, t, toString, path, pU, etc. The Proxy should not create child Vars
+//from those by accident. Path prefixes like q. and v. are handled separately by isVarPath.
+const BareLowercaseIdentRegex = /^[a-z][a-zA-Z0-9_]*$/;
+
+//VarjsRedesignY2027M7D25:
+//Display-only syntax check for path()/nath(). This is intentionally broader than
+//isVarLit because existing/generated hash ids like V$...42chars should print after
+//a dot even though isVarLit rejects them as fresh raw literals.
+const DotPathSegmentRegex = /^[A-Za-z_$][a-zA-Z0-9_$]*$/;
+
+//VarjsRedesignY2027M7D25:
+//This regex means "contains whitespace anywhere", so it is intentionally not
+//anchored with ^...$. isVarPath rejects any whitespace anywhere in a path string.
+const ContainsWhitespaceRegex = /\s/;
+
+var isVarHash = s=>VarHashRegex.test(s);
+var isVarHashPrefix = s=>VarHashPrefixRegex.test(s);
+var isBareLowercaseIdent = s=>BareLowercaseIdentRegex.test(s);
+var isDotPathSegment = s=>DotPathSegmentRegex.test(s);
+
+var varHashPrefixOfBig = s=>{
+	let i = s.indexOf('$');
+	if(i == -1) return 'V$';
+	let prefix = s.substring(0,i+1);
+	if(!isVarHashPrefix(prefix)){
+		Err('Bad Var hash prefix: '+prefix+' from '+s);
+	}
+	return prefix;
+};
+
+var isVarPathPrefix = s=>(
+	(s[1]=='.' && (s[0]=='q' || s[0]=='v' || s[0]=='V')) ||
+	(s[0]=='n' && s[1]=='s' && s[2]=='.') //TODO only q v q. v. no ns. no ns
+);
+
+const ed25519PubKeyBytesToName = bytes=>"Ed$"+bytesToBase64(bytes); //32 byte pubkey, 1 char longer suffix (43) than a sha252 hash suffix (43) so doesnt think its a hash
+
+const ed25519SigBytesToName = bytes=>"EdSig$"+bytesToBase64(bytes); //64 byte sig
+
+/*//Can the string be a Var literal path part? If not it goes in theVar.big and theVar.name is hash of that,
 //with the prefix up to and including the first $ prefixing the hash, and if it has no $ it uses Gob$ .
 //It is if first char is capital letter, its a valid js var name, and is short enuf.
+var isVarLit = nameOrBig=>{
+	if(nameOrBig.length > MaxLiteralNameLen) return false;
+	if(nameOrBig.length >= MinHashIdLen){ //dont waste time on this if its too small to be a hash id
+		if(varSuffixLen(nameOrBig) == hashLenChars){ //hashLenChars is 42 which is the number of base64 chars in 252 bits. If you use 256 bits its 43 chars, so ed25519 pubkeys and other 256 bit types as base64 dont look like hash ids.
+			return false;
+		}
+	}
+	return /^[A-Z_][a-zA-Z0-9_$]*$/.test(nameOrBig); //add _ as a starting char back so names like _n20_n12_8_n19_12_18 are allowed, but cant start with $
+	//nameOrBig.length <= MaxLiteralNameLen && /^[A-Z][a-zA-Z0-9_$]*$/.test(nameOrBig));
+	//nameOrBig.length <= MaxLiteralNameLen && /^[A-Z_$][a-zA-Z0-9_$]*$/.test(nameOrBig)); //removed _ and $ as starting chars as explained in search for "varjsBug(hashIdLen)IsTooBigCuzItsUsingBase64NotHexSoAShorterHashCouldBeViewedAsNotAHashThereforeDuplicateAsRawNameWithoutBigVsTheOneWithContentAsBig_andExist" 2026-7-24.
+};*/
+//Direct non-path segment that goes into Var.name directly.
+//Starts A-Z_ and is not hash-shaped.
 var isVarLit = nameOrBig=>(
-	nameOrBig.length <= MaxLiteralNameLen && /^[A-Z_$][a-zA-Z0-9_$]*$/.test(nameOrBig));
+	nameOrBig.length <= MaxLiteralNameLen &&
+	!isVarHash(nameOrBig) &&
+	VarLitRegex.test(nameOrBig)
+);
 	
 /*var isChildName = possibleName=>(isVarLit(possibleName) ||
 	(possibleName.startsWith('ns.') && isVarLit(possibleName.substring('ns.'.length)))
 	(possibleName.startsWith('v.') && isVarLit(possibleName.substring('v.'.length)));
 */
-var isChildName = possibleName=>(isVarLit(possibleName) || isVarPath(possibleName));
+//var isChildName = possibleName=>(isVarLit(possibleName) || isVarPath(possibleName));
+var isChildName = possibleName=>(isVarLit(possibleName) || isVarHash(possibleName) || isVarPath(possibleName));
 
 const MaxVarPathLen = 512; //including paths in paths, see isVarPath
 
@@ -1471,10 +1685,12 @@ should have made v.Bellsack.Room1.Shape.Sak$NUrpaxxk7jDslEyguqyMLn4YUqCAC8gOIXms
 var isVarPath = s=>{
     if (s.length > MaxVarPathLen) return false;
 	// q ns and NS mean the same thing. v and V mean the same thing. Going forward (2026-5-28+) use v. for root and q. for room.
-    if (!(s.startsWith('q.') || s.startsWith('ns.') || s.startsWith('v.') || s.startsWith('V.'))) return false; //TODO change V to v
+    //if (!(s.startsWith('q.') || s.startsWith('ns.') || s.startsWith('v.') || s.startsWith('V.'))) return false; //TODO change V to v
+	if(!isVarPathPrefix(s)) return false;
 
     // quick reject any whitespace
-    if (/\s/.test(s)) return false;
+    //if (/\s/.test(s)) return false;
+	if(ContainsWhitespaceRegex.test(s)) return false;
 
     // reject any unescaped single-quote inside bracketed segments
     let inQuote = false, esc = false;
@@ -1487,15 +1703,122 @@ var isVarPath = s=>{
     return !inQuote && !esc;   // balanced quotes & no trailing escape
 };
 
+VarVM.varPathPartsElseNull = path=>{
+	if(!isVarPath(path)) return null;
+	let parts = [];
+	let i = 0;
+	let readDotSegment = ()=>{
+		let start = i;
+		while(i < path.length && path[i] != '.' && path[i] != '[') i++;
+		if(i == start) return null;
+		return path.substring(start,i);
+	};
+	let root = readDotSegment();
+	if(!root) return null;
+	parts.push(root);
+	while(i < path.length){
+		if(path[i] == '.'){
+			i++;
+			let segment = readDotSegment();
+			if(!segment || isBareLowercaseIdent(segment)) return null;
+			parts.push(segment);
+		}else if(path[i] == '['){
+			i++;
+			if(path[i] != "'") return null;
+			i++;
+			let segment = '';
+			let closed = false;
+			while(i < path.length){
+				let c = path[i++];
+				if(c == '\\'){
+					if(i >= path.length) return null;
+					let escaped = path[i++];
+					if(escaped == 'r') segment += '\r';
+					else if(escaped == 'n') segment += '\n';
+					else if(escaped == 'u'){
+						let hex = path.substring(i,i+4);
+						if(!/^[0-9a-fA-F]{4}$/.test(hex)) return null;
+						segment += String.fromCharCode(parseInt(hex,16));
+						i += 4;
+					}else{
+						segment += escaped;
+					}
+				}else if(c == "'"){
+					closed = true;
+					break;
+				}else{
+					segment += c;
+				}
+			}
+			if(!closed || path[i] != ']') return null;
+			i++;
+			parts.push(segment);
+		}else{
+			return null;
+		}
+	}
+	return parts;
+};
+
+VarVM.getOrCreateVarElseNullIfInvalidString = function(path){
+	let parts = this.varPathPartsElseNull(path);
+	if(!parts) return null;
+	let root = parts[0];
+	let vr = null;
+	if(root == 'v' || root == 'V'){
+		vr = this.rootV;
+	}else if(root == 'q' || root == 'ns' || root == 'NS'){
+		vr = this.rootQ;
+	}
+	if(!vr) return null;
+	for(let i=1; i<parts.length; i++){
+		vr = vr.pU(parts[i]);
+	}
+	return vr;
+};
+
+Var.prototype.inPtrs = function(){
+	return this.cache.inPtrs || (this.cache.inPtrs = new Set());
+};
+
+Var.prototype.inPtrsSize = function(){
+	return this.cache.inPtrs ? this.cache.inPtrs.size : 0;
+};
+
+Var.prototype.inPtrsAdd = function(vr){
+	this.inPtrs().add(vr);
+	return this;
+};
+
+Var.prototype.inPtrsDel = function(vr){
+	if(this.cache.inPtrs) this.cache.inPtrs.delete(vr);
+	return this;
+};
+
 //get or create child Var
-Var.prototype.pU = function(nameOrBig){
+/*Var.prototype.pU = function(nameOrBig){
 	let ret;
 	if(isVarLit(nameOrBig) || isVarPath(nameOrBig)){ //isVarLit already verifies isLowercase(nameOrBig[0])
 		ret = this.pu[nameOrBig] || new Var(this, nameOrBig, null, this.ob||null); //auto puts it in this.pu[string]
 	}else{
 		if(isLowercase(nameOrBig[0]) && !nameOrBig.startsWith('ns.') && !nameOrBig.startsWith('v.')){ //ns. and v. are prefixes for use with Ptr$anything Ptrs$anything etc.
 			Err('This often happens when you try to add a new function or field to the Var class at runtime. Put it in Var.prototype or in the Var constructor this.theField = null; or = undefined; so the Proxy (prototype of prototype of each Var instance) is not touched. One prototype deep is where you put class functions. Child Vars cant start with lowercase letter, such as toString p v or you gave: '+nameOrBig);
+		}*/
+Var.prototype.pU = function(nameOrBig){
+	let ret = this.pu[nameOrBig];
+	if(ret) return ret;
+
+	if(isVarPathPrefix(nameOrBig) && !isVarPath(nameOrBig)){
+		Err('Bad/too-long Var path, paths are never hashed: '+nameOrBig);
+	}
+
+	if(isVarLit(nameOrBig) || isVarHash(nameOrBig) || isVarPath(nameOrBig)){
+		ret = new Var(this, nameOrBig, null, this.ob||null); //auto puts it in this.pu[string]
+	}else{
+		if(isBareLowercaseIdent(nameOrBig)){
+			Err('This often happens when you try to add a new function or field to the Var class at runtime. Put it in Var.prototype or in the Var constructor this.theField = null; or = undefined; so the Proxy (prototype of prototype of each Var instance) is not touched. One prototype deep is where you put class functions. Child Vars cant be lowercase bare identifiers, such as toString p v or you gave: '+nameOrBig);
 		}
+
 		//let hash = hashStringToHex(nameOrBig);
 		let name = hashStringToBase64(nameOrBig); //todo dont hash if its small enuf to be a literal id (dont use .big)
 		/*if(nameOrBig.startsWith('mutid$')){ //FIXME 2025-1-9 removed the mutid$ prefix of tiles, so am not using it for anything.
@@ -1511,7 +1834,7 @@ Var.prototype.pU = function(nameOrBig){
 		
 		if(nameOrBig.startsWith('tile')){ //like tile1971583262467328$ then base64 of its Quad bytes, if small, else then base64 of hash of that.
 			if(isValidVarName(nameOrBig) && nameOrBig.length < 64){
-				//considering size of tile1971583262467328$ (size 21) and 43 digits of sha256 base64 (21+43==64),
+				//considering size of tile1971583262467328$ (size 21) and 43 (update: 42 digits of sha252) digits of sha256 base64 (21+43==64),
 				//if its smaller then use it directly, else hash it.
 				//isValidVarName might let vars be bigger like 100, but i havent used it much and am experimenting. Might need those bigger vars.
 				name = nameOrBig;
@@ -1535,13 +1858,7 @@ Var.prototype.pU = function(nameOrBig){
 			name = 'Gob$'+name; //no special prefixing
 		}*/
 		
-		let i = nameOrBig.indexOf('$');
-		if(i == -1){
-			name = 'Gob$'+name; //default prefix
-		}else{
-			//use same prefix from nameOrBig whatevers up to and including the first $ if exists 
-			name = nameOrBig.substring(0,i+1)+name;
-		}
+		name = varHashPrefixOfBig(nameOrBig)+name;
 		
 		//ret = this.pu[name] || new Var(this, name, nameOrBig, this.gob||null); //auto puts it in this.pu[string]
 		ret = this.pu[name] || new Var(this, name, nameOrBig, this.ob||null); //auto puts it in this.pu[string]
@@ -1578,8 +1895,15 @@ const varProxyHandler = {
 	//If a childName is not found, creates it in thisVar.childName and in thisVar.pu.childName which point at the same Var,
 	//so thisVar.pu.childName doesnt create it and theres some syntax thisVar.pu.?childName maybe, that can chain it get undefined at end.
 	get(target, prop, receiver){
+		VarVM.countCallsOfVarProxy++;
 		if(typeof(prop) === 'symbol'){
 			return Reflect.get(target, prop, receiver);
+		}
+		let saveProxyCallsHere = VarVM.saveProxyCallsHereIfIsListInsteadOfNull;
+		if(saveProxyCallsHere && Math.random()<.001){
+			saveProxyCallsHere.push(
+				receiver.path()+"["+singleQuoteEscape(String(prop))+"]"
+			);
 		}
 		//return target[prop] || receiver.pU(prop);
 		/*GPT-o3 says why change receiver.pU(prop) to target.pU.call(receiver, prop)
@@ -1587,34 +1911,34 @@ const varProxyHandler = {
 		+	 const child = target.pU.call(receiver, prop);
 			return child;
 		}
-		❓ Why not receiver.pU(prop)?
-		When the instance (receiver) looks for pU, it doesn’t have an
+		â“ Why not receiver.pU(prop)?
+		When the instance (receiver) looks for pU, it doesnâ€™t have an
 		own-property, so the engine would walk up the prototype chain:
-		VarPrototype → VarProxy → …
-		That walk would re-enter the same proxy trap we’re executing right
+		VarPrototype â†’ VarProxy â†’ â€¦
+		That walk would re-enter the same proxy trap weâ€™re executing right
 		now, leading to an extra hop (and, in some cases, an infinite loop
 		if guards were missing).
 
-		By calling target.pU.call(receiver, …) we:
+		By calling target.pU.call(receiver, â€¦) we:
 
 		grab the already-known method reference directly from the
-		plain object that is the proxy’s target (VarPrototype),
+		plain object that is the proxyâ€™s target (VarPrototype),
 
 		bind this to the real instance (receiver),
 
 		avoid any second trip through the proxy machinery.
 
-		This keeps the “first-touch” cost to one proxy invocation and guarantees
+		This keeps the â€œfirst-touchâ€ cost to one proxy invocation and guarantees
 		that all subsequent property reads hit the freshly cached
 		this[childName] own-property at plain-object speed.
 		*/
 		//return target[prop] || target.pU.call(receiver,prop);
 		
-		//Prototype-owned props (pU, path, toString, …)
+		//Prototype-owned props (pU, path, toString, â€¦)
 		//if(prop in target){
 		//	return target[prop];
 		//}
-		//Prototype-owned methods (pU, path, toString, …)
+		//Prototype-owned methods (pU, path, toString, â€¦)
 		//if(prop in Var.prototype){
 		//	return Var.prototype[prop];
 		//}
@@ -1632,7 +1956,7 @@ const varProxyHandler = {
 		at Object.get (bellsack161.html:2384:26)
 		at Reflect.get (<anonymous>)
 		at Object.get (bellsack161.html:2384:26)
-			Here’s the one-line fix that stops the infinite recursion.
+			Hereâ€™s the one-line fix that stops the infinite recursion.
 		(Only the get trap is touched.)
 
 		diff
@@ -1644,30 +1968,76 @@ const varProxyHandler = {
 		-		if(cached !== undefined){
 		-			return cached;
 		-		}
-		+		//Already-materialised child (own-prop on the *instance*) – check without climbing the
-		+		//prototype chain so we don’t re-enter this proxy trap.
+		+		//Already-materialised child (own-prop on the *instance*) â€“ check without climbing the
+		+		//prototype chain so we donâ€™t re-enter this proxy trap.
 		+		if (Object.prototype.hasOwnProperty.call(receiver, prop)) {
 		+			return receiver[prop];
 		+		}
 		*/
-		//Already-materialised child (own-prop on the *instance*) – check without climbing the
-		//prototype chain so we don’t re-enter this proxy trap.
+		//Already-materialised child (own-prop on the *instance*) â€“ check without climbing the
+		//prototype chain so we donâ€™t re-enter this proxy trap.
 		if(Object.prototype.hasOwnProperty.call(receiver, prop)){
 			return receiver[prop];
 		}
 		
 		//First-touch child: create & cache via pU
 		//return target.pU.call(receiver, prop);
-		//First-touch child — use receiver.pU; the lookup
+		//First-touch child â€” use receiver.pU; the lookup
 		//resolves on Var.prototype and never re-enters the proxy.
 		return receiver.pU(prop);
+	},
+	set(target,prop,value,receiver){
+		throw new Error(
+			'Unexpected VarProxy set for property '+String(prop)+
+			'. Built-in Var fields must exist on Var.prototype, and dynamic child Vars must be defined directly on their parent.'
+		);
 	},
 };
 
 //Var.prototype = new Proxy(Var.prototype, varProxyHandler);
-const VarProxy	 = new Proxy(Object.create(null), varProxyHandler);
-Object.setPrototypeOf(Var.prototype, VarProxy); //2025-7-5 changing from Var being a Proxy to "instance → proto → proxy".
-
+//Prevent varProxyHandler.set from happening in the Var constructor. The Proxy is attached
+//as proto of Var.prototype after every built-in constructor field and prototype method exists.
+Var.prototype.po = false;
+Var.prototype.big = null;
+Var.prototype.name = null;
+Var.prototype.cache = null;
+Var.prototype.ptr = null;
+Var.prototype.up = null;
+Var.prototype.h = 0;
+Var.prototype.pu = null;
+Var.prototype.ob = null;
+Var.prototype.obs = null;
+Var.prototype.p = 0;
+Var.prototype.v = 0;
+Var.prototype.t = 0;
+Var.prototype.tp = 1;
+Var.prototype.tv = 1;
+Var.prototype.kv = 0;
+Var.prototype.dp = 0;
+Var.prototype.dv = 0;
+Var.prototype.gr = 0;
+Var.prototype.prevGr = 0;
+Var.prototype.mn = -Infinity;
+Var.prototype.mx = Infinity;
+Var.prototype.poten = 0;
+Var.prototype.prevP = 0;
+Var.prototype.epsilon = DefaultEpsilon;
+Var.prototype.accelMul = 1;
+Var.prototype.e = 0;
+Var.prototype.gp = DefaultGp;
+Var.prototype.pr = 0;
+Var.prototype.ps = 0;
+Var.prototype.cv = 0;
+Var.prototype.vv = 0;
+Var.prototype.listeners = null;
+Var.prototype.dirtNext = undefined;
+Var.prototype.tempNext = undefined;
+Var.prototype.ej = null;
+Var.prototype.ejX = 0;
+Var.prototype.ejY = 0;
+Var.prototype.ejZ = 0;
+Var.prototype.path_ = null;
+Var.prototype.nath_ = null;
 
 //Var.prototype.pushEpsilon = function(epsilon){
 Var.prototype.pushEpsilon = function(){
@@ -1702,7 +2072,7 @@ Var.prototype.path = function(){
 		}else{
 			let upPath = this.up.path();
 			//if(isVarPath(this.name)){ //this is wrong cuz its a .name not the whole path
-			if(isVarLit(this.name)){
+			if(isDotPathSegment(this.name)){ //if(isVarLit(this.name)){
 				this.path_ = upPath+'.'+this.name;
 			}else{
 				this.path_ = upPath+'['+singleQuoteEscape(this.name)+']';
@@ -1721,7 +2091,7 @@ Var.prototype.nath = function(){ //TODO rename to qath?
 			this.nath_ = 'q'; //this.nath_ = 'ns';
 		}else{
 			let upNath = this.up.nath();
-			if(isVarLit(this.name)){
+			if(isDotPathSegment(this.name)){ //if(isVarLit(this.name)){
 				this.nath_ = upNath+'.'+this.name;
 			}else{
 				this.nath_ = upNath+'['+singleQuoteEscape(this.name)+']';
@@ -1745,17 +2115,17 @@ VarVM.next = function(dt){
 	while(list){
 		const d = list;						// current Var
 		list     = d.dirtNext;				// advance before we overwrite
-		d.dirtNext = d;						// self-ref ⇒ clean / inactive
+		d.dirtNext = d;						// self-ref â‡’ clean / inactive
 
-		/* 1 ─ heavy integrator (only place .p / .v change) */
+		/* 1 â”€ heavy integrator (only place .p / .v change) */
 		d.nextState(dt);					// may change d.v
 
-		/* 2 ─ notify observers once */
+		/* 2 â”€ notify observers once */
 		if(d.listeners){
 			for(const fn of d.listeners) try{ fn(d); } catch(e){ console.error(e); }
 		}
 
-		/* 3 ─ still moving? schedule itself for next frame */
+		/* 3 â”€ still moving? schedule itself for next frame */
 		if(d.v !== 0){						// uses the public API
 			d.makeDirty();					// will be processed next VarVM.next
 		}
@@ -1904,7 +2274,7 @@ Var.prototype.fieldEditor = function(field, isForMenu){
 			mul = 100; //FIXME?
 			hardMin = -1000;
 			hardMax = 1000;
-		}else if(this.name=='DisplayErrorsOnSurfaceInBrightGreenIfAbsMoreThan'){
+		}else if(this.name=='DisplayErrsOnSurfInBrightGreenIfAbsMoreThan'){
 			//FIXME stop hard-coding these slider ranges. find a standard place to put it outside Var*.js
 			add = 0; //FIXME?
 			mul = .002; //FIXME?
@@ -1951,7 +2321,7 @@ Var.prototype.fieldEditor = function(field, isForMenu){
 			mul = 50; //FIXME?
 			hardMin = 0;
 			hardMax = 1000;
-		}else if(this.name=='StartStrongRecoveryWhenBallPenetrateTerrainMoreThan'){
+		}else if(this.name=='StartStrongRecovWhenBallPenetrTerMoreThan'){
 			//FIXME stop hard-coding these slider ranges. find a standard place to put it outside Var*.js
 			add = 0;
 			mul = 1.3;
@@ -2060,6 +2430,9 @@ Var.prototype.fieldEditors = function(){
 		this.fieldEditor('cv',false),
 	];
 };
+
+const VarProxy = new Proxy(Object.create(null),varProxyHandler);
+Object.setPrototypeOf(Var.prototype,VarProxy); //instance -> Var.prototype -> VarProxy
 
 //var LogScale = function(mul){
 //	this.mul = mul;
@@ -2518,10 +2891,14 @@ var sha256 = function(bytesIn){
 //bytesToBase64 = bytes=>jsBase64ToDvBase64(btoa(String.fromCharCode.apply(null, bytes))); //returns string
 
 
+
 //use this one cuz its sorted by utf8 and ascii except = padding
 const dvBase64Digits = '$0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz=';
 //This is whats made by javascript atob and btoa funcs. This one is only used internally for atob and btoa
 const jsBase64Digits = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=';
+
+/*
+//TODO getting rid of jsBase64Digits and atob and btoa, use dvBase64Digits only.
 
 var bytesToJsBase64 = bytes=>btoa(String.fromCharCode.apply(null, bytes)); //returns string
 
@@ -2585,7 +2962,7 @@ var dvBase64ToJsBase64 = function(dvBase64){
 		s += '='; //pad
 	}
 	return s;
-};
+};*/
 
 var testBase64ToFromBytes = ()=>{
 	let listOfByteArrays = [Uint8Array.of(2,3,17,255,254,3,3,2,171,170,199),Uint8Array.of(10),Uint8Array.of(),Uint8Array.of(1,2,3,4),Uint8Array.of(1,2,3,4,5),Uint8Array.of(1,2,3,4,5,6),Uint8Array.of(1,2,3,4,5,6,7)];
@@ -2598,7 +2975,73 @@ var testBase64ToFromBytes = ()=>{
 		console.log('testBase64ToFromBytes_'+testNum+' test pass, bytes='+[...bytes].join(',')+' base64='+b64);
 	}
 };
+
+///START NEW BASE64STUFF
+
+var base64DigitToUint6 = {};
+for(let i=0;i<64;i++) base64DigitToUint6[dvBase64Digits[i]] = i;
+
+var GetUint6InByteArray = function(bytes,i){ //bytes is viewed as followed by 0 bits
+	let bit = i*6, j = bit>>3, sh = bit&7;
+	return ((((bytes[j]||0)<<8)|(bytes[j+1]||0)) >> (10-sh)) & 63;
+};
+var Uint6At = GetUint6InByteArray;
+
+var GetUint6InBase64 = function(s,i){ //base64 string is viewed as followed by 0 bits
+	let c = s[i];
+	if(c===undefined || c=='=') return 0;
+	let v = base64DigitToUint6[c];
+	if(v===undefined) throw new Error('Bad base64 char: '+c);
+	return v;
+};
+
+var GetByteInBase64 = function(s,i){
+	let bit = i*8, j = Math.floor(bit/6), sh = bit%6;
+	return (((GetUint6InBase64(s,j)<<6)|GetUint6InBase64(s,j+1)) >> (4-sh)) & 255;
+};
+
+var BytesToBase64MaybePad = function(bytes,isPad){
+	let rawLen = Math.ceil(bytes.length*8/6);
+	let outLen = isPad ? Math.ceil(bytes.length/3)*4 : rawLen;
+	let a = [], chunks = [];
+	for(let i=0;i<outLen;i++){
+		a.push(i<rawLen ? dvBase64Digits[Uint6At(bytes,i)] : '=');
+		if(a.length >= 0x8000){ chunks.push(a.join('')); a.length = 0; }
+	}
+	if(a.length) chunks.push(a.join(''));
+	return chunks.join('');
+};
+
+var bytesToBase64 = bytes=>BytesToBase64MaybePad(bytes,false); //dvBase64 no =
+var bytesToJsBase64 = bytes=>BytesToBase64MaybePad(bytes,true); //dvBase64 with =, old name
+
+var base64ToBytes = function(s){
+	let end = s.indexOf('=');
+	if(end != -1) s = s.substring(0,end);
+	let bytes = new Uint8Array(Math.floor(s.length*6/8));
+	for(let i=0;i<bytes.length;i++) bytes[i] = GetByteInBase64(s,i);
+	return bytes;
+};
+///END NEW BASE64STUFF
+
+
 testBase64ToFromBytes();
+
+
+//from old base64 code:
+//q.Hellooooooooooooooooooooooo4444ggggggggggggggggggggggggggggghhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd.path()
+//"v.Bellsack.Room1['V$GqrcO1WUqmWOynUr9akYLca8mmj85snSCpt9kWrvLQ']"
+//
+//from NEW BASE64STUFF:
+//q.Hellooooooooooooooooooooooo4444ggggggggggggggggggggggggggggghhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd.path()
+//This is wrong 2026-7-25 cuz shoulda been v.Bellsack.Room1.V$GqrcO1WUqmWOynUr9akYLca8mmj85snSCpt9kWrvLQ
+// "v.Bellsack.Room1['V$GqrcO1WUqmWOynUr9akYLca8mmj85snSCpt9kWrvLQ']"
+//isVarLit was recently modified.
+//At least theyre both V$GqrcO1WUqmWOynUr9akYLca8mmj85snSCpt9kWrvLQ. Just gotta fix that path thing.
+//
+//q.Hellooooooooooooooooooooooo4444ggggggggggggggggggggggggggggghhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd.path()
+//'v.Bellsack.Room1.V$GqrcO1WUqmWOynUr9akYLca8mmj85snSCpt9kWrvLQ'
+//That fixed it.
 
 //TODO rewrite these comments:
 //return 192 <= bytes[offset];
@@ -2606,12 +3049,15 @@ testBase64ToFromBytes();
 var byteHasChilds = byt=>(QFORK <= byt);
 //var hasChilds = (bytes, offset)=>byteHasChilds(bytes[offset]);
 
-var hashStringToHex = function(str){
+var hashStringToHex = function(str){ //sha256, 64 chars. not the usual sha252 of 42 chars. This was used in earlier code. I dont really need it anymore. TODO remove?
 	return bytesToHex(sha256(stringToBytes(str)));
 };
-var hashStringToBase64 = function(str){
+var hashBytesToBase64 = function(bytes){ //Uint8Array. sha252. 42 chars. drops last 4 bits so if you actually use 256 bits somewhere else such as ed25519 pubkey it doesnt think its a hash id.
+	return bytesToBase64(sha256(bytes)).substring(0,hashLenChars);
+};
+var hashStringToBase64 = function(str){ //42 base64 chars. sha252.
 	//return dagball.bytesToBase64(sha256(stringToBytes(str))); //fixme remove === padding at end.
-	return bytesToBase64(sha256(stringToBytes(str))); //fixme remove === padding at end.
+	return hashBytesToBase64(stringToBytes(str));
 };
 var utf8TextEncoder = new TextEncoder('utf-8');
 var utf8TextDecoder = new TextDecoder('utf-8');
@@ -2644,10 +3090,347 @@ var bytesAndRangeToHex = function(bytes,from,toExcl){
 //
 //V is the root Var of the tree of Vars. Each Var is a time-series of .p/position and .v/velocity and .t/time. gob.influence like dagball.Circ.influence
 //and dagball.Ball.influence is a Var that if its .p/value is 1 it exists and if 0 does not exist, in that namespace.
+var varComparator = (a,b)=>{ //v < v.Bellsack < v.C < v.C.Hello < v.C.Zello
+	let ap = a.path();
+	let bp = b.path();
+	return ap < bp ? -1 : (ap > bp ? 1 : 0);
+};
+
+class Varset{
+	constructor(vars){
+		let list = Array.from(vars || []);
+		for(let i=1; i<list.length; i++){
+			if(varComparator(list[i-1], list[i]) >= 0){
+				throw new Error('Varset vars must be strictly increasing by varComparator, prev='+list[i-1].path()+', next='+list[i].path());
+			}
+		}
+		this.list = Object.freeze(list);
+		this.set = new Set(list);
+		this.fields = {};
+	}
+	has(vr){
+		return this.set.has(vr);
+	}
+	containsAll(varsetOrList){
+		let list = varsetOrList instanceof Varset ? varsetOrList.list : varsetOrList;
+		for(let vr of list){
+			if(!this.has(vr)) return false;
+		}
+		return true;
+	}
+	equals(other){
+		if(!(other instanceof Varset)) return false;
+		if(this.list.length != other.list.length) return false;
+		for(let i=0; i<this.list.length; i++){
+			if(this.list[i] !== other.list[i]) return false;
+		}
+		return true;
+	}
+	toString(){
+		return JSON.stringify(this.list.map(vr=>vr.path()));
+	}
+}
+
+let varsetCache = new Map();
+var getOrCreateVarset = vars=>{
+	let list = vars instanceof Varset ? vars.list : Array.from(vars || []);
+	for(let i=1; i<list.length; i++){
+		if(varComparator(list[i-1], list[i]) >= 0){
+			throw new Error('getOrCreateVarset vars must be strictly increasing by varComparator, prev='+list[i-1].path()+', next='+list[i].path());
+		}
+	}
+	let key = list.map(vr=>vr.path()).join('\n');
+	let ret = varsetCache.get(key);
+	if(!ret){
+		ret = new Varset(list);
+		varsetCache.set(key, ret);
+	}
+	return ret;
+};
+
+class EdJoint{
+	constructor(varsetOrVars){
+		let varset;
+		if(varsetOrVars instanceof Varset){
+			varset = varsetOrVars;
+		}else{
+			let list = Array.isArray(varsetOrVars) ? varsetOrVars : [varsetOrVars];
+			list = Array.from(new Set(list)).sort(varComparator);
+			varset = getOrCreateVarset(list);
+		}
+		this.vars = varset;
+		this.varset = varset;
+	}
+	has(vr){
+		return this.vars.has(vr);
+	}
+	containsAll(varsetOrList){
+		return this.vars.containsAll(varsetOrList);
+	}
+	toString(){
+		return 'EdJoint('+this.vars.toString()+')';
+	}
+}
+
 //const V = window.V = new Var(null, 'V'); //var Var = function(optionalParentVar, optionalName, optionalBig, optionalGob)
 
 const V = window.V = new Var(null, 'v'); //2025-10-30 renaming V to v as root. See 'ns.' and 'v.' prefixes in Var.prototype.path() and isVarLit and isVarPath.
+VarVM.rootV = V;
 console.log('Var.js, window.V.path() = '+window.V.path());
+
+//VarjsRedesignY2027M7D25:
+//Manual tests for Var.js segment/path/hash/base64/loadMap/touch behavior.
+//Called by the top/red panel button. Do not run automatically at boot.
+var testVarjs = function(){
+	console.log('Starting testVarjs()');
+
+	let assert = (cond,msg)=>{
+		if(!cond) throw new Error('testVarjs failed: '+msg);
+	};
+	let assertEq = (a,b,msg)=>{
+		if(a !== b) throw new Error('testVarjs failed: '+msg+', expected '+b+', observed '+a);
+	};
+	let assertStarts = (s,prefix,msg)=>assert(s.startsWith(prefix),msg+', expected prefix '+prefix+', observed '+s);
+	let assertEnds = (s,suffix,msg)=>assert(s.endsWith(suffix),msg+', expected suffix '+suffix+', observed '+s);
+	let assertThrows = (fn,msg)=>{
+		let didThrow = false;
+		try{
+			fn();
+		}catch(e){
+			didThrow = true;
+		}
+		assert(didThrow,msg);
+	};
+	let pass = name=>console.log('testVarjs '+name+' passed');
+
+	let vws = v.O1$VarjsTestWorkspace;
+	let qws = q.O1$VarjsTestWorkspace;
+	vws.p = 1;
+	qws.p = 1;
+
+	try{
+		let H41 = 'A'.repeat(41);
+		let H42 = 'A'.repeat(42);
+		let H43 = 'A'.repeat(43);
+		let H42Dollar = '$'.repeat(42);
+
+		assertEq(hashLenChars,42,'hashLenChars');
+		assertEq(MinHashIdLen,'V$'.length+42,'MinHashIdLen');
+		pass('constants');
+		testGraphicsBentCubeGeometry();
+
+		assert(isVarHash('V$'+H42),'V$H42 is hash');
+		assert(isVarHash('Sak$'+H42),'Sak$H42 is hash');
+		assert(isVarHash('Json$'+H42),'Json$H42 is hash');
+		assert(isVarHash('_$'+H42),'_$H42 is hash');
+		assert(isVarHash('V$'+H42Dollar),'hash suffix may contain $ as dvBase64 char');
+		assert(!isVarHash('v$'+H42),'lowercase first prefix char rejected');
+		assert(!isVarHash('$'+H42),'empty prefix rejected');
+		assert(!isVarHash('Bad-Prefix$'+H42),'punctuation in prefix rejected');
+		assert(!isVarHash('V$'+H41),'41-char suffix rejected');
+		assert(!isVarHash('V$'+H43),'43-char suffix rejected');
+		assert(!isVarHash('V$'+'A'.repeat(41)+'='),'= rejected in hash suffix');
+		assert(!isVarHash('V$'+'A'.repeat(41)+'-'),'- rejected in hash suffix');
+		assert(!isVarHash('Ed$'+H43),'ed25519-style 43-char suffix rejected');
+		pass('isVarHash');
+
+		assert(isVarLit('Hello'),'Hello literal');
+		assert(isVarLit('Opt'),'Opt literal');
+		assert(isVarLit('_n20_n12_8_n19_12_18'),'underscore-start literal');
+		assert(isVarLit('G$short'),'G$short literal');
+		assert(isVarLit('Ed$'+H43),'Ed$H43 literal, not hash');
+		assert(!isVarLit('V$'+H42),'V$H42 not literal because hash-shaped');
+		assert(!isVarLit('Sak$'+H42),'Sak$H42 not literal because hash-shaped');
+		assert(!isVarLit('hello'),'lowercase bare not literal');
+		assert(!isVarLit('9Hello'),'digit-start not literal');
+		assert(!isVarLit('$Hello'),'dollar-start not literal');
+		assert(!isVarLit('Hello World'),'space not literal');
+		assert(!isVarLit('Hello-World'),'- not literal');
+		assert(!isVarLit('A'.repeat(MaxLiteralNameLen+1)),'too-long literal rejected');
+		pass('isVarLit');
+
+		assert(isVarPathPrefix('q.A'),'q. path prefix');
+		assert(isVarPathPrefix('v.A'),'v. path prefix');
+		assert(isVarPathPrefix('V.A'),'V. path prefix');
+		assert(isVarPathPrefix('ns.A'),'ns. path prefix currently accepted');
+		assert(!isVarPathPrefix('x.A'),'x. not path prefix');
+		assert(isVarPath('q.Thing.Blah.p'),'q path to field');
+		assert(isVarPath('v.Bellsack.Room5.Thing'),'v path to Var');
+		assert(isVarPath('V.Bellsack.Room5.Thing'),'V path currently accepted');
+		assert(isVarPath("q.A['v.B.C']"),'quoted path segment accepted');
+		assert(!isVarPath('Room1.X'),'path without root alias rejected');
+		assert(!isVarPath('x.Bellsack.Room1'),'unknown path root rejected');
+		assert(!isVarPath('q.Bad Path'),'path whitespace rejected');
+		assert(!isVarPath("q.A['unterminated]"),'unbalanced quote rejected');
+		assert(!isVarPath('q.A\\'),'trailing escape rejected');
+		assert(!isVarPath('q.'+'A'.repeat(MaxVarPathLen)),'too-long path rejected');
+		pass('isVarPath');
+
+		assert(isChildName('Hello'),'child key accepts literal');
+		assert(isChildName('V$'+H42),'child key accepts hash id');
+		assert(isChildName('q.Thing.Blah.p'),'child key accepts path');
+		assert(!isChildName('hello'),'child key rejects lowercase bare');
+		assert(!isChildName('hello world'),'child key rejects raw big string');
+		assert(!isChildName('q.Bad Path'),'child key rejects bad path');
+		pass('isChildName');
+
+		assert(isDotPathSegment('Hello'),'dot path accepts normal segment');
+		assert(isDotPathSegment('V$'+H42),'dot path accepts hash id');
+		assert(!isDotPathSegment('Hello-World'),'dot path rejects hyphen');
+		assert(!isDotPathSegment('q.A'),'dot path rejects whole path string');
+		pass('isDotPathSegment');
+
+		let bytes32 = new Uint8Array(32);
+		for(let i=0;i<bytes32.length;i++) bytes32[i] = i;
+		let b64_32 = bytesToBase64(bytes32);
+		assertEq(b64_32.length,43,'32 bytes encode to 43 chars');
+		assertEq(base64ToBytes(b64_32).length,32,'32-byte base64 roundtrip length');
+		for(let i=0;i<32;i++) assertEq(base64ToBytes(b64_32)[i],bytes32[i],'32-byte base64 roundtrip byte '+i);
+
+		let bytes64 = new Uint8Array(64);
+		for(let i=0;i<bytes64.length;i++) bytes64[i] = (255-i)&255;
+		let b64_64 = bytesToBase64(bytes64);
+		assertEq(b64_64.length,86,'64 bytes encode to 86 chars');
+		assertEq(base64ToBytes(b64_64).length,64,'64-byte base64 roundtrip length');
+
+		let bytes255 = new Uint8Array(32);
+		for(let i=0;i<bytes255.length;i++) bytes255[i] = 255;
+		let b64_255 = bytesToBase64(bytes255);
+		assertEq(b64_255[42],dvBase64Digits[(255&15)<<2],'last base64 char for 32 bytes has final 4 bits then 2 zero bits');
+
+		let old43 = bytesToBase64(sha256(stringToBytes('prefix-test')));
+		let new42 = hashStringToBase64('prefix-test');
+		assertEq(old43.length,43,'old full sha256 base64 length');
+		assertEq(new42.length,42,'new sha252 hash length');
+		assertStarts(old43,new42,'new 42-char hash is prefix of old 43-char hash');
+		pass('base64AndHash');
+
+		let pub = ed25519PubKeyBytesToName(bytes32);
+		assertStarts(pub,'Ed$','pubkey prefix');
+		assertEq(pub.substring('Ed$'.length).length,43,'ed25519 pubkey suffix length 43');
+		assert(!isVarHash(pub),'ed25519 pubkey name is not hash-shaped');
+		let sig = ed25519SigBytesToName(bytes64);
+		assertStarts(sig,'EdSig$','sig prefix');
+		assertEq(sig.substring('EdSig$'.length).length,86,'ed25519 sig suffix length 86');
+		assert(!isVarHash(sig),'ed25519 sig name is not hash-shaped');
+		pass('ed25519Names');
+
+		let direct = qws.NormalChild;
+		assertEq(direct.name,'NormalChild','direct literal child name');
+		assertEq(direct.big,null,'direct literal child big null');
+		assertEnds(direct.path(),'.NormalChild','direct literal path dot form');
+
+		let bigNoPrefix = 'hello world raw big VarjsRedesignY2027M7D25';
+		let bigNoPrefixVar = qws[bigNoPrefix];
+		assertEq(bigNoPrefixVar.name,'V$'+hashStringToBase64(bigNoPrefix),'raw big without prefix hashes to V$');
+		assertEq(bigNoPrefixVar.big,bigNoPrefix,'raw big without prefix stored in big');
+		assertEnds(bigNoPrefixVar.path(),'.'+bigNoPrefixVar.name,'hash child path dot form');
+
+		let bigWithPrefix = 'G$hello world raw string VarjsRedesignY2027M7D25';
+		let bigWithPrefixVar = qws[bigWithPrefix];
+		assertEq(bigWithPrefixVar.name,'G$'+hashStringToBase64(bigWithPrefix),'raw big with prefix keeps prefix');
+		assertEq(bigWithPrefixVar.big,bigWithPrefix,'raw big with prefix stored in big');
+
+		assertThrows(()=>qws['bad$hello world'],'lowercase hash prefix rejected');
+		assertThrows(()=>qws['Bad-Prefix$hello world'],'punctuation hash prefix rejected');
+		assertThrows(()=>qws['q.Bad Path'],'bad path-like string throws instead of hashing');
+		assertThrows(()=>qws['q.'+'A'.repeat(MaxVarPathLen)],'too-long path-like string throws instead of hashing');
+		pass('pUCreateDirectAndBig');
+
+		let hashId = 'V$'+H42;
+		let hashVar = qws[hashId];
+		assertEq(hashVar.name,hashId,'direct hash-id lookup name');
+		assertEq(hashVar.big,null,'direct hash-id lookup has null big');
+		assertEnds(hashVar.path(),'.'+hashId,'direct hash-id path dot form');
+		pass('pUHashIdLookup');
+
+		let loadBig = 'Sak$VarjsRedesignY2027M7D25 loadMap big content with spaces';
+		let loadId = 'Sak$'+hashStringToBase64(loadBig);
+		let loadTarget = qws.LoadMapWorkspace;
+		loadTarget.loadMap({[loadId]:{big:loadBig,p:2,v:3,t:4}}, {keepNewest:true});
+		assert(loadTarget.pu[loadId],'loadMap created hash child from big');
+		assertEq(loadTarget.pu[loadId].big,loadBig,'loadMap stored big');
+		assertEq(loadTarget.pu[loadId].p,2,'loadMap p');
+		assertEq(loadTarget.pu[loadId].v,3,'loadMap v');
+		assertEq(loadTarget.pu[loadId].t,4,'loadMap t');
+		assertThrows(()=>loadTarget.loadMap({['Sak$'+H42]:{big:loadBig,p:1,t:5}}, {keepNewest:true}),'loadMap wrong hash throws');
+		pass('loadMapHashBig');
+
+		let noT = qws.LoadMapNoT;
+		noT.loadMap({ChildWithoutT:{p:7,v:8}}, {});
+		assertEq(noT.ChildWithoutT.p,7,'loadMap missing t p');
+		assertEq(noT.ChildWithoutT.v,8,'loadMap missing t v');
+		assertEq(noT.ChildWithoutT.t,1,'loadMap missing t defaults to 1 on new child');
+
+		let newest = qws.KeepNewest;
+		newest.p = 10;
+		newest.v = 20;
+		newest.touch(100);
+		newest.loadMap({p:30,v:40,t:99}, {keepNewest:true});
+		assertEq(newest.p,10,'keepNewest rejects older p');
+		assertEq(newest.v,20,'keepNewest rejects older v');
+		newest.loadMap({p:30,v:40,t:101}, {keepNewest:true});
+		assertEq(newest.p,30,'keepNewest accepts newer p');
+		assertEq(newest.v,40,'keepNewest accepts newer v');
+		assertEq(newest.t,101,'keepNewest accepts newer t');
+		pass('loadMapTime');
+
+		let touch = qws.TouchTest;
+		touch.p = 1;
+		touch.v = 2;
+		touch.touch(10);
+		touch.touchIfTpv();
+		assertEq(touch.t,10,'touchIfTpv unchanged keeps t');
+		touch.p = 3;
+		touch.touchIfTpv();
+		assert(touch.t > 10,'touchIfTpv changed p updates t');
+		assertEq(touch.tp,touch.p,'touchIfTpv updates tp');
+		assertEq(touch.tv,touch.v,'touchIfTpv updates tv');
+		pass('touchIfTpv');
+
+		let lit = qws.CCP.Lit$_10_11;
+		let litA = lit._n8_8;
+		let litB = lit._n8_9;
+		litA.p = 1;
+		litB.p = 1;
+		litA.t = 10;
+		litB.t = 11;
+		assert(lit.best() === litB,'Lit$ best picks highest t among same p');
+		litA.p = 2;
+		assert(lit.best() === litA,'Lit$ best picks highest p before t');
+		pass('quadCraftLitBest');
+
+		let qcBallX = vws.QuadCraft.Room1.Ball.B5.X;
+		qcBallX.p = 12.5;
+		qcBallX.v = -0.25;
+		qcBallX.touchIfTpv();
+		assertEnds(qcBallX.path(),'.QuadCraft.Room1.Ball.B5.X','QuadCraft-like ball path');
+		assert(qcBallX.t > 0,'QuadCraft-like touch time');
+		assert(isVarLit('Lit$_10_11'),'QuadCraft Lit$_10_11 literal');
+		assert(isVarLit('_n8_8'),'QuadCraft _n8_8 literal');
+		pass('quadCraftPaths');
+
+		let o1 = qws.O1$GraphNode.Node12;
+		let o2 = qws.O2$cw.Sak$ShortLiteral.Sak$InstanceShortLiteral;
+		o1.p = 1;
+		o2.p = 1;
+		assertEnds(o1.path(),'.O1$GraphNode.Node12','O1$ path');
+		assertEnds(o2.path(),'.O2$cw.Sak$ShortLiteral.Sak$InstanceShortLiteral','O2$ path');
+		pass('objectDepthNames');
+
+		vws.p = 0;
+		qws.p = 0;
+		console.log('Ending testVarjs(), all tests passed.');
+	}catch(e){
+		try{
+			vws.p = 0;
+			qws.p = 0;
+		}catch(e2){
+			console.error('testVarjs cleanup failed',e2);
+		}
+		throw e;
+	}
+};
 
 //FIXME 2025-9-5+ rename V to v (lowercase) in case a variable in Sak language is named "V", but those starting with a capital letter,
 //as usual in the Var tree, are child Var's, and others (what about those that dont start with a letter at all?)
