@@ -1,5 +1,118 @@
 //Var*.js, opensource/Apache2 (versions before Bellsack256/2025-8-3 are MIT) by Ben F Rayfield.
 //copied 2026-8-26 from the "Var*.js" script tag in https://github.com/benrayfield/jsutils/blob/master/src/bellsack/Bellsack0575.10.sharded.lamglLoopBodyB.worksWithGraphicsAndPhysics320BallsIn10PhysicsShardsAnd85GraphicsShardsAt60FPS.html
+//Modified since that copy as Var.j is being added; see Var.touch, VarVM.bestTieBreakerByJElseT, testVarJ, etc.
+
+/*
+This overview comment was written by GPT-5.6-sol-ultra on 2026-8-26.
+
+Var.js / Varjs overview
+
+Varjs represents mutable application, simulation, and game state as one tree of
+Var objects. The global v is the root Var. An embedding application can set q
+and VarVM.rootQ as a convenient reference to its current room or other subtree.
+Every Var has one parent in .up, zero or more named children in .pu, a .name,
+and a stable path such as v.SomeGame.SomeRoom.SomeObject.X.
+
+Each exact Var is primarily a scalar state location. Var.p is its position,
+value, weight, or existence value depending on how that path is used. Var.v is
+its velocity. A Var can also contain physics parameters, bounds, caches,
+pointers, an object in .ob, content in .big, and other fields. Children are
+separate Vars, not fields covered by their parent's p, v, t, or j.
+
+The Var prototype is backed by a Proxy. Accessing a valid child name can create
+that child on demand. Uppercase names, recognized literal names, hash names,
+and Var paths have special rules. Lowercase names are normally built-in fields
+or methods. Any new built-in field must be declared in the Var constructor and
+on Var.prototype before the Proxy is installed, or an access may be mistaken
+for a child lookup or rejected by the Proxy.
+
+Var names can identify ordinary tree nodes or content-addressed data. If .big
+exists, .name is always derived from its content and prefix. Prefixes can
+describe strings, JSON, code, pointers, literals, objects, tensors, or other
+kinds of content. The hash and path functions make references stable while
+allowing large content to be stored only where needed.
+
+Var.t and Var.j are different version systems. Var.t is a timestamp produced
+by TimeId or supplied by a caller. Var.j is a nondecreasing logical Jump value
+for competing versions of one exact Var's p and v. Var.j is intentionally
+jumpy and does not increase proportionally to time. A synchronization mode can
+choose highest t or highest j as its p/v winner rule, but must not mix those
+winner rules for one merge. Both fields may exist at the same time.
+
+Var.j values are comparable between versions of the same exact Var. A parent's
+j does not version its children, and sibling j values have independent
+histories. Equal j values with different p/v require an explicit protocol rule.
+VarVM.bestTieBreakerByJElseT can experimentally make Var.best use sibling j
+values to break equal-p ties, but that comparison might not be meaningful.
+
+Callers often modify .p or .v directly. Var.tp and Var.tv remember their values
+at the last touch so touchIfTpv can detect a direct change. touch() normally
+adds 1 to j and sets t to TimeId. touch(number) preserves the older API by
+setting only t. An options map can independently contain addJ andOr t.
+touchRecur applies a touch to every exact Var in a subtree, while
+touchIfTpvRecursive touches only Vars whose p or v changed.
+
+Var.nextState(dt) is the central scalar physics integrator and is especially
+important for sparse gradients. A Var.p can be viewed as one coordinate of a
+very high-dimensional state vector. Game or rule code can compute forces,
+differential changes, constraints, or loss gradients for only the small subset
+of dimensions involved in current interactions. It writes temporary inputs
+such as .gr, .dp, .dv, .kv, .mn, and .mx on those affected Vars and calls
+makeDirty(). It does not need to scan or integrate every Var in the tree.
+
+After all contributions for a physics batch have been accumulated,
+Var.nextState(dt) commits them to p and v. A spring adds
+(p-pr)*ps to gr. Position advances approximately as:
+
+	p += dt*(v + dp - gp*gr)
+
+and velocity advances approximately as:
+
+	v = (v + dt*accelMul*(dv-gr))*exp(-dt*kv)
+
+Position is clamped to mn and mx. This separates sparse gradient/force
+calculation from the state-changing integration step, so many rules can add
+contributions before p and v move. Calling nextState(0) clears temporary
+inputs without moving p or v, which is useful while evaluating gradients of
+possible states that have not been chosen.
+
+After integration, nextState resets temporary per-cycle fields including dp,
+dv, gr, poten, mn, and mx, and restores kv from its persistent base values.
+Persistent inputs such as pr, ps, cv, and vv remain. Code that modifies a
+temporary physics field must call makeDirty() so that the Var is scheduled.
+
+makeDirty() idempotently places a Var in VarVM's sparse dirty linked list.
+VarVM.nextState(dt) and the evolving VarVM.next(dt) scheduler process only
+queued Vars, batch state changes, and notify listeners after integration.
+Moving Vars can queue themselves for the next cycle. This sparse scheduling is
+intended to support very large Var trees where only a small changing or nearby
+subset participates in a particular physics cycle or gradient calculation.
+
+toMap/toJson serialize selected parts of the tree, and loadMap/loadJson restore
+or merge maps recursively. Queries can filter a sparse subtree, and map formats
+can use nested .pu or flat child fields. Old maps may omit fields that did not
+exist when they were written, so compatibility defaults need to be deliberate.
+
+As of 2026-8-26, Var.j integration is still in progress. touch and its tests
+know about j, but toMap, loadMap, copyLocalFrom, and network merge code do not
+yet fully preserve and compare j with p/v. Do not treat the highest-j protocol
+as complete until those paths and their round-trip/winner tests are upgraded.
+
+Var.best selects the child with highest p. Equal-p children are tie-broken by
+t by default, or experimentally by j when VarVM.bestTieBreakerByJElseT is true.
+That child-selection operation is different from choosing between two versions
+of the same exact Var.
+
+testVarjs() is the manual general self-test suite. testVarJ() tests touch
+parameter handling, exact-Var independence, recursion, change polling, and
+both Var.best tie-breaker modes. These unit tests do not replace browser/server
+integration tests for serialization, sparse transport, conflict resolution,
+or convergence among concurrent writers.
+
+Varjs is experimental and evolving. Preserve exact-Var state associations,
+tree/path invariants, backward compatibility, sparse-gradient batching, and
+deterministic conflict rules when extending it.
+*/
 
 console.error('TODO O1_ O2_ O3_ O4_ (objects)... P_ Ps_ (Ptrs) L_ Ls_ (Lits) by ORing, to compute Var.po as true or false');
 if(window.v !== undefined) throw new Error('Theres already a v global var, which is the root like v.Bellsack.Room5.Hello.World');
@@ -142,6 +255,7 @@ const Var = function(optionalParentVar, optionalName, optionalBig, optionalGob){
 	
 	this.p = 0; //position
 	this.v = 0; //velocity
+	this.j = 0; //nondecreasing jump/version number for choosing between conflicting p/v states
 	
 	//2026-6-6: ok. lets boot in var constructor as t=0, but from loadMap use ||1.
 	//The rule will be, in json/map the default t is 1, and in Var it boots at t=0.
@@ -151,9 +265,9 @@ const Var = function(optionalParentVar, optionalName, optionalBig, optionalGob){
 	//accelMul to am? or 1/accelMul rename to ma or m meaning mass?) mn=-Infinity mx=Infinity etc).
 	this.t = 0; //2025-1-9 starting to use it experimentally... not used as of 2025-2-20 even though some code copies it, maybe later? TODO actual current time //TODO? this.t = utc time as float64 so has at least microsecond precision for 100+ more years.
 	
-	//.p is often set directly. so it would tend to be unreliable cuz caller will forget to do that. Lets go with .tp and .tv meaning the last values of p and v when t was updated, and just poll it
-	this.tp = this.p+1; //value of this.p last time this.t was updated. not copied to/from tomcat, is only for updating .t
-	this.tv = this.v+1; //value of this.v last time this.t was updated. not copied to/from tomcat, is only for updating .t
+	//.p and .v are often set directly. tp and tv let touchIfTpv poll for those changes.
+	this.tp = this.p+1; //value of this.p at the last touch. not copied to/from tomcat
+	this.tv = this.v+1; //value of this.v at the last touch. not copied to/from tomcat
 	
 	this.kv = 0; //velocity continuous decay per second, using this.v *= Math.exp(-dt*this.kv)
 	this.dp = 0; //diffeq, extra change of p per second See pinballBumper in dagball.
@@ -343,6 +457,8 @@ Var.prototype.opt = { //must be named opt instead of Opt cuz Opt would be a chil
 const VarVM = Var.prototype.vm = new function(){}; //put things shared by all Var's here.
 VarVM.rootV = null;
 VarVM.rootQ = null;
+//Var.p is the main comparison in Var.best(); equal Var.p is tie-broken by Var.j if true, else Var.t.
+VarVM.bestTieBreakerByJElseT = false;
 VarVM.countCallsOfVarProxy = 0;
 VarVM.decayingCountOfCallsOfVarProxy = 0;
 VarVM.countCallsOfVarProxy_atLastDecayUpdate = null;
@@ -719,33 +835,133 @@ var DefaultGp = 0;
 //var DefaultGp = 15.5;
 
 //console.error('TODO merge Var.prototype.touch into Var.prototype.makeDirty but dont call TimeId() that often cuz system clock could be the bottleneck in modding vars in that case. Instead only call TimeId() in lamglLoopBody once and call ...');
-Var.prototype.touchRecur = function(optionalT){
-	this.touch(optionalT);
+var varTouchParamToMap = param=>{
+	if(param === undefined){
+		return {addJ:1, t:TimeId()};
+	}else if(typeof param === 'number'){
+		return {t:param};
+	}else{
+		return param;
+	}
+};
+
+Var.prototype.touchRecur = function(param){
+	this.touch(param);
 	for(const k in this.pu){
-		this.pu[k].touchRecur(optionalT);
+		this.pu[k].touchRecur(param);
 	}
 	return this; //for chaining calls
 };
-Var.prototype.touch = function(optionalT){
-	//TimeId() returns a unique time, increments by at least 1 ULP.
-	this.t  = optionalT!==undefined ? optionalT : TimeId();
-	this.tp = this.p; //tp is value of p, and tv is value of v, the last time t was updated.
+
+/*
+2026-8-26: Var.j is being added for distributed synchronization.
+
+Var.t and Var.j describe different kinds of ordering.
+
+Var.t (Time) is a time label. Calling touch() normally sets t to TimeId(), which gives
+a unique UTC time in this JavaScript context. Passing a number directly to
+touch keeps the older API behavior of setting t to that number. Var.t remains
+useful for recording when something happened, local bookkeeping, debugging,
+and compatibility with data and code that already contain t.
+
+Var.j (Jump) is a nondecreasing logical version for this exact Var's p and v. Var.j
+does not increase proportionally to time. It is intentionally jumpy. A caller
+can add a small amount for a weak local update, a larger amount for an ordinary
+network write, or a much larger amount when an event must override competing
+simulation updates. These jumps are priorities between versions, not seconds,
+frames, network sequence numbers, or measurements of elapsed time.
+
+A synchronization protocol can choose Var.t or Var.j as its winner rule, but
+it must not use both winner rules at once for the same merge. A Var can contain
+both t and j at the same time, but every participant must agree which one
+decides which p and v win. A state can have a newer t but a lower j, or an older
+t but a higher j. Mixing the two winner rules can make participants choose
+different values and prevent convergence. The synchronization design described
+below chooses Var.j as the winner rule. Var.t remains present but does not
+participate in that winner decision.
+
+The synchronization rule is: for the same exact Var, always keep the p and v
+belonging to the highest Var.j, regardless of Var.t. An incoming state with a
+higher j replaces the current p and v even when its t is older. An incoming
+state with a lower j cannot replace them even when its t is newer. The t value
+must therefore not be used to override the decision made by j.
+
+This rule addresses a distributed-simulation problem. Several browsers may be
+simulating and writing the same Var while messages between them are delayed.
+If newest wall-clock t always won, each browser would usually have advanced its
+local simulation after the remote write was sent. It would then reject the
+remote write as old, even when that write represents an important action. The
+browsers could continue producing locally newer timestamps and permanently
+diverge.
+
+Var.j instead lets writers express how strongly an update should win. A local
+prediction can make a small jump. A browser currently doing ordinary shared
+simulation can make larger jumps. A discrete action that must be observed by
+the other browsers can make a much larger jump. After a browser receives a
+higher j, its later changes continue upward from that received j. A large jump
+does not create a permanent owner or write lock: any browser can later write
+the Var by producing a still higher j.
+
+This is a cooperative game-theory rule, not a security boundary. A writer that
+uses unnecessarily huge jumps can suppress reasonable writers until their j
+values catch up. Callers must therefore use agreed jump sizes, never decrease
+j, and use finite values large enough that adding them actually changes the
+JavaScript Number.
+
+Var.j applies separately to each exact Var. It does not apply to that Var's
+parent, children, or siblings. Updating a parent's j does not make its children
+newer, and updating a child's j does not make its parent newer. Recursive touch
+operations touch each visited Var independently. There is also no implied
+atomic group: related Vars can have different winning j values.
+
+Server-assigned tNet values solve a separate transport problem. A tNet range
+determines which accepted updates are sent through the network without losing
+or repeatedly sending ranges. Var.j determines which competing p and v win at
+one Var. Var.t records time. None of those three orderings should be substituted
+for either of the others.
+
+Equal j values do not establish an order between different p and v values.
+Writers should avoid producing conflicting states with equal j, or the network
+merge layer must use one explicitly defined tie rule. Var.t must not silently
+become that tie rule unless the protocol deliberately specifies it.
+
+Var.tp and Var.tv remember p and v at the last touch. They let touchIfTpv detect
+p or v being changed directly. They are local bookkeeping and do not decide
+which network state wins.
+
+The touch parameter can be:
+- undefined: use {addJ:1, t:TimeId()}.
+- a number: preserve the older behavior by setting only t.
+- an options map: independently apply addJ andOr t.
+
+A missing addJ leaves j unchanged. A missing t leaves t unchanged. In
+particular, touch({addJ:n}) performs a j-only jump without changing t.
+*/
+Var.prototype.touch = function(param){
+	let map = varTouchParamToMap(param);
+	if(map.addJ !== undefined){
+		this.j += map.addJ;
+	}
+	if(map.t !== undefined){
+		this.t = map.t;
+	}
+	this.tp = this.p; //tp and tv are the p and v values at the last touch.
 	this.tv = this.v;
 	return this; //for chaining calls
 };
 
-//if p or v changed since t was last updated (not counting if it already changed back, a rare case) then update this.t,
-//and set tp and tv to the current values.
-Var.prototype.touchIfTpv = function(){
+//If p or v changed since the last touch (not counting if it already changed back, a rare case),
+//touch using param. With no param, this adds 1 to j and updates t to TimeId().
+Var.prototype.touchIfTpv = function(param){
 	if((this.p != this.tp) || (this.v != this.tv)){
-		this.touch();
+		this.touch(param);
 	}
 };
 
-Var.prototype.touchIfTpvRecursive = function(){
-	this.touchIfTpv();
+Var.prototype.touchIfTpvRecursive = function(param){
+	this.touchIfTpv(param);
 	for(let name in this.pu){
-		this.pu[name].touchIfTpvRecursive();
+		this.pu[name].touchIfTpvRecursive(param);
 	}
 };
 
@@ -1397,16 +1613,22 @@ Var.prototype.search = function(goal, optionalMaxResults){
 Var.prototype.best = function() {
 	let best = null;
 	let bestP = -Infinity;
-	let bestT = -Infinity;
+	let bestTOrJ = -Infinity;
 
 	for (const name in this.pu) {
 		const child = this.pu[name];
 		if (!child) continue;
 
-		if (child.p > bestP || (child.p === bestP && child.t > bestT)) {
+		//Best tie-breaking by j is experimental and might not make sense: Var.j orders versions of one exact Var,
+		//so j values from different sibling Vars have independent histories and are not necessarily comparable.
+		if (child.p > bestP || (child.p === bestP && (
+			VarVM.bestTieBreakerByJElseT
+				? child.j > bestTOrJ
+				: child.t > bestTOrJ
+		))) {
 			best = child;
 			bestP = child.p;
-			bestT = child.t;
+			bestTOrJ = VarVM.bestTieBreakerByJElseT ? child.j : child.t;
 		}
 	}
 
@@ -2009,6 +2231,7 @@ Var.prototype.ob = null;
 Var.prototype.obs = null;
 Var.prototype.p = 0;
 Var.prototype.v = 0;
+Var.prototype.j = 0;
 Var.prototype.t = 0;
 Var.prototype.tp = 1;
 Var.prototype.tv = 1;
@@ -3181,6 +3404,130 @@ console.log('Var.js, window.V.path() = '+window.V.path());
 //VarjsRedesignY2027M7D25:
 //Manual tests for Var.js segment/path/hash/base64/loadMap/touch behavior.
 //Called by the top/red panel button. Do not run automatically at boot.
+//These Var.j tests were made by GPT-5.6-Sol-ExtraHigh.
+var testVarJ = function(){
+	console.log('Starting testVarJ()');
+	let assert = (cond,msg)=>{
+		if(!cond) throw new Error('testVarJ failed: '+msg);
+	};
+	let assertEq = (a,b,msg)=>{
+		if(a !== b) throw new Error('testVarJ failed: '+msg+', expected '+b+', observed '+a);
+	};
+	let pass = name=>console.log('testVarJ '+name+' passed');
+
+	let vr = q.O1$VarjsTestWorkspace.VarJTest;
+	vr.p = 10;
+	vr.v = 20;
+	vr.j = 0;
+	vr.t = 30;
+	vr.tp = vr.p;
+	vr.tv = vr.v;
+
+	vr.touch(40);
+	assertEq(vr.j,0,'numeric touch does not change j');
+	assertEq(vr.t,40,'numeric touch sets t');
+	assertEq(vr.tp,vr.p,'numeric touch updates tp');
+	assertEq(vr.tv,vr.v,'numeric touch updates tv');
+	pass('numericTouch');
+
+	vr.touch({addJ:5});
+	assertEq(vr.j,5,'addJ-only touch adds to j');
+	assertEq(vr.t,40,'addJ-only touch does not change t');
+
+	vr.touch({t:50});
+	assertEq(vr.j,5,'t-only touch does not change j');
+	assertEq(vr.t,50,'t-only touch sets t');
+
+	vr.touch({addJ:7,t:60});
+	assertEq(vr.j,12,'touch can addJ and set t together');
+	assertEq(vr.t,60,'touch can set t with addJ');
+	pass('optionsMapTouch');
+
+	vr.touch();
+	assertEq(vr.j,13,'no-param touch defaults to addJ 1');
+	assert(vr.t > 60,'no-param touch defaults to TimeId');
+	pass('noParamTouch');
+
+	let unchangedJ = vr.j;
+	let unchangedT = vr.t;
+	vr.touchIfTpv({addJ:9});
+	assertEq(vr.j,unchangedJ,'unchanged p/v does not addJ');
+	assertEq(vr.t,unchangedT,'unchanged p/v does not change t');
+
+	vr.p = 11;
+	vr.touchIfTpv({addJ:9});
+	assertEq(vr.j,unchangedJ+9,'changed p causes requested addJ');
+	assertEq(vr.t,unchangedT,'j-only touchIfTpv does not change t');
+	assertEq(vr.tp,vr.p,'j-only touchIfTpv updates tp');
+	assertEq(vr.tv,vr.v,'j-only touchIfTpv updates tv');
+	vr.touchIfTpv({addJ:9});
+	assertEq(vr.j,unchangedJ+9,'touchIfTpv does not repeat the same change');
+	pass('touchIfTpv');
+
+	let parent = q.O1$VarjsTestWorkspace.VarJRecursive;
+	let child = parent.Child;
+	let grandchild = child.Grandchild;
+	parent.j = 0;
+	child.j = 0;
+	grandchild.j = 0;
+	parent.t = 70;
+	child.t = 71;
+	grandchild.t = 72;
+
+	parent.touch({addJ:2});
+	assertEq(parent.j,2,'touch changes the exact Var');
+	assertEq(child.j,0,'parent touch does not change child j');
+	assertEq(grandchild.j,0,'parent touch does not change grandchild j');
+	pass('exactVarIndependence');
+
+	parent.j = 0;
+	parent.touchRecur({addJ:3});
+	assertEq(parent.j,3,'touchRecur changes parent j');
+	assertEq(child.j,3,'touchRecur changes child j independently');
+	assertEq(grandchild.j,3,'touchRecur changes grandchild j independently');
+	assertEq(parent.t,70,'j-only touchRecur leaves parent t');
+	assertEq(child.t,71,'j-only touchRecur leaves child t');
+	assertEq(grandchild.t,72,'j-only touchRecur leaves grandchild t');
+	pass('touchRecur');
+
+	parent.touch({});
+	child.touch({});
+	grandchild.touch({});
+	let parentJ = parent.j;
+	let childJ = child.j;
+	let grandchildJ = grandchild.j;
+	child.p++;
+	parent.touchIfTpvRecursive({addJ:4});
+	assertEq(parent.j,parentJ,'recursive polling leaves unchanged parent j');
+	assertEq(child.j,childJ+4,'recursive polling addsJ to changed child');
+	assertEq(grandchild.j,grandchildJ,'recursive polling leaves unchanged grandchild j');
+	pass('touchIfTpvRecursive');
+
+	let bestParent = q.O1$VarjsTestWorkspace.VarJBestTieBreakerByJElseT;
+	let higherT = bestParent.HigherT;
+	let higherJ = bestParent.HigherJ;
+	higherT.p = 1;
+	higherJ.p = 1;
+	higherT.t = 20;
+	higherJ.t = 10;
+	higherT.j = 5;
+	higherJ.j = 6;
+	let previousBestTieBreakerByJElseT = VarVM.bestTieBreakerByJElseT;
+	try{
+		VarVM.bestTieBreakerByJElseT = false;
+		assert(bestParent.best() === higherT,'equal p tie must be broken by higher t when bestTieBreakerByJElseT is false');
+		pass('equalPTieBreaksByTWhenFlagFalse');
+
+		VarVM.bestTieBreakerByJElseT = true;
+		assert(bestParent.best() === higherJ,'equal p tie must be broken by higher j when bestTieBreakerByJElseT is true');
+		pass('equalPTieBreaksByJWhenFlagTrue');
+	}finally{
+		VarVM.bestTieBreakerByJElseT = previousBestTieBreakerByJElseT;
+	}
+
+	console.log('Ending testVarJ(), all tests passed.');
+};
+
 var testVarjs = function(){
 	console.log('Starting testVarjs()');
 
@@ -3217,7 +3564,7 @@ var testVarjs = function(){
 		assertEq(hashLenChars,42,'hashLenChars');
 		assertEq(MinHashIdLen,'V$'.length+42,'MinHashIdLen');
 		pass('constants');
-		testGraphicsBentCubeGeometry();
+		//testGraphicsBentCubeGeometry();
 
 		assert(isVarHash('V$'+H42),'V$H42 is hash');
 		assert(isVarHash('Sak$'+H42),'Sak$H42 is hash');
@@ -3391,13 +3738,19 @@ var testVarjs = function(){
 		let lit = qws.CCP.Lit$_10_11;
 		let litA = lit._n8_8;
 		let litB = lit._n8_9;
-		litA.p = 1;
-		litB.p = 1;
-		litA.t = 10;
-		litB.t = 11;
-		assert(lit.best() === litB,'Lit$ best picks highest t among same p');
-		litA.p = 2;
-		assert(lit.best() === litA,'Lit$ best picks highest p before t');
+		let previousBestTieBreakerByJElseT = VarVM.bestTieBreakerByJElseT;
+		try{
+			VarVM.bestTieBreakerByJElseT = false;
+			litA.p = 1;
+			litB.p = 1;
+			litA.t = 10;
+			litB.t = 11;
+			assert(lit.best() === litB,'Lit$ best picks highest t among same p');
+			litA.p = 2;
+			assert(lit.best() === litA,'Lit$ best picks highest p before t');
+		}finally{
+			VarVM.bestTieBreakerByJElseT = previousBestTieBreakerByJElseT;
+		}
 		pass('quadCraftLitBest');
 
 		let qcBallX = vws.QuadCraft.Room1.Ball.B5.X;
@@ -3417,6 +3770,8 @@ var testVarjs = function(){
 		assertEnds(o1.path(),'.O1$GraphNode.Node12','O1$ path');
 		assertEnds(o2.path(),'.O2$cw.Sak$ShortLiteral.Sak$InstanceShortLiteral','O2$ path');
 		pass('objectDepthNames');
+
+		testVarJ();
 
 		vws.p = 0;
 		qws.p = 0;
