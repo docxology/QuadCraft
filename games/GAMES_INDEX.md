@@ -15,7 +15,7 @@
 | **Total Unit Tests** | 1,782 (all passing ✅) |
 | **Shared Modules** | 17 (12 core + 4 extended + hud-style.css) |
 | **Architecture** | Standalone HTML + `4d_generic/` shared modules |
-| **Last Validated** | 2026-02-23 |
+| **Last Validated** | 2026-08-31 — verified by `python3 run_games.py --validate` (30/30) and `python3 run_games.py --test` (1,782 pass / 0 fail) |
 
 ---
 
@@ -330,6 +330,8 @@ All games import shared modules from `4d_generic/` via `<script>` tags:
 ---
 
 ## 🌟 Enhancements for Existing Games
+
+> **Historical snapshot — not authoritative.** The "Complete" percentages below were captured at an earlier date and **contradict** the portfolio table above (e.g. Asteroids, Breakout, Pong). The by-genre portfolio table earlier in this file is the **canonical** completeness record.
 
 To fully leverage the Synergetics engine, existing games can be upgraded in the following ways to deepen their Quadray integration.
 

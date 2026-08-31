@@ -62,7 +62,7 @@ The quadray system uses four coordinates `(a, b, c, d)` instead of three Cartesi
 
 ### When Modifying Game State
 
-- Central state management in `gameState.js` (browser) or `Game.cpp` (native)
+- Central state management in `src/js/experiments/browser/js/core/gameState.js` (browser) or `src/game/Game.cpp` (native)
 - Use dirty flags to trigger mesh regeneration only when needed
 - Save format is JSON with quadray coordinates
 

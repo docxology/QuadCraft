@@ -2,6 +2,14 @@
 
 A tetrahedral-based voxel game using quadray coordinates, inspired by Minecraft.
 
+## Status & Verification (agents: start here)
+
+- **What this is:** an experimental tetrahedral voxel game (C++/OpenGL native, JS browser experiments) plus a 30-game 4D browser portfolio under `games/`.
+- **Current state, as of 2026-08-31, verified by command:** games portfolio fully green — `python3 games/run_games.py --validate` (30/30 pass) and `python3 games/run_games.py --test` (1,782 tests, 0 failures). Run these yourself; numbers were true when written, the command is the truth.
+- **Backlog / what to do next:** [TODO.md](TODO.md) (single canonical backlog).
+- **Documentation hub:** [docs/README.md](docs/README.md). Games portfolio details: [games/GAMES_INDEX.md](games/GAMES_INDEX.md).
+- **Native build (unverified this pass):** `./build.sh` (needs OpenGL, GLEW, GLFW3, CMake >= 3.10, C++17).
+
 ## Overview
 
 QuadCraft is an experimental voxel game that uses tetrahedral elements (instead of cubes) and quadray coordinates. This unique approach allows for more natural representation of slopes, curves, and complex structures that are difficult to achieve with traditional cubic voxels.
@@ -25,7 +33,7 @@ QuadCraft is an experimental voxel game that uses tetrahedral elements (instead 
 
 ### Pic
 
-<img src=<https://raw.githubusercontent.com/docxology/QuadCraft/refs/heads/main/src/js/experiments/QuadrayGrid_2025-5-26-307pET.png>><br>
+![Quadray grid experiment](https://raw.githubusercontent.com/docxology/QuadCraft/refs/heads/main/src/js/experiments/QuadrayGrid_2025-5-26-307pET.png)
 Those experiments are in js/experiments/QuadrayGrid2.html
 
 ## Technical Description
@@ -59,7 +67,7 @@ You'll need the following libraries installed:
 sudo apt-get install build-essential cmake libglew-dev libglfw3-dev
 
 # Clone the repository
-git clone https://github.com/yourusername/QuadCraft.git
+git clone https://github.com/docxology/QuadCraft.git
 cd QuadCraft
 
 # Build and run using the script
@@ -138,12 +146,10 @@ QuadCraft/
 │   ├── core/                    # Core engine components
 │   │   ├── coordinate/          # Quadray coordinate systems
 │   │   ├── world/               # World generation
-│   │   ├── physics/             # Physics engine
 │   │   └── entity/              # Entity management
 │   ├── render/                  # Rendering pipeline
 │   │   ├── mesh/                # Tetrahedral mesh generation
 │   │   ├── shader/              # Shader programs
-│   │   └── texture/             # Texture management
 │   ├── browser/                 # Browser-based experiments
 │   ├── js/                      # JavaScript experiments
 │   ├── server/                  # Server components

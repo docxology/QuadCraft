@@ -203,7 +203,7 @@ Verify:
 Add a row to `GAMES_INDEX.md`:
 
 ```markdown
-| 23 | 🎮 **4D My Game** | [`4d_my_game/`](4d_my_game/) | ✅ Complete | N | Key mechanic description |
+| 23 | 🎮 **4D My Game** | [`4d_my_game/`](../src/scaffold/) | ✅ Complete | N | Key mechanic description |
 ```
 
 Also update the game count in:
