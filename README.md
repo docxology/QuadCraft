@@ -5,7 +5,7 @@ A tetrahedral-based voxel game using quadray coordinates, inspired by Minecraft.
 ## Status & Verification (agents: start here)
 
 - **What this is:** an experimental tetrahedral voxel game (C++/OpenGL native, JS browser experiments) plus a 30-game 4D browser portfolio under `games/`.
-- **Current state, as of 2026-08-31, verified by command:** games portfolio fully green — `python3 games/run_games.py --validate` (30/30 pass) and `python3 games/run_games.py --test` (1,782 tests, 0 failures). Run these yourself; numbers were true when written, the command is the truth.
+- **Current state, as of 2026-08-31, verified by command:** games portfolio fully green — `python3 games/run_games.py --validate` (30/30 pass) and `python3 games/run_games.py --test` (1,782 tests, 0 failures). Run these yourself; numbers were true when written, the command is the truth. CI (`.github/workflows/games-tests.yml`) runs both on every push/PR to main.
 - **Backlog / what to do next:** [TODO.md](TODO.md) (single canonical backlog).
 - **Documentation hub:** [docs/README.md](docs/README.md). Games portfolio details: [games/GAMES_INDEX.md](games/GAMES_INDEX.md).
 - **Native build (unverified this pass):** `./build.sh` (needs OpenGL, GLEW, GLFW3, CMake >= 3.10, C++17).

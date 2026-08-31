@@ -21,3 +21,22 @@ Tree was clean at dispatch (`git status --porcelain | wc -l` = 0), branch `main`
 
 - MAJOR — per-directory AGENTS.md/README.md boilerplate audit across ~200 generated pairs: out of scope for one pass; the 2026-08-30 commit baf87de generated them and no evidence of staleness surfaced in sampled reads or the link scan. Defer to a dedicated pass.
 - Native C++ build verification (`./build.sh`) not attempted: macOS host toolchain (GLEW/GLFW3) unverified; command documented as-is (unverified here).
+
+
+## Second pass — 2026-08-31 (deferred work executed)
+
+- Deduped the "4D Geometry & Nomenclature" note: canonical statement lives in
+  games/GAMES_INDEX.md; games/README.md now links to it (no verbatim copy).
+- Repo-wide doc audit (all 368 .md): 0 broken relative links; backtick-path scan found
+  27 hits, of which the real ones were fixed — games/GAMES_INDEX.md Python Infrastructure
+  table (`scaffold.py`/`analytics.py` -> actual `__init__.py` class homes),
+  games/doc/game_template.md tower-defense filenames (`td_*`), tomcat README startup.sh
+  ambiguity, and the GAMES_INDEX GameScaffold example (used existing 'rogue' key; create()
+  refuses existing dirs — example now uses a new key). Remaining backtick hits verified as
+  convention examples, template placeholders, or already-flagged planned files.
+- CI added: .github/workflows/games-tests.yml — runs `run_games.py --validate` and
+  `--test` on push/PR to main (Node 20 + Python 3.12, ubuntu). Same commands verified
+  green locally this session (1,782/0 and 30/30). Hosted-CI result: (unverified — check
+  the Actions tab after push).
+- TODO.md rewritten: completed items removed; remaining work rescoped into
+  Minor/Medium/Major with per-item deferral reasons and verification commands.
