@@ -224,8 +224,8 @@ Legend: ● = imported | — = not applicable
 | `src/core/` | `registry.py` | Game registry (30 games), config loading |
 | `src/server/` | `launcher.py` | HTTP server per game, port management |
 | `src/qa/` | `testing.py`, `validation.py` | Test runner, structural validation |
-| `src/scaffold/` | `scaffold.py` | Game boilerplate generator |
-| `src/analytics/` | `analytics.py` | Per-game performance/coverage reporting |
+| `src/scaffold/` | `__init__.py` (`GameScaffold`) | Game boilerplate generator |
+| `src/analytics/` | `__init__.py` (`GameAnalytics`) | Per-game performance/coverage reporting |
 | `src/space/` | `quadrays.py`, `ivm.py`, `geometry.py`, `xyz.py` | Python Quadray math (mirrors JS) |
 | `src/shared/` | JS metadata | Shared module metadata for Python tools |
 | `src/board/` | Audit tools | Board analysis, migration helpers |
@@ -383,7 +383,8 @@ These concepts are designed to uniquely demonstrate the power of Quadray coordin
 
    ```python
    from games.src.scaffold import GameScaffold
-   GameScaffold('rogue', '4D Rogue', optional_modules=['base_board.js', 'pathfinding.js']).create()
+   # game_key must be NEW (create() refuses existing dirs unless overwrite=True)
+   GameScaffold('bowling', '4D Bowling', optional_modules=['base_board.js', 'pathfinding.js']).create()
    ```
 
 2. Import shared modules from `../4d_generic/` in `index.html`

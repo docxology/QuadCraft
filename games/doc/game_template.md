@@ -1,6 +1,6 @@
 # Game Template — Standard Directory Structure
 
-> **Note on 4D Geometry & Nomenclature**: Throughout QuadCraft, whenever we refer to **"4D"**, we strictly mean **Synergetics** geometry. This entails **Quadray 4D tetrahedral coordinates** deployed on an **Isotropic Vector Matrix (IVM)** of close-packed spheres, where the Quadray coordinates of the 12 neighboring balls are strictly defined by all permutations of `(0, 1, 1, 2)`.
+> **Note on 4D Geometry & Nomenclature**: "4D" in QuadCraft strictly means **Synergetics** geometry (Quadray tetrahedral coordinates on an IVM; 12 neighbors = permutations of `(0, 1, 1, 2)`). Canonical statement: [GAMES_INDEX.md](../GAMES_INDEX.md#note-on-4d-geometry--nomenclature).
 
 
 > Canonical structure, naming conventions, and required patterns for every QuadCraft game.
@@ -116,7 +116,15 @@ From `REQUIRED_JS_PATTERNS` in `core/config.py`:
 | Game Key | Board | Renderer | Game |
 |----------|-------|----------|------|
 | `snake` | `snake_board.js` → `SnakeBoard` | `snake_renderer.js` → `SnakeRenderer` | `snake_game.js` → `SnakeGame` |
-| `tower_defense` | `tower_defense_board.js` → `TowerDefenseBoard` | `tower_defense_renderer.js` → `TowerDefenseRenderer` | `tower_defense_game.js` → `TowerDefenseGame` |
+
+> **Naming reality (as of 2026-08-31, verified by `ls games/*/js/`):** the scaffold and
+> config template (`REQUIRED_JS_PATTERNS` in `games/src/core/config.py`) emit the full
+> `{key}_board.js` / `{key}_renderer.js` / `{key}_game.js` names, and 26 of 30 games follow
+> it. Legacy exceptions that also pass `qa/validation.py` (which only requires some
+> `*_board.js`, plus `*_map.js` for Doom): `4d_chess` uses bare `board.js`/`renderer.js`/`game.js`,
+> `4d_tower_defense` uses `td_*`, `4d_2048` uses `twenty48_*`, `4d_doom` uses its own
+> `doom_*` layout. New games MUST use the full `{key}_*` convention; do not copy the
+> legacy examples.
 
 ---
 
