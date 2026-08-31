@@ -1,0 +1,47 @@
+name: doc-links
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  doc-links:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Check all relative markdown links resolve
+        run: |
+          python3 - <<'EOF'
+          import os, re, sys, urllib.parse
+          broken = []
+          link_re = re.compile(r'\[[^\]]*\]\(([^)\s]+)\)')
+          for dirpath, dirnames, filenames in os.walk('.'):
+              dirnames[:] = [d for d in dirnames if d != '.git']
+              for fn in filenames:
+                  if not fn.endswith('.md'):
+                      continue
+                  p = os.path.join(dirpath, fn)
+                  for m in link_re.finditer(open(p, encoding='utf-8', errors='replace').read()):
+                      raw = m.group(1)
+                      if raw.startswith(('http://', 'https://', 'mailto:', '#', 'data:')):
+                          continue
+                      path = urllib.parse.unquote(raw.split('#')[0])
+                      if not path:
+                          continue
+                      if not os.path.exists(os.path.normpath(os.path.join(dirpath, path))):
+                          broken.append((p, raw))
+          if broken:
+              for p, raw in broken:
+                  print(f"BROKEN: {p} -> {raw}")
+              sys.exit(1)
+          print("All relative markdown links resolve.")
+          EOF
