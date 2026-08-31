@@ -24,7 +24,7 @@ tomcat/
 ### Installation
 
 1. Copy `webapps/QuadCraft` to `$CATALINA_HOME/webapps/`
-2. Start Tomcat: `./startup.sh`
+2. Start Tomcat: `$CATALINA_HOME/bin/startup.sh` (Tomcat's own launcher, not a script in this directory)
 3. Access: `http://localhost:8080/QuadCraft/`
 
 ### Configuration
