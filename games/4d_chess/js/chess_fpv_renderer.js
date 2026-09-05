@@ -1,5 +1,5 @@
 /**
- * FPVRenderer.js - First-Person View Renderer for 4D Quadray Chess
+ * chess_fpv_renderer.js - First-Person View Renderer for 4D Quadray Chess
  * 
  * Renders the board from the selected piece's perspective.
  * Shows the 4D Quadray space as seen from a piece's position.

@@ -1,5 +1,5 @@
 /**
- * game.js — 4D Quadray Chess Game Controller
+ * chess_game.js — 4D Quadray Chess Game Controller
  *
  * Extends BaseGame for lifecycle, camera sync, input, and HUD management.
  * Integrates HUD, ScoreManager, and geometric verification with Quadray-native evaluation.

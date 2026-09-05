@@ -40,7 +40,12 @@ std::shared_ptr<Mesh> ChunkMesher::createMeshForChunk(const TetraChunk& chunk) {
     std::vector<Vertex> vertices;
     std::vector<unsigned int> indices;
     
-    // Reserve space to avoid frequent reallocations
+    // Chunk origin in Cartesian world space. Elements are stored under chunk-local
+    // quadray keys, so mesh vertices must be offset into world space (the renderer
+    // draws with an identity model matrix).
+    const Vector3 chunkOrigin(chunk.chunkX * TetraChunk::CHUNK_SIZE,
+                              chunk.chunkY * TetraChunk::CHUNK_SIZE,
+                              chunk.chunkZ * TetraChunk::CHUNK_SIZE);
     vertices.reserve(elements.size() * 12);  // Estimate: 3 vertices per face, 4 faces per tetrahedron
     indices.reserve(elements.size() * 12);   // Estimate: 3 indices per face, 4 faces per tetrahedron
     
@@ -86,10 +91,10 @@ std::shared_ptr<Mesh> ChunkMesher::createMeshForChunk(const TetraChunk& chunk) {
         // Use a smaller inset for better continuity between adjacent tetrahedra
         const float insetFactor = 0.005f;  // Reduced from 0.01f for better seams
         
-        // Inset vertices slightly
+        // Inset vertices slightly, then offset into world space
         Vector3 center = (tetraVerts[0] + tetraVerts[1] + tetraVerts[2] + tetraVerts[3]) / 4.0f;
         for (int i = 0; i < 4; i++) {
-            tetraVerts[i] = tetraVerts[i] + (center - tetraVerts[i]) * insetFactor;
+            tetraVerts[i] = tetraVerts[i] + (center - tetraVerts[i]) * insetFactor + chunkOrigin;
         }
         
         // Get the neighbors of this element

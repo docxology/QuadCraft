@@ -8,7 +8,7 @@ Test suite for 4D Quadray Chess (91 tests, 100% pass rate).
 
 | File | Purpose |
 |------|---------|
-| test_all.js | Main, runnable test suite (all 91 tests — `node test_all.js`) |
+| test_chess.js | Main, runnable test suite (all 91 tests — `node test_chess.js`) |
 | lib_runner.js | Shared TestRunner class (helper, not run directly) |
 | lib_quadray.js | Quadray coordinate test helpers (helper, not run directly) |
 | lib_geometry.js | IVM verification helpers (helper, not run directly) |
@@ -18,7 +18,7 @@ Test suite for 4D Quadray Chess (91 tests, 100% pass rate).
 
 ```bash
 # Node.js CLI
-node test_all.js
+node test_chess.js
 
 # Browser
 open test.html
@@ -44,7 +44,7 @@ open test.html
 
 1. Add `test.it()` inside appropriate `test.describe()` block
 2. Use assertions: `assertEqual`, `assertTrue`, `assertApprox`
-3. Run `node test_all.js` to verify
+3. Run `node test_chess.js` to verify
 
 ## Assertions
 

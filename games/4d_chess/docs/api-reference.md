@@ -61,7 +61,7 @@ new Quadray(a = 0, b = 0, c = 0, d = 0)
 
 ## Piece Classes
 
-**File**: `js/pieces.js`
+**File**: `js/chess_pieces.js`
 
 ### Base Class: Piece
 
@@ -98,7 +98,7 @@ createPiece(type, color, position)
 
 ## Board Class
 
-**File**: `js/board.js`
+**File**: `js/chess_board.js`
 
 ### Constructor
 
@@ -144,7 +144,7 @@ BOARD_CONFIG = {
 
 ## Game Class
 
-**File**: `js/game.js`
+**File**: `js/chess_game.js`
 
 ### Constructor
 
@@ -182,7 +182,7 @@ new Game(canvas)
 
 ## Renderer Class
 
-**File**: `js/renderer.js`
+**File**: `js/chess_renderer.js`
 
 Handles 3D visualization on HTML5 Canvas.
 
@@ -198,7 +198,7 @@ Handles 3D visualization on HTML5 Canvas.
 
 ## Analysis Module
 
-**File**: `js/analysis.js`
+**File**: `js/chess_analysis.js`
 
 Geometric analysis and metrics.
 
@@ -220,7 +220,7 @@ Geometric analysis and metrics.
 
 ## Storage Module
 
-**File**: `js/storage.js`
+**File**: `js/chess_storage.js`
 
 Save/load functionality.
 

@@ -341,7 +341,7 @@ Promotion choices:
 
 ## Valid Move Calculation
 
-The game calculates valid moves in `pieces.js`:
+The game calculates valid moves in `chess_pieces.js`:
 
 ```javascript
 class Piece {

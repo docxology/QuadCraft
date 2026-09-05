@@ -20,11 +20,24 @@ struct ChunkCoordHash {
     }
 };
 
+/**
+ * World: chunk storage and block access.
+ *
+ * CANONICAL CHUNK KEY SPACE — Cartesian grid. A chunk is identified by
+ * (chunkX, chunkY, chunkZ) where chunk (cx, cy, cz) covers the world-space
+ * Cartesian cube [cx*CHUNK_SIZE, (cx+1)*CHUNK_SIZE) x [cy*... x [cz*...).
+ * Every chunk-creation and chunk-lookup path uses this key space:
+ * quadray positions entering the World API are converted with
+ * Quadray::toCartesian() and floored via worldToChunkCoords() first.
+ * Inside a chunk, elements are stored under chunk-LOCAL quadray coordinates
+ * (see TetraChunk::worldToChunkSpace); chunk meshes are emitted in world
+ * space by adding the chunk's Cartesian origin (see ChunkMesher).
+ */
 class World {
 public:
     // Block registry
     BlockRegistry blockRegistry;
-    
+
     World() = default;
     
     // Get a chunk at the specified coordinates
@@ -96,26 +109,21 @@ public:
     /**
      * Generates chunks in a radius around the specified coordinates.
      * This ensures that the world is properly populated around the player.
-     * 
+     *
      * @param center The center coordinates in quadray space
-     * @param radius The radius around the center to generate chunks
+     * @param radius The radius (in chunks) around the center to generate
      */
     void generateChunksAround(const Quadray& center, int radius) {
-        // Calculate the chunk coordinates from the quadray position
-        Quadray chunkCoords = Quadray(
-            (int)std::floor(center.a / TetraChunk::CHUNK_SIZE) * TetraChunk::CHUNK_SIZE,
-            (int)std::floor(center.b / TetraChunk::CHUNK_SIZE) * TetraChunk::CHUNK_SIZE,
-            (int)std::floor(center.c / TetraChunk::CHUNK_SIZE) * TetraChunk::CHUNK_SIZE,
-            (int)std::floor(center.d / TetraChunk::CHUNK_SIZE) * TetraChunk::CHUNK_SIZE
-        );
-        
+        // Canonical key space is the Cartesian chunk grid: convert the quadray
+        // center to Cartesian chunk coordinates before generating neighbors.
+        Vector3 cartPos = center.toCartesian();
+        auto [centerX, centerY, centerZ] = worldToChunkCoords(cartPos);
+
         // When the player is far from the origin, increase the chunk generation radius
         // This helps maintain a better view of the world when at higher elevations
         int adaptiveRadius = radius;
-        // Convert quadray to cartesian to check distance from origin
-        Vector3 cartPos = center.toCartesian();
         float distFromOrigin = cartPos.length();
-        
+
         // Add more chunks at higher distances from origin
         if (distFromOrigin > 100.0f) {
             adaptiveRadius += 1; // Add one extra layer
@@ -123,29 +131,14 @@ public:
         if (distFromOrigin > 200.0f) {
             adaptiveRadius += 1; // Another extra layer
         }
-        
-        // Generate chunks within an approximate sphere around the specified coordinates
-        for (int a = -adaptiveRadius; a <= adaptiveRadius; a++) {
-            for (int b = -adaptiveRadius; b <= adaptiveRadius; b++) {
-                for (int c = -adaptiveRadius; c <= adaptiveRadius; c++) {
-                    for (int d = -adaptiveRadius; d <= adaptiveRadius; d++) {
-                        // Calculate the distance in quadray space (approximate sphere)
-                        float distance = std::sqrt(float(a*a + b*b + c*c + d*d));
-                        
-                        // Only generate chunks within the specified radius
-                        if (distance <= adaptiveRadius) {
-                            Quadray offset = Quadray(
-                                a * TetraChunk::CHUNK_SIZE,
-                                b * TetraChunk::CHUNK_SIZE,
-                                c * TetraChunk::CHUNK_SIZE,
-                                d * TetraChunk::CHUNK_SIZE
-                            );
-                            
-                            Quadray pos = chunkCoords + offset;
-                            
-                            // Create the chunk if it doesn't exist
-                            getOrCreateChunk(pos);
-                        }
+
+        // Generate chunks within an approximate sphere around the center chunk
+        for (int dx = -adaptiveRadius; dx <= adaptiveRadius; dx++) {
+            for (int dy = -adaptiveRadius; dy <= adaptiveRadius; dy++) {
+                for (int dz = -adaptiveRadius; dz <= adaptiveRadius; dz++) {
+                    // Only generate chunks within the specified radius
+                    if (dx*dx + dy*dy + dz*dz <= adaptiveRadius*adaptiveRadius) {
+                        getOrCreateChunk(centerX + dx, centerY + dy, centerZ + dz);
                     }
                 }
             }
@@ -242,13 +235,8 @@ public:
         chunk->isDirty = false;
     }
 
-    // Get or create a chunk at the specified quadray coordinates
-    std::shared_ptr<TetraChunk> getOrCreateChunk(const Quadray& quadPos) {
-        // Calculate chunk coordinates from quadray position
-        int chunkX = static_cast<int>(std::floor(quadPos.a / TetraChunk::CHUNK_SIZE));
-        int chunkY = static_cast<int>(std::floor(quadPos.b / TetraChunk::CHUNK_SIZE));
-        int chunkZ = static_cast<int>(std::floor(quadPos.c / TetraChunk::CHUNK_SIZE));
-        
+    // Get or create (and generate) a chunk at the specified Cartesian chunk coordinates
+    std::shared_ptr<TetraChunk> getOrCreateChunk(int chunkX, int chunkY, int chunkZ) {
         // Get or create the chunk
         auto coords = std::make_tuple(chunkX, chunkY, chunkZ);
         auto it = chunks.find(coords);
@@ -263,41 +251,12 @@ public:
         
         // Generate the chunk
         if (!chunk->isGenerated) {
-            chunk->generate(*this);
+            chunk->generate();
         }
         
         return chunk;
     }
     
-    // Unload a chunk
-    void unloadChunk(const Quadray& quadPos) {
-        // Calculate chunk coordinates from quadray position
-        int chunkX = static_cast<int>(std::floor(quadPos.a / TetraChunk::CHUNK_SIZE));
-        int chunkY = static_cast<int>(std::floor(quadPos.b / TetraChunk::CHUNK_SIZE));
-        int chunkZ = static_cast<int>(std::floor(quadPos.c / TetraChunk::CHUNK_SIZE));
-        
-        // Remove the chunk from the map
-        chunks.erase(std::make_tuple(chunkX, chunkY, chunkZ));
-    }
-    
-    // Get a chunk by quadray position
-    std::shared_ptr<TetraChunk> getChunk(const Quadray& quadPos) const {
-        // Calculate chunk coordinates from quadray position
-        int chunkX = static_cast<int>(std::floor(quadPos.a / TetraChunk::CHUNK_SIZE));
-        int chunkY = static_cast<int>(std::floor(quadPos.b / TetraChunk::CHUNK_SIZE));
-        int chunkZ = static_cast<int>(std::floor(quadPos.c / TetraChunk::CHUNK_SIZE));
-        
-        // Find the chunk
-        auto coords = std::make_tuple(chunkX, chunkY, chunkZ);
-        auto it = chunks.find(coords);
-        
-        if (it != chunks.end()) {
-            return it->second;
-        }
-        
-        return nullptr;
-    }
-
 private:
     // Map of all loaded chunks
     std::unordered_map<std::tuple<int, int, int>, std::shared_ptr<TetraChunk>, ChunkCoordHash> chunks;

@@ -1,5 +1,5 @@
 /**
- * doom_render_fps.js — Futuristic Column Raycaster for 4D Doom
+ * doom_renderer.js — Futuristic Column Raycaster for 4D Doom
  * 
  * Uses DDA (Digital Differential Analyzer) to cast rays in the (A,B) plane,
  * sliced at the player's current (C,D) position in the 4D IVM hypercube.

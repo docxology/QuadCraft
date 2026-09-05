@@ -135,9 +135,9 @@ When creating a new game, use this `index.html` structure:
     <!-- <script src="../4d_generic/pathfinding.js"></script> -->
 
     <!-- Game Logic -->
-    <script src="js/board.js"></script>
-    <script src="js/renderer.js"></script>
-    <script src="js/game.js"></script>
+    <script src="js/{key}_board.js"></script>
+    <script src="js/{key}_renderer.js"></script>
+    <script src="js/{key}_game.js"></script>
 
     <script>
         const canvas = document.getElementById('gameCanvas');

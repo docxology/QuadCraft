@@ -8,7 +8,7 @@
 
 ```bash
 # Run all tests (100% pass)
-node tests/test_td.js
+node tests/test_tower_defense.js
 
 # Run tests then launch
 python3 ../../run_games.py --test --game tower_defense
@@ -31,15 +31,15 @@ Imported via `<script>` tags in `index.html` from `../4d_generic/`:
 
 Note: `pathfinding.js` and `entity_system.js` are **not** imported — this game's
 procedural path generation (`TowerDefenseBoard.generateIVMPath()` in
-`js/td_board.js`) and creep/tower objects are hand-rolled and do not use
+`js/tower_defense_board.js`) and creep/tower objects are hand-rolled and do not use
 `QuadrayPathfinder` or `EntityManager`/`QuadrayEntity`.
 
 ## Module Dependency Order
 
 ```
-1. td_board.js     # Creeps, Towers, Pathing, Wave logic, Procedural IVM paths
-2. td_renderer.js  # 3D Rendering & Visual Effects
-3. td_game.js      # Controller, Input, Auto-Wave
+1. tower_defense_board.js     # Creeps, Towers, Pathing, Wave logic, Procedural IVM paths
+2. tower_defense_renderer.js  # 3D Rendering & Visual Effects
+3. tower_defense_game.js      # Controller, Input, Auto-Wave
 ```
 
 ## File Inventory
@@ -48,15 +48,15 @@ procedural path generation (`TowerDefenseBoard.generateIVMPath()` in
 
 | File | Key Exports | Purpose |
 |------|-------------|---------|
-| `td_board.js` | `TowerDefenseBoard`, `TDTower`, `TDCreep`, `TOWER_TYPES`, `CREEP_TYPES` | Game state, physics, procedural paths |
-| `td_renderer.js` | `TDRenderer` | Drawing towers, creeps, particles, projectile trails |
-| `td_game.js` | `TDGame` | User interaction, game loop, auto-wave |
+| `tower_defense_board.js` | `TowerDefenseBoard`, `TDTower`, `TDCreep`, `TOWER_TYPES`, `CREEP_TYPES` | Game state, physics, procedural paths |
+| `tower_defense_renderer.js` | `TDRenderer` | Drawing towers, creeps, particles, projectile trails |
+| `tower_defense_game.js` | `TDGame` | User interaction, game loop, auto-wave |
 
 ### Tests (`tests/`)
 
 | File | Coverage |
 |------|----------|
-| `test_td.js` | `runTests()` — Path, placement, upgrades, sells, all 7 creep types, swarm splitting, regen healing, rhombic stats, gold math, metadata |
+| `test_tower_defense.js` | `runTests()` — Path, placement, upgrades, sells, all 7 creep types, swarm splitting, regen healing, rhombic stats, gold math, metadata |
 | | `runExtendedTests()` — Reset, sniper targeting priority, trail tracking, game-over trigger, wave countdown, speed consistency, volume ratios, log management |
 
 ## Key Mechanics
@@ -104,13 +104,13 @@ Each game generates a unique IVM-snapped path using `Quadray.BASIS` neighbor ste
 
 | Flag | Effect |
 |------|--------|
-| `--test` | Run `node tests/test_td.js` before launching |
+| `--test` | Run `node tests/test_tower_defense.js` before launching |
 | `[port]` | Custom port (default: 8109) |
 | *(auto)* | Kills stale processes on port before binding |
 
 ## Verification Checklist
 
-- [ ] All tests pass: `node tests/test_td.js`
+- [ ] All tests pass: `node tests/test_tower_defense.js`
 - [ ] Browser loads without errors
 - [ ] Creep legend panel shows all 7 types
 - [ ] Auto-wave button toggles correctly

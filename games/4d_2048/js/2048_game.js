@@ -1,5 +1,5 @@
 /**
- * twenty48_game.js — 4D 2048 Game Controller
+ * 2048_game.js — 4D 2048 Game Controller
  * @module Twenty48Game
  */
 if (typeof BaseGame === 'undefined' && typeof require !== 'undefined') { const _bg = require('../../4d_generic/base_game.js'); globalThis.BaseGame = _bg.BaseGame; }

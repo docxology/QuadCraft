@@ -1,5 +1,5 @@
 /**
- * twenty48_renderer.js — 4D 2048 Renderer
+ * 2048_renderer.js — 4D 2048 Renderer
  * @module Twenty48Renderer
  */
 if (typeof BaseRenderer === 'undefined' && typeof require !== 'undefined') { const _br = require('../../4d_generic/base_renderer.js'); globalThis.BaseRenderer = _br.BaseRenderer; }

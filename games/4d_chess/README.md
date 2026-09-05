@@ -56,7 +56,7 @@ python3 -m http.server 8080
 
 ```bash
 # Node.js CLI
-cd 4d_chess/tests && node test_all.js
+cd 4d_chess/tests && node test_chess.js
 
 # Or open in browser
 open 4d_chess/tests/test.html
@@ -115,12 +115,12 @@ D = √((a² + b² + c² + d²) / 2)
 ├── CONTRIBUTING.md     # Contributor guide
 ├── js/
 │   ├── quadray.js      # Quadray coordinate class (210 lines)
-│   ├── pieces.js       # Chess piece definitions (280 lines)
-│   ├── board.js        # 4D game board (272 lines)
-│   ├── renderer.js     # 3D visualization (427 lines)
-│   ├── game.js         # Game controller (556 lines)
-│   ├── storage.js      # Save/load functionality (177 lines)
-│   └── analysis.js     # Geometric analysis (386 lines)
+│   ├── chess_pieces.js       # Chess piece definitions (280 lines)
+│   ├── chess_board.js        # 4D game board (272 lines)
+│   ├── chess_renderer.js     # 3D visualization (427 lines)
+│   ├── chess_game.js         # Game controller (556 lines)
+│   ├── chess_storage.js      # Save/load functionality (177 lines)
+│   └── chess_analysis.js     # Geometric analysis (386 lines)
 ├── docs/
 │   ├── README.md       # Documentation index
 │   ├── api-reference.md   # Class/method documentation
@@ -133,7 +133,7 @@ D = √((a² + b² + c² + d²) / 2)
 │   └── quadray-math.md    # Mathematical foundations
 └── tests/
     ├── test.html       # Visual test runner
-    ├── test_all.js     # Unit test suite (91 tests) — the runnable entry point
+    ├── test_chess.js     # Unit test suite (91 tests) — the runnable entry point
     ├── lib_runner.js   # Shared test runner class (helper, not run directly)
     ├── lib_quadray.js  # Quadray coordinate test helpers (helper, not run directly)
     └── lib_geometry.js # IVM geometry verification helpers (helper, not run directly)

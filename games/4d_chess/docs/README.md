@@ -33,7 +33,7 @@ Welcome to the comprehensive documentation for **4D Quadray Chess**.
 ## Quick Links
 
 - **Play**: Open `index.html` or run `python3 -m http.server 8080`
-- **Tests**: `cd tests && node test_all.js` (83 tests)
+- **Tests**: `cd tests && node test_chess.js` (83 tests)
 - **Source**: `js/` directory (7 modules, ~2000 lines)
 
 ## Getting Started
@@ -54,12 +54,12 @@ python3 -m http.server 8080
        │
        v
 ┌─────────────┐
-│  pieces.js  │  Chess piece classes
+│  chess_pieces.js  │  Chess piece classes
 └──────┬──────┘
        │
        v
 ┌─────────────┐
-│  board.js   │  24-piece game board
+│  chess_board.js   │  24-piece game board
 └──────┬──────┘
        │
   ┌────┴────┬─────────────┐
@@ -86,7 +86,7 @@ python3 -m http.server 8080
 
 ```bash
 # Node.js CLI (83 tests)
-cd tests && node test_all.js
+cd tests && node test_chess.js
 
 # Or open in browser
 open tests/test.html

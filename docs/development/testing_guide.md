@@ -42,7 +42,7 @@ python3 games/run_games.py --test
 python3 games/run_games.py --test --game chess doom
 
 # Run a single test file directly
-node games/4d_chess/tests/test_all.js
+node games/4d_chess/tests/test_chess.js
 
 # Run Synergetics validation suite
 node games/4d_generic/tests/test_synergetics.js
@@ -85,12 +85,14 @@ process.exit(failed > 0 ? 1 : 0);
 
 ### Build Configuration
 
-Enable testing in the CMake build:
+Testing is enabled in the CMake build by default (no option needed):
 
 ```bash
-cmake .. -DQUADCRAFT_BUILD_TESTS=ON
-cd build
-cmake --build . --config Debug
+./build.sh --no-run --test   # build + ctest (used by CI)
+# or manually:
+cmake -S . -B build
+cmake --build build
+ctest --test-dir build
 ```
 
 ### Running C++ Tests
@@ -107,9 +109,9 @@ ctest --output-on-failure # Show output only for failures
 
 | Category | Tests | Coverage Area |
 | -------- | ----- | ------------- |
-| Coordinate | Quadray ↔ Cartesian conversion, normalization | `src/core/coordinate/` |
-| World | Chunk generation, block access | `src/core/world/` |
-| Entity | Entity lifecycle, component management | `src/core/entity/` |
+| Coordinate | Quadray ↔ Cartesian roundtrip, normalization, tetrahedral basis angles, distance, S3 constant | `src/core/coordinate/` (`tests/quadray_test.cpp`) |
+
+World and Entity test categories are aspirational; only the Coordinate suite exists today.
 
 ## Common Test Patterns
 

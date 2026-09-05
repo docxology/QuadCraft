@@ -8,7 +8,7 @@
 
 ```bash
 # Run all tests (91 tests, 100% pass)
-cd tests && node test_all.js
+cd tests && node test_chess.js
 
 # Start local server
 python3 -m http.server 8080
@@ -35,12 +35,12 @@ Imported via `<script>` tags in `index.html` from `../4d_generic/`:
 Load in this order to avoid reference errors:
 
 ```
-1. pieces.js     # Chess pieces (needs Quadray)
-2. board.js      # Game board (needs Quadray, Piece)
-3. renderer.js   # 3D visualization (needs Quadray, Board)
-4. game.js       # Controller (needs all above)
-5. analysis.js   # Metrics (needs Quadray, Board)
-6. storage.js    # Save/load (needs all above)
+1. chess_pieces.js     # Chess pieces (needs Quadray)
+2. chess_board.js      # Game board (needs Quadray, Piece)
+3. chess_renderer.js   # 3D visualization (needs Quadray, Board)
+4. chess_game.js       # Controller (needs all above)
+5. chess_analysis.js   # Metrics (needs Quadray, Board)
+6. chess_storage.js    # Save/load (needs all above)
 ```
 
 ## File Inventory
@@ -49,12 +49,12 @@ Load in this order to avoid reference errors:
 
 | File | Lines | Key Exports |
 |------|-------|-------------|
-| pieces.js | 280 | `Piece`, `King`, `Queen`, `Rook`, `Bishop`, `Knight`, `Pawn`, `PieceType`, `createPiece` |
-| board.js | 272 | `Board` class with check detection |
-| renderer.js | 427 | `Renderer` class for 3D projection |
-| game.js | 556 | `Game` controller class |
-| storage.js | 177 | `exportGameState`, `importGameState`, `downloadJSON` |
-| analysis.js | 386 | `getPositionMetrics`, `verifyGeometricIdentities` |
+| chess_pieces.js | 280 | `Piece`, `King`, `Queen`, `Rook`, `Bishop`, `Knight`, `Pawn`, `PieceType`, `createPiece` |
+| chess_board.js | 272 | `Board` class with check detection |
+| chess_renderer.js | 427 | `Renderer` class for 3D projection |
+| chess_game.js | 556 | `Game` controller class |
+| chess_storage.js | 177 | `exportGameState`, `importGameState`, `downloadJSON` |
+| chess_analysis.js | 386 | `getPositionMetrics`, `verifyGeometricIdentities` |
 
 ### Documentation (`docs/`)
 
@@ -75,7 +75,7 @@ Load in this order to avoid reference errors:
 
 | File | Tests | Coverage |
 |------|-------|----------|
-| test_all.js | 91 | Complete, runnable test suite (`node test_all.js`) |
+| test_chess.js | 91 | Complete, runnable test suite (`node test_chess.js`) |
 | lib_runner.js | — | Shared TestRunner class (helper, not run directly) |
 | lib_quadray.js | — | Quadray coordinate test helpers (helper, not run directly) |
 | lib_geometry.js | — | IVM geometry verification helpers (helper, not run directly) |
@@ -99,10 +99,10 @@ if (typeof module !== 'undefined' && module.exports) {
 
 | Class | Location | Purpose |
 |-------|----------|---------|
-| `Piece` | pieces.js | Base chess piece + 6 subclasses |
-| `Board` | board.js | 24-piece game board with Map storage |
-| `Renderer` | renderer.js | Canvas 3D projection |
-| `Game` | game.js | Main controller + UI |
+| `Piece` | chess_pieces.js | Base chess piece + 6 subclasses |
+| `Board` | chess_board.js | 24-piece game board with Map storage |
+| `Renderer` | chess_renderer.js | Canvas 3D projection |
+| `Game` | chess_game.js | Main controller + UI |
 
 ## Mathematical Constants
 
@@ -123,7 +123,7 @@ D = √((a² + b² + c² + d²) / 2)
 ### Adding a Test
 
 ```javascript
-// In test_all.js
+// In test_chess.js
 test.describe('Your Module', () => {
     test.it('should do something', () => {
         test.assertEqual(actual, expected, 'message');
@@ -134,7 +134,7 @@ test.describe('Your Module', () => {
 ### Adding a Metric
 
 ```javascript
-// In analysis.js
+// In chess_analysis.js
 function calculateNewMetric(board, color) {
     // Implementation
     return value;
@@ -145,7 +145,7 @@ function calculateNewMetric(board, color) {
 ### Modifying Piece Movement
 
 ```javascript
-// In pieces.js, in the piece's getValidMoves method
+// In chess_pieces.js, in the piece's getValidMoves method
 getValidMoves(board) {
     const moves = [];
     // Add move logic using Quadray basis vectors
@@ -155,7 +155,7 @@ getValidMoves(board) {
 
 ## Verification Checklist
 
-- [ ] All 91 tests pass: `cd tests && node test_all.js`
+- [ ] All 91 tests pass: `cd tests && node test_chess.js`
 - [ ] Browser loads: `open index.html`
 - [ ] Game plays correctly (select piece, click move)
 - [ ] Verify Math button works in sidebar

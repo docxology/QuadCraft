@@ -2,7 +2,6 @@
 
 #include <memory>
 #include <unordered_map>
-#include <array>
 #include <GLFW/glfw3.h>
 #include "../core/world/World.h"
 #include "../core/entity/Camera.h"
@@ -39,9 +38,6 @@ public:
     // Check if a chunk is in the view frustum
     bool isChunkInFrustum(const Vector3& center, float size);
     
-    // Process input (in addition to the Input class processing)
-    void processInput(float deltaTime);
-    
 private:
     // Window dimensions and title
     int width;
@@ -70,7 +66,6 @@ private:
     // Rendering options
     bool showWireframe;
     bool showOverlay;
-    bool showDebugInfo;
     
     // Performance tracking
     int lastRenderedChunks = 0;
@@ -99,18 +94,9 @@ private:
     // Create a perspective projection matrix
     std::vector<float> createProjectionMatrix(float fov, float aspect, float nearPlane, float farPlane) const;
     
-    // Frustum culling
-    struct Frustum {
-        std::array<std::array<float, 4>, 6> planes; // Left, right, bottom, top, near, far
-    };
-    
-    Frustum calculateViewFrustum(const float* view, const float* projection);
     
     // Performance reporting
     void reportFrameTime(float deltaTime);
-    
-    // Method to update FPS counter in window title
-    void updateFPS();
 };
 
 } // namespace QuadCraft 

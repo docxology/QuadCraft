@@ -42,44 +42,45 @@ public:
         });
         
         // Set mouse button callback
-        glfwSetMouseButtonCallback(window, [](GLFWwindow* w, int button, int action, int mods) {
+        glfwSetMouseButtonCallback(window, [](GLFWwindow* w, int button, int action, int /*mods*/) {
             Input* input = static_cast<Input*>(glfwGetWindowUserPointer(w));
             input->mouseButtonCallback(button, action);
         });
         
         // Set scroll callback
-        glfwSetScrollCallback(window, [](GLFWwindow* w, double xoffset, double yoffset) {
+        glfwSetScrollCallback(window, [](GLFWwindow* w, double /*xoffset*/, double yoffset) {
             Input* input = static_cast<Input*>(glfwGetWindowUserPointer(w));
-            input->scrollCallback(xoffset, yoffset);
+            input->scrollCallback(yoffset);
         });
         
         // Set key callback
-        glfwSetKeyCallback(window, [](GLFWwindow* w, int key, int scancode, int action, int mods) {
+        glfwSetKeyCallback(window, [](GLFWwindow* w, int key, int /*scancode*/, int action, int /*mods*/) {
             Input* input = static_cast<Input*>(glfwGetWindowUserPointer(w));
-            input->keyCallback(key, scancode, action, mods);
+            input->keyCallback(key, action);
         });
         
         // Start with normal cursor (not captured)
         setMouseCaptured(false);
     }
     
-    // Process all input
-    void processInput(float deltaTime) {
+    
+    // Process all input; the sole entry point for per-frame input handling
+    void processInput(float deltaTime, Camera& cam, World& worldRef) {
         // Debug deltaTime to check if it's reasonable
-        static float lastTime = 0.0f;
-        float currentTime = static_cast<float>(glfwGetTime());
-        if (currentTime - lastTime > 1.0f) {
+        static float lastDeltaLog = 0.0f;
+        float now = static_cast<float>(glfwGetTime());
+        if (now - lastDeltaLog > 1.0f) {
             std::cout << "Current deltaTime: " << deltaTime << std::endl;
-            lastTime = currentTime;
+            lastDeltaLog = now;
         }
-        
+
         // Track position and report distance to nearest tetrahedra
         // Don't update every frame to avoid console spam
-        if (showTetraDistance && currentTime - lastPositionUpdate > 0.3f) {
+        if (showTetraDistance && now - lastPositionUpdate > 0.3f) {
             reportTetrahedralDistances();
-            lastPositionUpdate = currentTime;
+            lastPositionUpdate = now;
         }
-        
+
         // Check for escape key to exit
         if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
             if (mouseCaptured) {
@@ -89,7 +90,7 @@ public:
                 glfwSetWindowShouldClose(window, true);
             }
         }
-        
+
         // Toggle mouse capture with Tab key
         if (glfwGetKey(window, GLFW_KEY_TAB) == GLFW_PRESS && !keyStates[GLFW_KEY_TAB]) {
             keyStates[GLFW_KEY_TAB] = true;
@@ -97,7 +98,7 @@ public:
         } else if (glfwGetKey(window, GLFW_KEY_TAB) == GLFW_RELEASE) {
             keyStates[GLFW_KEY_TAB] = false;
         }
-        
+
         // Toggle tetrahedral distance reporting with F4
         if (glfwGetKey(window, GLFW_KEY_F4) == GLFW_PRESS && !keyStates[GLFW_KEY_F4]) {
             keyStates[GLFW_KEY_F4] = true;
@@ -106,144 +107,7 @@ public:
         } else if (glfwGetKey(window, GLFW_KEY_F4) == GLFW_RELEASE) {
             keyStates[GLFW_KEY_F4] = false;
         }
-        
-        // Toggle position overlay with F4
-        if (glfwGetKey(window, GLFW_KEY_F4) == GLFW_PRESS && !keyStates[GLFW_KEY_F4]) {
-            keyStates[GLFW_KEY_F4] = true;
-            showPositionOverlay = !showPositionOverlay;
-            std::cout << "Position overlay " << (showPositionOverlay ? "enabled" : "disabled") << std::endl;
-            
-            // Display position immediately when enabled
-            if (showPositionOverlay) {
-                displayCameraPosition();
-            }
-        } else if (glfwGetKey(window, GLFW_KEY_F4) == GLFW_RELEASE) {
-            keyStates[GLFW_KEY_F4] = false;
-        }
-        
-        // Handle arrow keys with debug info
-        arrowUp = glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS;
-        arrowDown = glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS;
-        arrowLeft = glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS;
-        arrowRight = glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS;
-        
-        // Log key states for debugging
-        static bool loggedKeys = false;
-        if ((arrowUp || arrowDown || arrowLeft || arrowRight) && !loggedKeys) {
-            if (showTetraDistance) {
-                std::cout << "Arrow keys pressed - UP: " << arrowUp 
-                          << ", DOWN: " << arrowDown 
-                          << ", LEFT: " << arrowLeft 
-                          << ", RIGHT: " << arrowRight << std::endl;
-            }
-            loggedKeys = true;
-        } else if (!(arrowUp || arrowDown || arrowLeft || arrowRight)) {
-            loggedKeys = false;
-        }
-        
-        // Camera movement with arrow keys (always enabled)
-        if (arrowUp) {
-            // std::cout << "Arrow Up pressed" << std::endl;
-            camera.processKeyboard(FORWARD, deltaTime);
-        }
-        if (arrowDown) {
-            // std::cout << "Arrow Down pressed" << std::endl;
-            camera.processKeyboard(BACKWARD, deltaTime);
-        }
-        if (arrowLeft) {
-            // std::cout << "Arrow Left pressed" << std::endl;
-            camera.processKeyboard(LEFT, deltaTime);
-        }
-        if (arrowRight) {
-            // std::cout << "Arrow Right pressed" << std::endl;
-            camera.processKeyboard(RIGHT, deltaTime);
-        }
-        
-        // Additional test keys for extreme movement
-        if (glfwGetKey(window, GLFW_KEY_HOME) == GLFW_PRESS) {
-            // Move a large distance forward for testing
-            camera.processKeyboard(FORWARD, deltaTime * 10.0f);
-            std::cout << "HOME key: Large forward movement" << std::endl;
-            if (showTetraDistance) {
-                reportTetrahedralDistances();
-            }
-        }
-        
-        // Vertical movement (always enabled)
-        if (glfwGetKey(window, GLFW_KEY_PAGE_UP) == GLFW_PRESS)
-            camera.processKeyboard(UP, deltaTime);
-        if (glfwGetKey(window, GLFW_KEY_PAGE_DOWN) == GLFW_PRESS)
-            camera.processKeyboard(DOWN, deltaTime);
-        
-        // Only process WASD movement and block placement when mouse is captured
-        if (mouseCaptured) {
-            // Camera movement with WASD
-            if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-                camera.processKeyboard(FORWARD, deltaTime);
-            if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-                camera.processKeyboard(BACKWARD, deltaTime);
-            if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
-                camera.processKeyboard(LEFT, deltaTime);
-            if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
-                camera.processKeyboard(RIGHT, deltaTime);
-            
-            // Additional vertical movement 
-            if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS)
-                camera.processKeyboard(UP, deltaTime);
-            if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS)
-                camera.processKeyboard(DOWN, deltaTime);
-            
-            // Process block placement/removal if mouse buttons are pressed
-            if (isLeftMousePressed || isRightMousePressed) {
-                // Cast ray to find block to interact with
-                auto hitResult = castRayFromCamera(5.0f);
-                
-                if (hitResult.hit) {
-                    if (isLeftMousePressed) {
-                        // Left mouse button - remove block
-                        world.setBlock(hitResult.blockPosition, Block::AIR_BLOCK);
-                        isLeftMousePressed = false; // Reset to prevent continuous removal
-                        
-                        // Report the interaction for debugging
-                        if (showTetraDistance) {
-                            std::cout << "Removed block at quadray position: " 
-                                      << hitResult.blockPosition.a << ", " 
-                                      << hitResult.blockPosition.b << ", " 
-                                      << hitResult.blockPosition.c << ", " 
-                                      << hitResult.blockPosition.d << std::endl;
-                        }
-                    }
-                    else if (isRightMousePressed) {
-                        // Right mouse button - place block
-                        // Place at the adjacent position
-                        world.setBlock(hitResult.adjacentPosition, Block::STONE_BLOCK);
-                        isRightMousePressed = false; // Reset to prevent continuous placement
-                        
-                        // Report the interaction for debugging
-                        if (showTetraDistance) {
-                            std::cout << "Placed block at quadray position: " 
-                                      << hitResult.adjacentPosition.a << ", " 
-                                      << hitResult.adjacentPosition.b << ", " 
-                                      << hitResult.adjacentPosition.c << ", " 
-                                      << hitResult.adjacentPosition.d << std::endl;
-                        }
-                    }
-                }
-            }
-        }
-        
-        // Update position display at regular intervals if enabled
-        if (showPositionOverlay) {
-            float currentTime = glfwGetTime();
-            if (currentTime - lastPositionUpdate > 0.5f) { // Update every half second
-                displayCameraPosition();
-                lastPositionUpdate = currentTime;
-            }
-        }
-    }
-    
-    // Overload for processInput that takes explicit camera and world references
-    void processInput(float deltaTime, Camera& cam, World& worldRef) {
+
         // Calculate the current key state (to test if keys were just pressed)
         bool shift = glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS || 
                     glfwGetKey(window, GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS;
@@ -471,12 +335,12 @@ public:
     }
     
     // Scroll callback
-    void scrollCallback(double xoffset, double yoffset) {
+    void scrollCallback(double yoffset) {
         camera.processMouseScroll(static_cast<float>(yoffset));
     }
     
     // Key callback for toggle actions
-    void keyCallback(int key, int scancode, int action, int mods) {
+    void keyCallback(int key, int action) {
         // Only process key press events, not releases or repeats
         if (action == GLFW_PRESS) {
             // Toggle wireframe mode with F1

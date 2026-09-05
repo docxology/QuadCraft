@@ -75,11 +75,11 @@ Each game generates a unique path using `Quadray.BASIS` neighbors to create a wi
 games/4d_tower_defense/
 ├── index.html            # UI layout, styles, creep legend
 ├── js/
-│   ├── td_board.js       # Game state, creeps, towers, waves, procedural paths
-│   ├── td_renderer.js    # Canvas 3D projection and effects
-│   └── td_game.js        # Input handling, game loop, auto-wave
+│   ├── tower_defense_board.js       # Game state, creeps, towers, waves, procedural paths
+│   ├── tower_defense_renderer.js    # Canvas 3D projection and effects
+│   └── tower_defense_game.js        # Input handling, game loop, auto-wave
 ├── tests/
-│   └── test_td.js        # Node.js unit tests (core + extended)
+│   └── test_tower_defense.js        # Node.js unit tests (core + extended)
 # (Launching handled by centralized run_games.py)
 ├── README.md
 └── AGENTS.md
@@ -89,7 +89,7 @@ games/4d_tower_defense/
 
 ```bash
 # Run all tests
-node tests/test_td.js
+node tests/test_tower_defense.js
 
 # Or via run.sh
 python3 ../../run_games.py --test --game tower_defense

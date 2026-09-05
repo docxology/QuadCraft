@@ -15,13 +15,13 @@
 ## Module Map
 
 - `doom_config.js` — IVM constants, 8 directions, cell types (TETRA_WALL, OCTA_WALL)
-- `doom_map.js` — Sparse IVM grid, `getCell/setCell`, `getSlice(c,d)`, `cellParity`
+- `doom_board.js` — Sparse IVM grid, `getCell/setCell`, `getSlice(c,d)`, `cellParity`
 - `doom_entities.js` — `Player`, `Enemy` utilizing purely native `Quadray.distance()`
 - `doom_physics.js` — True 4D DDA line-of-sight algorithms across 4 hyperplanes
-- `doom_render_fps.js` — Distance-based 4D dynamic lighting projection |
+- `doom_renderer.js` — Distance-based 4D dynamic lighting projection |
 - `doom_hud_synergetics.js` — `SynergeticsHUD` class (panel, compass, position, grid)
 - `doom_synergetics.js` — `computeAllAnalysis`, geometric identity verification
-- `doom_main.js` — `DoomGame` controller integrating all modules
+- `doom_game.js` — `DoomGame` controller integrating all modules
 
 ## Key Patterns
 

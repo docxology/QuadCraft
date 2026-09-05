@@ -6,7 +6,7 @@ Unit and integration tests for 4D Quadray Chess.
 
 ```bash
 # Node.js CLI (91 tests)
-node test_all.js
+node test_chess.js
 
 # Browser visual runner
 open test.html
@@ -16,7 +16,7 @@ open test.html
 
 | File | Tests | Description |
 |------|-------|-------------|
-| test_all.js | 91 | Complete, runnable test suite (`node test_all.js`) |
+| test_chess.js | 91 | Complete, runnable test suite (`node test_chess.js`) |
 | lib_runner.js | — | Shared TestRunner class (helper, not run directly) |
 | lib_quadray.js | — | Quadray coordinate test helpers (helper, not run directly) |
 | lib_geometry.js | — | IVM geometry verification helpers (helper, not run directly) |

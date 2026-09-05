@@ -1,5 +1,5 @@
 /**
- * Pieces.js - Chess Piece Definitions for 4D Quadray Chess
+ * chess_pieces.js - Chess Piece Definitions for 4D Quadray Chess
  * 
  * Each piece has movement rules defined in terms of Quadray directions.
  * The Isotropic Vector Matrix (IVM) ensures uniform geometry.

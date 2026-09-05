@@ -73,9 +73,9 @@ python3 games/run_games.py --test
 # Run tests for specific games
 python3 games/run_games.py --test --game chess doom
 
-# Run a single game's suite directly (test_all.js is the runnable entry
+# Run a single game's suite directly (test_<key>.js is the runnable entry
 # point per game; lib_*.js files are shared helper modules, not standalone tests)
-node games/4d_chess/tests/test_all.js
+node games/4d_chess/tests/test_chess.js
 ```
 
 Test coverage includes:

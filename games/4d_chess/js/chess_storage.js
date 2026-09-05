@@ -1,5 +1,5 @@
 /**
- * Storage.js - Save/Load System for 4D Quadray Chess
+ * chess_storage.js - Save/Load System for 4D Quadray Chess
  * 
  * Provides serialization and file I/O for game state persistence.
  */

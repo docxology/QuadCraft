@@ -1,13 +1,13 @@
 /**
- * doom_main.js — Game Controller (Synergetics-integrated)
+ * doom_game.js — Game Controller (Synergetics-integrated)
  * 
  * Wires up Map, Entities, Physics, Renderer, SynergeticsHUD, FX Engine,
  * and Geometry verification. Handles input and game loop.
  */
-import { DoomMap } from './doom_map.js';
+import { DoomMap } from './doom_board.js';
 import { Player, Enemy, Projectile, Particle, Pickup } from './doom_entities.js';
 import { Physics } from './doom_physics.js';
-import { DoomRenderer } from './doom_render_fps.js';
+import { DoomRenderer } from './doom_renderer.js';
 import { SynergeticsHUD } from './doom_hud_synergetics.js';
 import { SynergeticsFX } from './doom_fx.js';
 import { markDirty } from './doom_synergetics.js';

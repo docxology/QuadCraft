@@ -1,7 +1,5 @@
 #pragma once
 
-#include <random>
-#include <functional>
 #include <cmath>
 #include "TetraChunk.h"
 #include "World.h"
@@ -10,8 +8,7 @@ namespace QuadCraft {
 
 class TerrainGenerator {
 public:
-    TerrainGenerator(unsigned int seed = 12345)
-        : seed(seed), engine(seed), distribution(-1.0f, 1.0f) {
+    TerrainGenerator() {
         // Initialize noise parameters
         terrainNoiseScale = 0.02f;
         terrainNoiseAmplitude = 32.0f;
@@ -25,7 +22,7 @@ public:
     }
     
     // Generate terrain for a given chunk
-    void generateChunk(TetraChunk& chunk, World& world) {
+    void generateChunk(TetraChunk& chunk) {
         // For each potential position in the chunk
         const int resolution = 8; // Resolution within each chunk
         
@@ -223,10 +220,6 @@ private:
         return (total + 1.0f) * 0.5f;
     }
     
-    // Noise parameters
-    unsigned int seed;
-    std::mt19937 engine;
-    std::uniform_real_distribution<float> distribution;
     float terrainNoiseScale;
     float terrainNoiseAmplitude;
     float caveNoiseScale;

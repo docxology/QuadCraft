@@ -106,7 +106,7 @@ void main() {
 
 Game::Game(int width, int height, const std::string& title)
     : width(width), height(height), title(title), window(nullptr),
-      deltaTime(0.0f), lastFrame(0.0f), showWireframe(true), showOverlay(false), showDebugInfo(false) {
+      deltaTime(0.0f), lastFrame(0.0f), showWireframe(true), showOverlay(false) {
 }
 
 Game::~Game() {
@@ -224,9 +224,6 @@ void Game::run() {
             deltaTime = maxDelta;
         }
         
-        // Process input
-        input->processInput(deltaTime);
-        
         // Update game state
         update();
         
@@ -295,9 +292,6 @@ void Game::update() {
     
     // Update chunk mesh generation with higher priority for closer chunks
     updateChunkMeshes(15);  // Increased from 10 to 15 to process more chunks per frame
-    
-    // Update the FPS counter
-    updateFPS();
 }
 
 void Game::updateChunkMeshes(int maxChunksToProcess) {
@@ -359,8 +353,8 @@ void Game::render() {
     Vector3 lightPos = camera->position + Vector3(10.0f, 20.0f, 10.0f);
     chunkShader->setVec3("lightPos", lightPos);
     chunkShader->setVec3("viewPos", camera->position);
-    chunkShader->setVec3("lightColor", Vector3(1.0f, 1.0f, 0.9f));
-    
+    chunkShader->setBool("showWireframe", showWireframe);
+    chunkShader->setBool("showOverlay", showOverlay);
     // Start timing the rendering process
     float startTime = static_cast<float>(glfwGetTime());
     float maxRenderTime = 0.35f;  // Allow more time for rendering to ensure consistency
@@ -461,10 +455,13 @@ void Game::render() {
         renderedChunks++;
     }
     
-    // Report the number of rendered chunks for debugging
-    std::string title = std::string(this->title) + " | FPS: " + std::to_string(static_cast<int>(1.0f / deltaTime)) + 
-                        " | Chunks: " + std::to_string(renderedChunks);
-    glfwSetWindowTitle(window, title.c_str());
+    // Track the rendered chunk count for the 1-second title report (reportFrameTime)
+    lastRenderedChunks = renderedChunks;
+
+    // Draw the quadray coordinate axis overlay when enabled (F2)
+    if (showOverlay) {
+        drawCoordinateOverlay();
+    }
 }
 
 void Game::drawCoordinateOverlay() {
@@ -590,72 +587,6 @@ std::vector<float> Game::createProjectionMatrix(float fov, float aspect, float n
     return matrix;
 }
 
-Game::Frustum Game::calculateViewFrustum(const float* view, const float* projection) {
-    Frustum frustum;
-    
-    // Combine view and projection matrices
-    float viewProj[16];
-    for (int i = 0; i < 4; i++) {
-        for (int j = 0; j < 4; j++) {
-            viewProj[i * 4 + j] = 0.0f;
-            for (int k = 0; k < 4; k++) {
-                viewProj[i * 4 + j] += projection[i * 4 + k] * view[k * 4 + j];
-            }
-        }
-    }
-    
-    // Extract frustum planes
-    // Left plane
-    frustum.planes[0][0] = viewProj[3] + viewProj[0];
-    frustum.planes[0][1] = viewProj[7] + viewProj[4];
-    frustum.planes[0][2] = viewProj[11] + viewProj[8];
-    frustum.planes[0][3] = viewProj[15] + viewProj[12];
-    
-    // Right plane
-    frustum.planes[1][0] = viewProj[3] - viewProj[0];
-    frustum.planes[1][1] = viewProj[7] - viewProj[4];
-    frustum.planes[1][2] = viewProj[11] - viewProj[8];
-    frustum.planes[1][3] = viewProj[15] - viewProj[12];
-    
-    // Bottom plane
-    frustum.planes[2][0] = viewProj[3] + viewProj[1];
-    frustum.planes[2][1] = viewProj[7] + viewProj[5];
-    frustum.planes[2][2] = viewProj[11] + viewProj[9];
-    frustum.planes[2][3] = viewProj[15] + viewProj[13];
-    
-    // Top plane
-    frustum.planes[3][0] = viewProj[3] - viewProj[1];
-    frustum.planes[3][1] = viewProj[7] - viewProj[5];
-    frustum.planes[3][2] = viewProj[11] - viewProj[9];
-    frustum.planes[3][3] = viewProj[15] - viewProj[13];
-    
-    // Near plane
-    frustum.planes[4][0] = viewProj[3] + viewProj[2];
-    frustum.planes[4][1] = viewProj[7] + viewProj[6];
-    frustum.planes[4][2] = viewProj[11] + viewProj[10];
-    frustum.planes[4][3] = viewProj[15] + viewProj[14];
-    
-    // Far plane
-    frustum.planes[5][0] = viewProj[3] - viewProj[2];
-    frustum.planes[5][1] = viewProj[7] - viewProj[6];
-    frustum.planes[5][2] = viewProj[11] - viewProj[10];
-    frustum.planes[5][3] = viewProj[15] - viewProj[14];
-    
-    // Normalize all planes
-    for (int i = 0; i < 6; i++) {
-        float length = std::sqrt(frustum.planes[i][0] * frustum.planes[i][0] + 
-                                frustum.planes[i][1] * frustum.planes[i][1] + 
-                                frustum.planes[i][2] * frustum.planes[i][2]);
-        
-        frustum.planes[i][0] /= length;
-        frustum.planes[i][1] /= length;
-        frustum.planes[i][2] /= length;
-        frustum.planes[i][3] /= length;
-    }
-    
-    return frustum;
-}
-
 bool Game::isChunkInFrustum(const Vector3& chunkCenter, float radius) {
     // For tetrahedral geometry, we need to use an increased radius for better coverage
     // Tetrahedral chunks can extend beyond their bounding sphere in certain directions
@@ -689,79 +620,6 @@ void Game::reportFrameTime(float deltaTime) {
         frameTimeAccumulator = 0.0f;
         frameCount = 0;
         lastReportTime = currentTime;
-    }
-}
-
-// Method to update FPS counter
-void Game::updateFPS() {
-    static float frameTimeAccumulator = 0.0f;
-    static int frameCount = 0;
-    static float lastUpdateTime = 0.0f;
-    
-    frameTimeAccumulator += deltaTime;
-    frameCount++;
-    
-    float currentTime = static_cast<float>(glfwGetTime());
-    
-    // Update FPS display every second
-    if (currentTime - lastUpdateTime >= 1.0f) {
-        float averageFrameTime = frameTimeAccumulator / static_cast<float>(frameCount);
-        float fps = 1.0f / averageFrameTime;
-        
-        // Update window title with FPS
-        std::string windowTitle = title + " | FPS: " + std::to_string(static_cast<int>(fps)) +
-                                " | Chunks: " + std::to_string(lastRenderedChunks);
-        glfwSetWindowTitle(window, windowTitle.c_str());
-        
-        // Reset accumulators
-        frameTimeAccumulator = 0.0f;
-        frameCount = 0;
-        lastUpdateTime = currentTime;
-    }
-}
-
-void Game::processInput(float deltaTime) {
-    // Process regular input with the specified deltaTime
-    input->processInput(deltaTime, *camera, *world);
-    
-    // Check for other key presses
-    if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
-        glfwSetWindowShouldClose(window, true);
-    }
-    
-    // Debug keys
-    static bool f3Pressed = false;
-    if (glfwGetKey(window, GLFW_KEY_F3) == GLFW_PRESS && !f3Pressed) {
-        f3Pressed = true;
-        showDebugInfo = !showDebugInfo;
-    } else if (glfwGetKey(window, GLFW_KEY_F3) == GLFW_RELEASE) {
-        f3Pressed = false;
-    }
-    
-    // Force chunk update when F5 is pressed (useful for testing)
-    static bool f5Pressed = false;
-    if (glfwGetKey(window, GLFW_KEY_F5) == GLFW_PRESS && !f5Pressed) {
-        f5Pressed = true;
-        world->markAllChunksDirty();
-        std::cout << "All chunks marked dirty for remeshing" << std::endl;
-    } else if (glfwGetKey(window, GLFW_KEY_F5) == GLFW_RELEASE) {
-        f5Pressed = false;
-    }
-    
-    // Always ensure chunks are updated around the player's current position
-    // This is critical for consistent movement in tetrahedral space
-    Quadray cameraQuadray = camera->getPositionQuadray();
-    world->generateChunksAround(cameraQuadray, TetraChunk::CHUNK_GENERATION_RADIUS);
-    
-    // Trigger chunk updates whenever we process input
-    // This ensures more responsive chunk updates during movement
-    static Vector3 lastCameraPos = camera->position;
-    float cameraMoveDistance = (camera->position - lastCameraPos).length();
-    
-    // Update chunks when camera moves, with a small threshold to prevent constant updates
-    if (cameraMoveDistance > 0.03f) {
-        world->updateChunks(cameraQuadray);
-        lastCameraPos = camera->position;
     }
 }
 

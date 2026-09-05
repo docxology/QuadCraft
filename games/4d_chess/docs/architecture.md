@@ -12,12 +12,12 @@ Code structure and module organization.
 ├── README.md           # Project overview
 ├── js/
 │   ├── quadray.js      # Core coordinate system
-│   ├── pieces.js       # Chess piece definitions
-│   ├── board.js        # 4D game board
-│   ├── renderer.js     # 3D visualization
-│   ├── game.js         # Game controller
-│   ├── storage.js      # Save/load functionality
-│   └── analysis.js     # Geometric analysis
+│   ├── chess_pieces.js       # Chess piece definitions
+│   ├── chess_board.js        # 4D game board
+│   ├── chess_renderer.js     # 3D visualization
+│   ├── chess_game.js         # Game controller
+│   ├── chess_storage.js      # Save/load functionality
+│   └── chess_analysis.js     # Geometric analysis
 ├── docs/
 │   ├── README.md       # Documentation index
 │   ├── api-reference.md
@@ -26,7 +26,7 @@ Code structure and module organization.
 │   └── architecture.md # This file
 └── tests/
     ├── test.html       # Browser test runner
-    └── test_all.js     # Unit tests (83 tests)
+    └── test_chess.js     # Unit tests (83 tests)
 ```
 
 ---
@@ -40,23 +40,23 @@ Code structure and module organization.
        │
        v
 ┌─────────────┐
-│  pieces.js  │  Uses Quadray for positions/movement
+│  chess_pieces.js  │  Uses Quadray for positions/movement
 └──────┬──────┘
        │
        v
 ┌─────────────┐
-│   board.js  │  Uses Pieces, Quadray
+│   chess_board.js  │  Uses Pieces, Quadray
 └──────┬──────┘
        │
        v
 ┌─────────────┬─────────────┬─────────────┐
-│ renderer.js │   game.js   │ analysis.js │
+│ chess_renderer.js │   chess_game.js   │ chess_analysis.js │
 │   (Board)   │(Board,Rend) │   (Board)   │
 └─────────────┴──────┬──────┴─────────────┘
                      │
                      v
               ┌─────────────┐
-              │ storage.js  │  (Game serialization)
+              │ chess_storage.js  │  (Game serialization)
               └─────────────┘
 ```
 
@@ -71,41 +71,41 @@ Code structure and module organization.
 - **Key role**: Mathematical foundation
 - **Methods**: clone, normalized, toCartesian, fromCartesian, add, subtract, scale, distance, distanceTo, equals, toKey
 
-### pieces.js
+### chess_pieces.js
 
 - **Purpose**: Chess piece definitions and movement
 - **Exports**: `Piece`, `King`, `Queen`, `Rook`, `Bishop`, `Knight`, `Pawn`, `PieceType`, `PlayerColor`, `createPiece`
 - **Key role**: Movement rules for each piece type
 - **Piece types**: 6 (King, Queen, Rook, Bishop, Knight, Pawn)
 
-### board.js
+### chess_board.js
 
 - **Purpose**: Game board state management
 - **Exports**: `Board`, `BOARD_CONFIG`
 - **Key role**: Position validation, move execution, check detection
 - **Constants**: `TOTAL_PIECES_PER_SIDE: 12`, `TOTAL_PIECES: 24`
 
-### renderer.js
+### chess_renderer.js
 
 - **Purpose**: 3D visualization on HTML5 Canvas
 - **Exports**: `Renderer`
 - **Key role**: Project 4D → 2D, draw pieces/grid/UI
 - **Features**: Glow effects, math panel, numbered move indicators
 
-### game.js
+### chess_game.js
 
 - **Purpose**: Main game controller
 - **Exports**: `Game`, `GAME_VERSION`, `DEFAULT_CONFIG`
 - **Key role**: User interaction, turn management, game flow
 - **Version**: 1.0.0
 
-### storage.js
+### chess_storage.js
 
 - **Purpose**: Save/load game state
 - **Exports**: `exportGameState`, `importGameState`, `downloadJSON`, `handleFileUpload`, `generateSaveFilename`
 - **Key role**: Serialization to JSON (v1.0 format)
 
-### analysis.js
+### chess_analysis.js
 
 - **Purpose**: Geometric and strategic analysis
 - **Exports**: `calculateCenterControl`, `calculateMobilityScore`, `calculatePieceSpread`, `calculateMaterialScore`, `getPositionMetrics`, `createMoveLog`, `logGameMetrics`, `getDistanceStats`
@@ -156,7 +156,7 @@ if (typeof module !== 'undefined' && module.exports) {
 
 ```html
 <script src="js/quadray.js"></script>
-<script src="js/pieces.js"></script>
+<script src="js/chess_pieces.js"></script>
 <!-- ... -->
 ```
 
@@ -164,7 +164,7 @@ if (typeof module !== 'undefined' && module.exports) {
 
 ```javascript
 const { Quadray } = require('./js/quadray.js');
-const { Board } = require('./js/board.js');
+const { Board } = require('./js/chess_board.js');
 ```
 
 ---
@@ -185,7 +185,7 @@ const { Board } = require('./js/board.js');
 
 ### Adding New Piece Types
 
-1. Create class extending `Piece` in `pieces.js`
+1. Create class extending `Piece` in `chess_pieces.js`
 2. Implement `getValidMoves(board)` method
 3. Add to `PieceType` enum
 4. Add symbol in `getSymbol()` method
@@ -193,7 +193,7 @@ const { Board } = require('./js/board.js');
 
 ### Adding New Analysis Metrics
 
-1. Add function in `analysis.js`
+1. Add function in `chess_analysis.js`
 2. Export function
 3. Call from `getPositionMetrics()`
 4. Update UI panel if needed
@@ -225,7 +225,7 @@ const { Board } = require('./js/board.js');
 | Geometric Verification | — | 9 | 9 |
 | **Total** | **51** | **32** | **83** |
 
-### Unit Tests (`test_all.js`)
+### Unit Tests (`test_chess.js`)
 
 - Quadray arithmetic and conversion
 - Piece creation and movement
@@ -245,7 +245,7 @@ const { Board } = require('./js/board.js');
 
 ```bash
 # CLI
-cd tests && node test_all.js
+cd tests && node test_chess.js
 
 # Browser
 open tests/test.html

@@ -83,8 +83,7 @@ class BoardCatalog:
         if not js_dir.is_dir():
             return None
 
-        board_files = list(js_dir.glob('*_board.js')) + list(js_dir.glob('td_board.js'))
-        board_files = list(set(board_files))
+        board_files = list(set(js_dir.glob('*_board.js')))
         if not board_files:
             return None
 

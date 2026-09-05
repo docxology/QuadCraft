@@ -45,6 +45,14 @@ struct QuadrayEqual {
     }
 };
 
+/**
+ * A chunk of tetrahedral elements.
+ *
+ * Chunk coordinates (chunkX, chunkY, chunkZ) are CARTESIAN grid indices:
+ * the chunk covers the world-space cube [chunkX*CHUNK_SIZE, (chunkX+1)*CHUNK_SIZE)
+ * on each axis (see World's canonical key-space note). Element keys inside the
+ * chunk are chunk-LOCAL quadray coordinates produced by worldToChunkSpace().
+ */
 class TetraChunk {
 public:
     // Constants for chunk properties
@@ -52,42 +60,22 @@ public:
     static const int CHUNK_GENERATION_RADIUS = 4;
     static const int CHUNK_UNLOAD_DISTANCE = 8 * CHUNK_SIZE;
 
-    // Chunk coordinates (in chunk space, not world space)
+    // Cartesian grid coordinates of this chunk
     int chunkX, chunkY, chunkZ;
-    
-    // Quadray position of the chunk
-    Quadray position;
-    
+
     // Flags for chunk state
     bool isDirty;        // Whether the chunk needs mesh regeneration
     bool isGenerated;    // Whether the chunk has been generated
     bool isVisible;      // Whether the chunk is currently visible to the player
-    
+
     // Constructor
-    TetraChunk(int x, int y, int z) : 
-        chunkX(x), 
-        chunkY(y), 
+    TetraChunk(int x, int y, int z) :
+        chunkX(x),
+        chunkY(y),
         chunkZ(z),
-        position(x * CHUNK_SIZE, y * CHUNK_SIZE, z * CHUNK_SIZE, 0),
         isDirty(true),
         isGenerated(false),
         isVisible(false) {
-    }
-    
-    /**
-     * Constructor for TetraChunk using Quadray position
-     * 
-     * @param pos The position of the chunk in quadray space
-     */
-    TetraChunk(const Quadray& pos) : 
-        position(pos),
-        isDirty(true),
-        isGenerated(false),
-        isVisible(false) {
-        // Calculate chunk coordinates from position
-        chunkX = static_cast<int>(pos.a / CHUNK_SIZE);
-        chunkY = static_cast<int>(pos.b / CHUNK_SIZE);
-        chunkZ = static_cast<int>(pos.c / CHUNK_SIZE);
     }
     
     // Get a block at specified quadray coordinates
@@ -151,7 +139,7 @@ public:
     }
     
     // Generate the chunk's content
-    void generate(World& world);
+    void generate();
     
     // Get neighboring tetrahedral elements for a given element
     std::array<Quadray, 4> getNeighbors(const Quadray& quadPos) const;
@@ -172,10 +160,12 @@ public:
      * @return The center position of the chunk
      */
     Vector3 getCenter() const {
-        // Calculate the center of the chunk by converting the quadray position
-        // plus half the chunk size to cartesian coordinates
-        Quadray center = position + Quadray(CHUNK_SIZE / 2, CHUNK_SIZE / 2, CHUNK_SIZE / 2, CHUNK_SIZE / 2);
-        return center.toCartesian();
+        // Center of the chunk's Cartesian cube (chunk keys are Cartesian grid indices)
+        return Vector3(
+            (chunkX + 0.5f) * CHUNK_SIZE,
+            (chunkY + 0.5f) * CHUNK_SIZE,
+            (chunkZ + 0.5f) * CHUNK_SIZE
+        );
     }
     
 private:

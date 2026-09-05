@@ -9,13 +9,13 @@ We utilize a **True 4D DDA Raycaster** tracing rays across 4 intersecting IVM hy
 | Module | Role |
 |--------|------|
 | `doom_config.js` | IVM constants, cell types, weapons, rendering config |
-| `doom_map.js` | IVM sparse map (Map-based), room generation, 4D slice extraction |
+| `doom_board.js` | IVM sparse map (Map-based), room generation, 4D slice extraction |
 | `doom_entities.js` | Player/Enemy/Projectile with Quadray helpers |
 | `doom_physics.js` | Pure Quadray distance algorithms and True 4D DDA raycasting |
-| `doom_render_fps.js` | True 4D dynamic lighting, IVM wall textures (tetra/octa) |
+| `doom_renderer.js` | True 4D dynamic lighting, IVM wall textures (tetra/octa) |
 | `doom_hud_synergetics.js` | Synergetics analysis panel, animated hit-markers |
 | `doom_synergetics.js` | Tetravolumes, IVM grid, coordination, polyhedra (T:O:C=1:4:20), 8 geometric identity checks |
-| `doom_main.js` | Game controller wiring modules + Synergetics HUD |
+| `doom_game.js` | Game controller wiring modules + Synergetics HUD |
 | `quadray.js` | Quadray coordinate class with IVM utilities |
 
 ## Synergetics Features

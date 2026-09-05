@@ -4,15 +4,15 @@
 
 namespace QuadCraft {
 
-// Static terrain generator instance with a random seed
-static TerrainGenerator terrainGenerator(static_cast<unsigned int>(time(nullptr)));
+// Static terrain generator instance (deterministic sine-based noise)
+static TerrainGenerator terrainGenerator;
 
-void TetraChunk::generate(World& world) {
+void TetraChunk::generate() {
     // Clear any existing elements
     elements.clear();
     
     // Use the terrain generator to fill this chunk
-    terrainGenerator.generateChunk(*this, world);
+    terrainGenerator.generateChunk(*this);
     
     // Mark the chunk as generated and dirty (needs mesh update)
     isGenerated = true;

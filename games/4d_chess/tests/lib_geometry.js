@@ -8,7 +8,7 @@
 // Load dependencies for Node.js
 if (typeof require !== 'undefined') {
     const { Quadray } = require('../../4d_generic/quadray.js');
-    const analysis = require('../js/analysis.js');
+    const analysis = require('../js/chess_analysis.js');
     global.Quadray = Quadray;
     global.angleBetweenQuadrays = analysis.angleBetweenQuadrays;
     global.verifyRoundTrip = analysis.verifyRoundTrip;

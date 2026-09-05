@@ -442,7 +442,7 @@ Knight Move Directions:
 
 ### Center Control Metrics
 
-The `analysis.js` module calculates center control:
+The `chess_analysis.js` module calculates center control:
 
 ```javascript
 calculateCenterControl(board, color)

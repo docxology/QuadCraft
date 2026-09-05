@@ -75,7 +75,7 @@ games). Two concrete, verified examples:
 | 4D Minecraft | Click | Place block above the hovered block (`+C` axis) | `games/4d_minecraft/js/minecraft_game.js` `_bindMouse()` |
 | 4D Minecraft | Alt+Click | Remove the hovered block | `games/4d_minecraft/js/minecraft_game.js` `_bindMouse()` |
 | 4D Minecraft | 1-8 | Select block type | `games/4d_minecraft/js/minecraft_game.js` module docstring |
-| 4D Doom | WASD (`KeyW` etc.) + mouse-move | First-person movement + look — the one FPS exception in the portfolio | `games/4d_doom/js/doom_main.js` |
+| 4D Doom | WASD (`KeyW` etc.) + mouse-move | First-person movement + look — the one FPS exception in the portfolio | `games/4d_doom/js/doom_game.js` |
 
 ## Function Keys
 

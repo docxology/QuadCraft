@@ -117,14 +117,17 @@ From `REQUIRED_JS_PATTERNS` in `core/config.py`:
 |----------|-------|----------|------|
 | `snake` | `snake_board.js` → `SnakeBoard` | `snake_renderer.js` → `SnakeRenderer` | `snake_game.js` → `SnakeGame` |
 
-> **Naming reality (as of 2026-08-31, verified by `ls games/*/js/`):** the scaffold and
-> config template (`REQUIRED_JS_PATTERNS` in `games/src/core/config.py`) emit the full
-> `{key}_board.js` / `{key}_renderer.js` / `{key}_game.js` names, and 26 of 30 games follow
-> it. Legacy exceptions that also pass `qa/validation.py` (which only requires some
-> `*_board.js`, plus `*_map.js` for Doom): `4d_chess` uses bare `board.js`/`renderer.js`/`game.js`,
-> `4d_tower_defense` uses `td_*`, `4d_2048` uses `twenty48_*`, `4d_doom` uses its own
-> `doom_*` layout. New games MUST use the full `{key}_*` convention; do not copy the
-> legacy examples.
+> **Naming reality (as of 2026-09-05, verified by `ls games/*/js/`):** all 30 games
+> follow the `{key}_*` convention — the scaffold and config template
+> (`REQUIRED_JS_PATTERNS` in `games/src/core/config.py`) emit the full
+> `{key}_board.js` / `{key}_renderer.js` / `{key}_game.js` names, and the four
+> former legacy exceptions (`4d_chess` bare names, `4d_tower_defense` `td_*`,
+> `4d_2048` `twenty48_*`, `4d_doom` mixed layout) were renamed to the standard
+> convention on 2026-09-05 (`chess_*`, `tower_defense_*`, `2048_*`, and doom's
+> `doom_map.js`/`doom_render_fps.js`/`doom_main.js` →
+> `doom_board.js`/`doom_renderer.js`/`doom_game.js`). `qa/validation.py` requires
+> the trio (plus `*_board.js` for games with auxiliary modules) with no per-game
+> file-name exceptions.
 
 ---
 
@@ -145,10 +148,8 @@ From `REQUIRED_JS_PATTERNS` in `core/config.py`:
 ## ES-Module Exception
 
 **4D Doom** uses `import/export` syntax instead of `<script>` tags:
-
 ```javascript
-// Doom uses ES modules — EXEMPT from shared-import validation
-import { DoomMap } from './doom_map.js';
+import { DoomMap } from './doom_board.js';
 ```
 
 Games in `ES_MODULE_GAMES = {"doom"}` are exempt from checks 3–4 in validation.

@@ -254,7 +254,7 @@ Distance from origin: 1.58 units
 Valid moves: 11 positions
 ```
 
-### Metrics from analysis.js
+### Metrics from chess_analysis.js
 
 | Function | Returns | Use |
 |----------|---------|-----|

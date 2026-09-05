@@ -1,5 +1,5 @@
 /**
- * doom_map.js — 4D Dungeon Generator on IVM Grid
+ * doom_board.js — 4D Dungeon Generator on IVM Grid
  *
  * Uses sparse Map-based storage (like Minecraft) for IVM cells.
  * Integer Quadray coordinates ARE IVM vertices — no cubic approximation.

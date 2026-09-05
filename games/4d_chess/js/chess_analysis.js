@@ -1,5 +1,5 @@
 /**
- * Analysis.js - Geometric Analysis for 4D Quadray Chess
+ * chess_analysis.js - Geometric Analysis for 4D Quadray Chess
  * 
  * Provides position metrics, movement analysis, and data logging.
  */

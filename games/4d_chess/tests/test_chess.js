@@ -8,10 +8,10 @@
 // Load modules for Node.js testing
 if (typeof require !== 'undefined') {
     const { Quadray } = require('../../4d_generic/quadray.js');
-    const { Piece, King, Queen, Rook, Bishop, Knight, Pawn, PieceType, PlayerColor, createPiece } = require('../js/pieces.js');
-    const { Board } = require('../js/board.js');
-    const storage = require('../js/storage.js');
-    const analysis = require('../js/analysis.js');
+    const { Piece, King, Queen, Rook, Bishop, Knight, Pawn, PieceType, PlayerColor, createPiece } = require('../js/chess_pieces.js');
+    const { Board } = require('../js/chess_board.js');
+    const storage = require('../js/chess_storage.js');
+    const analysis = require('../js/chess_analysis.js');
     // Make globals for test access
     global.Quadray = Quadray;
     global.Piece = Piece;
@@ -850,7 +850,7 @@ test.describe('Extended Storage Tests', () => {
 
 // Load verification functions for Node.js
 if (typeof require !== 'undefined') {
-    const analysis = require('../js/analysis.js');
+    const analysis = require('../js/chess_analysis.js');
     global.angleBetweenQuadrays = analysis.angleBetweenQuadrays;
     global.verifyRoundTrip = analysis.verifyRoundTrip;
     global.verifyGeometricIdentities = analysis.verifyGeometricIdentities;

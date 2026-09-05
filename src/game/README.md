@@ -24,11 +24,11 @@ The Game class orchestrates all game systems:
 ### Main Loop
 
 ```cpp
-while (!shouldClose) {
-    processInput();
-    update(deltaTime);
+while (!glfwWindowShouldClose(window)) {
+    update(deltaTime);   // processes input + world updates
     render();
     swapBuffers();
+    pollEvents();
 }
 ```
 

@@ -29,7 +29,7 @@ python3 run_games.py --test --game chess doom snake
 ### Single Test File (Direct)
 
 ```bash
-node games/4d_chess/tests/test_all.js
+node games/4d_chess/tests/test_chess.js
 node games/tests/shared/test_projection.js
 ```
 

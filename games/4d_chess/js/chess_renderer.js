@@ -1,5 +1,5 @@
 /**
- * renderer.js — 4D Quadray Chess Canvas Renderer
+ * chess_renderer.js — 4D Quadray Chess Canvas Renderer
  *
  * Extends BaseRenderer to project Quadray positions to 2D,
  * draw the IVM grid structure, pieces with glowing effects,

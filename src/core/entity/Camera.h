@@ -167,21 +167,21 @@ public:
     
     // Constructor with vectors
     Camera(Vector3 position = Vector3(0.0f, 0.0f, 0.0f), Vector3 up = Vector3(0.0f, 1.0f, 0.0f), float yaw = YAW, float pitch = PITCH) :
+        position(position),
         front(Vector3(0.0f, 0.0f, -1.0f)),
+        worldUp(up),
+        lastPosition(position),
+        accumulatedQuadrayDistance(0.0f),
         movementSpeed(SPEED),
         mouseSensitivity(SENSITIVITY),
         zoom(ZOOM),
-        position(position),
-        worldUp(up),
         yaw(yaw),
         pitch(pitch),
         roll(ROLL),
         targetYaw(yaw),
         targetPitch(pitch),
         targetRoll(ROLL),
-        isDroneMode(false),
-        lastPosition(position),
-        accumulatedQuadrayDistance(0.0f)
+        isDroneMode(false)
     {
         updateCameraVectors();
         std::cout << "Camera initialized at position: " << position.x << ", " << position.y << ", " << position.z << std::endl;
@@ -203,12 +203,12 @@ public:
         Vector3 r = f.cross(worldUp).normalized();
         Vector3 u = r.cross(f);
         
-        // Create view matrix (row-major)
+        // Create view matrix (column-major, matching OpenGL/glUniform convention)
         std::vector<float> view = {
-            r.x, r.y, r.z, -r.dot(position),
-            u.x, u.y, u.z, -u.dot(position),
-            -f.x, -f.y, -f.z, f.dot(position),
-            0.0f, 0.0f, 0.0f, 1.0f
+            r.x, u.x, -f.x, 0.0f,
+            r.y, u.y, -f.y, 0.0f,
+            r.z, u.z, -f.z, 0.0f,
+            -r.dot(position), -u.dot(position), f.dot(position), 1.0f
         };
         
         return view;
@@ -252,9 +252,6 @@ public:
         // Update position
         position += movement;
         
-        // Calculate movement magnitude in Cartesian space
-        float movementMagnitude = movement.length();
-        
         // Calculate movement in tetrahedral space
         Quadray prevQuadray = Quadray::fromCartesian(previousPosition);
         Quadray newQuadray = Quadray::fromCartesian(position);
@@ -263,10 +260,6 @@ public:
         // Accumulate quadray distance for tracking
         accumulatedQuadrayDistance += quadrayDistance;
         
-        // Always report movement in tetrahedral space for consistent tracking
-        if (movementMagnitude > 0.0f) {
-            reportMovementInTetrahedralSpace(movement);
-        }
         
         // Update camera vectors immediately without interpolation
         // This improves responsiveness in tetrahedral space
@@ -296,14 +289,12 @@ public:
                 pitch = -89.0f;
         }
         
-        // Update target angles for smooth rotation
         targetYaw = yaw;
         targetPitch = pitch;
         
         // Update Front, Right and Up Vectors using the updated Euler angles
         updateCameraVectors();
         
-        std::cout << "Mouse movement processed. Yaw: " << yaw << ", Pitch: " << pitch << std::endl;
     }
     
     // Process camera roll (only in drone mode)
@@ -344,28 +335,6 @@ public:
             zoom = 45.0f;
     }
     
-    // Report movement in tetrahedral space
-    void reportMovementInTetrahedralSpace(const Vector3& movement) {
-        // Convert current position to quadray coordinates
-        Quadray currentPosQuadray = Quadray::fromCartesian(position);
-        
-        // Convert previous position to quadray coordinates
-        Quadray prevPosQuadray = Quadray::fromCartesian(position - movement);
-        
-        // Calculate distance moved in quadray space
-        float quadrayDistance = currentPosQuadray.distance(prevPosQuadray);
-        
-        // Calculate cartesian distance for comparison
-        float cartesianDistance = movement.length();
-        
-        // Always log movement details for better tracking in tetrahedral space
-        std::cout << "Movement in tetrahedral space:" << std::endl;
-        std::cout << "  Cartesian: " << cartesianDistance << " units"
-                  << " (" << movement.x << ", " << movement.y << ", " << movement.z << ")" << std::endl;
-        std::cout << "  Quadray: " << quadrayDistance << " units" 
-                  << " (" << currentPosQuadray.a << ", " << currentPosQuadray.b << ", " 
-                  << currentPosQuadray.c << ", " << currentPosQuadray.d << ")" << std::endl;
-    }
     
     // Get current quadray position
     Quadray getQuadrayPosition() const {
@@ -396,10 +365,6 @@ public:
         // Update the frustum based on the new camera vectors
         updateFrustum();
         
-        // Output for debugging
-        std::cout << "Camera vectors updated - Front: (" 
-                  << front.x << ", " << front.y << ", " << front.z << "), Right: (" 
-                  << right.x << ", " << right.y << ", " << right.z << ")" << std::endl;
     }
     
     // Utility function to convert degrees to radians
@@ -413,10 +378,6 @@ public:
     void updatePositionQuadray() {
         positionQuadray = Quadray::fromCartesian(position);
     }
-    
-    /**
-     * Gets the current position in quadray coordinates
-     */
     const Quadray& getPositionQuadray() const {
         return positionQuadray;
     }

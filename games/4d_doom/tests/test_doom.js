@@ -15,7 +15,7 @@
  */
 import { CELL, IVM, MAP, WEAPONS, ENEMY_STATS, RENDER, COLORS } from '../js/doom_config.js';
 import { Quadray, ROOT2, S3 } from '../js/quadray.js';
-import { DoomMap } from '../js/doom_map.js';
+import { DoomMap } from '../js/doom_board.js';
 import { Player, Enemy, Projectile, Particle, Pickup } from '../js/doom_entities.js';
 import { Physics } from '../js/doom_physics.js';
 import {

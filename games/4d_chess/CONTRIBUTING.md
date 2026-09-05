@@ -23,7 +23,7 @@ cd QuadCraft/4d_chess
 open index.html
 
 # Run tests
-cd tests && node test_all.js
+cd tests && node test_chess.js
 ```
 
 ---
@@ -84,7 +84,7 @@ if (typeof module !== 'undefined' && module.exports) {
 
 ```bash
 # CLI (Node.js)
-cd tests && node test_all.js
+cd tests && node test_chess.js
 
 # Browser
 open tests/test.html
@@ -92,7 +92,7 @@ open tests/test.html
 
 ### Adding Tests
 
-1. Open `tests/test_all.js`
+1. Open `tests/test_chess.js`
 2. Find or create appropriate `describe` block
 3. Add `it` test case
 
@@ -131,7 +131,7 @@ git checkout -b feature/your-feature-name
 ### 3. Test Your Changes
 
 ```bash
-cd tests && node test_all.js
+cd tests && node test_chess.js
 # Ensure all tests pass
 ```
 
@@ -155,16 +155,16 @@ git push origin feature/your-feature-name
 
 ### New Piece Type
 
-1. Edit `js/pieces.js`
+1. Edit `js/chess_pieces.js`
 2. Create class extending `Piece`
 3. Implement `getValidMoves(board)`
 4. Add to `PieceType` enum
 5. Update `createPiece()` factory
-6. Add tests in `test_all.js`
+6. Add tests in `test_chess.js`
 
 ### New Analysis Metric
 
-1. Edit `js/analysis.js`
+1. Edit `js/chess_analysis.js`
 2. Add function following existing pattern
 3. Add to exports
 4. Add tests
@@ -173,7 +173,7 @@ git push origin feature/your-feature-name
 
 1. Add HTML in `index.html`
 2. Add CSS styles
-3. Add handler in `game.js`
+3. Add handler in `chess_game.js`
 4. Connect via event listener
 
 ---

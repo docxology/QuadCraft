@@ -1,5 +1,5 @@
 /**
- * twenty48_board.js — 4D 2048 Board on IVM Grid
+ * 2048_board.js — 4D 2048 Board on IVM Grid
  * Tile-merging puzzle on 4D Quadray lattice.
  * Tiles slide along IVM directions (twelve-around-one) and merge.
  * @module Twenty48Board

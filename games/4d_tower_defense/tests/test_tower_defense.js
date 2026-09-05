@@ -1,5 +1,5 @@
 /**
- * test_td.js -- 4D Tower Defense Unit Tests
+ * test_tower_defense.js -- 4D Tower Defense Unit Tests
  * Tests board logic, creep types, tower upgrades, sell, abilities, wave mechanics,
  * procedural paths, swarm splitting, regen healing, and rhombic sniper tower.
  */
@@ -10,7 +10,7 @@ const assert = (c, m) => {
 
 if (typeof require !== 'undefined') {
     const { Quadray } = require('../../4d_generic/quadray.js');
-    const { TowerDefenseBoard, TDTower, TDCreep, TOWER_TYPES, CREEP_TYPES } = require('../js/td_board.js');
+    const { TowerDefenseBoard, TDTower, TDCreep, TOWER_TYPES, CREEP_TYPES } = require('../js/tower_defense_board.js');
     global.Quadray = Quadray;
     global.TowerDefenseBoard = TowerDefenseBoard;
     global.TDTower = TDTower;

@@ -27,10 +27,6 @@ logger = logging.getLogger(__name__)
 # Games that use ES-module architecture (import/export) instead of script tags.
 ES_MODULE_GAMES = {"doom"}
 
-# Minimum expected methods in board classes
-EXPECTED_BOARD_METHODS = ["getCell", "setCell"]
-
-
 def validate_game(games_dir: Path, key: str) -> list[str]:
     """Validate a single game directory. Returns list of issues (empty = OK)."""
     meta = GAMES[key]
@@ -86,47 +82,24 @@ def validate_game(games_dir: Path, key: str) -> list[str]:
 
     # 6. Board logic file exists and has real content (not scaffold)
     if js_dir.is_dir():
-        # Check for *_board.js OR board.js
-        board_files = list(js_dir.glob("*_board.js")) + list(js_dir.glob("board.js"))
-        
-        # Exception for Doom (uses doom_map.js)
-        if key == "doom":
-            board_files += list(js_dir.glob("*_map.js"))
-
+        board_files = list(js_dir.glob("*_board.js"))
         if not board_files:
-            issues.append(f"no *_board.js or board.js file found in js/")
+            issues.append("no *_board.js file found in js/")
         else:
             for bf in board_files:
                 content = bf.read_text()
                 if len(content) < 200:
                     issues.append(f"{bf.name}: suspiciously small ({len(content)} bytes)")
-                
-                # Check for required methods (warning only for now to allow legacy games)
-                for method in EXPECTED_BOARD_METHODS:
-                    if method not in content:
-                        # For now, just log a debug or warning, don't fail validation
-                        # because many legacy games (Wave 1) use different APIs.
-                        pass 
-                        # issues.append(f"{bf.name}: missing {method}() method")
 
         # 7. Renderer not a scaffold
-        renderer_files = list(js_dir.glob("*_renderer.js")) + list(js_dir.glob("renderer.js"))
-        # Doom exception
-        if key == "doom":
-            renderer_files += list(js_dir.glob("*_render*.js"))
-            
+        renderer_files = list(js_dir.glob("*_renderer.js"))
+
         for rf in renderer_files:
             content = rf.read_text()
             if "[scaffold]" in content.lower() or "renderer scaffold" in content.lower():
                 issues.append(f"{rf.name}: still a scaffold stub")
-            if "TODO: Render game-specific" in content:
-                issues.append(f"{rf.name}: contains scaffold TODO")
-
         # 8. Game controller not a scaffold
-        game_files = list(js_dir.glob("*_game.js")) + list(js_dir.glob("game.js"))
-        # Doom exception
-        if key == "doom":
-             game_files += list(js_dir.glob("*_main.js"))
+        game_files = list(js_dir.glob("*_game.js"))
 
         for gf in game_files:
             content = gf.read_text()

@@ -1,5 +1,5 @@
 /**
- * board.js — 4D Chess Board on IVM Grid
+ * chess_board.js — 4D Chess Board on IVM Grid
  *
  * The board is a finite lattice of points in 4D Quadray space.
  * We use a bounded region to make gameplay tractable.

@@ -90,9 +90,9 @@ TEMPLATE = """<!DOCTYPE html>
 TEST_CONFIG = {
     "4d_chess": {
         "modules": [
-            "../js/pieces.js",
-            "../js/board.js",
-            "../js/analysis.js"
+            "../js/chess_pieces.js",
+            "../js/chess_board.js",
+            "../js/chess_analysis.js"
         ],
         "test_script": "test_chess.js"
     },
@@ -129,8 +129,8 @@ TEST_CONFIG = {
         "test_script": "test_catan.js"
     },
     "4d_tower_defense": {
-        "modules": ["../js/td_board.js"],
-        "test_script": "test_td.js"
+        "modules": ["../js/tower_defense_board.js"],
+        "test_script": "test_tower_defense.js"
     },
     "4d_doom": {
         "modules": [],

@@ -11,7 +11,9 @@ tomcat/
         ├── QuadCraftAjax.jsp
         ├── index.html_goesHere.txt
         └── WEB-INF/
-            └── classes/     # Compiled Java classes
+            └── classes/
+                └── immutable/
+                    └── occamsjsonds/   # Compiled Java classes + sources
 ```
 
 ## Deployment
@@ -41,9 +43,9 @@ AJAX endpoint for game operations:
 - POST: Save game state
 - GET: Load game state
 
-### WEB-INF/classes
+### WEB-INF/classes/immutable/occamsjsonds
 
-Compiled Java classes:
+Java sources (and compiled classes):
 
 - `JsonDS.java` - JSON data structure handling
 - `TestJsonDS.java` - Test code

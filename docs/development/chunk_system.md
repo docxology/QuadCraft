@@ -3,6 +3,16 @@
 > [!IMPORTANT]
 > **Design Specification Status**: This document outlines the *architectural design* and *planned implementation* of an extended chunk subsystem. As of the current version, none of `TetrahedralChunk`, `ChunkManager`, `ChunkCoord`, `ChunkCache`, `ChunkGenerator`, `ChunkSerializer`, `ChunkMemoryManager`, `ChunkCompressionLayer`, `ChunkStorage`, `ChunkEventSystem`, `ChunkLODSystem`, `ChunkRenderer`, or `ChunkLightingSystem` exist in the codebase (verified via `grep -rln 'class <Name>\b' src/`, 0 matches for all thirteen). The only real chunk class is `TetraChunk` (`src/core/world/TetraChunk.h`), which has none of the caching, compression, LOD, lighting, or event-system machinery described below. This guide serves as a design proposal, not documentation of current behavior.
 
+> **Implemented scheme (as of 2026-09-05)**: the real chunk storage — `World` and
+> `TetraChunk` in `src/core/world/` — uses **Cartesian chunk keys**. Chunk
+> `(cx, cy, cz)` covers the world-space cube `[cx*CHUNK_SIZE, (cx+1)*CHUNK_SIZE)`
+> on each axis; quadray positions entering the `World` API are converted with
+> `Quadray::toCartesian()` and floored by `World::worldToChunkCoords()` before any
+> chunk lookup or creation. Elements inside a chunk are keyed by chunk-local
+> quadray coordinates (`TetraChunk::worldToChunkSpace`), and `ChunkMesher` emits
+> mesh vertices in world space by adding the chunk's Cartesian origin.
+> Regression tests: `tests/world_chunk_test.cpp` (`ctest`).
+
 This document details the chunk system in QuadCraft, explaining how the tetrahedral world is divided into manageable chunks and how these chunks are processed, stored, and rendered.
 
 ## Chunk System Overview
