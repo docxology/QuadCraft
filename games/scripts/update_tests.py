@@ -1,5 +1,11 @@
+#!/usr/bin/env python3
+"""Sync hardcoded per-game test counts into each game's AGENTS.md/README.md.
+
+Counts come from TEST_COUNTS below; refresh it before running.
+"""
 import os
 import re
+from pathlib import Path
 
 TEST_COUNTS = {
     '4d_asteroids': 12,
@@ -24,8 +30,8 @@ TEST_COUNTS = {
     '4d_lights_out': 45
 }
 
-def update_test_counts():
-    games_dir = '/Users/4d/Documents/GitHub/QuadCraft/games'
+def main():
+    games_dir = str(Path(__file__).resolve().parent.parent)
     
     for game, count in TEST_COUNTS.items():
         agents_md_path = os.path.join(games_dir, game, 'AGENTS.md')
@@ -67,5 +73,5 @@ def update_test_counts():
                     f.write(r_content)
                 print(f"Updated {readme_md_path} with {count} tests.")
 
-if __name__ == '__main__':
-    update_test_counts()
+if __name__ == "__main__":
+    main()

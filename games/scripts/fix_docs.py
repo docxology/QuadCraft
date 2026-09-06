@@ -1,4 +1,8 @@
+#!/usr/bin/env python3
+"""Create missing README/AGENTS.md stubs for game and infra directories.
 
+Creates files only where absent; never overwrites existing docs.
+"""
 import os
 from pathlib import Path
 
@@ -74,28 +78,36 @@ def create_file(path, content):
     else:
         print(f"Skipping {path} (already exists)")
 
-# 1. Fix Game READMEs
-for game_dir in MISSING_GAMES_README:
-    path = Path(game_dir)
-    slug = path.name.replace("4d_", "")
-    name = path.name.replace("_", " ").title().replace("4D", "4D")
-    content = GAME_README_TEMPLATE.format(name=name, slug=slug)
-    create_file(path / "README.md", content)
+def main():
+    # Anchored to the repo root so paths resolve from any CWD
+    repo_root = Path(__file__).resolve().parent.parent.parent
 
-# 2. Fix Infra Docs
-for dir_path, desc in INFRA_DIRS.items():
-    path = Path(dir_path)
-    if not path.exists():
-        continue
-        
-    name = path.name.title()
-    
-    # AGENTS.md
-    agents_content = INFRA_AGENTS_TEMPLATE.format(name=name, desc=desc)
-    create_file(path / "AGENTS.md", agents_content)
-    
-    # README.md
-    readme_content = INFRA_README_TEMPLATE.format(name=name, desc=desc)
-    create_file(path / "README.md", readme_content)
+    # 1. Fix Game READMEs
+    for game_dir in MISSING_GAMES_README:
+        path = repo_root / game_dir
+        slug = path.name.replace("4d_", "")
+        name = path.name.replace("_", " ").title().replace("4D", "4D")
+        content = GAME_README_TEMPLATE.format(name=name, slug=slug)
+        create_file(path / "README.md", content)
 
-print("Documentation generation complete.")
+    # 2. Fix Infra Docs
+    for dir_path, desc in INFRA_DIRS.items():
+        path = repo_root / dir_path
+        if not path.exists():
+            continue
+
+        name = path.name.title()
+
+        # AGENTS.md
+        agents_content = INFRA_AGENTS_TEMPLATE.format(name=name, desc=desc)
+        create_file(path / "AGENTS.md", agents_content)
+
+        # README.md
+        readme_content = INFRA_README_TEMPLATE.format(name=name, desc=desc)
+        create_file(path / "README.md", readme_content)
+
+    print("Documentation generation complete.")
+
+
+if __name__ == "__main__":
+    main()
