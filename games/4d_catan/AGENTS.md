@@ -14,7 +14,7 @@ node tests/test_catan.js
 open games/4d_catan/index.html
 
 # Start local server (Port 8108)
-./games/run_catan.sh
+./games/run.sh catan
 ```
 
 ## Key Directories

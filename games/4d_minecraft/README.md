@@ -9,7 +9,8 @@ A standalone implementation of Minecraft using **Quadray coordinates** and the *
 ### Option 1: Run Script (Recommended)
 
 ```bash
-./run_minecraft.sh
+# From the repository root:
+./games/run.sh minecraft
 ```
 This starts a local server on port 8107 and opens the browser.
 

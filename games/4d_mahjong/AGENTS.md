@@ -14,7 +14,7 @@ node tests/test_mahjong.js
 open games/4d_mahjong/index.html
 
 # Start local server (Port 8111)
-./games/run_mahjong.sh
+./games/run.sh mahjong
 ```
 
 ## Key Directories

@@ -9,7 +9,8 @@ A standalone implementation of Asteroids using **Quadray coordinates** and the *
 ### Option 1: Run Script (Recommended)
 
 ```bash
-./run_asteroids.sh
+# From the repository root:
+./games/run.sh asteroids
 ```
 This starts a local server on port 8104 and opens the browser.
 

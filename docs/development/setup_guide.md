@@ -25,10 +25,10 @@ graph TD
     Dependencies --> Math["Math Libraries"]
     Dependencies --> System["System Libraries"]
     
-    Graphics --> OpenGL["OpenGL/GLAD"]
+    Graphics --> OpenGL["OpenGL"]
+    Graphics --> GLEW["GLEW"]
     Graphics --> GLFW["GLFW"]
     
-    Math --> GLM["GLM"]
     Math --> CustomMath["QuadCraft Math"]
     
     System --> STL["STL"]
@@ -48,7 +48,7 @@ graph TD
    - Linux: GCC 7.3.0+ or Clang 6.0+
    - macOS: Xcode Command Line Tools (Clang)
 
-2. **CMake (3.15+)**
+2. **CMake (3.16+)**
    - [Download from cmake.org](https://cmake.org/download/)
    - Or install via package manager:
      - Windows: `winget install Kitware.CMake`
@@ -79,10 +79,10 @@ Clone the QuadCraft repository:
 ```bash
 git clone https://github.com/docxology/QuadCraft.git
 cd QuadCraft
-git submodule update --init --recursive
 ```
 
-The `--recursive` flag is important as QuadCraft uses git submodules for some dependencies.
+QuadCraft has no git submodules and vendors no libraries: the native engine links system
+OpenGL, GLEW and GLFW3 (see [Prerequisites](#prerequisites)).
 
 ## Project Structure
 
@@ -91,32 +91,26 @@ The repository is organized into the following main directories:
 ```mermaid
 graph TD
     Root["Root (/)"] --> Src["src/"]
-    Root --> Build["build/"]
-    Root --> Assets["assets/"]
+    Root --> Games["games/"]
     Root --> Docs["docs/"]
     Root --> Tests["tests/"]
-    Root --> External["external/"]
-    
+    Root --> Build["build/"]
+
     Src --> Core["core/"]
     Src --> Game["game/"]
     Src --> Render["render/"]
-    Src --> Physics["physics/"]
-    Src --> UI["ui/"]
-    Src --> Utils["utils/"]
-    
-    External --> GLFW["glfw/"]
-    External --> GLAD["glad/"]
-    External --> GLM["glm/"]
-    External --> ImGui["imgui/"]
-    External --> STB["stb/"]
+    Src --> Browser["browser/ + js/ (experiments)"]
+    Src --> Server["server/ (Tomcat/JSP)"]
+
+    Games --> GameDirs["4d_<game>/ (30 standalone browser games)"]
+    Games --> Launcher["run_games.py + src/ (Python launcher)"]
 ```
 
-- **src/**: Main source code
-- **build/**: Build artifacts (created during build)
-- **assets/**: Game assets (textures, models, shaders, etc.)
+- **src/**: Native engine source (`core/`, `game/`, `render/`), browser experiments and the JSP server components
+- **games/**: 30 standalone browser games plus the Python launcher (`run_games.py`, `src/`)
 - **docs/**: Documentation
-- **tests/**: Unit and integration tests
-- **external/**: Third-party libraries and dependencies
+- **tests/**: CTest suites for the native engine (`quadray_test.cpp`, `world_chunk_test.cpp`)
+- **build/**: CMake build tree, created by `./build.sh` (not tracked; see `.gitignore`)
 
 ## Building QuadCraft
 
@@ -191,7 +185,7 @@ xcode-select --install
 
 ### Handling Dependencies
 
-Most dependencies are handled automatically through Git submodules or CMake's FetchContent. However, if you encounter issues, you can manually install dependencies:
+Dependencies are resolved from the system by CMake (`find_package(OpenGL)`, `find_package(GLEW)`, `find_package(glfw3)`) — nothing is vendored or downloaded at configure time. Install the development packages:
 
 ```bash
 # Ubuntu/Debian example
@@ -200,11 +194,12 @@ sudo apt install libglfw3-dev libglm-dev
 
 ## Running QuadCraft
 
-After building, the executable will be in the build directory (or a subdirectory depending on your build system).
+After building, the executable is written to `build/bin/QuadCraft` (the CMake target sets
+`RUNTIME_OUTPUT_DIRECTORY`).
 
 ```bash
-# From the build directory
-./QuadCraft
+# From the repository root
+./build/bin/QuadCraft
 ```
 
 For Windows with Visual Studio, you can run directly from the IDE with F5 or the Debug menu.
@@ -217,9 +212,8 @@ The 30 standalone browser games require no build step:
 # Open any game directly
 open games/4d_chess/index.html
 
-# Or use a local HTTP server via shell scripts
-cd games
-./run_chess.sh              # Opens on port 8100
+# Or use the shell wrapper (same thing, resolves a Python 3.10+ interpreter)
+./games/run.sh chess        # Opens on port 8100
 
 # Or use the Python launcher
 python3 games/run_games.py --game chess    # Single game
@@ -284,12 +278,11 @@ private:
 
 ### Debug Tools
 
-QuadCraft includes several debugging tools:
+QuadCraft's runtime toggles are defined in `src/game/Input.h`:
 
-1. **Debug Overlay** - Press F3 to toggle
-2. **Coordinate Display** - Press F4 to toggle
-3. **Performance Metrics** - Press F5 to toggle
-4. **Wireframe Mode** - Press F6 to toggle
+1. **Wireframe Mode** - Press F1 to toggle
+2. **Quadray Coordinate Overlay** - Press F2 to toggle
+3. **Tetrahedral Distance Reporting** - Press F4 to toggle (logged to the console)
 
 ## Building Documentation
 
@@ -311,8 +304,8 @@ The documentation uses Markdown files with Mermaid diagrams. To view the documen
 ### Common Build Issues
 
 1. **CMake can't find dependencies**
-   - Make sure you ran `git submodule update --init --recursive`
-   - Check that you have the required development packages installed
+   - Install the development packages for OpenGL, GLEW and GLFW3 (Ubuntu/Debian: `sudo apt install libglew-dev libglfw3-dev`)
+   - Check that `find_package(GLEW)` and `find_package(glfw3)` succeed in the CMake output
 
 2. **Compilation errors**
    - Ensure you have a compatible C++ compiler
@@ -334,20 +327,18 @@ If you encounter issues not covered here:
 
 ### Build Options
 
-QuadCraft's CMake configuration provides several options:
+QuadCraft's CMake configuration defines no custom options; the standard CMake selectors apply
+and the CTest suites are always built.
 
 ```bash
-# Enable detailed logging
-cmake .. -DQUADCRAFT_ENABLE_LOGGING=ON
+# Release build
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
 
-# Build with tests
-cmake .. -DQUADCRAFT_BUILD_TESTS=ON
+# Debug build
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug
 
-# Enable profiling
-cmake .. -DQUADCRAFT_ENABLE_PROFILING=ON
-
-# Build with sanitizers (Debug builds only)
-cmake .. -DQUADCRAFT_ENABLE_SANITIZERS=ON
+# Configure with a non-default compiler
+cmake -S . -B build -DCMAKE_CXX_COMPILER=clang++
 ```
 
 ### IDE-Specific Setup
@@ -388,7 +379,7 @@ When developing for QuadCraft, keep these performance considerations in mind:
 
 3. **Rendering Optimization**: Use frustum culling and level of detail techniques for rendering large tetrahedral worlds.
 
-4. **Profiling**: Use the built-in profiling tools (enable with `-DQUADCRAFT_ENABLE_PROFILING=ON`) to identify bottlenecks.
+4. **Profiling**: Use a platform profiler (Xcode Instruments, `perf`, `valgrind --tool=callgrind`) or a `-DCMAKE_BUILD_TYPE=RelWithDebInfo` build to identify bottlenecks.
 
 ## Next Steps
 
@@ -396,7 +387,7 @@ Now that your development environment is set up, here are some suggestions for g
 
 1. Explore the [Technical Architecture](architecture.md) to understand the system design
 2. Learn about the [Quadray Coordinate System](../mathematics/quadray_coordinates.md)
-3. Run the examples in the `examples/` directory to see the engine in action
+3. Launch the browser portfolio (`python3 games/run_games.py --list`) or build and run the native engine (`./build.sh`)
 4. Check the issue tracker for beginner-friendly issues to work on
 
 ## Contributing

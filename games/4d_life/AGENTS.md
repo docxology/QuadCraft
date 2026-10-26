@@ -14,7 +14,7 @@ node tests/test_life.js
 open games/4d_life/index.html
 
 # Start local server (Port 8103)
-./games/run_life.sh
+./games/run.sh life
 ```
 
 ## Key Directories

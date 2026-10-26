@@ -9,7 +9,8 @@ A standalone implementation of Mahjong using **Quadray coordinates** and the **I
 ### Option 1: Run Script (Recommended)
 
 ```bash
-./run_mahjong.sh
+# From the repository root:
+./games/run.sh mahjong
 ```
 This starts a local server on port 8111 and opens the browser.
 

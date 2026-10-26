@@ -9,7 +9,8 @@ A standalone implementation of Life using **Quadray coordinates** and the **Isot
 ### Option 1: Run Script (Recommended)
 
 ```bash
-./run_life.sh
+# From the repository root:
+./games/run.sh life
 ```
 This starts a local server on port 8103 and opens the browser.
 

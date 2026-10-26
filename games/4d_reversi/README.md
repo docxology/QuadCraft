@@ -9,7 +9,8 @@ A standalone implementation of Reversi using **Quadray coordinates** and the **I
 ### Option 1: Run Script (Recommended)
 
 ```bash
-./run_reversi.sh
+# From the repository root:
+./games/run.sh reversi
 ```
 This starts a local server on port 8102 and opens the browser.
 

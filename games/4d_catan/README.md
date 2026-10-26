@@ -9,7 +9,8 @@ A standalone implementation of Catan using **Quadray coordinates** and the **Iso
 ### Option 1: Run Script (Recommended)
 
 ```bash
-./run_catan.sh
+# From the repository root:
+./games/run.sh catan
 ```
 This starts a local server on port 8108 and opens the browser.
 

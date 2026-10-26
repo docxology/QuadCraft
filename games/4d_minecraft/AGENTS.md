@@ -11,7 +11,7 @@
 cd tests && node test_minecraft.js
 
 # Start local server (Port 8107)
-./games/run_minecraft.sh
+./games/run.sh minecraft
 
 # Open directly in browser
 open games/4d_minecraft/index.html

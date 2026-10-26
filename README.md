@@ -8,7 +8,7 @@ A tetrahedral-based voxel game using quadray coordinates, inspired by Minecraft.
 - **Current state, as of 2026-09-05, verified by command:** games portfolio fully green — `python3 games/run_games.py --validate` (30/30 pass) and `python3 games/run_games.py --test` (1,782 tests, 0 failures). Run these yourself; numbers were true when written, the command is the truth. CI (`.github/workflows/games-tests.yml`) runs both on every push/PR to main.
 - **Backlog / what to do next:** [TODO.md](TODO.md) (single canonical backlog).
 - **Documentation hub:** [docs/README.md](docs/README.md). Games portfolio details: [games/GAMES_INDEX.md](games/GAMES_INDEX.md).
-- **Native build, as of 2026-09-05, verified by command:** `./build.sh --no-run --test` builds with zero warnings (`-Wall -Wextra -pedantic`, macOS arm64 clang) and passes CTest (`tests/quadray_test.cpp`). CI (`.github/workflows/native-build.yml`) runs the same on Linux for every push/PR to main. Plain `./build.sh` also launches the game (needs a display). Requires OpenGL, GLEW, GLFW3, CMake >= 3.10, C++17.
+- **Native build, as of 2026-09-05, verified by command:** `./build.sh --no-run --test` builds with zero warnings (`-Wall -Wextra -pedantic`, macOS arm64 clang) and passes CTest (`tests/quadray_test.cpp`). CI (`.github/workflows/native-build.yml`) runs the same on Linux for every push/PR to main. Plain `./build.sh` also launches the game (needs a display). Requires OpenGL, GLEW, GLFW3, CMake >= 3.16, C++17.
 
 ## Overview
 
@@ -34,7 +34,7 @@ QuadCraft is an experimental voxel game that uses tetrahedral elements (instead 
 ### Pic
 
 ![Quadray grid experiment](https://raw.githubusercontent.com/docxology/QuadCraft/refs/heads/main/src/js/experiments/QuadrayGrid_2025-5-26-307pET.png)
-Those experiments are in js/experiments/QuadrayGrid2.html
+Those experiments are in `src/js/experiments/QuadrayGrid2.html`
 
 ## Technical Description
 
@@ -55,7 +55,7 @@ You'll need the following libraries installed:
 - OpenGL
 - GLEW
 - GLFW3
-- CMake (3.10 or higher)
+- CMake (3.16 or higher)
 - C++17 compatible compiler
 
 ### Build Instructions

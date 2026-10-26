@@ -17,9 +17,8 @@ All 30 games are **standalone browser applications** — zero build step, zero s
 # Open any game directly (no server needed for basic play)
 open games/4d_chess/index.html
 
-# Or use shell scripts with HTTP server
-cd games
-./run_chess.sh          # Opens on port 8100
+# Or use the shell wrapper from the repository root
+./games/run.sh chess    # Opens on port 8100
 
 # Or use the Python launcher for multiple games
 python3 games/run_games.py --game chess doom life

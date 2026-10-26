@@ -11,7 +11,7 @@ QuadCraft is a tetrahedral-based voxel game using quadray coordinates, inspired 
 | Native Engine | C++17, OpenGL, GLEW, GLFW3 | `src/core/`, `src/game/`, `src/render/` |
 | Browser Game | JavaScript, HTML5 Canvas | `src/browser/`, `src/js/` |
 | Server Backend | Java, JSP, Tomcat | `src/server/` |
-| Build System | CMake 3.10+ | `CMakeLists.txt` |
+| Build System | CMake 3.16+ | `CMakeLists.txt` |
 
 ## Core Concepts
 

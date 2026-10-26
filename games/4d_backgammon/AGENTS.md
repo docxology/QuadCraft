@@ -14,7 +14,7 @@ node tests/test_backgammon.js
 open games/4d_backgammon/index.html
 
 # Start local server (Port 8106)
-./games/run_backgammon.sh
+./games/run.sh backgammon
 ```
 
 ## Key Directories

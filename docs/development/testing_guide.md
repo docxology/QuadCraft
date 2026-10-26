@@ -28,7 +28,7 @@ flowchart TD
 
 All 30 games include Node.js-runnable test files in their `tests/` directory (one `test_all.js`-style entry point per game; 34 per-game test files total, verified via `find . -path '*/tests/test_*.js' | wc -l` under `games/`). These test quadray coordinate math, game logic, and (where applicable) IVM/Synergetics constants.
 
-> **Known issue**: the 4D Catan test file (`4d_catan/tests/test_catan.js`) currently crashes with a Node.js `SyntaxError: Identifier 'ResourceType' has already been declared` and reports 0 passed — see [games/doc/testing_guide.md](../../games/doc/testing_guide.md) for the live per-game test inventory and current pass/fail status.
+> **Last verified run (2026-10-25)**: `python3 games/run_games.py --test` reports 1,782 passed, 0 failed — including 4D Catan's 56 assertions (the earlier `ResourceType` re-declaration crash is fixed) — and `python3 games/run_games.py --validate` passes 30/30. See [games/doc/testing_guide.md](../../games/doc/testing_guide.md) for the per-game inventory; re-run the command for current numbers.
 
 For the per-game test-file names, assertion counts, and coverage table, see the "Current Test Inventory" and "Test Coverage by Game" sections of [games/doc/testing_guide.md](../../games/doc/testing_guide.md), which tracks the game/test structure more closely than the table this guide previously carried. Both guides can still drift from the live test run — re-run `python3 games/run_games.py --test` for current pass/fail counts rather than trusting either document's numbers verbatim.
 

@@ -14,7 +14,7 @@ node tests/test_reversi.js
 open games/4d_reversi/index.html
 
 # Start local server (Port 8102)
-./games/run_reversi.sh
+./games/run.sh reversi
 ```
 
 ## Key Directories

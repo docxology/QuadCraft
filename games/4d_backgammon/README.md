@@ -9,7 +9,8 @@ A standalone implementation of Backgammon using **Quadray coordinates** and the 
 ### Option 1: Run Script (Recommended)
 
 ```bash
-./run_backgammon.sh
+# From the repository root:
+./games/run.sh backgammon
 ```
 This starts a local server on port 8106 and opens the browser.
 

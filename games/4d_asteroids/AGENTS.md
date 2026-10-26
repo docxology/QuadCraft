@@ -14,7 +14,7 @@ node tests/test_asteroids.js
 open games/4d_asteroids/index.html
 
 # Start local server (Port 8104)
-./games/run_asteroids.sh
+./games/run.sh asteroids
 ```
 
 ## Key Directories
