@@ -6,8 +6,8 @@ Code structure and module organization.
 
 ## Directory Structure
 
-```
-4d_chess/
+```text
+games/4d_chess/
 ├── index.html          # Main game page
 ├── README.md           # Project overview
 ├── js/
