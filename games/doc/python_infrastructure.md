@@ -9,7 +9,7 @@
 ## Package Structure
 
 ```text
-src/
+games/src/
 ├── __init__.py       # Unified public API (54 exports)
 ├── core/             # Core infrastructure
 │   ├── config.py     # Shared constants (ports, paths, module lists)
@@ -142,7 +142,7 @@ Checks a single game for:
 
 ### `check_shared_dir(games_dir) → list[str]`
 
-Verifies `4d_generic/` contains all required shared modules.
+Verifies `games/4d_generic/` contains all required shared modules.
 
 ### `audit_all(games_dir) → bool`
 

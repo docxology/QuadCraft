@@ -10,7 +10,7 @@
 ## Package Structure
 
 ```text
-src/space/
+games/src/space/
 ├── __init__.py      # Re-exports all public symbols (16 total)
 ├── quadrays.py      # Quadray coordinate class
 ├── ivm.py           # IVM constants (SYNERGETICS)

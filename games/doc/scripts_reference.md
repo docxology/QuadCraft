@@ -9,7 +9,7 @@
 ## Script Inventory
 
 ```text
-scripts/
+games/scripts/
 ├── _run_template.sh           # Launcher wrapper template (delegates to run_games.py)
 ├── regenerate_scripts.py      # Generate launcher wrapper scripts from template
 ├── generate_test_html.py      # Generate browser-based test HTML pages
