@@ -18,7 +18,9 @@ assert('TETRA_VOL = 1', SYNERGETICS.TETRA_VOL === 1);
 assert('OCTA_VOL = 4', SYNERGETICS.OCTA_VOL === 4);
 assert('CUBO_VOL = 20', SYNERGETICS.CUBO_VOL === 20);
 assert('S3 matches sqrt(9/8)', Math.abs(SYNERGETICS.S3 - Math.sqrt(9 / 8)) < 0.0001);
-assert('BASIS_LENGTH ≈ 0.7071', Math.abs(SYNERGETICS.BASIS_LENGTH - 1 / Math.sqrt(2)) < 0.001);
+const basisXYZ = Quadray.A.toCartesian();
+assert('BASIS_LENGTH matches Cartesian basis radius',
+    Math.abs(SYNERGETICS.BASIS_LENGTH - Math.hypot(basisXYZ.x, basisXYZ.y, basisXYZ.z)) < 1e-12);
 
 // Tetrahedral angle
 const angle = angleBetweenQuadrays(Quadray.A, Quadray.B);

@@ -67,7 +67,7 @@
         assert('Board starts with score 0', board.score === 0);
         assert('Board starts at level 1', board.level === 1);
         assert('Board is not game over', board.gameOver === false);
-        assert('Total cells = 4^4 = 256', board.totalCells === 256);
+        assert('175 distinct physical cells in canonical extent 4', board.totalCells === 175);
 
         // 2. getCell returns 'hidden' for unrevealed
         const pos = new Quadray(1, 0, 0, 0);
@@ -93,7 +93,7 @@
 
         // 7. getMetadata
         const meta = board.getMetadata();
-        assert('getMetadata has totalCells', meta.totalCells === 256);
+        assert('getMetadata reports physical cells', meta.totalCells === 175);
         assert('getMetadata has volumeRatios', meta.volumeRatios.tetra === 1);
         assert('getMetadata has score', meta.score === 0);
 

@@ -55,7 +55,7 @@ const firstDir = ConnectFourBoard.WIN_DIRECTIONS[0];
 assert('WIN_DIRECTIONS[0] has .a property', typeof firstDir.a === 'number');
 assert('WIN_DIRECTIONS[0] has scale() method', typeof firstDir.scale === 'function');
 
-// ─── 3. Gravity Drop with IVM Snapping ───────────────────────────────
+// ─── 3. Gravity Drop with Raw Board Labels ───────────────────────────
 console.log('\n— Gravity Drop —');
 const { result, quadray, cellType } = board.dropPiece(2, 1, 1);
 assert('Drop result is "placed"', result === 'placed');
@@ -63,14 +63,6 @@ assert('Landing quadray exists', quadray instanceof Quadray);
 assert('Lands at row 0 (bottom)', quadray.a === 0);
 assert('cellType is string', cellType === 'tetra' || cellType === 'octa');
 
-// ─── 4. Quadray.toKey() Used for Storage ─────────────────────────────
-console.log('\n— Quadray Key Storage —');
-const landingKey = quadray.toKey();
-assert('Grid uses toKey()', board.grid.has(landingKey));
-const storedCell = board.grid.get(landingKey);
-assert('Stored cell has player', storedCell.player === 1);
-assert('Stored cell has quadray', storedCell.quadray instanceof Quadray);
-assert('Stored cell has cellType', typeof storedCell.cellType === 'string');
 
 // ─── 5. Cell Parity via Quadray.cellType() ───────────────────────────
 console.log('\n— Cell Parity —');
@@ -381,7 +373,7 @@ assert(
     boardAI.wouldWinAt(3, 0, 0, 2) === false
 );
 assert('wouldWinAt does not mutate board state (gameOver still false)', boardAI.gameOver === false);
-assert('wouldWinAt does not mutate board state (b=3 column still empty)', !boardAI.grid.has(Quadray.toIVM(new Quadray(0, 3, 0, 0)).toKey()));
+assert('wouldWinAt does not mutate board state (b=3 column still empty)', boardAI.getCell(new Quadray(0, 3, 0, 0)) === null);
 assert('wouldWinAt out-of-bounds column returns false', boardAI.wouldWinAt(99, 0, 0, 1) === false);
 
 // End-to-end: replicate ConnectFourGame._findImmediateWin's loop (the
@@ -398,6 +390,52 @@ const blockMove = findImmediateWin(boardAI, aiValidMoves, 1);
 assert('AI block-move search finds the b=3 column', !!blockMove && blockMove.b === 3 && blockMove.c === 0 && blockMove.d === 0);
 const winMoveForP2 = findImmediateWin(boardAI, aiValidMoves, 2);
 assert('AI win-move search finds no immediate win for player 2 in this position', winMoveForP2 === null);
+
+// Positive labels must survive physical snapping's canonical-gauge contract.
+const labeled = new ConnectFourBoard(6, 5, 3, 3);
+const firstLabeled = labeled.dropPiece(2, 2, 2);
+const secondLabeled = labeled.dropPiece(2, 2, 2);
+assert('Positive-label column keeps its row-0 coordinates',
+    firstLabeled.quadray.a === 0 && firstLabeled.quadray.b === 2 &&
+    firstLabeled.quadray.c === 2 && firstLabeled.quadray.d === 2);
+assert('Gravity keeps positive row labels instead of snapping them to row 0',
+    secondLabeled.quadray.a === 1 && secondLabeled.quadray.b === 2 &&
+    secondLabeled.quadray.c === 2 && secondLabeled.quadray.d === 2);
+assert('Column has two separately stored pieces', labeled.grid.size === 2);
+labeled.undoLastMove();
+assert('Undo removes only the last positive-label row', labeled.grid.size === 1 &&
+    labeled.getCell(firstLabeled.quadray)?.player === 1);
+
+const independentSlots = new ConnectFourBoard(2, 5, 3, 3);
+const originDrop = independentSlots.dropPiece(0, 0, 0); // P1 at origin.
+independentSlots.dropPiece(4, 0, 0);                    // P2 filler.
+independentSlots.dropPiece(1, 1, 1);                    // P1 at (0,1,1,1).
+const shiftedDrop = independentSlots.dropPiece(1, 1, 1); // P2 at (1,1,1,1).
+assert('Gauge-equivalent valid raw slots retain different players',
+    originDrop.quadray.equals(shiftedDrop.quadray) && independentSlots.grid.size === 4 &&
+    independentSlots.getCell(originDrop.quadray)?.player === 1 &&
+    independentSlots.getCell(shiftedDrop.quadray)?.player === 2);
+assert('Fullness and valid moves use raw columns rather than physical aliases',
+    independentSlots.getColumns().find(c => c.b === 1 && c.c === 1 && c.d === 1).full &&
+    !independentSlots.getColumns().find(c => c.b === 0 && c.c === 0 && c.d === 0).full &&
+    !independentSlots.getValidMoves().some(c => c.b === 1 && c.c === 1 && c.d === 1) &&
+    independentSlots.getValidMoves().some(c => c.b === 0 && c.c === 0 && c.d === 0));
+independentSlots.undoLastMove();
+assert('Undo of a gauge-equivalent raw slot preserves the original slot',
+    independentSlots.getCell(originDrop.quadray)?.player === 1 &&
+    independentSlots.getCell(shiftedDrop.quadray) === null && independentSlots.grid.size === 3);
+
+const positiveWin = new ConnectFourBoard(6, 5, 3, 3);
+for (let i = 0; i < 3; i++) {
+    positiveWin.dropPiece(1, 1, 1);
+    positiveWin.dropPiece(4, 0, 0);
+}
+assert('AI recognizes a vertical threat with nonzero-minimum raw labels',
+    positiveWin.wouldWinAt(1, 1, 1, 1) && !positiveWin.gameOver);
+assert('Vertical win traversal retains all positive row labels',
+    positiveWin.dropPiece(1, 1, 1).result === 'win' && positiveWin.winner === 1 &&
+    positiveWin.winLine.every(q => q.b === 1 && q.c === 1 && q.d === 1) &&
+    new Set(positiveWin.winLine.map(q => q.a)).size === 4);
 
 // ─── Summary ─────────────────────────────────────────────────────────
 console.log(`\n=== Results: ${passed} passed, ${failed} failed (${total} total) ===`);

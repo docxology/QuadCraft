@@ -49,7 +49,7 @@ node tests/test_all_shared.js
 <script src="../4d_generic/synergetics.js"></script>
 ```
 
-> **Exception:** `4d_doom` uses ES-module `import/export` syntax and retains its own quadray variant.
+> **ES-module bridge:** `4d_doom/js/quadray.js` adapts the same canonical class; its browser entrypoint preloads the shared classic script, while Node uses CommonJS loading.
 
 ## Tests
 

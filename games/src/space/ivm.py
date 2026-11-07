@@ -37,7 +37,7 @@ class SynergeticsConstants:
 
     # Tetrahedral geometry
     TETRAHEDRAL_ANGLE: float = 109.4712          # degrees between any two basis vectors
-    BASIS_LENGTH: float = 1.0 / ROOT2            # ~0.7071
+    BASIS_LENGTH: float = math.sqrt(3 / 2)       # Cartesian coefficient-unit norm
 
     # Volume ratios in tetravolumes
     TETRA_VOL: int = 1

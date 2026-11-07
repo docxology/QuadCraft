@@ -18,12 +18,14 @@ console.log('=== 4D Minesweeper Tests ===\n');
 // 1. Board creation
 const board = new MinesweeperBoard(3, 0.1);
 assert('Board created with size 3', board.size === 3);
-assert('Total cells = 3^4 = 81', board.totalCells === 81);
+assert('65 distinct physical cells in canonical extent 3', board.totalCells === 65 &&
+    new Set(board.getCells().map(c => c.quadray.toKey())).size === 65);
 assert('Game not over initially', board.gameOver === false);
 
-// 2. IVM neighbor count — center cell (1,1,1,1)
+// Neighbor queries accept gauge-equivalent representatives of the origin.
 const neighbors = board.getNeighborKeys(1, 1, 1, 1);
-assert('Center cell (1,1,1,1) has 12 neighbors', neighbors.length === 12);
+assert('Shifted origin has the same twelve neighbors', neighbors.length === 12 &&
+    neighbors.slice().sort().join(';') === board.getNeighborKeys(0, 0, 0, 0).sort().join(';'));
 
 // 3. Corner cell (0,0,0,0)
 const cornerNeighbors = board.getNeighborKeys(0, 0, 0, 0);
@@ -35,9 +37,9 @@ assert('Edge (1,0,0,0) has neighbors', edgeNeighbors.length > 0);
 
 // 5. Mine placement on first click (need larger grid so safe zone doesn't fill it)
 const board2 = new MinesweeperBoard(5, 0.15);
-board2.reveal(2, 2, 2, 2); // First click triggers mine placement
+board2.reveal(0, 0, 0, 0); // First click triggers mine placement
 assert('First click reveals cell', board2.revealed.size > 0);
-assert('First click cell is not a mine', !board2.mines.has(board2.key(2, 2, 2, 2)));
+assert('First click cell is not a mine', !board2.mines.has(board2.key(0, 0, 0, 0)));
 assert('Mines were placed', board2.mines.size > 0);
 
 // 6. Flagging
@@ -64,7 +66,7 @@ assert('Game over on win', board5.gameOver === true);
 // 9. getCells returns proper structure
 const board6 = new MinesweeperBoard(2, 0.1);
 const cells = board6.getCells();
-assert('getCells returns all 16 cells (2^4)', cells.length === 16);
+assert('getCells returns all 15 canonical physical cells', cells.length === 15);
 assert('Each cell has state property', cells.every(c => typeof c.state === 'string'));
 assert('Each cell has coords', cells.every(c => c.a !== undefined && c.d !== undefined));
 
@@ -103,6 +105,48 @@ const resultLoss = board9.reveal(0, 0, 0, 0);
 assert('Hitting mine returns "mine"', resultLoss === 'mine');
 assert('Game over after hitting mine', board9.gameOver === true);
 assert('Game not won after hitting mine', board9.won === false);
+
+// Reinitializing a level must regenerate only distinct physical cells.
+board2.size = 3;
+board2.initBoard();
+assert('Regenerated level clears state and uses canonical enumeration',
+    board2.totalCells === 65 && board2.mines.size === 0 && board2.revealed.size === 0 &&
+    board2.getCells().every(c => Math.min(c.a, c.b, c.c, c.d) === 0));
+assert('Noncanonical label cannot reveal an overlapping cell', board2.reveal(1, 1, 1, 1) === 'invalid' &&
+    board2.revealed.size === 0 && board2.firstClick);
+board2.toggleFlag(1, 1, 1, 1);
+assert('Noncanonical label cannot create an independent flag', board2.flagged.size === 0);
+board2.reveal(0, 1, 1, 2);
+assert('Mine placement and cached counts cover only physical cells',
+    board2.neighborCache.size === 65 && [...board2.mines].every(k => Math.min(...board2.parseKey(k)) === 0));
+assert('Normalized boundary adjacency is reciprocal',
+    board2.getNeighborKeys(0, 1, 1, 2).includes('1,1,0,2') &&
+    board2.getNeighborKeys(1, 1, 0, 2).includes('0,1,1,2'));
+
+// A flag in the first-click safe zone must survive automatic zero-cell flooding.
+const safeFlag = new MinesweeperBoard(3, 0.1);
+const flaggedNeighbor = safeFlag.key(0, 1, 1, 2);
+safeFlag.toggleFlag(0, 1, 1, 2);
+const originalRandom = Math.random;
+try {
+    Math.random = () => 0;
+    safeFlag.reveal(0, 0, 0, 0);
+} finally {
+    Math.random = originalRandom;
+}
+assert('First-click flood leaves the flagged safe neighbor hidden',
+    !safeFlag.mines.has(flaggedNeighbor) && safeFlag.flagged.has(flaggedNeighbor) &&
+    !safeFlag.revealed.has(flaggedNeighbor) && safeFlag.getCell(new Quadray(0, 1, 1, 2)) === 'flagged');
+assert('Non-loss play keeps revealed and flagged sets disjoint',
+    !safeFlag.won && !safeFlag.gameOver && [...safeFlag.revealed].every(k => !safeFlag.flagged.has(k)));
+const beforeFlagReveal = safeFlag.revealed.size;
+assert('Flagged flooded neighbor still rejects direct reveal',
+    safeFlag.reveal(0, 1, 1, 2) === 'flagged' && safeFlag.revealed.size === beforeFlagReveal);
+safeFlag.toggleFlag(0, 1, 1, 2);
+safeFlag.reveal(0, 1, 1, 2);
+assert('Removing the flag permits revealing the safe neighbor',
+    safeFlag.revealed.has(flaggedNeighbor) && !safeFlag.flagged.has(flaggedNeighbor));
+assert('Score counts revealed safe cells, not skipped flags', safeFlag.score === safeFlag.revealed.size);
 
 console.log(`\n=== Results: ${passed} passed, ${failed} failed ===`);
 process.exit(failed > 0 ? 1 : 0);

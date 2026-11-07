@@ -5,9 +5,10 @@
  * Integrates HUD, ScoreManager, and the enhanced RogueBoard.
  *
  * Controls:
- *   WASD/QE/ZX : Move in 8 IVM directions
- *   1-4        : Numpad move shortcuts
+ *   WASD/QE/ZX : Move in the first 8 IVM directions
+ *   1-4        : Move in the remaining 4 IVM directions
  *   H          : Use health potion
+ *   T/F/M      : Use teleport/fireball/mapping scroll (either letter case)
  *   N          : New game
  *   R          : Reset
  *   P          : Pause
@@ -43,12 +44,12 @@ class RogueGame extends BaseGame {
 
         // Direction mapping: key → IVM direction index (0-11)
         this.keyMap = {
-            'w': 0, 'arrowup': 0,
+            'w': 0, 'ArrowUp': 0,
             'e': 1,
-            'd': 2, 'arrowright': 2,
-            'x': 3, 'arrowdown': 3,
+            'd': 2, 'ArrowRight': 2,
+            'x': 3, 'ArrowDown': 3,
             's': 4,
-            'a': 5, 'arrowleft': 5,
+            'a': 5, 'ArrowLeft': 5,
             'q': 6,
             'z': 7,
             '1': 8,
@@ -60,13 +61,13 @@ class RogueGame extends BaseGame {
         console.log('[RogueGame] Initialized with WASD/QE/ZX movement + inventory');
     }
 
-    /** Override: bind game-specific keys. */
+    /** Override: case-insensitive actions dispatched only by InputController. */
     _setupGameInput() {
-        this.input.bind(['n'], () => this.newGame());
-        this.input.bind(['h'], () => this._usePotion());
-        this.input.bind(['t'], () => this._useScroll('teleport'));
-        this.input.bind(['f'], () => this._useScroll('fireball'));
-        this.input.bind(['m'], () => this._useScroll('mapping'));
+        this.input.bind(['n', 'N'], () => this.newGame());
+        this.input.bind(['h', 'H'], () => this._usePotion());
+        this.input.bind(['t', 'T'], () => this._useScroll('teleport'));
+        this.input.bind(['f', 'F'], () => this._useScroll('fireball'));
+        this.input.bind(['m', 'M'], () => this._useScroll('mapping'));
     }
 
     /** Override: hook for additional input. */
@@ -77,28 +78,13 @@ class RogueGame extends BaseGame {
 
     /** Bind keyboard for movement (operates on keydown for responsiveness). */
     _bindKeyboard() {
-        document.addEventListener('keydown', (e) => {
-            if (this.board.gameOver && e.key.toLowerCase() === 'n') {
-                this.newGame();
-                return;
-            }
-
-            const key = e.key.toLowerCase();
-            const dirIndex = this.keyMap[key];
-            if (dirIndex !== undefined) {
-                e.preventDefault();
-                const result = this.board.move(dirIndex);
-                if (result === 'dead') {
-                    this.scoring.addScore(this.board.gold);
-                    console.log(`[RogueGame] Final score: ${JSON.stringify(this.scoring.toJSON())}`);
-                }
-                this._updateCombatLog();
-            }
-
-            if (key === 'h') this._usePotion();
-            if (key === 't') this._useScroll('teleport');
-            if (key === 'f') this._useScroll('fireball');
-            if (key === 'm') this._useScroll('mapping');
+        const keys = Object.keys(this.keyMap).flatMap(key => key.length === 1 ? [key, key.toUpperCase()] : [key]);
+        this.input.bind(keys, (e) => {
+            if (this.loop.paused) return;
+            e.preventDefault();
+            const result = this.board.move(this.keyMap[e.key] ?? this.keyMap[e.key.toLowerCase()]);
+            if (result === 'dead') this.scoring.addScore(this.board.gold);
+            this._updateCombatLog();
         });
     }
 

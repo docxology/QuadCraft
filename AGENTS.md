@@ -20,7 +20,7 @@ QuadCraft is a tetrahedral-based voxel game using quadray coordinates, inspired 
 The quadray system uses four coordinates `(a, b, c, d)` instead of three Cartesian coordinates `(x, y, z)`:
 
 - Based on tetrahedral geometry with 4 basis vectors from tetrahedron center to vertices
-- Constraint: `a + b + c + d = constant` for points in same 3D space
+- Common-offset equivalence: `q` and `q + t(1,1,1,1)` represent the same 3D point; normalize by subtracting the minimum component
 - Enables precise tetrahedral grid navigation without floating-point errors
 - Conversion functions in `src/core/coordinate/Quadray.h` and `src/js/experiments/browser/js/math/quadray.js`
 
@@ -50,7 +50,7 @@ The quadray system uses four coordinates `(a, b, c, d)` instead of three Cartesi
 
 ### When Modifying Coordinate Systems
 
-- Always maintain the quadray constraint (`a + b + c + d = constant`)
+- Preserve common-offset equivalence; a fixed component sum is not required
 - Test conversions between quadray and Cartesian in both directions
 - The 12 core navigation directions must preserve grid alignment
 

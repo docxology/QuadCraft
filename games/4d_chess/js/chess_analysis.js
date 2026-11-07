@@ -245,7 +245,7 @@ function verifyRoundTrip(q, tolerance = 0.01) {
 function verifyGeometricIdentities() {
     const TOLERANCE = 0.01;
     const EXPECTED_TETRAHEDRAL_ANGLE = 109.4712; // arccos(-1/3) in degrees
-    const EXPECTED_BASIS_LENGTH = 1 / Math.sqrt(2); // ~0.7071
+    const EXPECTED_BASIS_LENGTH = Math.sqrt(3 / 2); // Cartesian coefficient-unit norm
 
     const results = {
         timestamp: new Date().toISOString(),
@@ -257,7 +257,7 @@ function verifyGeometricIdentities() {
     const basisLengths = Quadray.BASIS.map(b => b.length());
     const basisLengthCheck = {
         name: 'Basis Vector Lengths',
-        description: 'All 4 basis vectors should have equal length (~0.707)',
+        description: 'All 4 basis vectors should have equal Cartesian length sqrt(3/2)',
         expected: EXPECTED_BASIS_LENGTH.toFixed(4),
         actual: basisLengths.map(l => l.toFixed(4)),
         passed: basisLengths.every(l => Math.abs(l - EXPECTED_BASIS_LENGTH) < TOLERANCE)

@@ -1,4 +1,4 @@
-/** sudoku_board.js — 4D Sudoku on IVM Grid. Constraint regions by cell type. */
+/** sudoku_board.js — Sudoku coloring on canonical physical IVM cells. */
 if (typeof Quadray === 'undefined' && typeof require !== 'undefined') { const _q = require('../../4d_generic/quadray.js'); globalThis.Quadray = _q.Quadray; }
 if (typeof GridUtils === 'undefined' && typeof require !== 'undefined') { const _g = require('../../4d_generic/grid_utils.js'); globalThis.GridUtils = _g.GridUtils; }
 if (typeof BaseBoard === 'undefined' && typeof require !== 'undefined') { const _bb = require('../../4d_generic/base_board.js'); globalThis.BaseBoard = _bb.BaseBoard; }
@@ -7,7 +7,7 @@ if (typeof SYNERGETICS === 'undefined' && typeof require !== 'undefined') { cons
 class SudokuBoard extends BaseBoard {
     constructor(size = 4) {
         super(size, { name: 'SudokuBoard', verify: true });
-        this.cells = GridUtils.generateGrid(size);
+        this.cells = GridUtils.generateCanonicalGrid(size);
         this.solution = new Map(); this.given = new Set();
         this.moveCount = 0; this.errors = 0; this.won = false;
         this._generatePuzzle();
@@ -32,19 +32,15 @@ class SudokuBoard extends BaseBoard {
         }
     }
     _colorSolution(maxVal) {
-        // GridUtils.boundedNeighbors() is not symmetric (A can list B as a neighbor
-        // without B listing A back), so a coloring that only checks each cell's own
-        // neighbor list can still leave conflicts visible from the other cell's side.
-        // Build the symmetric closure once and backtrack over that — a solution that
-        // is conflict-free under the symmetric relation is also conflict-free under
-        // the (weaker) one-directional relation place()/_checkWin() enforce at runtime.
+        // Canonical physical cells have symmetric IVM adjacency. Use the same
+        // neighbor relation for generation and runtime constraint checks.
         const adj = new Map();
         for (const c of this.cells) adj.set(this.key(c.a, c.b, c.c, c.d), new Set());
         for (const c of this.cells) {
             const k = this.key(c.a, c.b, c.c, c.d);
             for (const n of GridUtils.boundedNeighbors(c.a, c.b, c.c, c.d, this.size)) {
                 const nk = this.key(n.a, n.b, n.c, n.d);
-                adj.get(k).add(nk); adj.get(nk).add(k);
+                adj.get(k).add(nk);
             }
         }
         // Most-constrained-first ordering speeds up the backtracking search.
@@ -69,6 +65,7 @@ class SudokuBoard extends BaseBoard {
     }
     place(pos, value) {
         const k = this.key(pos.a, pos.b, pos.c, pos.d);
+        if (!this.grid.has(k)) return false;
         if (this.given.has(k) || this.won) return false;
         this.setCell(pos, value);
         this.moveCount++;

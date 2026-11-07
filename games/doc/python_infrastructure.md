@@ -104,18 +104,18 @@ Orchestrates all tests. Returns `True` if everything passes.
 
 **Execution flow:**
 
-1. **Shared tests** — `games/tests/test_*.js` + `4d_generic/tests/test_*.js` (if running full suite)
-2. **Python tests** — `games/tests/test_*.py` via `_run_python_test()`
+1. **Shared tests** — recursively discover `test_*.js` below `games/tests/` and `4d_generic/tests/` for a full run; omit the aggregate shared runner to avoid double counting
+2. **Python tests** — recursively discover `games/tests/**/test_*.py` via `_run_python_test()`
 3. **Per-game tests** — `4d_<game>/tests/test_*.js` for each requested game
 
 ### Internal Details
 
 | Function | What it does |
 |----------|-------------|
-| `_run_test_file(tf, cwd, label)` | Run one `.js` test file via `node`, parse `=== Results: N passed, M failed ===` |
-| `_run_python_test(tf, cwd, label)` | Run one `.py` test file via `python3`, parse unittest output |
+| `_run_test_file(tf, cwd, label)` | Run one `.js` file via `node`; parse `N passed, M failed` summaries from stdout/stderr |
+| `_run_python_test(tf, cwd, label)` | Run one `.py` file and parse unittest output; process failure remains a test failure |
 
-**Fallback parsing:** If no structured results line found, counts `✅`/`❌` emoji lines.
+**Fallback parsing:** If no structured results line is found, count `✅`/`❌` lines. A nonzero process exit always fails, even if an earlier summary reported success. Failing file names and captured diagnostics are printed.
 
 > See [testing_guide.md](testing_guide.md) for writing tests.
 

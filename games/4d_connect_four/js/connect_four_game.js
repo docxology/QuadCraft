@@ -49,6 +49,7 @@ class ConnectFourGame extends BaseGame {
         this.aiEnabled = false;
         this.aiDifficulty = 0;   // index into DIFFICULTIES
         this.aiThinking = false;
+        this._aiTimer = null;
 
         // Startup integrity check
         this._runGeometricVerification();
@@ -90,29 +91,28 @@ class ConnectFourGame extends BaseGame {
 
     /** Start a new game, preserving scores. */
     newGame() {
+        this._cancelAI();
         this.board.reset();
-        this.aiThinking = false;
         console.log('[ConnectFourGame] New game started');
     }
 
     /** Override BaseGame.reset() — also reset scoring. */
     reset() {
+        this._cancelAI();
         this.scoring.reset();
         super.reset();
-        this.aiThinking = false;
     }
 
     /**
-     * Undo the last move (or last 2 if AI is enabled).
+     * Undo to the previous human decision point when AI is enabled.
      * Uses board.undoLastMove() for proper state reversal.
      */
     undo() {
-        if (this.board.moveCount === 0 || this.aiThinking) return;
-        this.board.undoLastMove();
-        // If AI is enabled, also undo the AI's previous move
-        if (this.aiEnabled && this.board.moveCount > 0) {
+        if (this.board.moveCount === 0) return;
+        this._cancelAI();
+        do {
             this.board.undoLastMove();
-        }
+        } while (this.aiEnabled && this.board.moveCount > 0 && this.board.currentPlayer !== 1);
         console.log(`[ConnectFourGame] Undo — now at move ${this.board.moveCount}`);
     }
 
@@ -120,6 +120,8 @@ class ConnectFourGame extends BaseGame {
     toggleAI() {
         this.aiEnabled = !this.aiEnabled;
         if (this.aiEnabled && this.aiDifficulty === 0) this.aiDifficulty = 1;
+        if (this.aiEnabled) this._queueAI();
+        else this._cancelAI();
         console.log(`[ConnectFourGame] AI: ${this.aiEnabled ? ConnectFourGame.DIFFICULTIES[this.aiDifficulty] : 'off'}`);
     }
 
@@ -128,7 +130,30 @@ class ConnectFourGame extends BaseGame {
         this.aiDifficulty = (this.aiDifficulty + 1) % ConnectFourGame.DIFFICULTIES.length;
         if (this.aiDifficulty === 0) this.aiEnabled = false;
         else this.aiEnabled = true;
+        if (this.aiEnabled) this._queueAI();
+        else this._cancelAI();
         console.log(`[ConnectFourGame] Difficulty: ${ConnectFourGame.DIFFICULTIES[this.aiDifficulty]}`);
+    }
+
+    /** Cancel the pending reply before changing the game or AI ownership. */
+    _cancelAI() {
+        clearTimeout(this._aiTimer);
+        this._aiTimer = null;
+        this.aiThinking = false;
+    }
+
+    /** Own at most one delayed reply, and recheck its turn when it fires. */
+    _queueAI() {
+        if (this._aiTimer !== null || !this.aiEnabled || this.board.gameOver || this.board.currentPlayer !== 2) return;
+        this.aiThinking = true;
+        this._aiTimer = setTimeout(() => {
+            this._aiTimer = null;
+            try {
+                this._aiMove();
+            } finally {
+                this.aiThinking = false;
+            }
+        }, 400);
     }
 
     /** Bind mouse click and move events. */
@@ -181,14 +206,7 @@ class ConnectFourGame extends BaseGame {
             console.log(`[ConnectFourGame] Score: ${JSON.stringify(this.scoring.toJSON())}`);
         }
 
-        // Trigger AI move after short delay
-        if (this.aiEnabled && !this.board.gameOver && this.board.currentPlayer === 2) {
-            this.aiThinking = true;
-            setTimeout(() => {
-                this._aiMove();
-                this.aiThinking = false;
-            }, 400);
-        }
+        this._queueAI();
     }
 
     /**
@@ -199,7 +217,7 @@ class ConnectFourGame extends BaseGame {
      * Hard: 3-ply alpha-beta minimax
      */
     _aiMove() {
-        if (this.board.gameOver) return;
+        if (!this.aiEnabled || this.board.gameOver || this.board.currentPlayer !== 2) return;
 
         const validMoves = this.board.getValidMoves();
         if (validMoves.length === 0) return;
@@ -263,16 +281,24 @@ class ConnectFourGame extends BaseGame {
         let bestMove = moves[0];
 
         for (const move of moves) {
+            const redoStack = this.board.turnManager.redoStack;
+            const winLine = this.board.winLine;
             const result = this.board.dropPiece(move.b, move.c, move.d);
             let score;
-            if (result.result === 'win') {
-                score = 100000;
-            } else if (result.result === 'draw') {
-                score = 0;
-            } else {
-                score = -this._alphaBeta(depth - 1, -Infinity, Infinity, false);
+            try {
+                if (result.result === 'win') {
+                    score = 100000;
+                } else if (result.result === 'draw') {
+                    score = 0;
+                } else {
+                    // Every recursive score is already relative to P2.
+                    score = this._alphaBeta(depth - 1, -Infinity, Infinity, false);
+                }
+            } finally {
+                this.board.undoLastMove();
+                this.board.turnManager.redoStack = redoStack;
+                this.board.winLine = winLine;
             }
-            this.board.undoLastMove();
 
             if (score > bestScore) {
                 bestScore = score;
@@ -301,16 +327,23 @@ class ConnectFourGame extends BaseGame {
         if (maximizing) {
             let maxEval = -Infinity;
             for (const move of moves) {
+                const redoStack = this.board.turnManager.redoStack;
+                const winLine = this.board.winLine;
                 const result = this.board.dropPiece(move.b, move.c, move.d);
                 let score;
-                if (result.result === 'win') {
-                    score = 100000 + depth; // Prefer faster wins
-                } else if (result.result === 'draw') {
-                    score = 0;
-                } else {
-                    score = this._alphaBeta(depth - 1, alpha, beta, false);
+                try {
+                    if (result.result === 'win') {
+                        score = 100000 + depth; // Prefer faster wins
+                    } else if (result.result === 'draw') {
+                        score = 0;
+                    } else {
+                        score = this._alphaBeta(depth - 1, alpha, beta, false);
+                    }
+                } finally {
+                    this.board.undoLastMove();
+                    this.board.turnManager.redoStack = redoStack;
+                    this.board.winLine = winLine;
                 }
-                this.board.undoLastMove();
                 maxEval = Math.max(maxEval, score);
                 alpha = Math.max(alpha, score);
                 if (beta <= alpha) break;
@@ -319,16 +352,23 @@ class ConnectFourGame extends BaseGame {
         } else {
             let minEval = Infinity;
             for (const move of moves) {
+                const redoStack = this.board.turnManager.redoStack;
+                const winLine = this.board.winLine;
                 const result = this.board.dropPiece(move.b, move.c, move.d);
                 let score;
-                if (result.result === 'win') {
-                    score = -(100000 + depth);
-                } else if (result.result === 'draw') {
-                    score = 0;
-                } else {
-                    score = this._alphaBeta(depth - 1, alpha, beta, true);
+                try {
+                    if (result.result === 'win') {
+                        score = -(100000 + depth);
+                    } else if (result.result === 'draw') {
+                        score = 0;
+                    } else {
+                        score = this._alphaBeta(depth - 1, alpha, beta, true);
+                    }
+                } finally {
+                    this.board.undoLastMove();
+                    this.board.turnManager.redoStack = redoStack;
+                    this.board.winLine = winLine;
                 }
-                this.board.undoLastMove();
                 minEval = Math.min(minEval, score);
                 beta = Math.min(beta, score);
                 if (beta <= alpha) break;
@@ -348,16 +388,22 @@ class ConnectFourGame extends BaseGame {
         let bestMove = moves[0];
 
         for (const move of moves) {
+            const redoStack = this.board.turnManager.redoStack;
+            const winLine = this.board.winLine;
             const result = this.board.dropPiece(move.b, move.c, move.d);
             let score = 0;
 
-            if (result.result === 'win') {
-                score = 10000;
-            } else if (result.result === 'placed') {
-                score = this.board.evaluatePosition(2);
+            try {
+                if (result.result === 'win') {
+                    score = 10000;
+                } else if (result.result === 'placed') {
+                    score = this.board.evaluatePosition(2);
+                }
+            } finally {
+                this.board.undoLastMove();
+                this.board.turnManager.redoStack = redoStack;
+                this.board.winLine = winLine;
             }
-
-            this.board.undoLastMove();
 
             if (score > bestScore) {
                 bestScore = score;

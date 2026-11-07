@@ -31,18 +31,35 @@ assert(g2[0].a === 0 && g2[0].b === 0, 'first cell is (0,0,0,0)');
 const g3 = GridUtils.generateGrid(3);
 assert(g3.length === 81, 'size 3 → 81 cells (3^4)');
 
+// Physical enumeration is separate from the intentionally raw label grid.
+const physical = GridUtils.generateCanonicalGrid(3);
+const xyzKey = p => [
+    p.a - p.b - p.c + p.d,
+    p.a - p.b + p.c - p.d,
+    p.a + p.b - p.c - p.d,
+].join(',');
+assert(physical.length === 65, 'size 3 has 3^4 - 2^4 distinct physical cells');
+assert(new Set(physical.map(xyzKey)).size === physical.length, 'no overlapping physical cells');
+assert(physical.every(p => Math.min(p.a, p.b, p.c, p.d) === 0), 'all physical cells are canonical');
+assert(GridUtils.generateCanonicalGrid(1).length === 1, 'extent 1 contains only the origin');
+assert(GridUtils.generateCanonicalGrid(0).length === 0, 'extent 0 contains no cells');
+assert(g3.some(p => p.a === 1 && p.b === 1 && p.c === 1 && p.d === 1),
+    'raw labels retain a separately addressable shifted origin');
+
 // 3. key / parseKey
 console.log('▸ key() / parseKey()');
 const k = GridUtils.key(1, 2, 3, 4);
 assert(k === '1,2,3,4', 'key format');
 const parsed = GridUtils.parseKey(k);
 assert(parsed.a === 1 && parsed.b === 2 && parsed.c === 3 && parsed.d === 4, 'parseKey roundtrip');
+assert(GridUtils.key(1, 1, 1, 1) !== GridUtils.key(0, 0, 0, 0), 'raw keys do not erase board labels');
 
 // 4. neighbors
 console.log('▸ neighbors()');
 const ns = GridUtils.neighbors(1, 1, 1, 1);
-assert(ns.length === 8, '8 neighbors');
-assert(ns[0].a === 2 && ns[0].b === 1, '+A neighbor correct');
+assert(ns.length === 12 && new Set(ns.map(xyzKey)).size === 12, '12 distinct physical neighbors');
+assert(ns.every(n => [n.a, n.b, n.c, n.d].sort().join(',') === '0,1,1,2'),
+    'shifted origin has the twelve kissing-sphere neighbors');
 
 // 5. inBounds
 console.log('▸ inBounds()');
@@ -54,9 +71,27 @@ assert(!GridUtils.inBounds(-1, 0, 0, 0, 3), '(-1,0,0,0) out of bounds');
 // 6. boundedNeighbors
 console.log('▸ boundedNeighbors()');
 const bn = GridUtils.boundedNeighbors(0, 0, 0, 0, 3);
-assert(bn.length === 4, 'corner has 4 bounded neighbors');
-const bn2 = GridUtils.boundedNeighbors(1, 1, 1, 1, 3);
-assert(bn2.length === 8, 'center has 8 bounded neighbors');
+assert(bn.length === 12, 'extent 3 includes all 12 origin neighbors');
+assert(GridUtils.boundedNeighbors(0, 0, 0, 0, 2).length === 0,
+    'extent 2 cannot contain a component-2 kissing-sphere neighbor');
+const fixture = ['0,0,0,0', '0,0,2,2', '0,1,2,1', '0,2,0,2', '0,2,1,1', '1,0,1,2', '1,1,0,2'];
+const fixtureKeys = GridUtils.boundedNeighbors(0, 1, 1, 2, 3).map(p => GridUtils.key(p.a, p.b, p.c, p.d)).sort();
+assert(JSON.stringify(fixtureKeys) === JSON.stringify(fixture), 'normalize before bounds (shared Python fixture)');
+assert(JSON.stringify(GridUtils.boundedNeighbors(7, 8, 8, 9, 3)
+    .map(p => GridUtils.key(p.a, p.b, p.c, p.d)).sort()) === JSON.stringify(fixture),
+    'bounded neighbors are gauge invariant');
+let symmetric = true, complete = true, sameResidue = true;
+for (const p of physical) {
+    const pk = GridUtils.key(p.a, p.b, p.c, p.d);
+    for (const n of GridUtils.boundedNeighbors(p.a, p.b, p.c, p.d, 3)) {
+        complete &&= physical.some(c => xyzKey(c) === xyzKey(n));
+        symmetric &&= GridUtils.boundedNeighbors(n.a, n.b, n.c, n.d, 3)
+            .some(c => GridUtils.key(c.a, c.b, c.c, c.d) === pk);
+        sameResidue &&= (n.a + n.b + n.c + n.d - p.a - p.b - p.c - p.d) % 4 === 0;
+    }
+}
+assert(complete && symmetric, 'physical neighbor graph is closed and symmetric');
+assert(sameResidue, 'IVM edges preserve component-sum mod4');
 
 // 7. manhattan
 console.log('▸ manhattan()');

@@ -1,9 +1,9 @@
 /**
  * snake_board.js — 4D Snake on IVM (Quadray) Lattice
  *
- * Snake body is a list of Quadray positions moving along IVM adjacency directions.
- * 12 IVM cuboctahedron-neighbor directions (permutations of {0,1,1,2}), delegated to GridUtils.
- * Food spawns at random unoccupied Quadray positions.
+ * Snake uses wrapped RAW four-index labels, not common-offset equivalence.
+ * Moves add the 12 permutations of {0,1,1,2} modulo the board size.
+ * Food stays in the head's reachable sum-mod-gcd(size,4) component.
  *
  * Deeply integrated with all Quadray/IVM shared modules:
  *   - Quadray: toKey, normalized, add, subtract, equals, distance,
@@ -51,9 +51,12 @@ class SnakeBoard extends BaseBoard {
     }
 
     /**
-     * @param {number} size - Grid size per Quadray axis
+     * @param {number} size - Positive integer raw-label extent; size 1 starts complete.
      */
     constructor(size = 6) {
+        if (!Number.isInteger(size) || size < 1) {
+            throw new RangeError('SnakeBoard size must be a positive integer');
+        }
         super(size, { name: 'SnakeBoard', verify: false });
         this.size = size;
         this.snake = [];          // Array of position keys (head is last)
@@ -113,10 +116,15 @@ class SnakeBoard extends BaseBoard {
         this.nextDirection = null;
         this.tickInterval = 200;
 
-        // Start snake in center, 3 segments long
+        // Trace backwards from the center along the initial wrapped direction.
+        // Its period is size, so smaller boards start with fewer unique segments.
         const mid = Math.floor(this.size / 2);
-        for (let i = 0; i < 3; i++) {
-            const k = this.key(mid - 2 + i, mid, mid, mid);
+        const { da, db, dc, dd } = this.direction;
+        for (let i = Math.min(3, this.size) - 1; i >= 0; i--) {
+            const k = this.key(
+                this.wrap(mid - i * da), this.wrap(mid - i * db),
+                this.wrap(mid - i * dc), this.wrap(mid - i * dd)
+            );
             this.snake.push(k);
             this.snakeSet.add(k);
         }
@@ -183,18 +191,22 @@ class SnakeBoard extends BaseBoard {
         const nd = this.wrap(hd + this.direction.dd);
         const newKey = this.key(na, nb, nc, nd);
 
-        // Self-collision check (not counting tail that's about to move)
-        if (this.snakeSet.has(newKey) && newKey !== this.snake[0]) {
+        const eating = newKey === this.food;
+        // The tail only departs on a non-growing move.
+        if (this.snakeSet.has(newKey) && (eating || newKey !== this.snake[0])) {
             this.gameOver = true;
             return 'die';
         }
 
-        // Move head
+        // Remove the departing tail before adding the head, which may reuse it.
+        if (!eating) {
+            const tail = this.snake.shift();
+            this.snakeSet.delete(tail);
+        }
         this.snake.push(newKey);
         this.snakeSet.add(newKey);
 
-        // Check food
-        if (newKey === this.food) {
+        if (eating) {
             this.score += 10;
             this._spawnFood();
 
@@ -206,19 +218,20 @@ class SnakeBoard extends BaseBoard {
             return 'eat';
         }
 
-        // Remove tail
-        const tail = this.snake.shift();
-        this.snakeSet.delete(tail);
         return 'move';
     }
 
-    /** Spawn food at a random unoccupied position. */
+    /** Spawn food in the head's reachable component of the wrapped raw-label grid. */
     _spawnFood() {
+        // Every direction sums to four; wrapping preserves that sum modulo gcd(size,4).
+        const modulus = this.size % 4 === 0 ? 4 : (this.size % 2 === 0 ? 2 : 1);
+        const residue = this.parseKey(this.head).reduce((sum, v) => sum + v, 0) % modulus;
         const candidates = [];
         for (let a = 0; a < this.size; a++)
             for (let b = 0; b < this.size; b++)
                 for (let c = 0; c < this.size; c++)
                     for (let d = 0; d < this.size; d++) {
+                        if ((a + b + c + d) % modulus !== residue) continue;
                         const k = this.key(a, b, c, d);
                         if (!this.snakeSet.has(k)) candidates.push(k);
                     }
@@ -226,7 +239,7 @@ class SnakeBoard extends BaseBoard {
         if (candidates.length > 0) {
             this.food = candidates[Math.floor(Math.random() * candidates.length)];
         } else {
-            // Board full — win!
+            // Playable component full — win, even if other raw labels are empty.
             this.gameOver = true;
             this.food = null;
         }

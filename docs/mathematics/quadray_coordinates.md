@@ -187,24 +187,22 @@ This is critical for `unordered_map` lookups in `TetraChunk`.
 
 ## Distance Calculation
 
-The distance between two points in Quadray space is calculated as:
+Distance is the Euclidean norm of the Cartesian image of the component
+difference $\Delta=q_1-q_2$:
 
-```mermaid
-graph TD
-    Start["Input: Quadray q1, Quadray q2"] --> Diff["diff = q1 - q2"]
-    Diff --> Len["length = sqrt((diff.a² + diff.b² + diff.c² + diff.d²) / 2)"]
-    Len --> Return["return length"]
-```
+$$
+D^2=\frac{
+(\Delta a-\Delta b-\Delta c+\Delta d)^2+
+(\Delta a-\Delta b+\Delta c-\Delta d)^2+
+(\Delta a+\Delta b-\Delta c-\Delta d)^2}{2}.
+$$
 
-In code:
-
-```cpp
-static float distance(const Quadray& q1, const Quadray& q2) {
-    // Subtract and find the length
-    Quadray diff(q1.a - q2.a, q1.b - q2.b, q1.c - q2.c, q1.d - q2.d);
-    return diff.length();
-}
-```
+This vanishes for any common-offset difference $(t,t,t,t)$, not just the
+all-zero tuple. A basis direction has length $\sqrt{3/2}$, and two distinct
+basis endpoints are distance $2$ apart. The former coefficient-only formula
+$\sqrt{\sum_i\Delta_i^2/2}$ does not respect the gauge and is not this metric.
+See the [native implementation](../../src/core/coordinate/Quadray.h) and the
+[suite unit mapping](https://github.com/docxology/symergetics/blob/main/docs/synergetics-suite.md).
 
 ## Tetrahedral Grid System
 

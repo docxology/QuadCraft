@@ -1,13 +1,15 @@
 /**
  * connect_four_board.js — 4D Connect Four on IVM Grid
  *
+ * Its four independent integer indices are board labels, not physical-cell identity.
+ * Gauge-equivalent labels remain distinct slots; only geometric readouts use the embedding.
  * Gravity drops along -A axis. Players alternate dropping pieces
  * into columns defined by (b,c,d) coordinates. Win condition:
  * 4 in a row along any IVM direction (axis-aligned or diagonal).
  *
  * Deeply integrated with all Quadray/IVM shared modules:
- *   - Quadray: toKey, normalized, add, subtract, equals, distance,
- *              distanceTo, length, scale, toIVM, cellType, cellVolume,
+ *   - Quadray: normalized, add, subtract, distance,
+ *              distanceTo, length, scale, cellType, cellVolume,
  *              toCartesian, fromCartesian, clone, IVM_DIRECTIONS, BASIS
  *   - GridUtils: key, parseKey, neighbors, boundedNeighbors, inBounds,
  *                manhattan, euclidean, generateGrid, depthSort, shuffle
@@ -60,7 +62,7 @@ class ConnectFourBoard extends BaseBoard {
         this.width = width;
         this.depthC = depthC;
         this.depthD = depthD;
-        this.grid = new Map();          // Quadray.toKey() -> { player, quadray, cellType }
+        this.grid = new Map();          // Raw GridUtils.key -> { player, quadray, cellType }
         this.turnManager = new TurnManager([1, 2], { maxHistory: Infinity }); // High tracking for minimax
         this.winner = 0;
         this.gameOver = false;
@@ -121,28 +123,28 @@ class ConnectFourBoard extends BaseBoard {
     }
 
     /**
-     * Get cell data at a Quadray position.
+     * Get cell data at an exact raw board label (no common-offset reduction).
      * @param {Quadray} q
      * @returns {Object|null} { player, quadray, cellType } or null
      */
     getCell(q) {
-        const key = q.toKey();
+        const key = GridUtils.key(q.a, q.b, q.c, q.d);
         return this.grid.get(key) || null;
     }
 
     /**
-     * Set cell data at a Quadray position.
+     * Set cell data at an exact raw board label.
      * @param {Quadray} q
      * @param {*} value
      */
     setCell(q, value) {
-        this.grid.set(q.toKey(), value);
+        this.grid.set(GridUtils.key(q.a, q.b, q.c, q.d), value);
     }
 
     /**
      * Drop a piece into column (b, c, d).
      * Gravity pulls it along -A axis to the lowest unoccupied A position.
-     * Uses Quadray.toIVM() for grid snapping and Quadray.add() for traversal.
+     * Integer board labels are constructed directly: physical snapping would erase rows.
      * @param {number} b
      * @param {number} c
      * @param {number} d
@@ -159,8 +161,8 @@ class ConnectFourBoard extends BaseBoard {
         // Find lowest empty row — gravity along A axis
         let landingRow = -1;
         for (let a = 0; a < this.height; a++) {
-            const pos = Quadray.toIVM(new Quadray(a, b, c, d));
-            if (!this.grid.has(pos.toKey())) {
+            const pos = new Quadray(a, b, c, d);
+            if (!this.grid.has(GridUtils.key(pos.a, pos.b, pos.c, pos.d))) {
                 landingRow = a;
                 break;
             }
@@ -168,11 +170,11 @@ class ConnectFourBoard extends BaseBoard {
 
         if (landingRow === -1) return { result: 'full', quadray: null, cellType: null };
 
-        // Create the landing Quadray and snap to IVM
-        const landingQuadray = Quadray.toIVM(new Quadray(landingRow, b, c, d));
+        // Preserve the integer landing-row label rather than gauge-normalizing it.
+        const landingQuadray = new Quadray(landingRow, b, c, d);
         const parity = Quadray.cellType(landingQuadray.a, landingQuadray.b, landingQuadray.c, landingQuadray.d);
 
-        // Place piece using Quadray.toKey() for storage
+        // Keep raw label identity separate from canonical physical Quadray keys.
         const player = this.currentPlayer;
         const cellData = {
             player: player,
@@ -180,7 +182,7 @@ class ConnectFourBoard extends BaseBoard {
             cellType: parity,
             moveNum: this.moveCount + 1,
         };
-        this.grid.set(landingQuadray.toKey(), cellData);
+        this.grid.set(GridUtils.key(landingQuadray.a, landingQuadray.b, landingQuadray.c, landingQuadray.d), cellData);
         this.moveCount++;
 
         const moveRecord = {
@@ -214,13 +216,12 @@ class ConnectFourBoard extends BaseBoard {
 
     /**
      * Check if the last placed piece creates a 4-in-a-row.
-     * Uses Quadray.add() to walk along WIN_DIRECTIONS and
-     * Quadray.equals() / toKey() for position matching.
+     * Walk WIN_DIRECTIONS in raw label space; physical gauge aliases do not match.
      * @param {Quadray} pos - The position to check from
      * @returns {boolean}
      */
     _checkWin(pos) {
-        const player = this.grid.get(pos.toKey())?.player;
+        const player = this.getCell(pos)?.player;
         if (!player) return false;
 
         for (const dir of ConnectFourBoard.WIN_DIRECTIONS) {
@@ -235,11 +236,10 @@ class ConnectFourBoard extends BaseBoard {
                     current.c + dir.c,
                     current.d + dir.d
                 );
-                const snapped = Quadray.toIVM(current);
-                if (!this.inBounds(snapped)) break;
-                const cell = this.grid.get(snapped.toKey());
+                if (!this.inBounds(current)) break;
+                const cell = this.getCell(current);
                 if (cell && cell.player === player) {
-                    line.push(snapped);
+                    line.push(current);
                 } else break;
             }
 
@@ -253,11 +253,10 @@ class ConnectFourBoard extends BaseBoard {
                     current.c + negDir.c,
                     current.d + negDir.d
                 );
-                const snapped = Quadray.toIVM(current);
-                if (!this.inBounds(snapped)) break;
-                const cell = this.grid.get(snapped.toKey());
+                if (!this.inBounds(current)) break;
+                const cell = this.getCell(current);
                 if (cell && cell.player === player) {
-                    line.push(snapped);
+                    line.push(current);
                 } else break;
             }
 
@@ -290,17 +289,17 @@ class ConnectFourBoard extends BaseBoard {
 
         let landingRow = -1;
         for (let a = 0; a < this.height; a++) {
-            const pos = Quadray.toIVM(new Quadray(a, b, c, d));
-            if (!this.grid.has(pos.toKey())) {
+            const pos = new Quadray(a, b, c, d);
+            if (!this.grid.has(GridUtils.key(pos.a, pos.b, pos.c, pos.d))) {
                 landingRow = a;
                 break;
             }
         }
         if (landingRow === -1) return false;
 
-        const landingQuadray = Quadray.toIVM(new Quadray(landingRow, b, c, d));
+        const landingQuadray = new Quadray(landingRow, b, c, d);
         const parity = Quadray.cellType(landingQuadray.a, landingQuadray.b, landingQuadray.c, landingQuadray.d);
-        const key = landingQuadray.toKey();
+        const key = GridUtils.key(landingQuadray.a, landingQuadray.b, landingQuadray.c, landingQuadray.d);
 
         const savedWinLine = this.winLine;
         this.grid.set(key, { player, quadray: landingQuadray, cellType: parity, moveNum: this.moveCount + 1 });
@@ -323,7 +322,7 @@ class ConnectFourBoard extends BaseBoard {
             const q = cellData.quadray;
             const cartesian = q.toCartesian();
             const distFromOrigin = q.distanceTo(Quadray.ORIGIN);
-            const isWinCell = this.winLine.some(w => w.toKey() === key);
+            const isWinCell = this.winLine.some(w => GridUtils.key(w.a, w.b, w.c, w.d) === key);
 
             cells.push({
                 a: q.a, b: q.b, c: q.c, d: q.d,
@@ -353,8 +352,8 @@ class ConnectFourBoard extends BaseBoard {
                 for (let d = 0; d < this.depthD; d++) {
                     let full = true;
                     for (let a = 0; a < this.height; a++) {
-                        const pos = Quadray.toIVM(new Quadray(a, b, c, d));
-                        if (!this.grid.has(pos.toKey())) { full = false; break; }
+                        const pos = new Quadray(a, b, c, d);
+                        if (!this.grid.has(GridUtils.key(pos.a, pos.b, pos.c, pos.d))) { full = false; break; }
                     }
                     const colQuadray = new Quadray(0, b, c, d);
                     const parity = Quadray.cellType(0, b, c, d);
@@ -379,7 +378,7 @@ class ConnectFourBoard extends BaseBoard {
     getNeighbors(q) {
         const raw = GridUtils.neighbors(q.a, q.b, q.c, q.d);
         return raw
-            .map(n => Quadray.toIVM(new Quadray(n.a, n.b, n.c, n.d)))
+            .map(n => new Quadray(n.a, n.b, n.c, n.d))
             .filter(n => this.inBounds(n));
     }
 
@@ -446,8 +445,8 @@ class ConnectFourBoard extends BaseBoard {
         for (let b = 0; b < this.width; b++)
             for (let c = 0; c < this.depthC; c++)
                 for (let d = 0; d < this.depthD; d++) {
-                    const topPos = Quadray.toIVM(new Quadray(this.height - 1, b, c, d));
-                    if (!this.grid.has(topPos.toKey())) {
+                    const topPos = new Quadray(this.height - 1, b, c, d);
+                    if (!this.grid.has(GridUtils.key(topPos.a, topPos.b, topPos.c, topPos.d))) {
                         moves.push({ b, c, d });
                     }
                 }
@@ -478,7 +477,7 @@ class ConnectFourBoard extends BaseBoard {
                 // Neighbor bonus using GridUtils neighbors
                 const neighbors = this.getNeighbors(q);
                 for (const n of neighbors) {
-                    const nCell = this.grid.get(n.toKey());
+                    const nCell = this.getCell(n);
                     if (nCell && nCell.player === player) score += 3;
                 }
             } else if (cellData.player === opponent) {
@@ -513,9 +512,8 @@ class ConnectFourBoard extends BaseBoard {
                     current.a + dir.a, current.b + dir.b,
                     current.c + dir.c, current.d + dir.d
                 );
-                const snapped = Quadray.toIVM(current);
-                if (!this.inBounds(snapped)) break;
-                const cell = this.grid.get(snapped.toKey());
+                if (!this.inBounds(current)) break;
+                const cell = this.getCell(current);
                 if (cell && cell.player === player) count++;
                 else if (cell) break; // opponent blocks
                 // empty — continue counting potential
@@ -558,7 +556,7 @@ class ConnectFourBoard extends BaseBoard {
         const entry = this.turnManager.undo();
         if (!entry) return null;
         const move = entry.move;
-        this.grid.delete(move.quadray.toKey());
+        this.grid.delete(GridUtils.key(move.quadray.a, move.quadray.b, move.quadray.c, move.quadray.d));
         this.moveCount--;
         this.winner = 0;
         this.gameOver = false;

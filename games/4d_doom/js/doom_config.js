@@ -40,7 +40,7 @@ export const IVM = {
     // S3 constant: XYZ→IVM volume conversion = √(9/8)
     S3: Math.sqrt(9 / 8),
     // Basis vector length in Cartesian
-    BASIS_LENGTH: 1 / Math.sqrt(2), // ~0.7071
+    BASIS_LENGTH: Math.sqrt(3 / 2), // Cartesian coefficient-unit norm
     // Tetra edge offsets for polyhedra detection
     TETRA_OFFSETS: [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]],
     // Octa vertex offsets

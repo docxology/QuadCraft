@@ -8,8 +8,8 @@ let dedupQuadraysMap = {};
 let dedupTriMap = {};
 
 /**
- * Quadray Class - 4D coordinate system for space
- * Represents points in 4D space that project to 3D with specific constraints
+ * Four real coefficients for a 3D point, modulo a common additive offset.
+ * Coefficient-unit basis vectors have Cartesian length sqrt(3/2).
  */
 class Quadray {
     constructor(a = 0, b = 0, c = 0, d = 0) {
@@ -47,9 +47,9 @@ class Quadray {
      */
     toCartesian() {
         const scale = 1 / ROOT2;
-        const x = scale * (this.a - this.b - this.c + this.d);
-        const y = scale * (this.a - this.b + this.c - this.d);
-        const z = scale * (this.a + this.b - this.c - this.d);
+        const x = scale * ((this.a - this.b) - (this.c - this.d));
+        const y = scale * ((this.a - this.b) + (this.c - this.d));
+        const z = scale * ((this.a - this.c) + (this.b - this.d));
         return [x, y, z];
     }
 
@@ -69,11 +69,13 @@ class Quadray {
     }
 
     /**
-     * Calculate the length/magnitude of the quadray
+     * Euclidean magnitude in Cartesian units, independent of common offsets
      */
     length() {
-        const sumSq = this.a ** 2 + this.b ** 2 + this.c ** 2 + this.d ** 2;
-        return Math.sqrt(sumSq / 2);
+        const ab = this.a - this.b;
+        const cd = this.c - this.d;
+        return Math.hypot((ab - cd) / ROOT2, (ab + cd) / ROOT2,
+            ((this.a - this.c) + (this.b - this.d)) / ROOT2);
     }
 
     /**
@@ -136,16 +138,15 @@ class Quadray {
     }
 
     /**
-     * Calculate 4D distance between two quadrays
+     * Euclidean Cartesian distance between quadrays or a/b/c/d records
      */
     static distance(q1, q2) {
-        const diff = new Quadray(
-            q1.a - q2.a,
-            q1.b - q2.b,
-            q1.c - q2.c,
-            q1.d - q2.d
-        );
-        return diff.length();
+        const ab = (q1.a - q1.b) - (q2.a - q2.b);
+        const cd = (q1.c - q1.d) - (q2.c - q2.d);
+        const ac = (q1.a - q1.c) - (q2.a - q2.c);
+        const bd = (q1.b - q1.d) - (q2.b - q2.d);
+        return Math.hypot((ab - cd) / ROOT2, (ab + cd) / ROOT2,
+            (ac + bd) / ROOT2);
     }
 
     /**

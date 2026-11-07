@@ -1,8 +1,8 @@
 /**
  * doom_physics.js — Movement, Collision, Projectile Updates, Enemy AI
  * 
- * Uses IVM 8-connected adjacency for collision and AI.
- * Movement respects Quadray coordinate space.
+ * Collision and LOS traverse DoomMap's independent raw four-index cells.
+ * Physical ranges continue to use the shared Cartesian Quadray metric.
  */
 import { Particle } from './doom_entities.js';
 import { IVM } from './doom_config.js';
@@ -42,8 +42,8 @@ export class Physics {
     }
 
     /**
-     * Check IVM neighborhood around a position.
-     * Returns the number of solid IVM neighbors (0-8).
+     * Check the eight signed raw-label neighbors around a position.
+     * Returns the number of solid neighbors (0-8).
      */
     countSolidNeighbors(a, b, c, d) {
         let count = 0;
@@ -124,30 +124,36 @@ export class Physics {
     }
 
     /**
-     * True 4D DDA Raycast for Line of Sight.
-     * Returns true if clear path exists.
+     * Traverse the closed raw-label segment through DoomMap's floor-index cells.
+     * Gauge-equivalent physical points can occupy different map cells.
+     * At simultaneous crossings, check the exact boundary's floor cell as well
+     * as the cells on either side; never visit arbitrary axis-order neighbors.
      */
     hasLineOfSight(e1, e2) {
-        const diffA = e2.a - e1.a;
-        const diffB = e2.b - e1.b;
-        const diffC = e2.c - e1.c;
-        const diffD = e2.d - e1.d;
+        const start = [e1.a, e1.b, e1.c, e1.d];
+        const delta = [e2.a - e1.a, e2.b - e1.b, e2.c - e1.c, e2.d - e1.d];
+        const cell = start.map(Math.floor);
+        const next = new Array(4);
 
-        const dist = Quadray.distance(e1, e2);
-        if (dist === 0) return true;
+        while (true) {
+            if (this.map.isSolid(...cell)) return false;
+            for (let axis = 0; axis < 4; axis++) {
+                next[axis] = delta[axis] === 0 ? Infinity :
+                    (cell[axis] + (delta[axis] > 0 ? 1 : 0) - start[axis]) / delta[axis];
+            }
+            const t = Math.min(...next);
+            if (t > 1) return true;
 
-        const steps = Math.ceil(dist * 2); // More steps for higher precision
-        for (let i = 1; i < steps; i++) {
-            const t = i / steps;
-            const checkA = e1.a + t * diffA;
-            const checkB = e1.b + t * diffB;
-            const checkC = e1.c + t * diffC;
-            const checkD = e1.d + t * diffD;
-            if (this.map.isSolid(checkA, checkB, checkC, checkD)) {
-                return false;
+            // floor(integer boundary) belongs to the positive-side cell.
+            for (let axis = 0; axis < 4; axis++) {
+                if (next[axis] === t && delta[axis] > 0) cell[axis]++;
+            }
+            if (this.map.isSolid(...cell)) return false;
+            if (t === 1) return true;
+            for (let axis = 0; axis < 4; axis++) {
+                if (next[axis] === t && delta[axis] < 0) cell[axis]--;
             }
         }
-        return true;
     }
 
     /** 

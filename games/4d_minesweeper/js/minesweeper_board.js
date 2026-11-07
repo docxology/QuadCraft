@@ -1,7 +1,7 @@
 /**
  * minesweeper_board.js — 4D Minesweeper on IVM (Quadray) Lattice
  *
- * Cells live at integer Quadray positions (a,b,c,d).
+ * Cells are distinct physical integer Quadrays in zero-minimum gauge.
  * IVM adjacency: each cell has up to 12 neighbors (the canonical
  * "12-around-one" cuboctahedron directions), via
  * GridUtils.boundedNeighbors()/GridUtils.DIRECTIONS.
@@ -80,7 +80,7 @@ class MinesweeperBoard extends BaseBoard {
 
         this.initBoard();
 
-        console.log(`[MinesweeperBoard] ${this.totalCells} cells, ${this.totalMines} mines on ${this.size}^4 IVM grid`);
+        console.log(`[MinesweeperBoard] ${this.totalCells} physical cells, ${this.totalMines} mines with canonical extent ${this.size}`);
         console.log(`[MinesweeperBoard] Cell volume: ${this.cellVolumeUnit}, S3: ${this.s3Constant}`);
         console.log(`[MinesweeperBoard] Volume ratios T:O:C = ${this.volumeRatios.tetra}:${this.volumeRatios.octa}:${this.volumeRatios.cubo}`);
     }
@@ -116,18 +116,15 @@ class MinesweeperBoard extends BaseBoard {
         this.score = 0;
         this.firstClick = true;
         // Count total cells in the grid
+        this.cells = GridUtils.generateCanonicalGrid(this.size);
         this.totalCells = 0;
         this._forEachCell(() => this.totalCells++);
         this.totalMines = Math.max(1, Math.floor(this.totalCells * this.mineRatio));
     }
 
-    /** Iterate over all valid integer Quadray positions in the grid. */
+    /** Iterate once over each canonical physical cell, including regenerated boards. */
     _forEachCell(fn) {
-        for (let a = 0; a < this.size; a++)
-            for (let b = 0; b < this.size; b++)
-                for (let c = 0; c < this.size; c++)
-                    for (let d = 0; d < this.size; d++)
-                        fn(a, b, c, d);
+        for (const { a, b, c, d } of this.cells) fn(a, b, c, d);
     }
 
     /**
@@ -151,8 +148,7 @@ class MinesweeperBoard extends BaseBoard {
     }
 
     /**
-     * Check if position is within bounds.
-     * Delegates to GridUtils.inBounds().
+     * Check canonical physical-cell membership, excluding nonzero-minimum labels.
      * @param {number} a
      * @param {number} b
      * @param {number} c
@@ -160,7 +156,7 @@ class MinesweeperBoard extends BaseBoard {
      * @returns {boolean}
      */
     inBounds(a, b, c, d) {
-        return GridUtils.inBounds(a, b, c, d, this.size);
+        return Math.min(a, b, c, d) === 0 && GridUtils.inBounds(a, b, c, d, this.size);
     }
 
     /**
@@ -191,7 +187,7 @@ class MinesweeperBoard extends BaseBoard {
 
     /**
      * Get IVM neighbors of a position that are within board bounds.
-     * Uses GridUtils.boundedNeighbors() for axis-aligned neighbors.
+     * Uses canonical twelve-around-one adjacency, not raw axis steps.
      * @param {Quadray} q
      * @returns {Array<Quadray>}
      */
@@ -306,6 +302,7 @@ class MinesweeperBoard extends BaseBoard {
      */
     reveal(a, b, c, d) {
         if (this.gameOver) return 'gameover';
+        if (!this.inBounds(a, b, c, d)) return 'invalid';
         const k = this.key(a, b, c, d);
 
         if (this.flagged.has(k)) return 'flagged';
@@ -332,7 +329,7 @@ class MinesweeperBoard extends BaseBoard {
         let revealedCount = 0;
         while (stack.length > 0) {
             const ck = stack.pop();
-            if (this.revealed.has(ck)) continue;
+            if (this.revealed.has(ck) || this.flagged.has(ck)) continue;
             this.revealed.add(ck);
             revealedCount++;
 
@@ -341,7 +338,7 @@ class MinesweeperBoard extends BaseBoard {
                 // Expand to neighbors
                 const [ca, cb, cc, cd] = this.parseKey(ck);
                 for (const nk of this.getNeighborKeys(ca, cb, cc, cd)) {
-                    if (!this.revealed.has(nk) && !this.mines.has(nk)) {
+                    if (!this.revealed.has(nk) && !this.flagged.has(nk) && !this.mines.has(nk)) {
                         stack.push(nk);
                     }
                 }
@@ -362,6 +359,7 @@ class MinesweeperBoard extends BaseBoard {
      */
     toggleFlag(a, b, c, d) {
         if (this.gameOver) return;
+        if (!this.inBounds(a, b, c, d)) return;
         const k = this.key(a, b, c, d);
         if (this.revealed.has(k)) return;
         if (this.flagged.has(k)) this.flagged.delete(k);

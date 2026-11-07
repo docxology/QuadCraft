@@ -51,7 +51,7 @@ assert('Basis B is (0,1,0,0)', Quadray.B.b === 1 && Quadray.B.a === 0);
 
 // Basis length
 const bLen = Quadray.A.length();
-assert('Basis length ≈ 0.7071', Math.abs(bLen - 1 / Math.sqrt(2)) < 0.001);
+assert('Basis length agrees with embedded vertex radius', Math.abs(bLen - Math.sqrt(3 / 2)) < 1e-12);
 
 // Add
 const sum = qa.add(qb);
@@ -68,6 +68,67 @@ assert('toKey produces string', typeof key === 'string' && key.includes(','));
 // Constants
 assert('ROOT2 is sqrt(2)', Math.abs(ROOT2 - Math.sqrt(2)) < 0.0001);
 assert('S3 is sqrt(9/8)', Math.abs(S3 - Math.sqrt(9 / 8)) < 0.0001);
+
+// Exercise both real implementations with their respective Cartesian APIs.
+const fs = require('node:fs');
+const path = require('node:path');
+const vm = require('node:vm');
+const modularContext = vm.createContext({});
+const modularRoot = path.resolve(__dirname, '../../../src/js/experiments/browser/js');
+for (const file of ['utils/constants.js', 'math/quadray.js']) {
+    vm.runInContext(fs.readFileSync(path.join(modularRoot, file), 'utf8'), modularContext, { filename: file });
+}
+const BrowserQuadray = vm.runInContext('Quadray', modularContext);
+
+for (const [label, Q, xyzOf] of [
+    ['shared', Quadray, q => Object.values(q.toCartesian())],
+    ['modular browser', BrowserQuadray, q => q.toCartesian()]
+]) {
+    const samples = [
+        new Q(), new Q(1, 0, 0, 0), new Q(8, 7, 7, 7),
+        new Q(-2.5, 0.25, 1.5, -0.75), new Q(0.5, -1.25, 0.75, 2)
+    ];
+    assert(`${label}: shifted origin has zero length`, new Q(-9, -9, -9, -9).length() === 0);
+    assert(`${label}: tetrahedron edge length is two`,
+        Math.abs(Q.distance(new Q(1, 0, 0, 0), new Q(0, 1, 0, 0)) - 2) < 1e-12);
+    for (const [i, p] of samples.entries()) {
+        const xyz = xyzOf(p);
+        const shift = 2 ** 40;
+        const shifted = new Q(p.a + shift, p.b + shift, p.c + shift, p.d + shift);
+        assert(`${label}: sample ${i} length matches XYZ`, Math.abs(p.length() - Math.hypot(...xyz)) < 1e-12);
+        assert(`${label}: sample ${i} equivalent point has zero distance`, Q.distance(p, shifted) === 0);
+        assert(`${label}: sample ${i} large gauge preserves length`, Math.abs(p.length() - shifted.length()) < 1e-12);
+        for (const [j, other] of samples.entries()) {
+            const otherXYZ = xyzOf(other);
+            const expected = Math.hypot(...xyz.map((v, axis) => v - otherXYZ[axis]));
+            const record = { a: other.a, b: other.b, c: other.c, d: other.d };
+            assert(`${label}: signed/fractional pair ${i},${j} matches XYZ`,
+                Math.abs(Q.distance(p, other) - expected) < 1e-12);
+            assert(`${label}: structural record pair ${i},${j} ignores independent gauge`,
+                Math.abs(Q.distance(shifted, record) - expected) < 1e-12);
+        }
+    }
+    // Preserve the scalar shared inverse and array-valued modular inverse.
+    for (const xyz of [[0, 0, 0], [1.25, -2.5, 3.75], [-4, -2, -1], [0, 3, -2]]) {
+        const restored = Q === Quadray ? Q.fromCartesian(...xyz) : Q.fromCartesian(xyz);
+        const back = xyzOf(restored);
+        assert(`${label}: signed Cartesian inverse ${xyz}`, back.every((v, axis) => Math.abs(v - xyz[axis]) < 1e-12));
+    }
+}
+
+for (const [values, expected, shift] of [
+    [[0.49, 0.49, 0.49, 0], [0, 0, 0, 0], 0.02],
+    [[-1.25, -0.75, 0.25, 1.25], [0, 1, 2, 3], 2],
+    [[3, 5, 2, 7], [1, 3, 0, 5], -4]
+]) {
+    const base = new Quadray(...values);
+    const shifted = new Quadray(...values.map(v => v + shift));
+    for (const q of [base, shifted]) {
+        const snap = Quadray.toIVM(q);
+        assert(`Canonical component snap ${values}`,
+            [snap.a, snap.b, snap.c, snap.d].every((v, i) => v === expected[i]));
+    }
+}
 
 console.log(`\n=== Results: ${passed} passed, ${failed} failed ===`);
 process.exit(failed > 0 ? 1 : 0);

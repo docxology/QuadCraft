@@ -5,9 +5,10 @@ Python port of quadray.js.  Quadray coordinates (a, b, c, d) represent
 positions in tetrahedral space using four basis vectors emanating from
 the centre of a regular tetrahedron.
 
-All arithmetic returns **normalised** results (min-component zeroed)
-unless noted otherwise.  Immutable-style API: every operation returns
-a new Quadray instance.
+Common additive offsets represent the same 3D point; a coefficient-unit
+basis vector has Cartesian length sqrt(3/2). Addition returns a normalised
+representative; subtraction and scaling retain their raw components.
+Every arithmetic operation returns a new Quadray instance.
 """
 
 from __future__ import annotations
@@ -23,7 +24,7 @@ S3: float = math.sqrt(9 / 8)         # 1.0606601717798212
 
 
 class Quadray:
-    """4D tetrahedral coordinate (a, b, c, d)."""
+    """Four floating coefficients for a 3D point modulo common offsets."""
 
     __slots__ = ("a", "b", "c", "d")
 
@@ -56,9 +57,9 @@ class Quadray:
         Uses the standard tetrahedron-vertex mapping scaled by 1/√2.
         """
         s = 1.0 / ROOT2
-        x = s * (self.a - self.b - self.c + self.d)
-        y = s * (self.a - self.b + self.c - self.d)
-        z = s * (self.a + self.b - self.c - self.d)
+        x = s * ((self.a - self.b) - (self.c - self.d))
+        y = s * ((self.a - self.b) + (self.c - self.d))
+        z = s * ((self.a - self.c) + (self.b - self.d))
         return (x, y, z)
 
     @classmethod
@@ -101,14 +102,22 @@ class Quadray:
     # ── Metrics ──────────────────────────────────────────────────────────
 
     def length(self) -> float:
-        """Quadray vector length: √((a² + b² + c² + d²) / 2)."""
-        return math.sqrt(
-            (self.a**2 + self.b**2 + self.c**2 + self.d**2) / 2
+        """Euclidean length in XYZ units, independent of the common offset."""
+        ab = self.a - self.b
+        cd = self.c - self.d
+        return math.hypot(
+            (ab - cd) / ROOT2, (ab + cd) / ROOT2,
+            ((self.a - self.c) + (self.b - self.d)) / ROOT2,
         )
 
     def distance_to(self, other: Quadray) -> float:
-        """Euclidean distance via subtraction → length."""
-        return (self - other).length()
+        """Euclidean XYZ distance; remove each gauge before differencing."""
+        ab = (self.a - self.b) - (other.a - other.b)
+        cd = (self.c - self.d) - (other.c - other.d)
+        ac = (self.a - self.c) - (other.a - other.c)
+        bd = (self.b - self.d) - (other.b - other.d)
+        return math.hypot((ab - cd) / ROOT2, (ab + cd) / ROOT2,
+                          (ac + bd) / ROOT2)
 
     # ── Equality / Hashing ───────────────────────────────────────────────
 

@@ -8,8 +8,8 @@
  * Uses all BaseRenderer methods:
  *   _project(), _drawAxes(), _clearCanvas(), _drawHUD(),
  *   _drawCircle(), _drawDiamond()
- * Plus: GridUtils.depthSort(), Quadray.cellType(), Quadray.distance(),
- *       Quadray.toCartesian(), Quadray.add(), Quadray.BASIS
+ * Plus: GridUtils.neighbors(), Quadray.cellType(), Quadray.distance(),
+ *       Quadray.toCartesian()
  *
  * @module TDRenderer
  */
@@ -103,24 +103,24 @@ class TDRenderer extends BaseRenderer {
 
         const visited = new Set();
         const nodes = [];
-        for (const wp of this.board.path) {
+        for (const waypoint of this.board.path) {
+            const wp = waypoint.normalized();
             const key = GridUtils.key(wp.a, wp.b, wp.c, wp.d);
             if (!visited.has(key)) {
                 visited.add(key);
                 nodes.push(wp);
             }
-            for (const basis of Quadray.BASIS) {
-                const n = wp.add(basis);
-                const rn = new Quadray(Math.round(n.a), Math.round(n.b), Math.round(n.c), Math.round(n.d));
+            // Two complete FCC/IVM neighbor rings, deduplicated in zero-min gauge.
+            for (const n of GridUtils.neighbors(wp.a, wp.b, wp.c, wp.d)) {
+                const rn = new Quadray(n.a, n.b, n.c, n.d);
                 const nk = GridUtils.key(rn.a, rn.b, rn.c, rn.d);
                 if (!visited.has(nk)) {
                     visited.add(nk);
                     nodes.push(rn);
                 }
                 // Second ring neighbors for denser grid
-                for (const basis2 of Quadray.BASIS) {
-                    const n2 = rn.add(basis2);
-                    const rn2 = new Quadray(Math.round(n2.a), Math.round(n2.b), Math.round(n2.c), Math.round(n2.d));
+                for (const n2 of GridUtils.neighbors(rn.a, rn.b, rn.c, rn.d)) {
+                    const rn2 = new Quadray(n2.a, n2.b, n2.c, n2.d);
                     const nk2 = GridUtils.key(rn2.a, rn2.b, rn2.c, rn2.d);
                     if (!visited.has(nk2)) {
                         visited.add(nk2);
@@ -200,24 +200,25 @@ class TDRenderer extends BaseRenderer {
         const ctx = this.ctx;
         const board = this.board;
         const nodes = this._getGridNodes();
+        const nodeIndices = new Map(nodes.map((q, i) => [GridUtils.key(q.a, q.b, q.c, q.d), i]));
 
-        // Draw edges between nodes that are ~1 IVM unit apart
+        // The twelve FCC/IVM neighbors have Cartesian edge length 2.
         ctx.lineWidth = 0.6;
         for (let i = 0; i < nodes.length; i++) {
             const p1 = this._projectQ(nodes[i]);
-            for (let j = i + 1; j < nodes.length; j++) {
-                const dist = Quadray.distance(nodes[i], nodes[j]);
-                if (Math.abs(dist - 1.0) < 0.15) {
-                    const p2 = this._projectQ(nodes[j]);
-                    // Depth-based opacity - enhanced fog
-                    const avgZ = (p1.z + p2.z) / 2;
-                    const depthAlpha = Math.max(0.01, Math.min(0.4, 0.4 - avgZ * 0.005));
-                    ctx.strokeStyle = `rgba(40, 50, 90, ${depthAlpha})`;
-                    ctx.beginPath();
-                    ctx.moveTo(p1.x, p1.y);
-                    ctx.lineTo(p2.x, p2.y);
-                    ctx.stroke();
-                }
+            const q = nodes[i];
+            for (const neighbor of GridUtils.neighbors(q.a, q.b, q.c, q.d)) {
+                const j = nodeIndices.get(GridUtils.key(neighbor.a, neighbor.b, neighbor.c, neighbor.d));
+                if (j === undefined || j <= i) continue;
+                const p2 = this._projectQ(nodes[j]);
+                // Depth-based opacity - enhanced fog
+                const avgZ = (p1.z + p2.z) / 2;
+                const depthAlpha = Math.max(0.01, Math.min(0.4, 0.4 - avgZ * 0.005));
+                ctx.strokeStyle = `rgba(40, 50, 90, ${depthAlpha})`;
+                ctx.beginPath();
+                ctx.moveTo(p1.x, p1.y);
+                ctx.lineTo(p2.x, p2.y);
+                ctx.stroke();
             }
         }
 

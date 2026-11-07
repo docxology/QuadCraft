@@ -62,7 +62,8 @@ function runQuadrayTests(test) {
         test.it('should calculate length correctly', () => {
             const q = Quadray.A;
             const len = q.length();
-            test.assertApprox(len, 1 / ROOT2, 0.01, 'Length of basis vector');
+            const xyz = q.toCartesian();
+            test.assertApprox(len, Math.hypot(xyz.x, xyz.y, xyz.z), 1e-12, 'Length agrees with Cartesian radius');
         });
 
         test.it('should detect equality between Quadrays', () => {
@@ -85,13 +86,6 @@ function runQuadrayTests(test) {
             }
         });
 
-        test.it('static distance should match instance distanceTo', () => {
-            const q1 = new Quadray(1, 0, 0, 0);
-            const q2 = new Quadray(0, 1, 0, 0);
-            const d1 = Quadray.distance(q1, q2);
-            const d2 = q1.distanceTo(q2);
-            test.assertApprox(d1, d2, 0.0001, 'Both distance methods should match');
-        });
     });
 
     test.describe('Extended Quadray Tests', () => {
@@ -123,13 +117,6 @@ function runQuadrayTests(test) {
             test.assertApprox(norm1.a, norm2.a, 0.01, 'a should match');
         });
 
-        test.it('distanceTo should match static distance', () => {
-            const q1 = new Quadray(1, 0, 0, 0);
-            const q2 = new Quadray(0, 1, 0, 0);
-            const d1 = q1.distanceTo(q2);
-            const d2 = Quadray.distance(q1, q2);
-            test.assertApprox(d1, d2, 0.0001, 'Methods should match');
-        });
     });
 }
 

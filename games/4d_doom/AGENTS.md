@@ -2,8 +2,8 @@
 
 ## Shared Modules
 
-> **Note:** 4D Doom uses ES-module `import/export` syntax. It retains its own
-> quadray variant in `js/`. Other shared modules are not yet integrated.
+> Doom uses ES-module `import/export` syntax. `js/quadray.js` bridges to the
+> canonical `../4d_generic/quadray.js`; it is not a separate math implementation.
 
 ## Architecture
 
@@ -17,7 +17,7 @@
 - `doom_config.js` — IVM constants, 8 directions, cell types (TETRA_WALL, OCTA_WALL)
 - `doom_board.js` — Sparse IVM grid, `getCell/setCell`, `getSlice(c,d)`, `cellParity`
 - `doom_entities.js` — `Player`, `Enemy` utilizing purely native `Quadray.distance()`
-- `doom_physics.js` — True 4D DDA line-of-sight algorithms across 4 hyperplanes
+- `doom_physics.js` — Grid-label DDA and line-of-sight routines
 - `doom_renderer.js` — Distance-based 4D dynamic lighting projection |
 - `doom_hud_synergetics.js` — `SynergeticsHUD` class (panel, compass, position, grid)
 - `doom_synergetics.js` — `computeAllAnalysis`, geometric identity verification
@@ -25,13 +25,13 @@
 
 ## Key Patterns
 
-1. **IVM Adjacency**: 8-connected (±1 on each of 4 axes), not 4-connected cubic
-2. **Cell Parity**: `(a+b+c+d) % 2` → 'tetra' (even) or 'octa' (odd) — IVM vertex type
+1. **Raw-label adjacency**: 8 signed coordinate steps; distinct from the 12 FCC/IVM neighbor permutations
+2. **Cell classification**: `(a+b+c+d) % 2` selects the game's tetra/octa label
 3. **Tetravolume**: Per-cell = (1/√2)³ × S3 ≈ 0.375 tetravolumes
 4. **Analysis Caching**: `markDirty()` invalidates, recompute only when needed (not per-frame)
 5. **Slice Projection**: `getSlice(c,d)` returns 2D array for the DDA in (A,B) plane
 
 ## Testing
 
-- 0 tests (ES module migration in progress) in `tests/test_doom.js` — open `test_doom.html` in browser
-- 8 geometric identity checks verified on startup
+- Node: `node games/4d_doom/tests/test_doom.js` from repository root
+- Browser: serve `games/` (or the repository root) and open `tests/test_doom.html`; the shared classic script must load before its module bridge

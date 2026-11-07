@@ -1,7 +1,7 @@
 /**
  * test_tower_defense.js -- 4D Tower Defense Unit Tests
  * Tests board logic, creep types, tower upgrades, sell, abilities, wave mechanics,
- * procedural paths, swarm splitting, regen healing, and rhombic sniper tower.
+ * procedural paths, swarm splitting, regen healing, rhombic sniper and IVM grid geometry.
  */
 const assert = (c, m) => {
     if (!c) { console.error(`❌ FAILED: ${m}`); throw new Error(m); }
@@ -386,9 +386,38 @@ function runExtendedTests() {
     console.log("\nAll Extended Tests completed!");
 }
 
+function runRendererGeometryTests() {
+    const { BaseRenderer } = require('../../4d_generic/base_renderer.js');
+    globalThis.BaseRenderer = BaseRenderer;
+    const { TDRenderer } = require('../js/tower_defense_renderer.js');
+    const board = new TowerDefenseBoard(6, { seed: 17 });
+    board.path = [new Quadray(0, 0, 0, 0)];
+    // Exercise real node geometry without substituting a canvas or draw calls.
+    const renderer = Object.create(TDRenderer.prototype);
+    renderer.board = board;
+    const nodes = renderer._getGridNodes();
+    const keys = new Set(nodes.map(q => GridUtils.key(q.a, q.b, q.c, q.d)));
+    assert(nodes.length === 55 && keys.size === 55, 'Two FCC/IVM rings contain 55 distinct physical sites');
+    assert(nodes.every(q => Math.min(q.a, q.b, q.c, q.d) === 0 &&
+        (q.a + q.b + q.c + q.d) % 4 === 0), 'Wireframe sites stay in the canonical origin IVM sublattice');
+    const neighbors = nodes.filter(q => Math.abs(Quadray.distance(Quadray.ORIGIN, q) - 2) < 1e-12);
+    assert(neighbors.length === 12, 'Wireframe contains all twelve length-2 neighbors around the path');
+    const center = neighbors.reduce((sum, q) => {
+        const p = q.toCartesian();
+        return { x: sum.x + p.x, y: sum.y + p.y, z: sum.z + p.z };
+    }, { x: 0, y: 0, z: 0 });
+    assert(Math.hypot(center.x, center.y, center.z) < 1e-12, 'Twelve-neighbor shell is geometrically centered, not positive-basis biased');
+    board.path = [new Quadray(7, 7, 7, 7), new Quadray(0, 0, 0, 0)];
+    board.tick++;
+    const aliasNodes = renderer._getGridNodes();
+    assert(aliasNodes.length === 55 && aliasNodes.every(q => keys.has(GridUtils.key(q.a, q.b, q.c, q.d))),
+        'Gauge-equivalent path labels neither shift nor duplicate the physical wireframe');
+}
+
 if (typeof require !== 'undefined' && require.main === module) {
     runTests();
     runExtendedTests();
+    runRendererGeometryTests();
 } else if (typeof window !== 'undefined') {
     // Run in browser
     runTests();

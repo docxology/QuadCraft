@@ -7,6 +7,9 @@ on:
     branches: [main]
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   native-build:
     runs-on: ubuntu-latest
@@ -19,3 +22,19 @@ jobs:
 
       - name: Build and test native engine
         run: ./build.sh --no-run --test
+
+  headless:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      matrix:
+        configuration: [Debug, Release]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # actions/checkout@v7.0.1
+      - name: Configure without graphics dependencies
+        run: cmake -S . -B build-headless -DQUADCRAFT_BUILD_GAME=OFF -DBUILD_TESTING=ON -DCMAKE_BUILD_TYPE=${{ matrix.configuration }}
+      - name: Build native tests
+        run: cmake --build build-headless --parallel 2
+      - name: Exercise native assertions
+        working-directory: build-headless
+        run: ctest --output-on-failure --no-tests=error

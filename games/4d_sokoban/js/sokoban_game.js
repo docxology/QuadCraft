@@ -16,36 +16,43 @@ class SokobanGame extends BaseGame {
     constructor(canvas, hudEl) {
         const board = new SokobanBoard(5);
         const renderer = new SokobanRenderer(canvas, board);
-        super(canvas, board, renderer, hudEl, { name: 'SokobanGame' });
+        super(canvas, hudEl, board, renderer, { name: 'SokobanGame' });
         this.scoring = new ScoreManager({ key: 'quadcraft_sokoban', highScoreMode: 'low' });
         this.dirIndex = 0;
-        console.log('[SokobanGame] Use keys 1-9,0,Q,W to pick IVM direction, Enter to move');
+        console.log('[SokobanGame] Use keys 1-9,0,Q,W to move in an IVM direction');
+    }
+    /** Bind movement through BaseGame's InputController, not an unused key hook. */
+    _setupGameInput() {
+        this.input.bind(['1', '2', '3', '4', '5', '6', '7', '8', '9', '0', 'q', 'Q', 'w', 'W'],
+            e => this._handleKey(e));
+        this.input.bind(['n'], () => this.newGame());
     }
 
+
     _handleKey(e) {
+        if (this.loop.paused) return;
         const dirMap = {
             '1': 0, '2': 1, '3': 2, '4': 3, '5': 4, '6': 5,
             '7': 6, '8': 7, '9': 8, '0': 9, 'q': 10, 'w': 11
         };
-        if (dirMap[e.key] !== undefined) {
-            this.dirIndex = dirMap[e.key];
+        const key = e.key.toLowerCase();
+        if (dirMap[key] !== undefined) {
+            this.dirIndex = dirMap[key];
             this.board.move(this.dirIndex);
-            this._render();
             if (this.board.won) {
                 this.scoring.addScore(this.board.moveCount);
             }
         }
-        if (e.key === 'r') { this.board.reset(); this._render(); }
     }
 
-    _resetState() { this.board.reset(); this.scoring.reset(); }
-    newGame() { this.board.reset(); this._render(); }
+    reset() { super.reset(); this.scoring.reset(); }
+    newGame() { this.reset(); }
 
     _getHUDState() {
         const m = this.board.getMetadata();
         const hi = this.scoring.highScore > 0 ? ` | Best: ${this.scoring.highScore}` : '';
-        if (m.won) return `🎉 Solved! Moves: ${m.moveCount}, Pushes: ${m.pushCount}${hi}`;
-        return `Boxes: ${m.boxesOnGoals}/${m.totalBoxes} | Moves: ${m.moveCount} | Pushes: ${m.pushCount}${hi}`;
+        if (m.won) return { text: `🎉 Solved! Moves: ${m.moveCount}, Pushes: ${m.pushCount}${hi}`, color: '#48bb78' };
+        return { text: `Boxes: ${m.boxesOnGoals}/${m.totalBoxes} | Moves: ${m.moveCount} | Pushes: ${m.pushCount}${hi}`, color: '#94a3b8' };
     }
 }
 

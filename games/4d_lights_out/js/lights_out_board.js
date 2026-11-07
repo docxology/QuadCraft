@@ -51,9 +51,9 @@ class LightsOutBoard extends BaseBoard {
         console.log(`[LightsOutBoard] ${this.cells.length} cells on ${size}x grid, 12 IVM neighbors per cell`);
     }
 
-    /** Build the set of valid cell positions. */
+    /** Build distinct canonical physical cells, not independent raw labels. */
     _buildCells() {
-        this.cells = GridUtils.generateGrid(this.size);
+        this.cells = GridUtils.generateCanonicalGrid(this.size);
         for (const pos of this.cells) {
             this.setCell(pos, false); // Start all OFF
         }

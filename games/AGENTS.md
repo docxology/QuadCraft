@@ -1,6 +1,6 @@
 # Games — Agent Instructions
 
-> **Note on 4D Geometry & Nomenclature**: "4D" in QuadCraft strictly means **Synergetics** geometry (Quadray tetrahedral coordinates on an IVM; 12 neighbors = permutations of `(0, 1, 1, 2)`). Canonical statement: [GAMES_INDEX.md](GAMES_INDEX.md#note-on-4d-geometry--nomenclature).
+> **Geometry and labels:** Quadrays are four components modulo a common offset, representing three spatial dimensions. The FCC/IVM sublattice has 12 neighbors (permutations of `(0,1,1,2)`); some games intentionally use independent raw board labels instead. See the [suite conventions](https://github.com/docxology/symergetics/blob/main/docs/synergetics-suite.md) before changing coordinates or keys.
 
 ## Overview
 
@@ -17,7 +17,7 @@ python3 run_games.py --all
 # Launch specific game(s)
 python3 run_games.py --game chess doom
 
-# Run all unit tests (1,782 passing)
+# Run all checks, including nested shared JavaScript/Python suites
 python3 run_games.py --test
 
 # Run tests for specific game

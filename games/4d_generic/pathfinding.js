@@ -3,7 +3,7 @@
  *
  * Provides graph search algorithms operating on 4D Quadray grids:
  *   - BFS: Breadth-first search for shortest unweighted path
- *   - A*:  A-star with Manhattan heuristic for weighted navigation
+ *   - A*:  A-star with physical IVM hop heuristic (Dijkstra for custom costs)
  *   - Flood Fill: Area expansion from a seed (Minesweeper, Life)
  *   - Line of Sight: Ray casting along IVM directions
  *
@@ -74,7 +74,11 @@ class QuadrayPathfinder {
     }
 
     /**
-     * A* search on the IVM grid using Manhattan distance heuristic.
+     * A* search between canonical physical IVM cells.
+     * Half the L1 norm of the mean-free component delta is the obstacle-free
+     * hop distance within an IVM residue class, hence a consistent lower bound
+     * with obstacles. Custom entry costs have no supplied positive lower bound,
+     * so they use zero heuristic (Dijkstra), including fractional and zero costs.
      * Returns the shortest weighted path from start to goal.
      *
      * @param {{a:number,b:number,c:number,d:number}} start
@@ -82,7 +86,7 @@ class QuadrayPathfinder {
      * @param {function({a:number,b:number,c:number,d:number}):boolean} isWalkable
      * @param {number} size — Grid bounds.
      * @param {function({a:number,b:number,c:number,d:number}):number} [costFn]
-     *        — Movement cost for entering a cell (default: 1).
+     *        — Finite nonnegative cost for entering a cell (default: 1).
      * @returns {Array<{a:number,b:number,c:number,d:number}>|null}
      */
     static shortestPath(start, goal, isWalkable, size, costFn) {
@@ -91,10 +95,17 @@ class QuadrayPathfinder {
         if (startKey === goalKey) return [start];
 
         const moveCost = costFn || (() => 1);
+        const heuristic = costFn ? (() => 0) : (p => {
+            const da = goal.a - p.a, db = goal.b - p.b;
+            const dc = goal.c - p.c, dd = goal.d - p.d;
+            const mean = (da + db + dc + dd) / 4;
+            return (Math.abs(da - mean) + Math.abs(db - mean) +
+                Math.abs(dc - mean) + Math.abs(dd - mean)) / 2;
+        });
 
         // Open set as a simple sorted array (adequate for IVM grid sizes)
         const gScore = new Map([[startKey, 0]]);
-        const fScore = new Map([[startKey, GridUtils.manhattan(start, goal)]]);
+        const fScore = new Map([[startKey, heuristic(start)]]);
         const parent = new Map();
         const open = [start];
         const closed = new Set();
@@ -129,7 +140,7 @@ class QuadrayPathfinder {
                 if (tentativeG < (gScore.get(nKey) ?? Infinity)) {
                     parent.set(nKey, current);
                     gScore.set(nKey, tentativeG);
-                    fScore.set(nKey, tentativeG + GridUtils.manhattan(n, goal));
+                    fScore.set(nKey, tentativeG + heuristic(n));
                     if (!open.some(o =>
                         o.a === n.a && o.b === n.b && o.c === n.c && o.d === n.d
                     )) {

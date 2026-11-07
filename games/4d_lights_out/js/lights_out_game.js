@@ -8,7 +8,7 @@
  * Extends BaseGame for shared lifecycle, input, and camera management.
  *
  * API surface used:
- *   - BaseGame: init, start, pause, reset, newGame
+ *   - BaseGame: init, togglePause, reset, _setupGameInput, _getHUDState
  *   - ScoreManager: addScore, reset, toJSON
  *   - HUD: livesString, set
  *
@@ -29,7 +29,7 @@ class LightsOutGame extends BaseGame {
     constructor(canvas, hudEl) {
         const board = new LightsOutBoard(4);
         const renderer = new LightsOutRenderer(canvas, board);
-        super(canvas, board, renderer, hudEl, { name: 'LightsOutGame' });
+        super(canvas, hudEl, board, renderer, { name: 'LightsOutGame' });
 
         // Score tracking via ScoreManager
         this.scoring = new ScoreManager({
@@ -39,10 +39,16 @@ class LightsOutGame extends BaseGame {
 
         console.log('[LightsOutGame] Initialized — click cells to toggle');
     }
+    /** Register cell picking through the shared lifecycle. */
+    _setupGameInput() {
+        this.canvas.addEventListener('click', e => this._handleClick(e));
+        this.input.bind(['n'], () => this.newGame());
+    }
+
 
     /** Override: handle click to toggle a cell. */
     _handleClick(e) {
-        if (this.board.won) return;
+        if (this.board.won || this.loop.paused || e.shiftKey) return;
 
         const rect = this.canvas.getBoundingClientRect();
         const sx = e.clientX - rect.left;
@@ -51,7 +57,6 @@ class LightsOutGame extends BaseGame {
         const cell = this.renderer.hitTest(sx, sy, this.camera);
         if (cell) {
             this.board.toggle(cell);
-            this._render();
 
             if (this.board.won) {
                 this.scoring.addScore(this.board.moveCount);
@@ -61,27 +66,26 @@ class LightsOutGame extends BaseGame {
     }
 
     /** Reset to a new puzzle. */
-    _resetState() {
-        this.board.reset();
+    reset() {
+        super.reset();
         this.scoring.reset();
     }
 
     /** New game (preserve high score). */
     newGame() {
-        this.board.reset();
-        this._render();
+        this.reset();
     }
 
-    /** Build HUD state string. */
+    /** Return the shared HUD text/color contract. */
     _getHUDState() {
         const meta = this.board.getMetadata();
         const hiLabel = this.scoring.highScore > 0 ? ` | Best: ${this.scoring.highScore}` : '';
 
         if (meta.won) {
-            return `🎉 SOLVED in ${meta.moveCount} moves!${hiLabel}`;
+            return { text: `🎉 SOLVED in ${meta.moveCount} moves!${hiLabel}`, color: '#48bb78' };
         }
 
-        return `Lit: ${meta.litCount}/${meta.totalCells} | Moves: ${meta.moveCount}${hiLabel}`;
+        return { text: `Lit: ${meta.litCount}/${meta.totalCells} | Moves: ${meta.moveCount}${hiLabel}`, color: '#94a3b8' };
     }
 }
 

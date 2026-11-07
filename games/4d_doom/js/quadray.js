@@ -1,19 +1,19 @@
 /**
  * Quadray.js — ESM Bridge to shared 4d_generic/quadray.js
  *
- * Browser: Globals are loaded via <script src="../4d_generic/quadray.js"> in index.html.
- * Node.js: Falls back to dynamic import of the shared module.
+ * Browser: Shared classic-script lexical globals must be loaded before this module.
+ * Node.js: Loads the same canonical CommonJS implementation with createRequire.
  *
  * Single source of truth: ../4d_generic/quadray.js
  */
 
 let _Quadray, _ROOT2, _S3;
 
-if (typeof globalThis.Quadray !== 'undefined') {
-    // Browser path — globals already loaded via <script> tags
-    _Quadray = globalThis.Quadray;
-    _ROOT2 = globalThis.ROOT2;
-    _S3 = globalThis.S3;
+if (typeof Quadray !== 'undefined' && typeof ROOT2 !== 'undefined' && typeof S3 !== 'undefined') {
+    // Classic-script class/const bindings are identifiers, not window properties.
+    _Quadray = Quadray;
+    _ROOT2 = ROOT2;
+    _S3 = S3;
 } else {
     // Node.js path — require the shared canonical module
     const { createRequire } = await import('node:module');

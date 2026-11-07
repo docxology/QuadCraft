@@ -16,7 +16,9 @@ console.log('=== 4D Go — Comprehensive Tests ===\n');
 
 console.log('— Construction —');
 const b = new GoBoard(5);
-assert('625 cells (5^4)', b.cells.length === 625);
+assert('Each physical cell is stored exactly once',
+    b.cells.length === 369 && b.grid.size === 369 &&
+    new Set(b.cells.map(c => new Quadray(c.a, c.b, c.c, c.d).toKey())).size === 369);
 assert('Black first', b.turns.currentPlayer === 'black');
 assert('MoveCount 0', b.moveCount === 0);
 assert('Captures start at 0', b.captured.black === 0 && b.captured.white === 0);
@@ -56,6 +58,18 @@ assert('Pass increments moveCount', b3.moveCount === 1);
 console.log('\n— All cells start empty —');
 const b4 = new GoBoard(5);
 assert('All empty', b4.cells.every(c => b4.getCell(c) === STONE.EMPTY));
+const captureBoard = new GoBoard(3);
+const target = { a: 0, b: 1, c: 1, d: 2 };
+const lastLiberty = { a: 1, b: 1, c: 0, d: 2 };
+captureBoard.setCell(target, STONE.WHITE);
+for (const neighbor of GridUtils.boundedNeighbors(target.a, target.b, target.c, target.d, 3)) {
+    if (captureBoard.key(neighbor.a, neighbor.b, neighbor.c, neighbor.d) !== '1,1,0,2')
+        captureBoard.setCell(neighbor, STONE.BLACK);
+}
+assert('Capture follows a normalized boundary edge', captureBoard.place(lastLiberty) &&
+    captureBoard.getCell(target) === STONE.EMPTY && captureBoard.captured.black === 1);
+assert('Shifted-origin label cannot create a second physical cell',
+    !captureBoard.place({ a: 1, b: 1, c: 1, d: 1 }) && captureBoard.grid.size === 65);
 
 console.log('\n— Metadata —');
 const meta = b.getMetadata();

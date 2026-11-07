@@ -33,7 +33,7 @@ class GridUtils {
     ];
 
     /**
-     * Generate all integer Quadray coordinates in a size^4 grid.
+     * Generate raw integer board labels in a size^4 grid, without gauge reduction.
      * @param {number} size — Grid dimension (0 to size-1 per axis).
      * @returns {Array<{a:number, b:number, c:number, d:number}>}
      */
@@ -48,7 +48,25 @@ class GridUtils {
     }
 
     /**
-     * Create a string key for a Quadray coordinate — useful for Set/Map lookups.
+     * Enumerate physical integer Quadray cells once, in zero-minimum gauge.
+     * Components lie in [0,size); count is size^4 - (size-1)^4 for size >= 1.
+     * All four component-sum-mod4 IVM sublattices are retained.
+     * Use this with canonical neighbors; generateGrid intentionally keeps raw labels.
+     * @param {number} size — Canonical component extent.
+     * @returns {Array<{a:number, b:number, c:number, d:number}>}
+     */
+    static generateCanonicalGrid(size) {
+        const cells = [];
+        for (let a = 0; a < size; a++)
+            for (let b = 0; b < size; b++)
+                for (let c = 0; c < size; c++)
+                    for (let d = 0; d < size; d++)
+                        if (Math.min(a, b, c, d) === 0) cells.push({ a, b, c, d });
+        return cells;
+    }
+
+    /**
+     * Create a raw label key; no rounding or common-offset gauge reduction.
      * @param {number} a
      * @param {number} b
      * @param {number} c
@@ -72,6 +90,8 @@ class GridUtils {
     /**
      * Get the 12 true IVM neighbors (kissing spheres) of a coordinate.
      * Uses permutations of (0,1,1,2) — the correct close-packed sphere topology.
+     * Results are canonical physical points, independent of the input gauge.
+     * Steps preserve component sum modulo 4 and are symmetric on canonical cells.
      * @param {number} a
      * @param {number} b
      * @param {number} c
@@ -115,7 +135,7 @@ class GridUtils {
     }
 
     /**
-     * 4D Manhattan distance between two Quadray points.
+     * Raw four-coefficient Manhattan distance, not physical IVM graph distance.
      * @param {{a:number, b:number, c:number, d:number}} p1
      * @param {{a:number, b:number, c:number, d:number}} p2
      * @returns {number}
@@ -126,7 +146,7 @@ class GridUtils {
     }
 
     /**
-     * 4D Euclidean distance between two Quadray points.
+     * Raw four-coefficient Euclidean distance, not embedded Cartesian distance.
      * @param {{a:number, b:number, c:number, d:number}} p1
      * @param {{a:number, b:number, c:number, d:number}} p2
      * @returns {number}

@@ -2,7 +2,7 @@
 if (typeof BaseRenderer === 'undefined' && typeof require !== 'undefined') { const _br = require('../../4d_generic/base_renderer.js'); globalThis.BaseRenderer = _br.BaseRenderer; }
 class GoRenderer extends BaseRenderer {
     constructor(canvas, board) { super(canvas, board); }
-    render(ctx, camera) {
+    render(ctx = this.ctx, camera) {
         const W = ctx.canvas.width, H = ctx.canvas.height; ctx.clearRect(0, 0, W, H);
         const bg = ctx.createRadialGradient(W / 2, H / 2, 0, W / 2, H / 2, W * 0.7); bg.addColorStop(0, '#1a2a1a'); bg.addColorStop(1, '#0a140a');
         ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
@@ -18,9 +18,16 @@ class GoRenderer extends BaseRenderer {
             else if (s === 2) { ctx.fillStyle = '#f0f0f0'; ctx.beginPath(); ctx.arc(p.px, p.py, r, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = '#ccc'; ctx.lineWidth = 1; ctx.stroke(); }
             else { ctx.fillStyle = 'rgba(100,200,100,0.05)'; ctx.beginPath(); ctx.arc(p.px, p.py, r * 0.3, 0, Math.PI * 2); ctx.fill(); }
         }
-        this.drawAxes(ctx, W, H, camera);
+        this._drawAxes();
     }
-    _proj(cells, camera) { if (typeof projectQuadray !== 'function') return []; const W = this.canvas.width, H = this.canvas.height; return cells.map(c => { const p = projectQuadray(c.a, c.b, c.c, c.d, W, H, camera); return { ...c, px: p.x, py: p.y, pScale: p.scale }; }); }
+    /** Project with the same renderer scale, perspective and camera used for picking. */
+    _proj(cells, camera) {
+        if (camera) { this.rotX = camera.rotX; this.rotY = camera.rotY; }
+        return cells.map(c => {
+            const p = this._project(c.a, c.b, c.c, c.d);
+            return { ...c, px: p.x, py: p.y, pScale: p.scale };
+        });
+    }
     hitTest(sx, sy, camera) { const proj = this._proj(this.board.cells, camera); let best = null, bd = 25; for (const p of proj) { const d = Math.hypot(p.px - sx, p.py - sy); if (d < bd) { bd = d; best = { a: p.a, b: p.b, c: p.c, d: p.d }; } } return best; }
 }
 if (typeof module !== 'undefined' && module.exports) { module.exports = { GoRenderer }; }

@@ -1,4 +1,4 @@
-/** go_board.js — 4D Go on IVM Grid. Liberties counted via 12 IVM neighbors. */
+/** go_board.js — Go on distinct canonical physical cells with 12 IVM neighbors. */
 if (typeof Quadray === 'undefined' && typeof require !== 'undefined') { const _q = require('../../4d_generic/quadray.js'); globalThis.Quadray = _q.Quadray; }
 if (typeof GridUtils === 'undefined' && typeof require !== 'undefined') { const _g = require('../../4d_generic/grid_utils.js'); globalThis.GridUtils = _g.GridUtils; }
 if (typeof BaseBoard === 'undefined' && typeof require !== 'undefined') { const _bb = require('../../4d_generic/base_board.js'); globalThis.BaseBoard = _bb.BaseBoard; }
@@ -10,7 +10,7 @@ class GoBoard extends BaseBoard {
     constructor(size = 5) {
         super(size, { name: 'GoBoard', verify: true });
         this.turns = new TurnManager(['black', 'white']);
-        this.cells = GridUtils.generateGrid(size);
+        this.cells = GridUtils.generateCanonicalGrid(size);
         this.captured = { black: 0, white: 0 };
         this.moveCount = 0;
         for (const c of this.cells) this.setCell(c, STONE.EMPTY);
