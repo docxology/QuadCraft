@@ -179,7 +179,8 @@ test.describe('Quadray Class', () => {
     test.it('should calculate length correctly', () => {
         const q = new Quadray(1, 0, 0, 0);
         const len = q.length();
-        test.assertApprox(len, 0.707, 0.01);
+        const xyz = q.toCartesian();
+        test.assertApprox(len, Math.hypot(xyz.x, xyz.y, xyz.z), 1e-12);
     });
 
     test.it('should detect equality between Quadrays', () => {
@@ -194,10 +195,10 @@ test.describe('Quadray Class', () => {
         test.assertEqual(Quadray.BASIS.length, 4);
     });
 
-    test.it('basis vectors should be unit vectors', () => {
+    test.it('basis vectors should have the embedded tetrahedron radius', () => {
         for (const basis of Quadray.BASIS) {
             const len = basis.length();
-            test.assertApprox(len, 0.707, 0.01);
+            test.assertApprox(len, Math.sqrt(3 / 2), 1e-12);
         }
     });
 
@@ -205,7 +206,7 @@ test.describe('Quadray Class', () => {
         const q1 = Quadray.ORIGIN;
         const q2 = Quadray.A;
         const dist = Quadray.distance(q1, q2);
-        test.assertApprox(dist, 0.707, 0.01);
+        test.assertApprox(dist, Math.sqrt(3 / 2), 1e-12);
     });
 
     test.it('toString should return readable format', () => {
@@ -354,7 +355,7 @@ test.describe('Piece Movement Rules', () => {
         // Verify all moves are 1 Quadray step away (~1.22 Cartesian distance)
         for (const move of moves) {
             const dist = Quadray.distance(king.position, move);
-            test.assertApprox(dist, 1.22, 0.1, 'King move should be 1 step');
+            test.assertApprox(dist, Math.sqrt(3 / 2), 1e-12, 'King move should be 1 coefficient step');
         }
     });
 
@@ -606,6 +607,19 @@ test.describe('Edge Cases', () => {
         test.assertEqual(stats.min, 0, 'Min should be 0 for empty');
         test.assertEqual(stats.max, 0, 'Max should be 0 for empty');
         test.assertEqual(stats.avg, 0, 'Avg should be 0 for empty');
+    });
+
+    test.it('move distance statistics measure physical travel, not gauge changes', () => {
+        const stats = getDistanceStats({ moveHistory: [
+            { from: new Quadray(1, 0, 0, 0), to: new Quadray(8, 7, 7, 7) },
+            { from: new Quadray(1, 0, 0, 0), to: new Quadray(0, 1, 0, 0) },
+            { from: new Quadray(-1, -1, -1, -1), to: new Quadray(-0.5, -1, -1, -1) }
+        ] });
+        const total = 2 + Math.sqrt(3 / 2) / 2;
+        test.assertEqual(stats.min, 0, 'Re-expression contributes no travel');
+        test.assertApprox(stats.max, 2, 1e-12, 'Tetrahedron edge travel');
+        test.assertApprox(stats.total, total, 1e-12, 'Signed fractional moves retain Cartesian units');
+        test.assertApprox(stats.avg, total / 3, 1e-12, 'Mean physical travel');
     });
 
     test.it('validateBoard should confirm valid initial state', () => {

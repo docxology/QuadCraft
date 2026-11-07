@@ -88,15 +88,41 @@ void testBasisVectors() {
 }
 
 void testDistance() {
-    const float sqrtHalf = std::sqrt(0.5f);
     expectNear(QuadCraft::Quadray::distance(QuadCraft::Quadray(), QuadCraft::Quadray(1, 0, 0, 0)),
-               sqrtHalf, 1e-6f, "distance origin to basis vertex");
+               std::sqrt(1.5f), 1e-6f, "distance origin to basis vertex");
 
     // Symmetry and identity.
     QuadCraft::Quadray p(2.0f, 3.0f, 1.0f, 0.0f);
     QuadCraft::Quadray q(5.0f, 1.0f, 1.0f, 4.0f);
     expectNear(p.distance(p), 0.0f, 1e-6f, "distance to self is zero");
     expectNear(p.distance(q), q.distance(p), 1e-6f, "distance is symmetric");
+}
+
+void testCartesianMetric() {
+    using QuadCraft::Quadray;
+    const Quadray samples[] = {
+        Quadray(), Quadray(1, 0, 0, 0), Quadray(8, 7, 7, 7),
+        Quadray(-2.5f, 0.25f, 1.5f, -0.75f),
+        Quadray(0.5f, -1.25f, 0.75f, 2.0f),
+    };
+    for (const auto& p : samples) {
+        const auto xyz = p.toCartesian();
+        expectNear(p.length(), xyz.length(), 1e-5f, "length agrees with Cartesian norm");
+        expectNear(p.magnitude(), xyz.length(), 1e-5f, "magnitude agrees with Cartesian norm");
+        const float shift = 1048576.0f; // Retains quarter-unit components in float.
+        const Quadray shifted(p.a + shift, p.b + shift, p.c + shift, p.d + shift);
+        expectNear(p.distance(shifted), 0.0f, 1e-6f, "common offset is zero distance");
+        expectNear(shifted.length(), p.length(), 1e-5f, "length ignores large common offset");
+        for (const auto& q : samples) {
+            const auto other = q.toCartesian();
+            const float expected = std::hypot(xyz.x - other.x, xyz.y - other.y, xyz.z - other.z);
+            expectNear(p.distance(q), expected, 1e-5f, "distance agrees with Cartesian separation");
+            expectNear(shifted.distance(q), expected, 1e-5f, "distance ignores independent gauge shifts");
+        }
+    }
+    expectNear(Quadray(-9, -9, -9, -9).length(), 0.0f, 0.0f, "shifted origin has zero length");
+    expectNear(Quadray(1, 0, 0, 0).distance(Quadray(0, 1, 0, 0)),
+               2.0f, 1e-6f, "tetrahedron edge has Cartesian length two");
 }
 
 void testS3Constant() {
@@ -110,6 +136,7 @@ int main() {
     testNormalized();
     testBasisVectors();
     testDistance();
+    testCartesianMetric();
     testS3Constant();
 
     if (failures != 0) {

@@ -6,13 +6,12 @@ the document root, so that '../4d_generic/' imports resolve correctly.
 """
 
 import http.server
+from functools import partial
 import logging
 import os
 import platform
-import socketserver
 import subprocess
 import threading
-import time
 from pathlib import Path
 from typing import Any
 
@@ -28,6 +27,14 @@ class QuietHTTPHandler(http.server.SimpleHTTPRequestHandler):
     def log_message(self, format: str, *args: Any) -> None:
         pass  # Suppress output
 
+
+class GameHTTPServer(http.server.ThreadingHTTPServer):
+    """Handle incomplete/slow requests without blocking serving or shutdown."""
+
+    allow_reuse_address = True
+    daemon_threads = True
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Game Server — serves one game on one port
 # ─────────────────────────────────────────────────────────────────────────────
@@ -39,13 +46,15 @@ class GameServer:
         self.key = game_key
         self.name = meta["name"]
         self.port = base_port + meta["port_offset"]
-        self.game_dir = games_dir / meta["dir"]
+        self.game_dir = games_dir.resolve() / meta["dir"]
         self.open_browser = open_browser
         self.server = None
         self.thread = None
 
     def start(self) -> bool:
         """Start the HTTP server in a background thread."""
+        if self.server is not None:
+            return True
         if not self.game_dir.exists():
             logger.warning("[Launcher] %s: directory not found at %s", self.name, self.game_dir)
             print(f"  ⚠️  {self.name}: directory not found at {self.game_dir}")
@@ -56,43 +65,42 @@ class GameServer:
             print(f"  ⚠️  {self.name}: no index.html found")
             return False
 
-        # SERVE FROM ROOT ("games/") so that "../4d_generic" imports work
-        root_dir = self.game_dir.parent 
-        
-        current_dir = os.getcwd()
+        # Each handler owns its document root; process cwd is never changed.
+        handler = partial(QuietHTTPHandler, directory=str(self.game_dir.parent))
         try:
-            os.chdir(root_dir)
-            handler = lambda *args, **kwargs: QuietHTTPHandler(*args, directory=str(root_dir), **kwargs)
+            self.server = GameHTTPServer(("127.0.0.1", self.port), handler)
+        except OSError as e:
+            logger.error("[Launcher] %s: port %d unavailable: %s", self.name, self.port, e)
+            print(f"  ⚠️  {self.name}: port {self.port} unavailable ({e})")
+            return False
 
-            # Allow address reuse to avoid "Address already in use" errors on quick restarts
-            socketserver.TCPServer.allow_reuse_address = True
-            try:
-                self.server = socketserver.TCPServer(("127.0.0.1", self.port), handler)
-            except OSError as e:
-                logger.error("[Launcher] %s: port %d unavailable: %s", self.name, self.port, e)
-                print(f"  ⚠️  {self.name}: port {self.port} unavailable ({e})")
-                return False
+        # Port zero requests an ephemeral listener; publish its actual port.
+        self.port = self.server.server_address[1]
+        self.thread = threading.Thread(
+            target=self.server.serve_forever,
+            kwargs={"poll_interval": 0.1},
+            daemon=True,
+        )
+        self.thread.start()
+        logger.info("[Launcher] %s started on port %d", self.name, self.port)
 
-            self.thread = threading.Thread(target=self.server.serve_forever, daemon=True)
-            self.thread.start()
-            logger.info("[Launcher] %s started on port %d", self.name, self.port)
+        rel_path = self.game_dir.name
+        url = f"http://127.0.0.1:{self.port}/{rel_path}/index.html"
+        print(f"  ✅ {self.name:20s} → {url}")
 
-            # URL includes the game directory name relative to games/ root
-            rel_path = self.game_dir.name
-            url = f"http://127.0.0.1:{self.port}/{rel_path}/index.html"
-            print(f"  ✅ {self.name:20s} → {url}")
-
-            if self.open_browser:
-                open_url(url)
-            return True
-        finally:
-            os.chdir(current_dir)
+        if self.open_browser:
+            open_url(url)
+        return True
 
     def stop(self) -> None:
-        """Shut down the server."""
-        if self.server:
+        """Stop accepting requests without waiting for daemon request threads."""
+        if self.server is not None:
             self.server.shutdown()
             self.server.server_close()
+            if self.thread is not None:
+                self.thread.join(timeout=1)
+            self.server = None
+            self.thread = None
             logger.info("[Launcher] %s stopped", self.name)
 
 def open_url(url: str) -> None:

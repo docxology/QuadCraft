@@ -1,0 +1,11 @@
+{
+  "name": "quadcraft-browser-gate",
+  "version": "0.3.0",
+  "private": true,
+  "scripts": {
+    "test": "node smoke.mjs"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.65.0"
+  }
+}

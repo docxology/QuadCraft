@@ -6,9 +6,9 @@
  * Quadray/IVM tetrahedral grid.
  *
  * Uses:
- *   - Quadray: toKey, cellType, toIVM, toCartesian
- *   - GridUtils: generateGrid, neighbors, boundedNeighbors, inBounds, shuffle, key
- *   - QuadrayPathfinder: shortestPath, lineOfSight, cellsInRange, floodFill
+ *   - Quadray: toKey, cellType, toCartesian
+ *   - GridUtils: generateCanonicalGrid, neighbors, boundedNeighbors, inBounds, shuffle, key
+ *   - QuadrayPathfinder: bfs, shortestPath
  *   - BaseBoard: grid ops, distances, metadata
  *   - TurnManager: player/enemy alternation
  *   - SYNERGETICS: constants
@@ -75,13 +75,16 @@ function createSeededRng(seed) {
 class RogueBoard extends BaseBoard {
 
     /**
-     * @param {number} size - Grid dimension per axis.
+     * @param {number} size - Integer canonical extent, at least 3.
      * @param {{seed?: number}} [options] - Pass `seed` to make dungeon,
      *   enemy, and item generation fully deterministic (used by tests to
      *   avoid depending on organically-generated random state). Omitted
      *   in production, where generation uses real Math.random().
      */
     constructor(size = 8, options = {}) {
+        if (!Number.isInteger(size) || size < 3) {
+            throw new RangeError('RogueBoard size must be an integer of at least 3');
+        }
         super(size, { name: 'RogueBoard', verify: true });
         this.turns = new TurnManager(['player', 'enemies']);
 
@@ -120,22 +123,22 @@ class RogueBoard extends BaseBoard {
         this.explored = new Set();  // Keys of ever-seen cells
 
         // Grid
-        this.cells = GridUtils.generateGrid(size);
+        this.cells = GridUtils.generateCanonicalGrid(size);
         this._generateDungeon();
 
-        console.log(`[RogueBoard] ${size}⁴ IVM dungeon, depth ${this.depth}`);
+        console.log(`[RogueBoard] ${this.cells.length} physical cells, depth ${this.depth}`);
     }
 
     // ─── Dungeon Generation ─────────────────────────────────────────
 
-    /** Generate a new dungeon level with rooms, corridors, enemies, and items. */
+    /** Regenerate a dungeon on canonical cells in the origin's connected IVM sublattice. */
     _generateDungeon() {
         // Clear grid
+        this.grid.clear();
         for (const c of this.cells) this.setCell(c, TILE.WALL);
 
         // Carve rooms using random walk with branching
-        const mid = Math.floor(this.size / 2);
-        const start = { a: mid, b: mid, c: mid, d: mid };
+        const start = { a: 0, b: 0, c: 0, d: 0 };
         const carved = new Set();
         const queue = [start];
         const targetCells = Math.floor(this.cells.length * 0.45);
@@ -157,11 +160,19 @@ class RogueBoard extends BaseBoard {
         GridUtils.shuffle(floors, this._rng);
 
         if (floors.length < 5) {
-            // Fallback: ensure minimum dungeon size
-            for (let i = 0; i < 5 && i < this.cells.length; i++) {
-                this.setCell(this.cells[i], TILE.FLOOR);
+            // Finish a small connected dungeon without retrying random generation.
+            // Extent >= 3 contains the origin and its twelve IVM neighbors.
+            for (let i = 0; i < floors.length && floors.length < 5; i++) {
+                const cur = floors[i];
+                for (const n of GridUtils.boundedNeighbors(cur.a, cur.b, cur.c, cur.d, this.size)) {
+                    const k = this.key(n.a, n.b, n.c, n.d);
+                    if (carved.has(k)) continue;
+                    carved.add(k);
+                    this.setCell(n, TILE.FLOOR);
+                    floors.push(n);
+                    if (floors.length === 5) break;
+                }
             }
-            return this._generateDungeon(); // retry
         }
 
         let idx = 0;
@@ -303,7 +314,7 @@ class RogueBoard extends BaseBoard {
 
     // ─── FOV (Field of View) ────────────────────────────────────────
 
-    /** Compute visible cells from the player's position using lineOfSight. */
+    /** Cast five-hop physical IVM rays, revealing the first blocker on each ray. */
     _computeFOV() {
         this.visible = new Set();
         if (!this.player) return;
@@ -313,42 +324,24 @@ class RogueBoard extends BaseBoard {
         this.visible.add(pk);
         this.explored.add(pk);
 
-        // Cast rays along all 12 IVM directions
-        const directions = GridUtils.DIRECTIONS;
-        const isBlocking = (pos) => {
-            const t = this.getCell(pos);
-            return t === TILE.WALL || t === TILE.DOOR;
-        };
+        // Shared lineOfSight traces raw labels; dungeon rays must instead
+        // canonicalize after every hop, including common-offset boundary crossings.
         const fovRange = 5;
-
-        for (const dir of directions) {
-            const cells = QuadrayPathfinder.lineOfSight(
-                this.player, dir, isBlocking, this.size, fovRange
-            );
-            for (const c of cells) {
-                const k = this.key(c.a, c.b, c.c, c.d);
+        for (const [da, db, dc, dd] of GridUtils.DIRECTIONS) {
+            let pos = this.player;
+            for (let hop = 0; hop < fovRange; hop++) {
+                const a = pos.a + da, b = pos.b + db;
+                const c = pos.c + dc, d = pos.d + dd;
+                const m = Math.min(a, b, c, d);
+                pos = { a: a - m, b: b - m, c: c - m, d: d - m };
+                if (!GridUtils.inBounds(pos.a, pos.b, pos.c, pos.d, this.size)) break;
+                const k = this.key(pos.a, pos.b, pos.c, pos.d);
                 this.visible.add(k);
                 this.explored.add(k);
+                const tile = this.getCell(pos);
+                if (tile === TILE.WALL || tile === TILE.DOOR) break;
             }
         }
-
-        // Also mark adjacent cells of visible cells for smoother FOV
-        const extraVisible = new Set();
-        for (const k of this.visible) {
-            // Parse key back to coords (key format: "a,b,c,d")
-            const parts = k.split(',').map(Number);
-            if (parts.length === 4) {
-                const nbrs = GridUtils.boundedNeighbors(parts[0], parts[1], parts[2], parts[3], this.size);
-                for (const n of nbrs) {
-                    if (this.getCell(n) !== TILE.WALL) {
-                        const nk = this.key(n.a, n.b, n.c, n.d);
-                        extraVisible.add(nk);
-                        this.explored.add(nk);
-                    }
-                }
-            }
-        }
-        for (const k of extraVisible) this.visible.add(k);
     }
 
     /** Check if a position is currently visible to the player. */

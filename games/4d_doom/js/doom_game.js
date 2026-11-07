@@ -20,9 +20,9 @@ export class DoomGame {
         this.canvas = canvas;
         this.map = new DoomMap();
 
-        // Spawn player in first room
+        // Raw room indices select cells; start inside them, not on collision boundaries.
         const spawn = this.map.rooms[0];
-        this.player = new Player(spawn.a, spawn.b, spawn.c, spawn.d);
+        this.player = new Player(spawn.a + 0.5, spawn.b + 0.5, spawn.c + 0.5, spawn.d + 0.5);
 
         this.enemies = [];
         this.projectiles = [];
@@ -44,6 +44,8 @@ export class DoomGame {
         // Input state
         this.keys = {};
         this.damageFlash = 0;
+        this.mouseLookError = null;
+        this.mouseLookRequest = null;
         this.setupInput();
 
         // Game loop
@@ -134,7 +136,7 @@ export class DoomGame {
 
         this.canvas.addEventListener('click', () => {
             if (!document.pointerLockElement) {
-                this.canvas.requestPointerLock();
+                this.mouseLookRequest = this.requestMouseLook();
             } else {
                 this.shoot();
             }
@@ -151,6 +153,23 @@ export class DoomGame {
                 this.shoot();
             }
         });
+    }
+
+    async requestMouseLook() {
+        const status = document.getElementById('mouseLookStatus');
+        try {
+            await this.canvas.requestPointerLock();
+            this.mouseLookError = null;
+            if (status) status.textContent = '';
+            return true;
+        } catch (error) {
+            this.mouseLookError = { name: error.name, message: error.message };
+            if (status) {
+                status.textContent = `Mouse look unavailable (${error.name}). Keyboard controls remain active.`;
+            }
+            console.warn('Mouse capture unavailable:', error);
+            return false;
+        }
     }
 
     shoot() {
@@ -207,7 +226,7 @@ export class DoomGame {
 
     respawn() {
         const spawn = this.map.rooms[0];
-        this.player = new Player(spawn.a, spawn.b, spawn.c, spawn.d);
+        this.player = new Player(spawn.a + 0.5, spawn.b + 0.5, spawn.c + 0.5, spawn.d + 0.5);
         this.enemies = [];
         this.projectiles = [];
         this.particles = [];

@@ -16,57 +16,8 @@
     <div id="results">Running tests...</div>
 
     <!-- Core Dependencies -->
-    <script src="../js/quadray.js"></script>
+    <script src="../../4d_generic/quadray.js"></script>
     
-    <!-- Game Modules (Load order matters) -->
-    
-
-    <!-- Test Runner Helper -->
-    <script>
-        const results = document.getElementById('results');
-        results.innerHTML = ''; // Clear "Running tests..."
-        
-        let passed = 0;
-        let failed = 0;
-
-        // Global assert for browser tests that don't have their own reporting
-        window.assert = function(condition, message) {
-            const div = document.createElement('div');
-            if (condition) {
-                div.className = 'pass';
-                div.textContent = '✅ PASS: ' + message;
-                passed++;
-            } else {
-                div.className = 'fail';
-                div.textContent = '❌ FAIL: ' + message;
-                failed++;
-                console.error('FAIL:', message);
-            }
-            results.appendChild(div);
-            updateSummary();
-        };
-        
-        window.updateSummary = function() {
-            let summary = document.getElementById('summary');
-            if (!summary) {
-                summary = document.createElement('h2');
-                summary.id = 'summary';
-                document.body.prepend(summary);
-            }
-            summary.textContent = `Total: ${passed} Passed, ${failed} Failed`;
-            summary.style.color = failed === 0 ? '#4f4' : '#f44';
-        };
-
-        // Shim Node.js require/module for hybrid scripts
-        window.require = function(module) {
-            // Attempt to return global objects if they exist
-            if (module.includes('quadray')) return { Quadray: window.Quadray };
-            // Return empty object or shim as needed
-            return {};
-        };
-        
-        window.module = { exports: {} };
-    </script>
     
     <!-- Test Script -->
     <script type="module" src="test_doom.js"></script>

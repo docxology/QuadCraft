@@ -58,8 +58,8 @@ public:
     
     // Calculate the length of a quadray vector
     float length() const {
-        // Using the formula: D = sqrt((a² + b² + c² + d²) / 2)
-        return std::sqrt((a*a + b*b + c*c + d*d) / 2.0f);
+        // Euclidean length in the published Cartesian embedding.
+        return toCartesian().length();
     }
     
     // Basic operations

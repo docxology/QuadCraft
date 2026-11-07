@@ -27,7 +27,7 @@ class LightsOutRenderer extends BaseRenderer {
     }
 
     /** Main render loop. */
-    render(ctx, camera) {
+    render(ctx = this.ctx, camera) {
         const W = ctx.canvas.width;
         const H = ctx.canvas.height;
         ctx.clearRect(0, 0, W, H);
@@ -103,18 +103,15 @@ class LightsOutRenderer extends BaseRenderer {
         }
 
         // --- Draw axes ---
-        this.drawAxes(ctx, W, H, camera);
+        this._drawAxes();
     }
 
-    /** Project cells to screen coordinates. */
+    /** Project using renderer zoom/perspective and the current picking camera. */
     _projectCells(cells, camera) {
-        if (typeof projectQuadray !== 'function') return [];
-
-        const W = this.canvas.width;
-        const H = this.canvas.height;
+        if (camera) { this.rotX = camera.rotX; this.rotY = camera.rotY; }
 
         return cells.map(c => {
-            const p = projectQuadray(c.a, c.b, c.c, c.d, W, H, camera);
+            const p = this._project(c.a, c.b, c.c, c.d);
             return { ...c, px: p.x, py: p.y, pScale: p.scale };
         });
     }

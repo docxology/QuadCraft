@@ -38,7 +38,9 @@ function assert(cond, msg) {
 console.log('\n=== LightsOutBoard Construction ===');
 {
     const board = new LightsOutBoard(3);
-    assert(board.cells.length === 81, 'Size 3 grid has 3^4 = 81 cells');
+    assert(board.cells.length === 65 && board.grid.size === 65 &&
+        new Set(board.cells.map(c => new Quadray(c.a, c.b, c.c, c.d).toKey())).size === 65,
+        'Size 3 has 65 independently stored, nonoverlapping physical cells');
     assert(board.moveCount === 0, 'Move count starts at 0');
     assert(!board.won, 'Not won at start');
 }
@@ -77,11 +79,13 @@ console.log('\n=== Toggle Mechanics ===');
     board.gameOver = false;
 
     // Toggle origin — should flip self + bounded IVM neighbors
-    const pos = { a: 1, b: 1, c: 1, d: 1 };
+    const pos = { a: 0, b: 0, c: 0, d: 0 };
     const flipped = board.toggle(pos);
-    assert(flipped > 1, `Toggle flipped ${flipped} cells (self + neighbors)`);
+    assert(flipped === 13 && board.litCount() === 13, 'Origin toggle flips exactly itself and twelve physical neighbors');
     assert(board.isLit(pos), 'Toggled cell is now lit');
     assert(board.moveCount === 1, 'Move count incremented');
+    assert(board.toggle({ a: 1, b: 1, c: 1, d: 1 }) === 0 && board.grid.size === board.cells.length,
+        'Absent shifted-origin label cannot create a second light');
 }
 
 console.log('\n=== Double Toggle Reverts ===');

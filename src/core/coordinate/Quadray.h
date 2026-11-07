@@ -7,6 +7,8 @@
 
 namespace QuadCraft {
 
+// Four real coefficients for a 3D point, modulo a common additive offset.
+// Coefficient-unit basis vectors have Cartesian length sqrt(3/2).
 class Quadray {
 public:
     // Four components of quadray coordinates
@@ -26,9 +28,9 @@ public:
     // Convert from quadray to Cartesian coordinates
     Vector3 toCartesian() const {
         const float scale = 1.0f / ROOT2;
-        float x = scale * (a - b - c + d);
-        float y = scale * (a - b + c - d);
-        float z = scale * (a + b - c - d);
+        float x = scale * ((a - b) - (c - d));
+        float y = scale * ((a - b) + (c - d));
+        float z = scale * ((a - c) + (b - d));
         return Vector3(x, y, z);
     }
     
@@ -45,10 +47,12 @@ public:
         return result.normalized();
     }
     
-    // Calculate the length of a quadray vector
+    // Euclidean length in toCartesian() units; common offsets are gauge only.
     float length() const {
-        // Using the formula: D = sqrt((a² + b² + c² + d²) / 2)
-        return std::sqrt((a*a + b*b + c*c + d*d) / 2.0f);
+        const float ab = a - b;
+        const float cd = c - d;
+        return std::hypot((ab - cd) / ROOT2, (ab + cd) / ROOT2,
+                          ((a - c) + (b - d)) / ROOT2);
     }
     
     // Calculate the magnitude (distance from origin) in quadray space
@@ -66,11 +70,14 @@ public:
         return Quadray(a * scalar, b * scalar, c * scalar, d * scalar);
     }
     
-    // Calculate the distance between two points in quadray space
+    // Euclidean distance, removing each gauge before differencing points.
     static float distance(const Quadray& q1, const Quadray& q2) {
-        // Subtract and find the length
-        Quadray diff(q1.a - q2.a, q1.b - q2.b, q1.c - q2.c, q1.d - q2.d);
-        return diff.length();
+        const float ab = (q1.a - q1.b) - (q2.a - q2.b);
+        const float cd = (q1.c - q1.d) - (q2.c - q2.d);
+        const float ac = (q1.a - q1.c) - (q2.a - q2.c);
+        const float bd = (q1.b - q1.d) - (q2.b - q2.d);
+        return std::hypot((ab - cd) / ROOT2, (ab + cd) / ROOT2,
+                          (ac + bd) / ROOT2);
     }
     
     // Distance to another quadray coordinate (instance method)

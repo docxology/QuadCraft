@@ -5,10 +5,25 @@ A tetrahedral-based voxel game using quadray coordinates, inspired by Minecraft.
 ## Status & Verification (agents: start here)
 
 - **What this is:** an experimental tetrahedral voxel game (C++/OpenGL native, JS browser experiments) plus a 30-game 4D browser portfolio under `games/`.
-- **Current state, as of 2026-09-05, verified by command:** games portfolio fully green — `python3 games/run_games.py --validate` (30/30 pass) and `python3 games/run_games.py --test` (1,782 tests, 0 failures). Run these yourself; numbers were true when written, the command is the truth. CI (`.github/workflows/games-tests.yml`) runs both on every push/PR to main.
+- **Current verification:** the complete games runner reports 2,395 passing checks and zero failures; structural validation passes all 30 games. Verified with Python 3.13 using `games/run_games.py --test` and `--validate`, including nested shared JavaScript/Python suites. The command, not a saved count, is authoritative. CI (`.github/workflows/games-tests.yml`) runs both on every push/PR to main.
 - **Backlog / what to do next:** [TODO.md](TODO.md) (single canonical backlog).
 - **Documentation hub:** [docs/README.md](docs/README.md). Games portfolio details: [games/GAMES_INDEX.md](games/GAMES_INDEX.md).
-- **Native build, as of 2026-09-05, verified by command:** `./build.sh --no-run --test` builds with zero warnings (`-Wall -Wextra -pedantic`, macOS arm64 clang) and passes CTest (`tests/quadray_test.cpp`). CI (`.github/workflows/native-build.yml`) runs the same on Linux for every push/PR to main. Plain `./build.sh` also launches the game (needs a display). Requires OpenGL, GLEW, GLFW3, CMake >= 3.16, C++17.
+- **Native verification:** the graphics-free CMake configuration (`-DQUADCRAFT_BUILD_GAME=OFF`) built successfully and passed both CTest targets. The normal graphical configuration could not complete locally because GLEW was missing. The game requires OpenGL, GLEW, GLFW3, CMake >= 3.16 and C++17; plain `./build.sh` also needs a display.
+
+## Synergetics suite
+
+QuadCraft is the interactive application layer alongside
+[QuadMath](https://github.com/docxology/QuadMath) (specification, exact math and
+lattice algorithms) and [symergetics](https://github.com/docxology/symergetics)
+(rational geometry, transformations and research workflows).
+The [suite guide](https://github.com/docxology/symergetics/blob/main/docs/synergetics-suite.md)
+documents the Y/Z exchange and scale difference between their Cartesian
+embeddings, plus an executable Python/JavaScript/C++ interoperability example.
+
+Release details: [CHANGELOG.md](CHANGELOG.md). The
+[real Chromium gate](games/tests/browser/README.md) checks twelve application
+surfaces and records actual mouse-capture availability rather than mocking it.
+Native CI includes independent Debug/Release graphics-free configurations.
 
 ## Overview
 
@@ -57,6 +72,19 @@ You'll need the following libraries installed:
 - GLFW3
 - CMake (3.16 or higher)
 - C++17 compatible compiler
+
+### Headless core build
+
+Coordinate and world tests do not require OpenGL, GLEW, GLFW or a display:
+
+```bash
+cmake -S . -B build-core -DQUADCRAFT_BUILD_GAME=OFF
+cmake --build build-core
+ctest --test-dir build-core --output-on-failure
+```
+
+The normal game build remains enabled by default. `BUILD_TESTING=OFF` disables
+the test targets independently.
 
 ### Build Instructions
 

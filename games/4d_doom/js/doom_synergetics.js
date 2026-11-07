@@ -205,7 +205,7 @@ export function angleBetweenQuadrays(q1, q2) {
 export function verifyGeometricIdentities() {
     const TOL = 0.01;
     const EXPECTED_ANGLE = 109.4712;
-    const EXPECTED_LEN = 1 / Math.sqrt(2);
+    const EXPECTED_LEN = Math.sqrt(3 / 2); // Cartesian coefficient-unit norm
     const checks = [];
     let allPassed = true;
 

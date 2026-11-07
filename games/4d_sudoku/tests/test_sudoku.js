@@ -15,7 +15,9 @@ console.log('=== 4D Sudoku — Comprehensive Tests ===\n');
 
 console.log('— Construction —');
 const b = new SudokuBoard(4);
-assert('256 cells (4^4)', b.cells.length === 256);
+assert('Each physical constraint cell is stored once', b.cells.length === 175 &&
+    b.grid.size === 175 && b.solution.size === 175 &&
+    new Set(b.cells.map(c => new Quadray(c.a, c.b, c.c, c.d).toKey())).size === 175);
 assert('Has givens', b.given.size > 0);
 assert('MoveCount 0', b.moveCount === 0);
 assert('Errors 0', b.errors === 0);
@@ -46,6 +48,8 @@ console.log('\n— IVM Constraints —');
 assert('12 IVM directions', GridUtils.DIRECTIONS.length === 12);
 const nbrs = GridUtils.boundedNeighbors(1, 1, 1, 1, 4);
 assert('Has IVM neighbors', nbrs.length > 0);
+assert('Raw shifted-origin label cannot insert an unconstrained cell',
+    !b.place({ a: 1, b: 1, c: 1, d: 1 }, 1) && b.grid.size === 175);
 
 console.log('\n— Metadata —');
 const meta = b.getMetadata();

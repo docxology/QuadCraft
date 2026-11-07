@@ -2,7 +2,7 @@
 if (typeof BaseRenderer === 'undefined' && typeof require !== 'undefined') { const _br = require('../../4d_generic/base_renderer.js'); globalThis.BaseRenderer = _br.BaseRenderer; }
 class HexRenderer extends BaseRenderer {
     constructor(canvas, board) { super(canvas, board); }
-    render(ctx, camera) {
+    render(ctx = this.ctx, camera) {
         const W = ctx.canvas.width, H = ctx.canvas.height; ctx.clearRect(0, 0, W, H);
         ctx.fillStyle = '#0a0a1e'; ctx.fillRect(0, 0, W, H);
         if (!this.board) return;
@@ -16,9 +16,16 @@ class HexRenderer extends BaseRenderer {
             else if (s === 2) { ctx.fillStyle = '#3498db'; ctx.beginPath(); ctx.arc(p.px, p.py, r, 0, Math.PI * 2); ctx.fill(); }
             else { ctx.fillStyle = 'rgba(255,255,255,0.03)'; ctx.beginPath(); ctx.arc(p.px, p.py, r * 0.4, 0, Math.PI * 2); ctx.fill(); }
         }
-        this.drawAxes(ctx, W, H, camera);
+        this._drawAxes();
     }
-    _proj(cells, camera) { if (typeof projectQuadray !== 'function') return []; const W = this.canvas.width, H = this.canvas.height; return cells.map(c => { const p = projectQuadray(c.a, c.b, c.c, c.d, W, H, camera); return { ...c, px: p.x, py: p.y, pScale: p.scale }; }); }
+    /** Project with the same renderer scale, perspective and camera used for picking. */
+    _proj(cells, camera) {
+        if (camera) { this.rotX = camera.rotX; this.rotY = camera.rotY; }
+        return cells.map(c => {
+            const p = this._project(c.a, c.b, c.c, c.d);
+            return { ...c, px: p.x, py: p.y, pScale: p.scale };
+        });
+    }
     hitTest(sx, sy, camera) { const proj = this._proj(this.board.cells, camera); let best = null, bd = 25; for (const p of proj) { const d = Math.hypot(p.px - sx, p.py - sy); if (d < bd) { bd = d; best = { a: p.a, b: p.b, c: p.c, d: p.d }; } } return best; }
 }
 if (typeof module !== 'undefined' && module.exports) { module.exports = { HexRenderer }; }

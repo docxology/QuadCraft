@@ -28,6 +28,25 @@
             cursor: crosshair;
         }
 
+        #mouseLookStatus {
+            position: fixed;
+            top: 12px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 20;
+            max-width: 70vw;
+            padding: 8px 12px;
+            background: rgba(0, 0, 0, 0.9);
+            border: 1px solid currentColor;
+            font-size: 12px;
+            text-align: center;
+            pointer-events: none;
+        }
+
+        #mouseLookStatus:empty {
+            display: none;
+        }
+
         /* ── Vignette & CRT Effects ── */
         body::after {
             content: '';
@@ -234,6 +253,7 @@
 <body>
     <canvas id="gameCanvas"></canvas>
     <div class="crt-overlay"></div>
+    <div id="mouseLookStatus" role="status" aria-live="polite"></div>
 
     <div id="instructions">
         <div class="corner-tri tl"></div>
@@ -310,10 +330,10 @@
 
         startBtn.addEventListener('click', () => {
             instructions.classList.add('hidden');
-            canvas.requestPointerLock();
             if (!window.game) {
                 window.game = new DoomGame(canvas);
             }
+            window.game.mouseLookRequest = window.game.requestMouseLook();
         });
 
         // Also allow clicking canvas to start
@@ -321,15 +341,10 @@
             if (!window.game) {
                 instructions.classList.add('hidden');
                 window.game = new DoomGame(canvas);
+                window.game.mouseLookRequest = window.game.requestMouseLook();
             }
         });
 
-        // Pointer lock change handling
-        document.addEventListener('pointerlockchange', () => {
-            if (!document.pointerLockElement && window.game && window.game.player.alive) {
-                // Don't show instructions, just let them click to re-lock
-            }
-        });
     </script>
 </body>
 

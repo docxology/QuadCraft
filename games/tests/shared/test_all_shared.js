@@ -1,10 +1,8 @@
 /**
  * test_all_shared.js — Integration runner for all shared module tests
  *
- * Runs test_projection.js, test_camera.js, test_zoom.js in sequence
- * and reports combined results.
- *
- * Run: node games/tests/test_all_shared.js
+ * Runs shared modules and actual game-renderer geometry regressions in sequence.
+ * Run: node games/tests/shared/test_all_shared.js
  */
 const { execSync } = require('child_process');
 const path = require('path');
@@ -18,6 +16,7 @@ const TEST_FILES = [
     'test_score_manager.js',
     'test_grid_utils.js',
     'test_base_renderer.js',
+    'test_game_renderers.js',
     'test_base_game.js',
     'test_base_board.js',
     'test_entity_system.js',

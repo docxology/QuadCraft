@@ -244,8 +244,8 @@ class ConnectFourRenderer extends BaseRenderer {
         // Find the landing row
         let landingRow = -1;
         for (let a = 0; a < this.board.height; a++) {
-            const pos = Quadray.toIVM(new Quadray(a, b, c, d));
-            if (!this.board.grid.has(pos.toKey())) {
+            const pos = new Quadray(a, b, c, d);
+            if (!this.board.grid.has(GridUtils.key(pos.a, pos.b, pos.c, pos.d))) {
                 landingRow = a;
                 break;
             }

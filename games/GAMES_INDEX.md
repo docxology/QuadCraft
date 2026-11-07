@@ -1,6 +1,6 @@
 # 🎮 QuadCraft Games Portfolio — GAMES_INDEX.md
 
-> **Note on 4D Geometry & Nomenclature**: Throughout QuadCraft, whenever we refer to **"4D"**, we strictly mean **Synergetics** geometry. This entails **Quadray 4D tetrahedral coordinates** deployed on an **Isotropic Vector Matrix (IVM)** of close-packed spheres, where the Quadray coordinates of the 12 neighboring balls are strictly defined by all permutations of `(0, 1, 1, 2)`. Cartesian (XYZ) analogies are secondary to this true Synergetics foundation.
+> **Geometry & naming:** Quadray's four coefficients describe three spatial dimensions modulo a common offset. IVM nearest neighbors are the 12 permutations of `(0, 1, 1, 2)`. Some games deliberately retain independent raw four-index board labels; those labels must not be merged by physical gauge normalization. See the [suite conventions and interoperability guide](https://github.com/docxology/symergetics/blob/main/docs/synergetics-suite.md).
 
 > **Canonical index** of all 4D games built on the Quadray tetrahedral coordinate system.
 > Each game is a **standalone browser application** — self-contained for easy porting, forking, and independent versioning.
@@ -12,10 +12,10 @@
 | Metric | Value |
 |--------|-------|
 | **Implemented Games** | 30 |
-| **Total Unit Tests** | 1,782 (all passing ✅) |
+| **Reported Checks** | 2,395 passing, zero failures: game checks plus shared mathematical, renderer and Python suites |
 | **Shared Modules** | 17 (12 core + 4 extended + hud-style.css) |
 | **Architecture** | Standalone HTML + `4d_generic/` shared modules |
-| **Last Validated** | 2026-08-31 — verified by `python3 run_games.py --validate` (30/30) and `python3 run_games.py --test` (1,782 pass / 0 fail) |
+| **Last Validated** | 2026-11-06 with Python 3.13 — `python3 run_games.py --validate` and `python3 run_games.py --test` |
 
 ---
 
@@ -27,14 +27,14 @@
 
 | # | Game | Dir | Complete | Tests | Players | Grid | AI | Input | Camera | Key Mechanic |
 |---|------|-----|----------|-------|---------|------|-----|-------|--------|-------------|
-| 1 | ♟️ **4D Chess** | [`4d_chess/`](4d_chess/) | 80% | 91 | 2 | 8⁴ discrete | None (2-player human) | Click | Shift-drag | Turn-based strategy, check/checkmate |
+| 1 | ♟️ **4D Chess** | [`4d_chess/`](4d_chess/) | 80% | 92 | 2 | 8⁴ discrete | None (2-player human) | Click | Shift-drag | Turn-based strategy, check/checkmate |
 | 2 | 🏁 **4D Checkers** | [`4d_checkers/`](4d_checkers/) | 70% | 11 | 2 | 4⁴ discrete | Rule-based | Click | Left-drag | Diagonal capture + promotion |
 | 3 | ⚫ **4D Reversi** | [`4d_reversi/`](4d_reversi/) | 80% | 34 | 2 | 4⁴ discrete | Greedy AI | Click | Shift-drag | Disc flipping + AI opponent |
 | 4 | 🎲 **4D Backgammon** | [`4d_backgammon/`](4d_backgammon/) | 60% | 30 | 2 | 24-point spiral | Dice-driven | Click | Shift-drag | 24-point 4D spiral track + dice |
 | 5 | 🏝️ **4D Catan** | [`4d_catan/`](4d_catan/) | 40% | 56 | 2 (1 human + 1 AI) | 19-hex tile | Trade AI | Click | Shift-drag | 19 tiles, resources, settlements |
 | 6 | 🀄 **4D Mahjong** | [`4d_mahjong/`](4d_mahjong/) | 80% | 33 | 1 | 4-layer stack | — | Click | Shift-drag | 144-tile 4-layer matching |
-| 7 | 🔴 **4D Connect Four** | [`4d_connect_four/`](4d_connect_four/) | 90% | 124 | 2 | 6×5×3×3 gravity | Lookahead | Click | Shift-drag | Gravity-drop 4-in-a-row detection |
-| 8 | ⚪ **4D Go** | [`4d_go/`](4d_go/) | 60% | 31 | 2 | Liberties Grid | None (2-player human) | Click | Shift-drag | Go liberties on IVM |
+| 7 | 🔴 **4D Connect Four** | [`4d_connect_four/`](4d_connect_four/) | 90% | 141 | 2 | 6×5×3×3 gravity | Lookahead | Click | Shift-drag | Gravity-drop 4-in-a-row detection |
+| 8 | ⚪ **4D Go** | [`4d_go/`](4d_go/) | 60% | 33 | 2 | Liberties Grid | None (2-player human) | Click | Shift-drag | Go liberties on IVM |
 | 9 | ⬡ **4D Hex** | [`4d_hex/`](4d_hex/) | 70% | 29 | 2 | Hex/IVM connection | Path AI | Click | Shift-drag | Topological connection |
 
 ### Arcade & Action (5)
@@ -53,16 +53,16 @@
 |---|------|-----|----------|-------|---------|------|-----|-------|--------|-------------|
 | 15 | 👾 **4D Pac-Man** | [`4d_pacman/`](4d_pacman/) | 50% | 74 | 1 | Maze graph | Ghost chase | Keyboard | Shift-drag | Maze navigation, ghost AI |
 | 16 | 🐸 **4D Frogger** | [`4d_frogger/`](4d_frogger/) | 60% | 27 | 1 | Lane-based | Traffic | Keyboard | Shift-drag | Lane-crossing, obstacle avoidance |
-| 17 | 🐍 **4D Snake** | [`4d_snake/`](4d_snake/) | 55% | 15 | 1 | Discrete wrap | — | Keyboard | Shift-drag | Growing snake, food collection |
+| 17 | 🐍 **4D Snake** | [`4d_snake/`](4d_snake/) | 55% | 48 | 1 | Discrete wrap | — | Keyboard | Shift-drag | Growing snake, food collection |
 
 ### Puzzle & Logic (7)
 
 | # | Game | Dir | Complete | Tests | Players | Grid | AI | Input | Camera | Key Mechanic |
 |---|------|-----|----------|-------|---------|------|-----|-------|--------|-------------|
 | 18 | 🧱 **4D Tetris** | [`4d_tetris/`](4d_tetris/) | 70% | 18 | 1 | Falling-piece | — | Keyboard | Shift-drag | Falling tetrominoes on IVM grid |
-| 19 | 💥 **4D Minesweeper** | [`4d_minesweeper/`](4d_minesweeper/) | 90% | 23 | 1 | Discrete reveal | — | Click | Shift-drag | Mine-counting with IVM neighbors |
-| 20 | 🔢 **4D Sudoku** | [`4d_sudoku/`](4d_sudoku/) | 80% | 31 | 1 | 4⁴ constraint | — | Click | Shift-drag | Constraint-satisfaction in 4D regions |
-| 21 | 💡 **4D Lights Out** | [`4d_lights_out/`](4d_lights_out/) | 90% | 45 | 1 | Toggle grid | — | Click | Shift-drag | Pattern toggle on IVM neighbors |
+| 19 | 💥 **4D Minesweeper** | [`4d_minesweeper/`](4d_minesweeper/) | 90% | 33 | 1 | Discrete reveal | — | Click | Shift-drag | Mine-counting with IVM neighbors |
+| 20 | 🔢 **4D Sudoku** | [`4d_sudoku/`](4d_sudoku/) | 80% | 32 | 1 | Canonical IVM cells | — | Click | Shift-drag | Constraint-satisfaction on the IVM graph |
+| 21 | 💡 **4D Lights Out** | [`4d_lights_out/`](4d_lights_out/) | 90% | 46 | 1 | Toggle grid | — | Click | Shift-drag | Pattern toggle on IVM neighbors |
 | 22 | 🎰 **4D 2048** | [`4d_2048/`](4d_2048/) | 80% | 28 | 1 | 4⁴ merge grid | — | Keyboard | Shift-drag | Tile merging in 12 IVM directions |
 | 23 | 🧩 **4D Sokoban** | [`4d_sokoban/`](4d_sokoban/) | 75% | 34 | 1 | Discrete push | — | Keyboard | Shift-drag | Box-pushing across IVM grid |
 | 24 | 🎴 **4D Memory** | [`4d_memory/`](4d_memory/) | 85% | 27 | 1-2 | Pair grid | — | Click | Shift-drag | Flip-match pairs in tetrahedral layout |
@@ -79,16 +79,16 @@
 
 | # | Game | Dir | Complete | Tests | Players | Grid | AI | Input | Camera | Key Mechanic |
 |---|------|-----|----------|-------|---------|------|-----|-------|--------|-------------|
-| 28 | ⚔️ **4D Rogue** | [`4d_rogue/`](4d_rogue/) | 50% | 120 | 1 | Dungeon rooms | Wander/chase | Keyboard | Shift-drag | Procedural dungeon, permadeath |
+| 28 | ⚔️ **4D Rogue** | [`4d_rogue/`](4d_rogue/) | 50% | 164 | 1 | Dungeon rooms | Wander/chase | Keyboard | Shift-drag | Procedural dungeon, permadeath |
 
 ### Tower Defense & FPS (2)
 
 | # | Game | Dir | Complete | Tests | Players | Grid | AI | Input | Camera | Key Mechanic |
 |---|------|-----|----------|-------|---------|------|-----|-------|--------|-------------|
-| 29 | 🏰 **4D Tower Defense** | [`4d_tower_defense/`](4d_tower_defense/) | 60% | 217 | 1 | Path grid | Spawn waves | Click | Shift-drag | Waves, auto-targeting towers, gold |
-| 30 | 👹 **4D Doom** | [`4d_doom/`](4d_doom/) | 50% | 116 | 1 | Raycasted 3D | Pursuit | Keyboard + Mouse | FPS Mouselook | Hitscan FPS, enemy AI pursuit |
+| 29 | 🏰 **4D Tower Defense** | [`4d_tower_defense/`](4d_tower_defense/) | 60% | 222 | 1 | Path grid | Spawn waves | Click | Shift-drag | Waves, auto-targeting towers, gold |
+| 30 | 👹 **4D Doom** | [`4d_doom/`](4d_doom/) | 50% | 136 | 1 | Raycasted 3D | Pursuit | Keyboard + Mouse | FPS Mouselook | Hitscan FPS, enemy AI pursuit |
 
-**Total: 30 games, 1,782 unit tests, all passing ✅**
+The game rows count game-specific checks. The portfolio total also includes shared mathematical, renderer and Python infrastructure checks.
 
 ---
 
@@ -113,7 +113,7 @@ All games import from `4d_generic/`. The **Core 12** modules are used by every g
 | `input_controller.js` | Input | Unified keyboard input: bindings + polled state | 29/30 ¹ |
 | `hud.js` | UI | Color-coded HUD state manager | 29/30 ¹ |
 
-> ¹ Doom uses ES Modules with its own game engine but imports `quadray.js`, `synergetics.js`, `grid_utils.js`, and `projection.js` via an ESM shim.
+> ¹ Doom preloads the four shared geometry scripts as classic scripts, then uses its own ES-module engine. Its `js/quadray.js` bridge exposes the shared lexical Quadray implementation to ESM consumers.
 
 ### Extended Modules (4) — Specialized Adoption
 
@@ -175,14 +175,14 @@ Legend: ● = imported | — = not applicable
 
 | Genre | Games | Tests | % of Portfolio |
 |-------|-------|-------|---------------|
-| Strategy & Board | 9 | 439 | 30% |
-| Arcade & Action | 5 | 203 | 17% |
-| Maze & Navigation | 3 | 116 | 10% |
-| Puzzle & Logic | 7 | 206 | 23% |
+| Strategy & Board | 9 | 459 | 30% |
+| Arcade & Action | 5 | 204 | 17% |
+| Maze & Navigation | 3 | 149 | 10% |
+| Puzzle & Logic | 7 | 218 | 23% |
 | Simulation & World | 3 | 315 | 10% |
-| RPG & Adventure | 1 | 120 | 3% |
-| Tower Defense & FPS | 2 | 333 | 7% |
-| **Total** | **30** | **1,782** | **100%** |
+| RPG & Adventure | 1 | 164 | 3% |
+| Tower Defense & FPS | 2 | 358 | 7% |
+| **Total game-specific checks** | **30** | **1,867** | **100%** |
 
 ---
 
@@ -254,7 +254,7 @@ python3 run_games.py --game chess doom life    # Multiple games
 python3 run_games.py --all                     # All 30 simultaneously
 python3 run_games.py --all --base-port 9000    # Custom port range
 python3 run_games.py --config games_config.json # From config file
-python3 run_games.py --test                    # Run all 1,782 unit tests
+python3 run_games.py --test                    # All game, shared and Python checks
 python3 run_games.py --validate                # Structural validation (30/30)
 ```
 

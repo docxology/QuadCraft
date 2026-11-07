@@ -198,7 +198,7 @@ sequenceDiagram
 | **Shared foundation** | Common math/rendering via `<script src="../4d_generic/">` tags |
 | **Single source of truth** | `quadray.js` is THE Quadray implementation; games don't copy it |
 | **Registry-driven** | `GAMES` dict in `registry.py` drives launch, test, validate, analytics |
-| **ES-module exception** | Doom uses `import/export` syntax; exempted from shared-import validation |
+| **ES-module bridge** | Doom uses `import/export`, but its bridge resolves the same shared `Quadray` class in browser and Node runtimes |
 
 ---
 

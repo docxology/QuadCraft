@@ -1,0 +1,51 @@
+name: browser-tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  chromium-runtime:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: games/tests/browser
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # actions/checkout@v7.0.1
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # actions/setup-node@v7.1.0
+        with:
+          node-version-file: .node-version
+          cache: npm
+          cache-dependency-path: games/tests/browser/package-lock.json
+
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # actions/setup-python@v7.1.0
+        with:
+          python-version-file: .python-version
+
+      - name: Install locked Playwright dependency
+        run: npm ci --ignore-scripts --no-audit --no-fund
+
+      - name: Install matching Chromium and OS prerequisites
+        run: npx --no-install playwright install --with-deps chromium
+
+      - name: Exercise twelve actual browser games
+        env:
+          BROWSER_DIAGNOSTICS_DIR: ${{ runner.temp }}/quadcraft-browser-diagnostics
+        run: npm test
+
+      - name: Upload browser execution evidence
+        if: always()
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # actions/upload-artifact@v6
+        with:
+          name: chromium-runtime-diagnostics
+          path: ${{ runner.temp }}/quadcraft-browser-diagnostics/
+          if-no-files-found: warn
+          retention-days: 14

@@ -26,7 +26,7 @@ const SYNERGETICS = {
     ROOT2: 1.4142135623730951,
     S3: 1.0606601717798212, // sqrt(9/8) — XYZ-to-IVM volume conversion
     TETRAHEDRAL_ANGLE: 109.4712, // degrees between any two basis vectors
-    BASIS_LENGTH: 1 / Math.sqrt(2), // ~0.7071
+    BASIS_LENGTH: Math.sqrt(3 / 2), // Cartesian norm of a coefficient-unit basis
 
     // Synergetics volume ratios (tetravolumes)
     TETRA_VOL: 1,
@@ -86,11 +86,11 @@ function verifyGeometricIdentities() {
         if (!check.passed) results.allPassed = false;
     }
 
-    // 1. Basis vector lengths = 0.7071
+    // 1. Basis vector Cartesian lengths = sqrt(3/2)
     const basisLengths = Quadray.BASIS.map(b => b.length());
     addCheck({
         name: 'Basis Vector Lengths',
-        description: 'All 4 basis vectors should have equal length (~0.707)',
+        description: 'All 4 basis vectors should have equal Cartesian length sqrt(3/2)',
         expected: SYNERGETICS.BASIS_LENGTH.toFixed(4),
         actual: basisLengths.map(l => l.toFixed(4)),
         passed: basisLengths.every(l => Math.abs(l - SYNERGETICS.BASIS_LENGTH) < TOLERANCE)

@@ -5,8 +5,9 @@ Discovers and runs all test_*.js files via Node.js. Reports per-game
 pass/fail counts via regex parsing of the standardized test output
 format: "=== Results: N passed, M failed ==="
 
-Supports running shared module tests (games/tests/, 4d_generic/tests/)
-and per-game tests (games/4d_*/tests/).
+Supports nested shared module tests (games/tests/, 4d_generic/tests/)
+and per-game tests (games/4d_*/tests/). Nonzero exits, missing game suites,
+and files without executed-check evidence are failures.
 """
 import re
 import subprocess
@@ -17,8 +18,8 @@ from ..core.registry import GAMES
 
 logger = logging.getLogger(__name__)
 
-# Regex to parse the standardized results line
-RESULTS_RE = re.compile(r'Results:\s*(\d+)\s*passed,\s*(\d+)\s*failed', re.IGNORECASE)
+# Shared and per-game suites use different prefixes but the same count fields.
+RESULTS_RE = re.compile(r'(\d+)\s*passed,\s*(\d+)\s*failed', re.IGNORECASE)
 
 
 def _run_test_file(tf: Path, cwd: Path, label: str) -> tuple[int, int]:
@@ -37,33 +38,34 @@ def _run_test_file(tf: Path, cwd: Path, label: str) -> tuple[int, int]:
             timeout=30  # Prevent hanging
         )
 
-        # Prefer structured results line
-        match = RESULTS_RE.search(result.stdout)
-        if match:
-            test_count = int(match.group(1))
-            fail_count = int(match.group(2))
+        output = result.stdout + "\n" + result.stderr
+        summaries = RESULTS_RE.findall(output)
+        if summaries:
+            test_count, fail_count = map(int, summaries[-1])
         else:
-            # Fallback: count unique pass/fail lines
-            lines = result.stdout.split('\n')
-            test_count = sum(1 for l in lines if '✅' in l and 'Results' not in l)
-            fail_count = sum(1 for l in lines if '❌' in l and 'Results' not in l)
+            lines = output.splitlines()
+            test_count = sum(1 for line in lines if '✅' in line and 'Results' not in line)
+            fail_count = sum(1 for line in lines if '❌' in line and 'Results' not in line)
 
-            # A crash before any structured/emoji output must never report
-            # (0, 0) — that would silently drop the failure from the totals.
-            if result.returncode != 0 and test_count == 0 and fail_count == 0:
-                fail_count = 1
+        # A later crash or an empty suite must not look like a passing run.
+        no_checks = test_count + fail_count == 0
+        if result.returncode != 0 or no_checks:
+            fail_count = max(1, fail_count)
 
         status = "✅" if result.returncode == 0 and fail_count == 0 else "❌"
         detail = f"{test_count} passed"
         if fail_count > 0:
             detail += f", {fail_count} failed"
+        if no_checks:
+            detail += " (no executed checks reported)"
 
-        print(f"  {status} {label:20s} — {detail}")
+        print(f"  {status} {label:20s} — {tf.name}: {detail}")
 
-        if result.returncode != 0 and result.stderr:
-            for line in result.stderr.strip().split('\n')[:5]:
-                logger.debug(f"     {line}")
-            print(f"     (stderr available at DEBUG log level)")
+        if fail_count:
+            if result.stdout:
+                print(result.stdout.rstrip())
+            if result.stderr:
+                print(result.stderr.rstrip())
 
         return (test_count, fail_count)
 
@@ -105,33 +107,33 @@ def _run_python_test(tf: Path, cwd: Path, label: str) -> tuple[int, int]:
         run_match = re.search(r'Ran (\d+) test', output)
         test_count = int(run_match.group(1)) if run_match else 0
         
-        # Check success
-        pass_count = test_count
-        fail_count = 0
-        
-        if result.returncode != 0 or "FAILED" in output:
-            # Parse failures
-            fail_match = re.search(r'failures=(\d+)', output)
-            err_match = re.search(r'errors=(\d+)', output)
-            fails = int(fail_match.group(1)) if fail_match else 0
-            errs = int(err_match.group(1)) if err_match else 0
-            fail_count = fails + errs
-            if fail_count == 0 and result.returncode != 0:
-                 fail_count = 1 # Generic failure
-            pass_count = test_count - fail_count
+        # unittest's run count includes skipped tests, not executed checks.
+        skip_match = re.search(r'skipped=(\d+)', output)
+        skipped = int(skip_match.group(1)) if skip_match else 0
+        fail_match = re.search(r'failures=(\d+)', output)
+        err_match = re.search(r'errors=(\d+)', output)
+        fails = int(fail_match.group(1)) if fail_match else 0
+        errs = int(err_match.group(1)) if err_match else 0
+        fail_count = fails + errs
+        pass_count = max(0, test_count - skipped - fail_count)
+        no_checks = test_count - skipped == 0
+        if result.returncode != 0 or "FAILED" in output or no_checks:
+            fail_count = max(1, fail_count)
 
         status = "✅" if fail_count == 0 and result.returncode == 0 else "❌"
         detail = f"{pass_count} passed"
         if fail_count > 0:
             detail += f", {fail_count} failed"
+        if no_checks:
+            detail += " (no executed checks reported)"
             
         print(f"  {status} {label:20s} — {tf.name}: {detail}")
         
         if fail_count > 0:
-             # Print last few lines of failure
-             lines = output.strip().split('\n')
-             for line in lines[-5:]:
-                 logger.debug(f"     {line}")
+            if result.stdout:
+                print(result.stdout.rstrip())
+            if result.stderr:
+                print(result.stderr.rstrip())
 
         return (pass_count, fail_count)
 
@@ -146,15 +148,14 @@ def run_tests(games_dir: Path, game_keys: list[str] | None = None) -> bool:
 
     Returns True if all tests passed, False otherwise.
     """
-    keys = game_keys or list(GAMES.keys())
+    keys = list(GAMES) if game_keys is None else game_keys
     passed = 0
     failed = 0
-    skipped = 0
     repo_root = games_dir.parent
 
     # ── Shared module tests (games/tests/ and games/4d_generic/tests/) ──
     # Run if no specific games requested, OR if we are running the full suite
-    should_run_shared = (game_keys is None) or (len(game_keys) == len(GAMES))
+    should_run_shared = (game_keys is None) or (set(game_keys) == set(GAMES))
     
     if should_run_shared:
         print("📦 Shared Module Tests\n")
@@ -169,7 +170,7 @@ def run_tests(games_dir: Path, game_keys: list[str] | None = None) -> bool:
                  continue
 
             # JS Tests
-            test_files = sorted(test_dir.glob("test_*.js"))
+            test_files = sorted(test_dir.rglob("test_*.js"))
             for tf in test_files:
                 if tf.name == "test_all_shared.js":
                     continue  # Skip the runner, run individual files
@@ -178,7 +179,7 @@ def run_tests(games_dir: Path, game_keys: list[str] | None = None) -> bool:
                 failed += f
             
             # Python Tests (unittest)
-            py_test_files = sorted(test_dir.glob("test_*.py")) if test_dir.is_dir() else []
+            py_test_files = sorted(test_dir.rglob("test_*.py"))
             for tf in py_test_files:
                 # We'll run each python test file as a separate process to keep isolation
                 p, f = _run_python_test(tf, games_dir, label)
@@ -190,8 +191,8 @@ def run_tests(games_dir: Path, game_keys: list[str] | None = None) -> bool:
 
     for key in keys:
         if key not in GAMES:
-            print(f"  ⚠️  Unknown game: {key}")
-            skipped += 1
+            print(f"  ❌ Unknown game: {key}")
+            failed += 1
             continue
 
         meta = GAMES[key]
@@ -199,8 +200,8 @@ def run_tests(games_dir: Path, game_keys: list[str] | None = None) -> bool:
         test_files = sorted(game_dir.glob("tests/test_*.js"))
 
         if not test_files:
-            print(f"  ⏭️  {meta['name']:20s} — No tests found")
-            skipped += 1
+            print(f"  ❌ {meta['name']:20s} — No tests found")
+            failed += 1
             continue
 
         for tf in test_files:
@@ -208,11 +209,13 @@ def run_tests(games_dir: Path, game_keys: list[str] | None = None) -> bool:
             passed += p
             failed += f
 
+    if passed + failed == 0:
+        print("  ❌ No executed checks reported")
+        failed += 1
+
     # ── Summary ──
     print(f"\n{'═' * 48}")
     print(f"  Total: {passed} passed, {failed} failed", end="")
-    if skipped > 0:
-        print(f", {skipped} skipped", end="")
     print()
     if failed == 0:
         print("  ✅ All tests passed!")

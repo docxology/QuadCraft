@@ -49,7 +49,7 @@ class RogueRenderer extends BaseRenderer {
         this._drawAxes();
         this.animTime += 0.03;
 
-        const cells = GridUtils.generateGrid(this.board.size);
+        const cells = this.board.cells;
         const projected = this._projectCells(cells);
 
         // Sort by depth (back-to-front)
@@ -76,12 +76,10 @@ class RogueRenderer extends BaseRenderer {
         this._drawDungeonHUD();
     }
 
-    /** Project all cells to screen coordinates. */
+    /** Project canonical board cells with the renderer's current camera and zoom. */
     _projectCells(cells) {
-        if (typeof projectQuadray !== 'function') return [];
-        const W = this.canvas.width, H = this.canvas.height;
         return cells.map(c => {
-            const p = projectQuadray(c.a, c.b, c.c, c.d, W, H, this.camera);
+            const p = this._project(c.a, c.b, c.c, c.d);
             return { ...c, px: p.x, py: p.y, pScale: p.scale };
         });
     }
@@ -268,9 +266,7 @@ class RogueRenderer extends BaseRenderer {
 
     /** Project a single cell to screen coords. */
     _projectOne(pos) {
-        if (typeof projectQuadray !== 'function') return null;
-        const W = this.canvas.width, H = this.canvas.height;
-        const p = projectQuadray(pos.a, pos.b, pos.c, pos.d, W, H, this.camera);
+        const p = this._project(pos.a, pos.b, pos.c, pos.d);
         return { px: p.x, py: p.y, pScale: p.scale };
     }
 

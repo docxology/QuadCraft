@@ -87,7 +87,6 @@
         const { result, quadray, cellType } = board.dropPiece(2, 1, 1);
         assert('Drop placed', result === 'placed');
         assert('Landing is Quadray', quadray instanceof Quadray);
-        assert('Grid uses toKey', board.grid.has(quadray.toKey()));
         assert('cellType set', cellType === 'tetra' || cellType === 'octa');
 
         // 3. Cell Parity
@@ -143,6 +142,19 @@
         board3.reset();
         assert('Reset clears grid (Map.size=0)', board3.grid.size === 0);
         assert('Reset clears moveHistory', board3.moveHistory.length === 0);
+
+        section('Independent Raw Slots');
+        const labels = new ConnectFourBoard(2, 5, 3, 3);
+        const original = labels.dropPiece(0, 0, 0).quadray;
+        labels.dropPiece(4, 0, 0);
+        labels.dropPiece(1, 1, 1);
+        const shifted = labels.dropPiece(1, 1, 1).quadray;
+        assert('Gauge-equivalent labels retain separate players',
+            original.equals(shifted) && labels.getCell(original).player === 1 &&
+            labels.getCell(shifted).player === 2 && labels.grid.size === 4);
+        labels.undoLastMove();
+        assert('Undo preserves the other gauge-equivalent label',
+            labels.getCell(original).player === 1 && labels.getCell(shifted) === null);
 
         log(`\n=== Results: ${passed} passed, ${failed} failed (${total} total) ===`);
     </script>

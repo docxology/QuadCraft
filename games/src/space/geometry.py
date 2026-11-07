@@ -125,7 +125,7 @@ def verify_geometric_identities(tolerance: float = 0.01) -> VerificationReport:
     """Run all 8 Synergetics geometry checks (mirrors verifyGeometricIdentities JS).
 
     Checks:
-        1. Basis vector lengths         ≈ 0.7071
+        1. Basis vector lengths         ≈ sqrt(3/2)
         2. Tetrahedral angles           ≈ 109.47°
         3. Origin identity              → (0,0,0)
         4. Round-trip conversion         (6 test points)
@@ -140,7 +140,7 @@ def verify_geometric_identities(tolerance: float = 0.01) -> VerificationReport:
     basis_lengths = [b.length() for b in Quadray.BASIS]
     report.checks.append(CheckResult(
         name="Basis Vector Lengths",
-        description="All 4 basis vectors should have length ≈0.7071",
+        description="All 4 embedded basis vectors should have length sqrt(3/2)",
         expected=f"{SYNERGETICS.BASIS_LENGTH:.4f}",
         actual=str([f"{l:.4f}" for l in basis_lengths]),
         passed=all(abs(l - SYNERGETICS.BASIS_LENGTH) < tolerance for l in basis_lengths),
@@ -250,9 +250,9 @@ DIRECTIONS = [
 
 
 def generate_grid(size: int) -> List[Quadray]:
-    """Generate all cells in a size⁴ Quadray integer grid.
+    """Generate raw size⁴ board labels, without common-offset gauge reduction.
 
-    Returns size⁴ Quadray instances with integer components ∈ [0, size).
+    These are not distinct physical cells. Components are integers ∈ [0, size).
     """
     cells = []
     for a in range(size):
@@ -269,19 +269,18 @@ def in_bounds(a: int, b: int, c: int, d: int, size: int) -> bool:
 
 
 def neighbors(a: int, b: int, c: int, d: int) -> List[Quadray]:
-    """Return the 12 kissing neighbours (unbounded)."""
+    """Return 12 canonical physical IVM neighbors, independent of input gauge."""
     return [
-        Quadray(a + da, b + db, c + dc, d + dd)
+        Quadray(a + da, b + db, c + dc, d + dd).normalized()
         for da, db, dc, dd in DIRECTIONS
     ]
 
 
 def bounded_neighbors(a: int, b: int, c: int, d: int, size: int) -> List[Quadray]:
-    """Return only in-bounds face-touching neighbours."""
+    """Normalize physical neighbors before applying canonical component bounds."""
     return [
-        Quadray(a + da, b + db, c + dc, d + dd)
-        for da, db, dc, dd in DIRECTIONS
-        if in_bounds(a + da, b + db, c + dc, d + dd, size)
+        q for q in neighbors(a, b, c, d)
+        if in_bounds(q.a, q.b, q.c, q.d, size)
     ]
 
 

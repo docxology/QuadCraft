@@ -115,7 +115,7 @@ assert('Explored set has cells', b.explored.size > 0);
 assert('Player cell is visible', b.isVisible(b.player));
 assert('Player cell is explored', b.isExplored(b.player));
 // Walls far away should not be visible
-const allCells = GridUtils.generateGrid(b.size);
+const allCells = b.cells;
 const invisibleWalls = allCells.filter(c => b.getCell(c) === TILE.WALL && !b.isVisible(c));
 assert('Some walls are not visible (FOV works)', invisibleWalls.length > 0);
 
@@ -221,7 +221,7 @@ assert('Armor bonus is 4', b8.armor.bonus === 4);
 // organic layout Math.random() happens to produce this run.
 console.log('\n— Dungeon Connectivity —');
 const b9 = new RogueBoard(8, { seed: 7 });
-const allCells9 = GridUtils.generateGrid(b9.size);
+const allCells9 = b9.cells;
 const stairsCell = allCells9.find(c => b9.getCell(c) === TILE.STAIRS);
 assert('Stairs exist in dungeon', stairsCell !== undefined);
 if (stairsCell) {
@@ -241,6 +241,23 @@ for (let seed = 0; seed < 25; seed++) {
 }
 assert(`Stairs generated across 25 seeds (missing: ${stairsMissingSeeds.join(',') || 'none'})`,
     stairsMissingSeeds.length === 0);
+
+// Repeated deterministic world generation must not recreate a raw midpoint label.
+const physicalKeys = new Set(b9.cells.map(c => new Quadray(c.a, c.b, c.c, c.d).toKey()));
+for (let depth = 2; depth <= 4; depth++) {
+    b9.depth = depth;
+    b9._generateDungeon();
+    assert(`Depth ${depth} stores exactly one record per physical cell`,
+        b9.grid.size === b9.cells.length && physicalKeys.size === b9.cells.length &&
+        [...b9.grid.keys()].every(k => Math.min(...k.split(',').map(Number)) === 0));
+    const occupied = [b9.player, ...b9.enemies.map(e => e.pos), ...b9.items.map(i => i.pos)];
+    assert(`Depth ${depth} entities stay on the player's reachable IVM sublattice`,
+        occupied.every(c => physicalKeys.has(new Quadray(c.a, c.b, c.c, c.d).toKey()) &&
+            (c.a + c.b + c.c + c.d) % 4 === 0));
+    const stairs = b9.cells.find(c => b9.getCell(c) === TILE.STAIRS);
+    assert(`Depth ${depth} stairs remain reachable after regeneration`, stairs !== undefined &&
+        QuadrayPathfinder.bfs(b9.player, stairs, c => b9.getCell(c) !== TILE.WALL, b9.size) !== null);
+}
 
 // ─── 14. Death and Game Over ─────────────────────────────────────────
 console.log('\n— Death and Game Over —');
@@ -424,6 +441,55 @@ b17.depth = 5;
 b17._generateDungeon();
 const hasBoss = b17.enemies.some(e => e.boss === true || e.type === 'dragon');
 assert('Boss (Dragon) generates on depth 5', hasBoss);
+
+// Canonical multi-hop sight must survive gauge crossings and stop at blockers.
+console.log('\n— Canonical FOV regressions —');
+const sight = new RogueBoard(8, { seed: 1 });
+for (const cell of sight.cells) sight.setCell(cell, TILE.FLOOR);
+sight.player = { a: 0, b: 0, c: 0, d: 0 };
+sight._computeFOV();
+for (const [da, db, dc, dd] of GridUtils.DIRECTIONS) {
+    assert(`Unobstructed third-hop ray ${da},${db},${dc},${dd}`,
+        sight.isVisible({ a: 3 * da, b: 3 * db, c: 3 * dc, d: 3 * dd }));
+}
+const near = { a: 0, b: 1, c: 1, d: 2 };
+const far = { a: 0, b: 2, c: 2, d: 4 };
+for (const blocker of [TILE.WALL, TILE.DOOR]) {
+    sight.setCell(near, blocker);
+    sight._computeFOV();
+    assert(`Blocker ${blocker} itself is visible`, sight.isVisible(near));
+    assert(`Blocker ${blocker} hides the next hop`, !sight.isVisible(far));
+    assert('Previously seen cell stays explored behind blocker', sight.isExplored(far));
+    sight.setCell(near, TILE.FLOOR);
+}
+sight.player = { a: 2, b: 0, c: 1, d: 1 };
+sight._computeFOV();
+const crossing = { a: 1, b: 0, c: 1, d: 2 };
+const beyondCrossing = { a: 0, b: 0, c: 1, d: 3 };
+assert('Second-hop visibility crosses zero-minimum gauge boundary', sight.isVisible(beyondCrossing));
+sight.setCell(crossing, TILE.DOOR);
+sight._computeFOV();
+assert('Gauge-crossing door is visible and blocks the next hop',
+    sight.isVisible(crossing) && !sight.isVisible(beyondCrossing));
+
+console.log('\n— Finite dungeon size policy —');
+for (const size of [0, 1, 2, 2.5]) {
+    let rejected = false;
+    try {
+        new RogueBoard(size, { seed: 1 });
+    } catch (error) {
+        rejected = error instanceof RangeError && error.message === 'RogueBoard size must be an integer of at least 3';
+    }
+    assert(`Unsupported size ${size} rejects without recursive generation`, rejected);
+}
+for (const seed of [0, 1, 2, 3, 4]) {
+    const tiny = new RogueBoard(3, { seed });
+    const stairs = tiny.cells.find(cell => tiny.getCell(cell) === TILE.STAIRS);
+    assert(`Minimum supported board seed ${seed} has reachable stairs`, !!stairs &&
+        !!QuadrayPathfinder.bfs(tiny.player, stairs, pos => tiny.getCell(pos) !== TILE.WALL, tiny.size));
+    assert(`Minimum supported board seed ${seed} has five connected carved cells`,
+        tiny.cells.filter(cell => tiny.getCell(cell) !== TILE.WALL).length >= 5);
+}
 
 // ─── Summary ─────────────────────────────────────────────────────────
 console.log(`\n=== Results: ${passed} passed, ${failed} failed (${total} total) ===`);

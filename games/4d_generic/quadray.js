@@ -4,6 +4,8 @@
  * 
  * Quadray coordinates (a, b, c, d) represent positions in tetrahedral space
  * using four basis vectors emanating from the center of a regular tetrahedron.
+ * Adding a common offset to all four components leaves the point unchanged.
+ * Cartesian units give each coefficient-unit basis vector length sqrt(3/2).
  */
 
 const ROOT2 = 1.4142135623730951;
@@ -56,9 +58,9 @@ class Quadray {
     toCartesian() {
         const scale = 1.0 / ROOT2;
         return {
-            x: scale * (this.a - this.b - this.c + this.d),
-            y: scale * (this.a - this.b + this.c - this.d),
-            z: scale * (this.a + this.b - this.c - this.d)
+            x: scale * ((this.a - this.b) - (this.c - this.d)),
+            y: scale * ((this.a - this.b) + (this.c - this.d)),
+            z: scale * ((this.a - this.c) + (this.b - this.d))
         };
     }
 
@@ -79,11 +81,14 @@ class Quadray {
     }
 
     /**
-     * Calculate the length of this Quadray vector.
+     * Euclidean length in Cartesian units, invariant under a common offset.
      * @returns {number}
      */
     length() {
-        return Math.sqrt((this.a ** 2 + this.b ** 2 + this.c ** 2 + this.d ** 2) / 2);
+        const ab = this.a - this.b;
+        const cd = this.c - this.d;
+        return Math.hypot((ab - cd) / ROOT2, (ab + cd) / ROOT2,
+            ((this.a - this.c) + (this.b - this.d)) / ROOT2);
     }
 
     /**
@@ -129,18 +134,19 @@ class Quadray {
     }
 
     /**
-     * Snap a Quadray to the nearest Integer Vector Matrix (IVM) coordinates.
-     * Used for grid alignment in games like Minecraft and Doom.
-     * @param {Quadray} q 
-     * @returns {Quadray} New Quadray with integer components
+     * Round zero-minimum components to integers using Math.round (ties up).
+     * This gauge-invariant component snap is not an XYZ-nearest FCC search.
+     * @param {{a: number, b: number, c: number, d: number}} q
+     * @returns {Quadray} Canonical integer representative
      */
     static toIVM(q) {
+        const minVal = Math.min(q.a, q.b, q.c, q.d);
         return new Quadray(
-            Math.round(q.a),
-            Math.round(q.b),
-            Math.round(q.c),
-            Math.round(q.d)
-        );
+            Math.round(q.a - minVal),
+            Math.round(q.b - minVal),
+            Math.round(q.c - minVal),
+            Math.round(q.d - minVal)
+        ).normalized();
     }
 
     /**
@@ -173,14 +179,18 @@ class Quadray {
     }
 
     /**
-     * Calculate the distance between two Quadrays.
-     * @param {Quadray} q1
-     * @param {Quadray} q2
+     * Euclidean distance in Cartesian units; accepts structural records.
+     * @param {{a: number, b: number, c: number, d: number}} q1
+     * @param {{a: number, b: number, c: number, d: number}} q2
      * @returns {number}
      */
     static distance(q1, q2) {
-        const diff = q1.subtract(q2);
-        return diff.length();
+        const ab = (q1.a - q1.b) - (q2.a - q2.b);
+        const cd = (q1.c - q1.d) - (q2.c - q2.d);
+        const ac = (q1.a - q1.c) - (q2.a - q2.c);
+        const bd = (q1.b - q1.d) - (q2.b - q2.d);
+        return Math.hypot((ab - cd) / ROOT2, (ab + cd) / ROOT2,
+            (ac + bd) / ROOT2);
     }
 
     /**

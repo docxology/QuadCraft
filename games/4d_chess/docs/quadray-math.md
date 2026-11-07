@@ -74,15 +74,17 @@ z = (a + b - c - d) / √2
 
 ## Distance Formula
 
-The distance between two Quadrays:
+For component differences $\Delta=q_1-q_2$, use the Cartesian embedding:
 
-```
-D = √((Δa² + Δb² + Δc² + Δd²) / 2)
-```
+$$
+D^2=\frac{(\Delta a-\Delta b-\Delta c+\Delta d)^2+
+(\Delta a-\Delta b+\Delta c-\Delta d)^2+
+(\Delta a+\Delta b-\Delta c-\Delta d)^2}{2}.
+$$
 
-Where Δ represents the difference in each component.
-
-**Example**: Distance from (0,0,0,0) to (1,0,0,0) = √(1/2) ≈ 0.707
+The distance from `(0,0,0,0)` to `(1,0,0,0)` is $\sqrt{3/2}$.
+Adding a common offset to either representative leaves the distance unchanged.
+Raw board-slot identity remains distinct from geometric equivalence.
 
 ---
 

@@ -167,7 +167,7 @@ class MinesweeperGame extends BaseGame {
 
         if (b.firstClick) {
             return {
-                text: `Click any cell to begin | Mines: ${meta.totalMines} | Grid: ${b.size}^4 IVM`,
+                text: `Click any cell to begin | Mines: ${meta.totalMines} | Cells: ${b.cells.length}`,
                 color: '#94a3b8',
             };
         }

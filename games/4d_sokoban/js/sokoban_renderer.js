@@ -22,7 +22,7 @@ class SokobanRenderer extends BaseRenderer {
         };
     }
 
-    render(ctx, camera) {
+    render(ctx = this.ctx, camera) {
         const W = ctx.canvas.width, H = ctx.canvas.height;
         ctx.clearRect(0, 0, W, H);
 
@@ -66,7 +66,7 @@ class SokobanRenderer extends BaseRenderer {
             }
         }
 
-        this.drawAxes(ctx, W, H, camera);
+        this._drawAxes();
     }
 
     _drawDiamond(ctx, x, y, r) {
@@ -76,11 +76,11 @@ class SokobanRenderer extends BaseRenderer {
         ctx.closePath(); ctx.fill();
     }
 
+    /** Project using renderer zoom/perspective and the current picking camera. */
     _projectAll(cells, camera) {
-        if (typeof projectQuadray !== 'function') return [];
-        const W = this.canvas.width, H = this.canvas.height;
+        if (camera) { this.rotX = camera.rotX; this.rotY = camera.rotY; }
         return cells.map(c => {
-            const p = projectQuadray(c.a, c.b, c.c, c.d, W, H, camera);
+            const p = this._project(c.a, c.b, c.c, c.d);
             return { ...c, px: p.x, py: p.y, pScale: p.scale };
         });
     }

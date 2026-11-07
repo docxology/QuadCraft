@@ -142,7 +142,7 @@ function runAnalysisTests() {
     const verif = verifyGeometricIdentities();
     assert(verif.checks.length === 8, "Verification suite has exactly 8 checks");
     assert(verif.checks[0].name === 'Basis Vector Lengths', "Check 1: Basis Vector Lengths");
-    assert(verif.checks[0].passed, "Basis vector lengths ≈ 0.7071");
+    assert(verif.checks[0].passed, "Basis vector Cartesian lengths = sqrt(3/2)");
     assert(verif.checks[1].name === 'Tetrahedral Symmetry', "Check 2: Tetrahedral Symmetry");
     assert(verif.checks[1].passed, "Tetrahedral angles ≈ 109.47°");
     assert(verif.checks[2].passed, "Check 3: Origin identity passes");

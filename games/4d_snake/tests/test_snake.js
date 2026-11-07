@@ -102,5 +102,72 @@ board4.firstClick = false; // skip mine placement
 const collisionResult = board4.step();
 assert('Self-collision results in death', collisionResult === 'die' && board4.gameOver);
 
+// Raw wrapped labels remain distinct, with a contiguous, unique initial body.
+function occupancyAgrees(b) {
+    return b.snake.length === b.snakeSet.size && b.snake.every(k => b.snakeSet.has(k));
+}
+function advancedKey(b, key, direction = b.direction) {
+    const [a, b0, c, d] = b.parseKey(key);
+    return b.key(b.wrap(a + direction.da), b.wrap(b0 + direction.db),
+        b.wrap(c + direction.dc), b.wrap(d + direction.dd));
+}
+for (const size of [1, 2, 3, 4, 6]) {
+    const initial = new SnakeBoard(size);
+    assert(`Size ${size} starts with unique in-bounds segments`, occupancyAgrees(initial) &&
+        initial.snake.every(k => initial.parseKey(k).every(v => v >= 0 && v < size)));
+    assert(`Size ${size} initial body is contiguous in the movement direction`,
+        initial.snake.slice(1).every((k, i) => k === advancedKey(initial, initial.snake[i])));
+    assert(`Size ${size} initial length respects the wrapped direction period`,
+        initial.snake.length === Math.min(3, size));
+    if (size === 1) assert('Singleton raw board starts complete', initial.gameOver && initial.food === null);
+}
+const occupancy = new SnakeBoard(6);
+occupancy.food = 'unreachable';
+assert('Normal movement succeeds', occupancy.step() === 'move');
+assert('Normal movement keeps Set and body equal', occupancyAgrees(occupancy));
+occupancy.food = advancedKey(occupancy, occupancy.head);
+assert('Growth succeeds', occupancy.step() === 'eat');
+assert('Growth keeps Set and body equal', occupancyAgrees(occupancy));
+
+const tailEntry = new SnakeBoard(4);
+tailEntry.snake = ['0,0,0,0', '0,1,1,2', '0,2,2,0', '0,3,3,2'];
+tailEntry.snakeSet = new Set(tailEntry.snake);
+tailEntry.food = '1,0,0,3';
+for (let i = 0; i < 2; i++) {
+    const departing = tailEntry.snake[0];
+    assert(`Legal departing-tail entry ${i} succeeds`, tailEntry.step() === 'move' && tailEntry.head === departing);
+    assert(`Tail entry ${i} preserves occupied head and complete Set`, occupancyAgrees(tailEntry));
+}
+
+// Independently enumerate the actual wrapped move graph, not canonical neighbors.
+for (const size of [3, 4, 6]) {
+    const component = new SnakeBoard(size);
+    const reachable = new Set([component.head]);
+    const queue = [component.head];
+    for (let i = 0; i < queue.length; i++) {
+        for (const direction of SnakeBoard.DIRECTIONS) {
+            const next = advancedKey(component, queue[i], direction);
+            if (!reachable.has(next)) { reachable.add(next); queue.push(next); }
+        }
+    }
+    const expectedCount = size ** 4 / (size % 4 === 0 ? 4 : (size % 2 === 0 ? 2 : 1));
+    assert(`Size ${size} wrapped component has expected cardinality`, reachable.size === expectedCount);
+    const lastFree = [...reachable].sort().pop();
+    component.snake = [...reachable].filter(k => k !== lastFree);
+    component.snakeSet = new Set(component.snake);
+    const random = Math.random;
+    try {
+        Math.random = () => 0;
+        component._spawnFood();
+        assert(`Size ${size} food uses the only free reachable raw label`, component.food === lastFree);
+        component.snake.push(lastFree);
+        component.snakeSet.add(lastFree);
+        component._spawnFood();
+        assert(`Size ${size} full playable component completes`, component.gameOver && component.food === null);
+    } finally {
+        Math.random = random;
+    }
+}
+
 console.log(`\n=== Results: ${passed} passed, ${failed} failed ===`);
 process.exit(failed > 0 ? 1 : 0);

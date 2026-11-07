@@ -103,13 +103,14 @@ function runTests() {
         assert(typeof c1.x === 'number', 'toCartesian returns x');
         const q2 = new Quadray(0, 1, 0, 0);
         const d12 = Quadray.distance(q1, q2);
-        assert(d12 > 0, 'distance between basis vectors > 0');
+        assert(approx(d12, 2, 1e-12), 'Basis vertices are two Cartesian units apart');
         const qn = q1.normalized();
         assert(approx(Math.min(qn.a, qn.b, qn.c, qn.d), 0, 0.01), 'normalized has min ~0');
 
         // IVM utilities
         const qSnap = Quadray.toIVM(new Quadray(1.3, 0.2, 0.8, 0.1));
-        assert(Number.isInteger(qSnap.a), 'toIVM snaps to nearest int');
+        assert([qSnap.a, qSnap.b, qSnap.c, qSnap.d].every((v, i) => v === [1, 0, 1, 0][i]),
+            'toIVM rounds canonical components');
         assert(approx(Quadray.cellVolume(), 0.375), 'cellVolume ≈ 0.375');
         assert(Quadray.cellType(0, 0, 0, 0) === 'tetra', 'Origin has tetra parity');
         assert(Quadray.cellType(1, 0, 0, 0) === 'octa', '(1,0,0,0) has octa parity');
@@ -172,7 +173,11 @@ function runTests() {
         assert(enemy.hp === 60, 'Enemy imp has 60 hp');
         assert(enemy.quadray instanceof Quadray, 'Enemy .quadray returns Quadray');
         const dist = player.distanceTo(enemy);
-        assert(dist > 0, `Player-enemy distance > 0 (got ${dist.toFixed(2)})`);
+        assert(approx(dist, Math.sqrt(6), 1e-12), 'Two A steps have Cartesian length sqrt(6)');
+        assert(approx(Quadray.distance(player, enemy), Math.sqrt(6), 1e-12),
+            'Actual Player and Enemy records support geometric distance');
+        assert(Quadray.distance(player, { a: 12, b: 12, c: 12, d: 12 }) === 0,
+            'Entity record and shifted origin have zero physical separation');
         const enemy2 = new Enemy(5, 6, 5, 5, 'demon');
         assert(enemy2.cellParity === 'octa', 'Enemy at (5,6,5,5) has octa parity');
 
@@ -187,6 +192,76 @@ function runTests() {
         const e2 = { a: 4, b: 3, c: 2, d: 1 };
         const qd = physics.quadrayDistance(e1, e2);
         assert(qd > 0, `Quadray distance > 0 (got ${qd.toFixed(2)})`);
+
+        // Exercise the live structural-record collision path at its geometric boundary.
+        const spawn = map.rooms[0];
+        map.setCell(Math.floor(spawn.a), Math.floor(spawn.b), Math.floor(spawn.c), Math.floor(spawn.d), CELL.FLOOR);
+        const nearEnemy = new Enemy(spawn.a + 0.25, spawn.b, spawn.c, spawn.d, 'imp');
+        const farEnemy = new Enemy(spawn.a + 0.75, spawn.b, spawn.c, spawn.d, 'imp');
+        const shot = new Projectile(spawn.a, spawn.b, spawn.c, spawn.d, 0, 0, 10, 'player');
+        const shots = [shot];
+        const collisionParticles = [];
+        physics.updateProjectiles(shots, [farEnemy, nearEnemy], player, collisionParticles);
+        assert(farEnemy.hp === 60, 'Projectile does not hit outside its 0.8 Cartesian radius');
+        assert(nearEnemy.hp === 50, 'Projectile hits nearby Enemy through structural distance');
+        assert(shots.length === 0 && !shot.alive, 'Hit projectile is consumed by live physics');
+        // LOS uses real raw-index occupancy, not physical distance or gauge keys.
+        const losMap = new DoomMap(12);
+        losMap.cells.clear();
+        for (let a = 4; a <= 5; a++)
+            for (let b = 4; b <= 5; b++)
+                for (let c = 2; c <= 3; c++)
+                    for (let d = 2; d <= 3; d++)
+                        losMap.setCell(a, b, c, d, CELL.FLOOR);
+        const losPhysics = new Physics(losMap);
+        const aliasStart = new Quadray(4.5, 4.5, 2, 2);
+        const aliasEnd = new Quadray(5.5, 5.5, 3, 3);
+        assert(Quadray.distance(aliasStart, aliasEnd) === 0, 'LOS fixture endpoints are physical aliases');
+        assert(losPhysics.hasLineOfSight(aliasStart, aliasEnd) &&
+            losPhysics.hasLineOfSight(aliasEnd, aliasStart), 'Clear raw path between aliases works in both directions');
+        losMap.setCell(5, 5, 2, 2, CELL.WALL);
+        assert(!losPhysics.hasLineOfSight(aliasStart, aliasEnd) &&
+            !losPhysics.hasLineOfSight(aliasEnd, aliasStart), 'Raw wall blocks gauge-equivalent endpoints in both directions');
+        const aliasEnemy = new Enemy(aliasStart.a, aliasStart.b, aliasStart.c, aliasStart.d, 'imp');
+        const aliasPlayer = new Player(aliasEnd.a, aliasEnd.b, aliasEnd.c, aliasEnd.d);
+        aliasEnemy.speed = 0;
+        assert(!losPhysics.hasLineOfSight(aliasEnemy, aliasPlayer), 'Actual entity records retain distinct raw cells');
+        losPhysics.updateEnemies([aliasEnemy], aliasPlayer, [], []);
+        assert(aliasPlayer.hp === 100 && aliasEnemy.state === 'wander' && !aliasEnemy.lastSeenPlayer,
+            'Enemy cannot see or attack a physical alias through a raw wall');
+        losMap.setCell(5, 5, 2, 2, CELL.FLOOR);
+        losPhysics.updateEnemies([aliasEnemy], aliasPlayer, [], []);
+        assert(aliasEnemy.state === 'attack' && aliasPlayer.hp === 100 - aliasEnemy.damage,
+            'Removing raw wall restores enemy sight and shared-metric melee range');
+
+        const thinStart = new Quadray(4.5, 4.4999, 2.5, 2.5);
+        const thinEnd = new Quadray(5.5, 5.4999, 2.5, 2.5);
+        assert(losPhysics.hasLineOfSight(thinStart, thinEnd), 'Ordinary clear raw segment has LOS');
+        losMap.setCell(5, 4, 2, 2, CELL.WALL);
+        assert(!losPhysics.hasLineOfSight(thinStart, thinEnd) &&
+            !losPhysics.hasLineOfSight(thinEnd, thinStart), 'DDA detects even a briefly crossed wall cell');
+        const boundaryStart = new Quadray(4.5, 4.5, 2.5, 2.5);
+        const boundaryEnd = new Quadray(5, 4.5, 2.5, 2.5);
+        assert(!losPhysics.hasLineOfSight(boundaryStart, boundaryEnd) &&
+            !losPhysics.hasLineOfSight(boundaryEnd, boundaryStart), 'Wall exactly at either segment endpoint blocks LOS');
+        assert(!losPhysics.hasLineOfSight(boundaryEnd, boundaryEnd), 'Coincident raw point inside a wall is blocked');
+        assert(losPhysics.hasLineOfSight(boundaryStart, boundaryStart), 'Coincident raw point in floor is clear');
+        losMap.setCell(5, 4, 2, 2, CELL.FLOOR);
+        losMap.setCell(4, 5, 2, 2, CELL.WALL);
+        assert(losPhysics.hasLineOfSight(new Quadray(4.5, 4.5, 2.5, 2.5), new Quadray(5.5, 5.5, 2.5, 2.5)) &&
+            losPhysics.hasLineOfSight(new Quadray(5.5, 5.5, 2.5, 2.5), new Quadray(4.5, 4.5, 2.5, 2.5)),
+            'Simultaneous positive crossings do not visit off-segment walls');
+        losMap.setCell(4, 5, 2, 2, CELL.FLOOR);
+        losMap.setCell(5, 5, 2, 2, CELL.WALL);
+        assert(!losPhysics.hasLineOfSight(new Quadray(4.5, 5.5, 2.5, 2.5), new Quadray(5.5, 4.5, 2.5, 2.5)) &&
+            !losPhysics.hasLineOfSight(new Quadray(5.5, 4.5, 2.5, 2.5), new Quadray(4.5, 5.5, 2.5, 2.5)),
+            'Mixed-sign crossing checks the boundary floor cell in both directions');
+        for (let a = 6; a < losMap.size; a++) losMap.setCell(a, 4, 2, 2, CELL.FLOOR);
+        assert(losPhysics.hasLineOfSight(boundaryStart, new Quadray(11.5, 4.5, 2.5, 2.5)),
+            'Carved corridor is clear up to the final in-bounds cell');
+        assert(!losPhysics.hasLineOfSight(boundaryStart, new Quadray(12, 4.5, 2.5, 2.5)) &&
+            !losPhysics.hasLineOfSight(new Quadray(12, 4.5, 2.5, 2.5), boundaryStart),
+            'Exact outer map boundary is solid in both directions');
 
         // Movement
         const testEnt = { a: map.rooms[0].a, b: map.rooms[0].b, c: map.rooms[0].c, d: map.rooms[0].d };
