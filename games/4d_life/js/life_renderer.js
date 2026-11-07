@@ -22,6 +22,12 @@ class LifeRenderer extends BaseRenderer {
             rotY: 0.6,
             bgColor: '#050510',
         });
+        const corners = [];
+        for (const a of [0, board.size - 1])
+            for (const b of [0, board.size - 1])
+                for (const c of [0, board.size - 1])
+                    for (const d of [0, board.size - 1]) corners.push({ a, b, c, d });
+        this.fitToPoints(corners);
 
         this.mouseX = 0;
         this.mouseY = 0;

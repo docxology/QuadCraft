@@ -52,6 +52,42 @@ class BaseRenderer {
     }
 
     /**
+     * Fit physical coordinate extents, not raw board labels. A bounding sphere
+     * keeps the entire board in front of the perspective camera at any rotation.
+     * Call after configuring the renderer, with the board's full playable extent.
+     */
+    fitToPoints(points, padding = 32) {
+        const positions = points.map(q => new Quadray(q.a, q.b, q.c, q.d).toCartesian());
+        if (positions.length === 0) throw new RangeError('Camera fit requires points');
+        const min = { x: Infinity, y: Infinity, z: Infinity };
+        const max = { x: -Infinity, y: -Infinity, z: -Infinity };
+        for (const p of positions) {
+            for (const axis of ['x', 'y', 'z']) {
+                if (!Number.isFinite(p[axis])) throw new RangeError('Camera fit requires finite coordinates');
+                min[axis] = Math.min(min[axis], p[axis]);
+                max[axis] = Math.max(max[axis], p[axis]);
+            }
+        }
+        this.target = {
+            x: (min.x + max.x) / 2,
+            y: (min.y + max.y) / 2,
+            z: (min.z + max.z) / 2,
+        };
+        let radius = 0;
+        for (const p of positions) {
+            radius = Math.max(radius, Math.hypot(
+                p.x - this.target.x, p.y - this.target.y, p.z - this.target.z));
+        }
+        this.cameraDist = Math.max(this.cameraDist, radius * 2, 1);
+        if (radius > 0) {
+            const projectedRadius = radius * this.cameraDist / (this.cameraDist - radius);
+            const available = Math.min(this.canvas.width, this.canvas.height) / 2 - padding;
+            if (available <= 0) throw new RangeError('Canvas is too small for camera padding');
+            this.scale = Math.min(this.scale, available / projectedRadius);
+        }
+    }
+
+    /**
      * Project a Quadray coordinate (a, b, c, d) to 2D screen space.
      * Uses the global projectQuadray function if available, otherwise
      * falls back to a simple linear projection.
@@ -69,6 +105,7 @@ class BaseRenderer {
                 scale: this.scale, cameraDist: this.cameraDist,
                 centerX: this.canvas.width / 2,
                 centerY: this.canvas.height / 2,
+                target: this.target,
             });
         }
         // Linear fallback — simple 2D mapping
@@ -88,6 +125,7 @@ class BaseRenderer {
                 scale: this.scale, cameraDist: this.cameraDist,
                 centerX: this.canvas.width / 2,
                 centerY: this.canvas.height / 2,
+                target: this.target,
             });
         }
     }

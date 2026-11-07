@@ -36,7 +36,7 @@ jobs:
       - name: Install matching Chromium and OS prerequisites
         run: npx --no-install playwright install --with-deps chromium
 
-      - name: Exercise thirteen actual browser games
+      - name: Exercise all thirty actual browser games
         env:
           BROWSER_DIAGNOSTICS_DIR: ${{ runner.temp }}/quadcraft-browser-diagnostics
         run: npm test

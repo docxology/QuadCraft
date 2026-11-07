@@ -106,6 +106,9 @@ class LifeGame extends BaseGame {
     singleStep() {
         this.board.step();
         this.scoring.addScore(1);
+        this._syncCamera();
+        this.renderer.render();
+        this._updateHUD();
     }
 
     /**
