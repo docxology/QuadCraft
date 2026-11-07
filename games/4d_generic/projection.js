@@ -26,9 +26,10 @@ if (typeof Quadray === 'undefined' && typeof require !== 'undefined') {
  * @param {number} opts.cameraDist - Camera distance for perspective
  * @param {number} opts.centerX - Screen center X
  * @param {number} opts.centerY - Screen center Y
+ * @param {{x:number,y:number,z:number}} [opts.target] - Physical camera target
  * @returns {{ x: number, y: number, scale: number }}
  */
-function projectQuadray(q, { rotX, rotY, scale, cameraDist, centerX, centerY }) {
+function projectQuadray(q, { rotX, rotY, scale, cameraDist, centerX, centerY, target }) {
     const cart = q.toCartesian();
 
     const cosY = Math.cos(rotY);
@@ -36,9 +37,12 @@ function projectQuadray(q, { rotX, rotY, scale, cameraDist, centerX, centerY }) 
     const cosX = Math.cos(rotX);
     const sinX = Math.sin(rotX);
 
-    let x = cart.x * cosY - cart.z * sinY;
-    let z = cart.x * sinY + cart.z * cosY;
-    let y = cart.y;
+    const tx = cart.x - (target?.x ?? 0);
+    const ty = cart.y - (target?.y ?? 0);
+    const tz = cart.z - (target?.z ?? 0);
+    let x = tx * cosY - tz * sinY;
+    let z = tx * sinY + tz * cosY;
+    let y = ty;
 
     let y2 = y * cosX - z * sinX;
     let z2 = y * sinX + z * cosX;

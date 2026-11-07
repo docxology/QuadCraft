@@ -22,6 +22,7 @@ class MahjongRenderer extends BaseRenderer {
             rotY: 0.6,
             bgColor: '#0a0a14',
         });
+        this.fitToPoints(board.tiles.map(tile => tile.toQuadray()), 40);
         this.mouseX = 0;
         this.mouseY = 0;
         this.isDragging = false;

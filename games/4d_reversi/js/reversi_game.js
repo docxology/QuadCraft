@@ -108,6 +108,7 @@ class ReversiGame extends BaseGame {
     reset() {
         this.scoring.reset();
         super.reset();
+        this.turnManager.reset();
         this._syncRendererState();
     }
 

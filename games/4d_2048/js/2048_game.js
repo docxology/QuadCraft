@@ -12,13 +12,19 @@ class Twenty48Game extends BaseGame {
         super(canvas, hudEl, board, renderer, { name: 'Twenty48Game' });
         this.scoring = new ScoreManager({ key: 'quadcraft_2048' });
     }
-    _handleKey(e) {
-        const map = { '1':0,'2':1,'3':2,'4':3,'5':4,'6':5,'7':6,'8':7,'9':8,'0':9,'q':10,'w':11 };
-        if (map[e.key] !== undefined) { this.board.slide(map[e.key]); this.scoring.addScore(this.board.score - (this.scoring.score||0)); this._render(); }
-        if (e.key === 'r') { this.board.reset(); this._render(); }
+    _setupGameInput() {
+        const keys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0', 'q', 'w'];
+        keys.forEach((binding, direction) => this.input.bind([binding], () => {
+            if (this.loop.paused) return;
+            this.board.slide(direction);
+            this.scoring.addScore(this.board.score - this.scoring.score);
+        }));
     }
-    _resetState() { this.board.reset(); this.scoring.reset(); }
-    newGame() { this.board.reset(); this._render(); }
+    reset() {
+        this.scoring.reset();
+        super.reset();
+    }
+    newGame() { this.reset(); }
     _getHUDState() {
         const m = this.board.getMetadata();
         const hi = this.scoring.highScore > 0 ? ' | Best: ' + this.scoring.highScore : '';

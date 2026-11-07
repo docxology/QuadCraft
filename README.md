@@ -21,8 +21,10 @@ documents the Y/Z exchange and scale difference between their Cartesian
 embeddings, plus an executable Python/JavaScript/C++ interoperability example.
 
 Release details: [CHANGELOG.md](CHANGELOG.md). The
-[real Chromium gate](games/tests/browser/README.md) checks twelve application
-surfaces and records actual mouse-capture availability rather than mocking it.
+[real Chromium gate](games/tests/browser/README.md) checks all 30 catalog games
+with actual input/state/rendering and records real mouse-capture availability.
+The current minor release repairs 2048 controls/pause, Life camera/paused
+redraw, shared canvas layout, Reversi reset history and Mahjong framing.
 Native CI includes independent Debug/Release graphics-free configurations.
 
 ## Overview

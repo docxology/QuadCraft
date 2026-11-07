@@ -58,6 +58,8 @@ header h1 {
 
 .game-area {
     display: flex;
+    /* Keep CSS canvas pixels aligned with backing-store pixels and hit testing. */
+    align-items: flex-start;
     gap: 20px;
     padding: 24px;
     max-width: 1100px;

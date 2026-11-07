@@ -1,5 +1,27 @@
 # Changelog
 
+## v0.4.0 — 2026-11-07
+
+### Interactive correctness
+
+- Bind all twelve 2048 movement directions through the actual input controller, retain scoring/reset behavior and ignore movement while paused.
+- Add shared physical-point camera fitting with an explicit projection target; Life's full raw-grid extent remains in front of the perspective camera and on canvas under rotation.
+- Render paused Life single-step updates immediately and keep the HUD/camera synchronized.
+- Fit Mahjong's real tile extent instead of clipping its upper faces.
+- Stop shared flex layout from stretching canvas CSS dimensions away from their backing size, restoring consistent rendering and picking coordinates.
+- Reset Reversi controller turn/history state together with its board.
+
+### All-game browser verification
+
+- Expand the real Chromium gate from thirteen selected surfaces to all thirty catalog games, with meaningful keyboard/pointer/state transitions.
+- Split reusable helpers and board/arcade/simulation scenarios into focused modules while retaining the existing npm entrypoint and thirteen strong scenarios.
+- Capture initial/final screenshots, isolated browser contexts, runtime/resource diagnostics, failure traces and machine-readable outcomes. Missing runtimes and game errors remain hard failures.
+- Integrate the browser gate into symergetics' full, revision-specific suite profile and cross-reference QuadMath 0.5.0 / symergetics 1.2.0 contracts.
+
+Native coordinate, raw-versus-physical board, orientation/unit and graphical
+dependency contracts are unchanged. These browser scenarios do not establish
+every gameplay path, every browser or interactive native gameplay.
+
 ## v0.3.0 — 2026-11-06
 
 ### Geometry and shared methods

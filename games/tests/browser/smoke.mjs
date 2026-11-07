@@ -6,6 +6,10 @@ import { tmpdir } from 'node:os';
 import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from '@playwright/test';
+import { advance, key, state, click } from './helpers.mjs';
+import { surfaces as boardSurfaces } from './board-scenarios.mjs';
+import { surfaces as arcadeSurfaces } from './arcade-scenarios.mjs';
+import { surfaces as simulationSurfaces } from './simulation-scenarios.mjs';
 
 const gamesRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const repoRoot = resolve(gamesRoot, '..');
@@ -62,12 +66,6 @@ for (const signal of ['SIGINT', 'SIGTERM']) {
     });
 }
 
-async function advance(page, ms = 96) { await page.clock.runFor(ms); }
-async function key(page, name) {
-    await page.keyboard.press(name);
-    await advance(page);
-}
-async function state(page, fn, arg) { return page.evaluate(fn, arg); }
 
 
 async function pick(page, kind) {
@@ -99,10 +97,6 @@ async function pick(page, kind) {
         }
         throw new Error(`No visible, unobstructed, pickable ${kind} cell`);
     }, kind);
-}
-async function click(page, point, options) {
-    await page.mouse.click(point.x, point.y, options);
-    await advance(page);
 }
 
 async function go(page) {
@@ -414,8 +408,11 @@ const surfaces = [
     ['snake', snake],
     ['minesweeper', minesweeper], ['connect_four', connectFour],
     ['tower_defense', towerDefense], ['minecraft', minecraft],
+    ...boardSurfaces, ...arcadeSurfaces, ...simulationSurfaces,
 ];
 try {
+    assert.equal(surfaces.length, 30, 'Every catalog game must have a live scenario');
+    assert.equal(new Set(surfaces.map(([name]) => name)).size, 30, 'Duplicate scenarios must not hide missing games');
     const url = await startServer();
     browser = await chromium.launch({ headless: true }); // Missing runtime is a hard failure, never a skip.
     for (const [name, exercise] of surfaces) {
@@ -455,15 +452,18 @@ try {
             assert.equal(response.status(), 200);
             await page.bringToFront();
             await advance(page);
+            await page.screenshot({ path: join(diagnostics, `${name}-initial.png`), fullPage: true });
             const details = await exercise(page);
             await advance(page);
             assert.deepEqual(errors, [], `${name}: browser runtime/resource errors`);
             await page.screenshot({ path: join(diagnostics, `${name}.png`), fullPage: true });
             await context.tracing.stop();
-            results.push({ name, passed: true, ...details });
+            results.push({ name, passed: true, initialScreenshot: `${name}-initial.png`,
+                screenshot: `${name}.png`, ...details });
             console.log(`PASS ${name}`);
         } catch (error) {
-            results.push({ name, passed: false, error: error.stack || String(error), runtimeErrors: errors });
+            results.push({ name, passed: false, screenshot: `${name}-failure.png`, trace: `${name}-trace.zip`,
+                error: error.stack || String(error), runtimeErrors: errors });
             console.error(`FAIL ${name}: ${error.stack || error}`);
             try { await page.screenshot({ path: join(diagnostics, `${name}-failure.png`), fullPage: true }); }
             catch (captureError) { log.push(`Screenshot failed: ${captureError}`); }
@@ -474,7 +474,7 @@ try {
         }
     }
     assert.equal(results.filter(result => !result.passed).length, 0, 'One or more browser surfaces failed');
-    assert.equal(results.length, 13);
+    assert.equal(results.length, 30);
 } catch (error) {
     await writeFile(join(diagnostics, 'harness-error.txt'), error.stack || String(error));
     console.error(error.stack || error);
