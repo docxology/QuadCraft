@@ -14,8 +14,6 @@ jobs:
   chromium-runtime:
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    env:
-      BROWSER_DIAGNOSTICS_DIR: ${{ runner.temp }}/quadcraft-browser-diagnostics
     defaults:
       run:
         working-directory: games/tests/browser
@@ -39,6 +37,8 @@ jobs:
         run: npx --no-install playwright install --with-deps chromium
 
       - name: Exercise twelve actual browser games
+        env:
+          BROWSER_DIAGNOSTICS_DIR: ${{ runner.temp }}/quadcraft-browser-diagnostics
         run: npm test
 
       - name: Upload browser execution evidence
