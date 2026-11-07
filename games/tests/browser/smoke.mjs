@@ -176,6 +176,42 @@ async function sokoban(page) {
     assert.equal(await state(page, () => game.board.moveCount), 1);
     assert.deepEqual(await state(page, () => game.board.player), { a: 0, b: 1, c: 1, d: 2 });
 }
+
+async function snake(page) {
+    await page.locator('#btnNew').click();
+    const before = await state(page, () => ({
+        head: game.board.head, direction: game.board.direction.name,
+    }));
+    await key(page, 'w');
+    await advance(page, 250);
+    const moved = await state(page, () => ({
+        head: game.board.head, direction: game.board.direction.name, over: game.board.gameOver,
+    }));
+    assert.notEqual(moved.head, before.head, 'The real animation loop must advance Snake');
+    assert.notEqual(moved.direction, before.direction, 'Keyboard input must turn the moving snake');
+    assert.equal(moved.over, false);
+
+    await page.locator('#btnPause').click();
+    const pausedHead = await state(page, () => game.board.head);
+    await advance(page, 450);
+    assert.equal(await state(page, () => game.board.head), pausedHead, 'Pause must stop movement');
+
+    const camera = await state(page, () => ({ x: game.camera.rotX, y: game.camera.rotY }));
+    const box = await page.locator('#gameCanvas').boundingBox();
+    await page.keyboard.down('Shift');
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(box.x + box.width / 2 + 90, box.y + box.height / 2 + 45, { steps: 3 });
+    await page.mouse.up();
+    await page.keyboard.up('Shift');
+    assert.notDeepEqual(await state(page, () => ({ x: game.camera.rotX, y: game.camera.rotY })), camera);
+
+    await page.locator('#btnPause').click();
+    await advance(page, 250);
+    assert.notEqual(await state(page, () => game.board.head), pausedHead, 'Rotated gameplay must resume');
+    assert.equal(await state(page, () => game.board.gameOver), false);
+}
+
 async function rogue(page) {
     await state(page, () => {
         const b = game.board;
@@ -375,6 +411,7 @@ async function doom(page) {
 const surfaces = [
     ['go', go], ['hex', hex], ['lights_out', lightsOut], ['memory', memory],
     ['rogue', rogue], ['sokoban', sokoban], ['sudoku', sudoku], ['doom', doom],
+    ['snake', snake],
     ['minesweeper', minesweeper], ['connect_four', connectFour],
     ['tower_defense', towerDefense], ['minecraft', minecraft],
 ];
@@ -437,7 +474,7 @@ try {
         }
     }
     assert.equal(results.filter(result => !result.passed).length, 0, 'One or more browser surfaces failed');
-    assert.equal(results.length, 12);
+    assert.equal(results.length, 13);
 } catch (error) {
     await writeFile(join(diagnostics, 'harness-error.txt'), error.stack || String(error));
     console.error(error.stack || error);

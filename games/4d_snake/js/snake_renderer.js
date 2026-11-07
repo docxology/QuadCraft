@@ -13,7 +13,8 @@ class SnakeRenderer extends BaseRenderer {
     constructor(canvas, board) {
         super(canvas, board, {
             scale: 40,
-            cameraDist: 5,
+            // Stay outside the board's Cartesian bounding sphere for every rotation.
+            cameraDist: Math.max(5, 2 * board.size),
             rotX: 0.4,
             rotY: 0.7,
             bgColor: '#050f05',
