@@ -1,5 +1,5 @@
-# saves/ — Agent Notes
+# Historical grid4 experiment save snapshots maintenance
 
-Two JSON save files from the experiments page plus its README (contract already
-documented). User data — never edit; treat as reproducibility evidence for the
-experiments build.
+Do not edit, rename or delete user snapshots. Determine type and producing HTML before interpreting data; never invent a version migration guarantee.
+
+Read the adjacent [directory guide](README.md) before changing this area. Report source inspection separately from executed runtime checks.

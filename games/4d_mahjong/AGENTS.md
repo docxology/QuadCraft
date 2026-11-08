@@ -1,79 +1,15 @@
-# 4D Mahjong - Agent Instructions
+# 4D Mahjong — Model and runtime maintenance
 
-## Project Overview
+Read the [game guide](README.md), [module ownership](js/README.md), [test scope](tests/README.md) and [portfolio contracts](../../docs/games.md) before changing behavior.
 
-4D Mahjong simulates the classic tile-matching game in a 4-layered 3D layout (conceptually 4D). Players match identical free tiles to clear the board. **Production-ready** with 33 passing tests.
+## Preserve the implemented boundary
 
-## Quick Commands
+Keep logical layer ordering separate from camera depth and exposure. Do not replace array tile identity with normalized occupancy keys.
 
-```bash
-# Run all tests (33 tests, 100% pass)
-node tests/test_mahjong.js
+Play is click-driven; the inherited `BaseGame.update` does not advance tile state. The loop services rendering/HUD, while hints expire against `performance.now()` in milliseconds.
 
-# Open in browser
-open games/4d_mahjong/index.html
+[index.html](index.html) instantiates `MahjongGame` after the actual shared imports and local board/renderer/controller scripts. Inheritance or an imported helper is not evidence that this game uses every shared system. Keep rules in `MahjongBoard`, projected drawing in `MahjongRenderer` and browser input/lifecycle in `MahjongGame`.
 
-# Start local server (Port 8111)
-./games/run.sh mahjong
-```
+## Evidence and commands
 
-## Key Directories
-
-| Directory | Files | Purpose |
-|-----------|-------|---------|
-| `js/` | 3 modules | Core logic (Quadray, Board, Renderer, Game) |
-| `tests/` | 1 file | Test suite (33 tests) |
-
-## Shared Modules
-
-Imported via `<script>` tags in `index.html` from `../4d_generic/`:
-`quadray.js`, `camera.js`, `projection.js`, `zoom.js`, `synergetics.js`
-
-## Module Dependency Order
-
-Load in this order:
-
-```
-1. mahjong_board.js   # Tile layout & Matching logic
-2. mahjong_renderer.js# Canvas rendering
-3. mahjong_game.js    # Controller & Input
-```
-
-## File Inventory
-
-### JavaScript Modules (`js/`)
-
-| File | Key Exports | Purpose |
-|------|-------------|---------|
-| `mahjong_board.js` | `Board`, `Tile` | Layout generation, checking free tiles |
-| `mahjong_renderer.js`| `Renderer` | Drawing tiles with face art |
-| `mahjong_game.js` | `Game` | Selection & Hints |
-
-### Tests (`tests/`)
-
-| File | Tests | Coverage |
-|------|-------|----------|
-| `test_mahjong.js` | 33 | Tile freedom rules, matching pairs, win condition |
-
-## Key Mechanics
-
-### Freedom Rule
-
-A tile is "free" (selectable) if it has no other tile stacked on top of it
-(Layer + 1, within Quadray distance < 2.0) — see `isExposed()` in
-`js/mahjong_board.js`. The classic Mahjong Solitaire left/right side-open
-condition is **not** implemented; lateral neighbors do not block
-selection.
-
-### 4D Layering
-
-The "turtle" layout is built by stacking tiles in height (Z/W dimension).
-
-## Verification Checklist
-
-- [ ] All tests pass: `node tests/test_mahjong.js`
-- [ ] Browser loads without errors
-- [ ] Tiles render with correct faces
-- [ ] Only free tiles can be selected
-- [ ] Matches remove tiles
-- [ ] Hint system finds valid pairs
+Run commands from the QuadCraft repository root; launch with `python3.13 games/run_games.py --game mahjong`. See [tests/README.md](tests/README.md) for the Node and harness commands. Report exercised checks, not saved counts, production-readiness or inferred canvas coverage. Review the actual controls in the game guide rather than copying another game's bindings.

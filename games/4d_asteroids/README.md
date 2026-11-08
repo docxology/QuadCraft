@@ -1,68 +1,53 @@
-# 4D Quadray Asteroids
+# 4D Asteroids — Continuous wrapped flight and swept collisions
 
-A standalone implementation of Asteroids using **Quadray coordinates** and the **Isotropic Vector Matrix (IVM)** tetrahedral geometry.
+Pilot a ship among asteroids and UFOs in a continuously wrapped raw four-label world, displayed through the shared three-dimensional Quadray embedding.
 
-![4D Asteroids](https://img.shields.io/badge/4D-Asteroids-blue?style=for-the-badge)
+“4D” is the portfolio name. Physical Quadray projection has rank three; raw board labels may deliberately carry additional game state. See the [portfolio coordinate/time contract](../../docs/games.md).
 
 ## Quick Start
 
-### Option 1: Run Script (Recommended)
+From the QuadCraft repository root, with Python 3.13 and a modern browser:
 
 ```bash
-# From the repository root:
-./games/run.sh asteroids
+python3.13 games/run_games.py --game asteroids
 ```
-This starts a local server on port 8104 and opens the browser.
 
-### Option 2: Manual Server
-
-```bash
-cd games
-python3 -m http.server 8104
-open http://localhost:8104/4d_asteroids/
-```
+Serve the parent `games/` tree, not this game directory alone: [index.html](index.html) loads sibling `../4d_generic/` assets. No JavaScript bundling step is needed. The static launcher is not a multiplayer backend.
 
 ## Game Mechanics
 
-- **Geometry**: Independent continuous raw labels wrap in `[0,size)^4`; collisions
-  use physical Cartesian sphere radii in the shared native embedding. Periodic
-  images form a BCC lattice, so componentwise raw minimum deltas are not valid
-  physical nearest images. Swept free-flight collisions resolve earliest impact,
-  including seams and grazing passes; split fragments continue from the impact.
-- **Clock**: `GameLoop` supplies fixed seconds (16 ms per tick here), with the
-  shared 250 ms catch-up limit. Held thrust is 18.75 raw velocity units/s²,
-  preserving the original 0.3 impulse per tick and raw speed cap of 2.
-  UFO firing, projectile lifetime, shields and 1.5-second respawn use simulation
-  time and retain elapsed remainders. Pause freezes gameplay commands and time;
-  reset discards pending respawns and starts the seeded world again.
-- **Reproducibility**: `new AsteroidsBoard(size, {seed})` accepts a uint32 seed.
-  Omitted seeds are sampled once. All simulation draws use the board's independent
-  `GridUtils.createSeededRng` stream; cosmetic renderer draws cannot change play.
-  Repeating a reset with the same seed and tick inputs repeats the simulation.
-- **Camera**: The full continuous hypercube's 16 corners are fitted with padding,
-  keeping legal entity positions in front of the camera at every rotation.
-- **Standalone**: Zero dependencies. Open `index.html` to play.
-- **Regressions**: `node tests/test_asteroids.js`; `tests/test.html` additionally
-  exercises the actual Canvas renderer and controller in a browser.
+Entity positions wrap independently in `[0,size)^4`. Physical sphere collisions use the shared Cartesian metric with periodic BCC images, not componentwise raw minimum deltas. Swept free flight resolves the earliest collision; split fragments advance through the remaining time. `new AsteroidsBoard(size, {seed})` owns its simulation RNG and resets to that seed; renderer randomness is cosmetic.
+
+### Clock and lifecycle
+
+`GameLoop` calls `update(dt)` with fixed seconds at a 16 ms tick. Thrust is integrated with that dt; UFO fire, projectile expiry, shields and the 1.5-second respawn are simulation-time events. The shared loop caps catch-up at 250 ms. Pause rejects gameplay commands as well as updates.
 
 ## Key Controls
 
-- **W/S, A/D, Q/E**: Held thrust on the labeled axes
-- **Space**: Fire; **Shift**: Hyperspace; **V**: Shield
-- **P**: Pause; **R**: Reset; **Shift+drag**: Rotate; **Scroll**: Zoom
+W/S thrust +C/−C; A/D thrust −A/+A; Q thrusts +B and E thrusts +D. Space fires in the current raw-velocity direction (or +A at rest), Shift invokes hyperspace, V activates a shield, P pauses and R resets. Shift+drag rotates; the wheel zooms.
 
 ## Architecture
 
-```
-games/4d_asteroids/
-├── index.html           # Entry point
-├── js/
-│   ├── asteroids_board.js  # Game State & Logic
-│   ├── asteroids_renderer.js # Canvas Visualization
-│   └── asteroids_game.js   # Controller
-└── tests/
-    └── test_asteroids.js   # Node.js Unit Tests
+- [Model](js/asteroids_board.js): `AsteroidsBoard` owns game state and rules.
+- [Renderer](js/asteroids_renderer.js): `AsteroidsRenderer` — Fitted Quadray projection of entities, trails, cosmetic particles, hover readouts and the in-canvas HUD.
+- [Controller](js/asteroids_game.js): `AsteroidsGame` wires input and lifecycle.
+- [Module guide](js/README.md) describes additional helpers and load boundaries.
+
+Raw labels are not four independent physical axes. Ship speed is capped in raw coefficient space, while collision radii are physical. Shift is both a hyperspace key and the camera-drag modifier.
+
+## Testing
+
+From the repository root:
+
+```bash
+python3.13 games/run_games.py --test --game asteroids
 ```
 
----
-*Part of the [QuadCraft](../../) project.*
+[Tests and limitations](tests/README.md) distinguish logic checks from actual browser interaction. No saved count or production-readiness claim replaces current results.
+
+## Documentation
+
+- [Maintenance instructions](AGENTS.md)
+- [Shared modules](../4d_generic/README.md)
+- [Game index](../GAMES_INDEX.md)
+- [QuadCraft](../../README.md)

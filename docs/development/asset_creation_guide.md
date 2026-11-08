@@ -1,67 +1,27 @@
-# Asset Creation Guide
+# Native vertex colors and browser assets: actual import limits
 
-This guide explains how to create and import custom assets for QuadCraft.
+[Development index](README.md) · [Source customization](modding_guide.md) · [Renderer architecture](architecture.md)
 
-## Texture Assets
+## Native renderer has no asset-pack loader
 
-QuadCraft uses standard image formats for block and item textures.
+[`ChunkMesher.cpp`](../../src/render/mesh/ChunkMesher.cpp) assigns block colors, adds positional/face variation and writes zero texture coordinates. [`Game.cpp`](../../src/game/Game.cpp) embeds GLSL source and shades vertex color with lighting and wireframe/overlay options. The shader's texture-coordinate field is not evidence of texture sampling.
 
-### Block Textures
+There is no runtime PNG texture registry, OBJ/glTF importer, mod asset directory, resource-pack metadata or `registerTexture` method. CMake does not copy an `assets/` directory. A block registered in `BlockRegistry` is a material record, not an imported model.
 
-- **Format**: PNG (recommended)
-- **Resolution**: Powers of 2 (16x16, 32x32, 64x64)
-- **Mapping**: Since blocks are tetrahedrons, textures are mapped to triangular faces. The texture is typically an equilateral triangle UV-mapped onto a square image.
+## Change visible native content at its actual source
 
-#### Texture Layout
+- Material metadata: [`Block.h`](../../src/core/world/Block.h).
+- Material selection during generation: [`TerrainGenerator.h`](../../src/core/world/TerrainGenerator.h).
+- Tetrahedron geometry: [`TetrahedralElement.h`](../../src/core/world/TetrahedralElement.h).
+- Face vertices, normals and colors: `ChunkMesher.cpp`.
+- Shader effects: the source strings in `Game.cpp`.
 
-For a standard square texture:
+These are compiled changes. Preserve the world-space mesh offset and declared Cartesian scale; there is no universal asset convention of “one unit equals one tetrahedron height.” Coefficient-unit quadray basis vectors have Cartesian length `sqrt(3/2)` in the native/shared embedding.
 
-- **Bottom-Left**: Vertex A
-- **Bottom-Right**: Vertex B
-- **Top-Center**: Vertex C (approximate)
+## Browser content belongs to its game/page
 
-### UI Textures
+Portfolio games draw with their own Canvas renderer and HTML/CSS. Keep any page-relative resource URL consistent with the HTTP root and retain sibling shared modules. The historical geometry experiment likewise owns its own Canvas drawing functions; an image or model added beside it is not automatically loaded or registered.
 
-UI elements like icons and crosshairs should be transparent PNGs.
+## Texture/model design context only
 
-## Model Assets
-
-While the world is voxel-based, entities (mobs, items) can use custom meshes.
-
-- **Format**: OBJ or glTF
-- **Scale**: 1 unit = 1 tetrahedron height
-- **Orientation**: Forward is +Z, Up is +Y
-
-## Importing Assets
-
-Assets are typically loaded via the Modding System.
-
-### Directory Structure
-
-Place your assets in your mod folder:
-
-```text
-my_mod/
-├── mod.json
-└── assets/
-    └── my_mod/
-        ├── textures/
-        │   ├── blocks/
-        │   └── items/
-        └── models/
-            └── entities/
-```
-
-### Registration
-
-Register textures in your mod's initialization code:
-
-```cpp
-registry->registerTexture("my_mod:custom_block", "assets/my_mod/textures/blocks/custom_block.png");
-```
-
-## Best Practices
-
-1. **Consistency**: Match the pixel density of vanilla assets (default 16x16).
-2. **seamlessness**: Ensure textures tile correctly on all 3 sides of the triangle.
-3. **Optimization**: Keep texture sizes reasonable to save memory.
+If an importer is implemented in the future, it must specify UV coordinates, winding/normals, image color/alpha conventions, scale/orientation, ownership and loading errors. Triangular faces could be UV-mapped into images, but PNG sizes, glTF support and mod folder layouts are not current requirements or supported recipes. Decide these interfaces in code before documenting an asset pipeline.

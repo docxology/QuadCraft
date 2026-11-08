@@ -1,39 +1,5 @@
-# Experiments - AI Agent Guidelines
+# QuadrayGrid snapshots and focused geometry experiments maintenance
 
-## Purpose
+Preserve historical snapshots and user saves. Identify source filename in bug reports and comparisons; do not call grid4 the current production build or assume split scripts and standalone HTML are generated from one another.
 
-Experimental space for rapid prototyping and exploration.
-
-## Guidelines
-
-### Exploration vs Production
-
-- Experiments: Quick tests, may be messy
-- Production: Goes to `browser/` modular version
-
-### Documentation
-
-- Add comment header explaining purpose
-- Note what worked and what didn't
-- Screenshot interesting results
-
-### Cleanup
-
-- Archive successful experiments
-- Delete clearly obsolete ones
-- Keep experiments that demonstrate concepts
-
-## When to Create New Experiment
-
-- Testing new algorithm
-- Exploring visual approach
-- Prototyping feature before integration
-
-## When to Integrate
-
-Move to production when:
-
-- Algorithm proven
-- Code is clean
-- Feature is stable
-- Tests pass
+Read the adjacent [directory guide](README.md) before changing this area. Report source inspection separately from executed runtime checks.

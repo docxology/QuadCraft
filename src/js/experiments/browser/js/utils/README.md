@@ -1,66 +1,7 @@
-# Utility Modules
+# Experiment constants, units and configuration namespaces
 
-Shared constants and utilities.
+[constants.js](constants.js) declares classic-script bindings `ROOT2 = Math.SQRT2`, `S3 = sqrt(9/8)`, `GAME_CONFIG`, geometry/direction tables, logging/analysis/export configuration and utilities. Consumers also use its `constants` namespace; it is not a named-export module.
 
-## Files
+`GAME_CONFIG` contains `SIDE`, `CUBE_SIZE`, `QGRID_BOOT_DEPTH`, camera defaults and `CAMERA_PAN_SPEED`; old documentation's `CAMERA_SPEED`, `GRID_SIZE`, `MAX_RENDER_DISTANCE` and CSS palette examples were not this interface. Distinguish display scaling from physical embedding units.
 
-| File | Purpose |
-|------|---------|
-| `constants.js` | Configuration and constants |
-
-## constants.js
-
-Central configuration and mathematical constants:
-
-### Mathematical Constants
-
-```javascript
-ROOT2 = Math.sqrt(2)      // √2 for quadray scaling
-S3 = Math.sqrt(3)         // √3 for geometry
-```
-
-### Game Configuration
-
-```javascript
-// Camera settings
-CAMERA_SPEED = 0.5
-CAMERA_SENSITIVITY = 0.1
-ZOOM_SPEED = 0.1
-
-// Grid settings
-GRID_SIZE = 100
-DOT_SIZE = 2
-
-// Rendering
-MAX_RENDER_DISTANCE = 50
-```
-
-### UI Configuration
-
-```javascript
-// Panel dimensions
-CONTROL_PANEL_WIDTH = 250
-ANALYSIS_PANEL_WIDTH = 300
-
-// Time series
-TIME_WINDOW_DEFAULT = 60  // seconds
-UPDATE_INTERVAL_DEFAULT = 100  // ms
-```
-
-### Color Palette
-
-```javascript
-COLORS = {
-  octahedron: '#4a90d9',
-  tetrahedronZ: '#d94a4a',
-  tetrahedronC: '#4ad94a',
-  grid: '#888888',
-  background: '#1a1a2e'
-}
-```
-
-## Usage
-
-```javascript
-import { ROOT2, CAMERA_SPEED, COLORS } from './utils/constants.js';
-```
+`LOGGING_CONFIG.LOG_INTERVAL_MS` and `AUTO_EXPORT_INTERVAL` are milliseconds. Configuration limits are intended caps, not demonstrated frame-rate or memory guarantees. Read exact consumer code before interpreting a configuration value as enforced behavior.

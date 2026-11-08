@@ -1,39 +1,5 @@
-# Screenshots and Debug Images
+# Historical browser screenshots and debugging evidence
 
-This directory contains development screenshots and debug visualizations.
+Images here record dated experiments, including 2025 collision/nearest-empty-position debugging and a 2026-01-11 two-browser Tomcat sparse-sync screenshot. Filenames describe the author's historical context, not current measured correctness, frame rate or multiplayer readiness.
 
-## Contents
-
-Screenshots documenting:
-
-- Feature development progress
-- Bug reproductions
-- Visual debugging
-- Physics behavior analysis
-
-## Naming Convention
-
-Files are named with date and context:
-
-```text
-YYYY-M-DD_N_description.png/jpg
-```
-
-Example: `2025-8-25_1.png`
-
-## Notable Images
-
-| File | Description |
-|------|-------------|
-| `2025-10-10...nearestEmptyXYZ...` | Physics bug debugging |
-| `2026-1-11_syncedBetween2Browsers...` | Multiplayer sync demo |
-| `*_whyIsItJumpy*` | Performance analysis series |
-
-## Usage
-
-These images are useful for:
-
-- Issue tracking and bug reports
-- Feature documentation
-- Development history
-- Before/after comparisons
+Use these as issue/history references alongside the exact HTML snapshot and save data. A screenshot does not establish collision accuracy, absence of stalls, compatibility across browsers or durable synchronization. Preserve original assets and captions; this documentation audit did not replay the recorded scenarios.

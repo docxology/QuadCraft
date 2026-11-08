@@ -1,65 +1,11 @@
-# Browser Application
+# Monolithic browser world, Var state and save/sync boundaries
 
-This directory contains the standalone browser-based QuadCraft implementation.
+[index.html](index.html) is the current monolithic Canvas experiment and loads [lib/Var.js](lib/README.md). `indexOld_quadraygrid4.html` preserves an older snapshot. The split scripts under `../js/experiments/browser/` and portfolio games are independent implementations.
 
-## Files
+The page contains quadray navigation/shape editing, CCP ball-grid experiments, moving-ball collision heuristics, camera modes and trusted code evaluation. Browser quaternion camera features do not imply a native quaternion camera. Render projection/sorting and collision helpers are prototype approximations, not guarantees of watertight geometry or physical accuracy.
 
-| File | Purpose |
-|------|---------|
-| `index.html` | Main game application (QuadrayGrid4/5) |
-| `indexOld_quadraygrid4.html` | Previous version backup |
-| `lib/` | JavaScript utility libraries |
-| `saves/` | JSON save files |
-| `pic/` | Development screenshots |
+Serve from the checkout using `python3.13 -m http.server 8080`, then visit `/src/browser/index.html`. Basic local use is distinct from the optional Tomcat endpoint. Read visible controls and handlers for the selected mode: keyboard movement and camera behavior change with options. A claim that every browser or input path works would require runtime evidence.
 
-## Quick Start
+`StateMap/StateJson` currently produce type `quadcraft_quadraygrid5_state`: selection, legacy camera fields, `camPos/camQ`, code text, grid, checkbox/brush settings and a current-room `root` Var map. `LoadMap` checks that type. [Archived saves](saves/README.md) include older `V` fields and grid4 `ccp` storage; filenames alone do not establish compatibility. Quicksaves use localStorage keys `quadcraft.quicksave.1` through UI slot 9, not cookies, and may collide with older pages on the same origin.
 
-Open `index.html` directly in a modern browser - no server required for basic functionality.
-
-## Features
-
-### Core Gameplay
-
-- Tetrahedral voxel placement and removal
-- 12-direction navigation on quadray grid
-- Octahedron and tetrahedron shapes (Z and C types)
-
-### CCP Ball Grid System
-
-- Close-Centered Packing for efficient ball management
-- Physics-based ball bouncing
-- Multiple paintbrush tools for pattern creation
-
-### Save System
-
-- QuickSave slots (1-5) using localStorage
-- File-based JSON export/import
-- Cross-session persistence
-
-### Controls
-
-**Navigation:**
-
-- QWERTY (q,w,e,r,t,y): Move backward in 6 directions
-- ASDFGH (a,s,d,f,g,h): Move forward in 6 directions
-
-**Camera:**
-
-- Arrow Keys: Pan camera
-- Mouse: Left-drag rotate, right-drag pan, scroll zoom
-
-**Shapes:**
-
-- X: Place/remove octahedron
-- Z: Place/remove tetrahedron Z
-- C: Place/remove tetrahedron C
-- Space: Toggle all shapes
-
-## Implementation Notes
-
-This is the primary actively-developed version of QuadCraft. Most new features are implemented here first before being ported to other implementations.
-
-## Related
-
-- `src/js/experiments/browser/` - Modular version with separated concerns
-- `docs/development/javascript_implementation.md` - Technical documentation
+Optional sparse sync sends `readWriteSparse` requests with game, room, root and `peer.main.tNetFrom`; see [server protocol](../server/README.md). This is timestamp-merged in-memory shared state, not authenticated/authoritative multiplayer or durable world storage. Executing text uses page privileges; never paste untrusted scripts. No native or browser gameplay was exercised for this documentation audit.

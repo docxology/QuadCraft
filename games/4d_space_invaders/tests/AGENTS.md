@@ -1,6 +1,7 @@
-# tests/ — Agent Notes
+# 4D Space Invaders Tests — Regression maintenance
 
-Node-run unit tests for the 4d_space_invaders game modules (`../js/`). Run from the repo
-root via the game harness: `python3 games/run_games.py --test --game space_invaders`
-(harness and registry game id verified in `games/run_games.py` /
-`games/src/core/registry.py`, 2026-08-29).
+[README.md](README.md) lists the actual Node entrypoints, source-covered behaviors and browser-runner limits. Run documented commands from the QuadCraft repository root, not a guessed launcher-relative working directory.
+
+Document `SpaceInvadersBoard`, `SpaceInvadersRenderer` and `SpaceInvadersGame` rather than invented Invaders aliases. Keep raw hit keys and logical counters distinct from physical projection.
+
+Keep regressions tied to observable state transitions and the real board/controller boundary. Numeric pass totals or imported shared helpers are not coverage claims; report command results only when executed. Browser dependency lists and Canvas behavior require separate browser evidence. Read the [game guide](../README.md) before changing scenarios.

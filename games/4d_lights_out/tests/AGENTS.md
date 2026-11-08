@@ -1,6 +1,15 @@
-# tests/ — Agent Notes
+# 4D Lights Out test maintenance
 
-Node-run unit tests for the 4d_lights_out game modules (`../js/`). Run from the repo
-root via the game harness: `python3 games/run_games.py --test --game lights_out`
-(harness and registry game id verified in `games/run_games.py` /
-`games/src/core/registry.py`, 2026-08-29).
+Read [suite scope and commands](README.md) and [game instructions](../AGENTS.md). The test files are JavaScript behavior checks, not proof that every shared module or browser path is covered.
+
+## Behavior to preserve
+
+Keep canonical cells and normalized bounded-neighbor toggles aligned. Random generation must not get trapped by the player-facing won guard. Do not document unsupported ScoreManager low-score options as implemented.
+
+## Evidence limits
+
+Canonical physical cells, twelve direction permutations, self-plus-neighbor toggling, double-toggle reversal, win detection, nonblank randomization, metadata and reset. These do not prove an optimal solver or browser scoring persistence.
+
+There is no local HTML test runner. Run the Node logic suite and separately inspect click picking, reset and HUD on the served page.
+
+Prefer genuine consumer-visible state transitions and geometry checks over file-existence, source-text, wording or fixed-count assertions. Test actual game interfaces when changing them; helper objects do not establish controller integration. Keep suite output/exit status compatible with the [launcher test runner](../../src/qa/testing.py), and report only executed results. Browser interaction is a separate verification gate.

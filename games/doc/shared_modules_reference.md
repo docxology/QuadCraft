@@ -1,412 +1,84 @@
-# Shared Modules Reference — `4d_generic/`
+# Shared browser helpers: actual APIs and dependencies
 
-> **Note on 4D Geometry & Nomenclature**: "4D" in QuadCraft strictly means **Synergetics** geometry (Quadray tetrahedral coordinates on an IVM; 12 neighbors = permutations of `(0, 1, 1, 2)`). Canonical statement: [GAMES_INDEX.md](../GAMES_INDEX.md#note-on-4d-geometry--nomenclature).
-
-
-> Canonical documentation for all 17 shared JavaScript modules that form the foundation layer of every QuadCraft game.
-
----
-
-## Module Index
-
-| # | Module | Category | Dependencies | Description |
-|---|--------|----------|--------------|-------------|
-| 1 | `quadray.js` | math | — | Quadray 4D coordinate class with arithmetic, normalization, conversions |
-| 2 | `camera.js` | rendering | — | `CameraController` — shift-drag rotation for 3D/4D scenes |
-| 3 | `projection.js` | rendering | `quadray.js` | `projectQuadray()` → screen-space; `drawQuadrayAxes()` |
-| 4 | `zoom.js` | rendering | — | `setupZoom()` — mouse wheel zoom with min/max clamping |
-| 5 | `synergetics.js` | math | `quadray.js` | IVM constants, volume ratios (Tetra/Octa/Icosa), Jitterbug, D/R conversion |
-| 6 | `input_controller.js` | input | — | `InputController` — event-driven keyboard bindings + polled `isDown()` state |
-| 7 | `game_loop.js` | engine | — | `GameLoop` — fixed-timestep rAF loop with pause/stop/start lifecycle |
-| 8 | `hud.js` | ui | — | `HUD` — color-coded state manager for status overlays |
-| 9 | `score_manager.js` | engine | — | `ScoreManager` — score/level/lives tracker with localStorage persistence |
-| 10 | `grid_utils.js` | math | — | `GridUtils` — IVM grid generation, neighbors, bounds, distance, depth sort |
-| 11 | `base_renderer.js` | rendering | `quadray.js`, `projection.js` | `BaseRenderer` — canvas setup, Quadray projection, axis drawing, primitives |
-| 12 | `base_game.js` | engine | `game_loop.js`, `input_controller.js` | `BaseGame` — lifecycle controller with auto-setup for loop, input, camera |
-| 13 | `base_board.js` | board | `quadray.js`, `grid_utils.js`, `synergetics.js` | `BaseBoard` — common grid ops, distances, integrity, metadata |
-| 14 | `entity_system.js` | engine | `quadray.js` | `QuadrayEntity` + `EntityManager` — position/velocity, collision, wrapping |
-| 15 | `turn_manager.js` | engine | — | `TurnManager` — player rotation, move history, undo/redo |
-| 16 | `pathfinding.js` | board | `grid_utils.js` | `QuadrayPathfinder` — BFS, A*, flood fill, line-of-sight |
-| 17 | `hud-style.css` | ui | — | Shared CSS for HUD panels, overlays, and status bars |
-
----
+Source lives in [`4d_generic/`](../4d_generic/). This reference documents the current browser implementations, not the historical monolithic/native interfaces or a claim that every game uses every module. The [canonical portfolio contracts](../../docs/games.md) own mathematical units, raw identity, clocks and RNG distinctions.
 
 ## Load Order
 
-Modules **must** be loaded in dependency-safe order in `index.html`. The canonical order:
+Classic-script consumers must load dependencies before use. A working order is quadray, synergetics, grid utilities, camera, projection, zoom, input, game loop, HUD, scoring, renderer, game, then optional board/entity/turn/pathfinding scripts and game scripts. Load `graph_field.js` explicitly if used. Doom's actual HTML/ES-module bridge is a different entrypoint; do not substitute this list for it.
 
-```html
-<!-- 1. Core Math (no dependencies) -->
-<script src="../4d_generic/quadray.js"></script>
+The Python `ModuleRegistry.load_order()` returns metadata in its declared order; it does not load JavaScript. Its definitions omit graph-field/CSS and its path-presence methods inherit the [tooling default-path limitation](configuration.md).
 
-<!-- 2. Rendering (some depend on quadray.js) -->
-<script src="../4d_generic/camera.js"></script>
-<script src="../4d_generic/projection.js"></script>
-<script src="../4d_generic/zoom.js"></script>
+## Quadray and GridUtils
 
-<!-- 3. Math Extensions -->
-<script src="../4d_generic/synergetics.js"></script>
-<script src="../4d_generic/grid_utils.js"></script>
-
-<!-- 4. Engine (no math dependencies) -->
-<script src="../4d_generic/game_loop.js"></script>
-<script src="../4d_generic/input_controller.js"></script>
-<script src="../4d_generic/score_manager.js"></script>
-
-<!-- 5. UI -->
-<script src="../4d_generic/hud.js"></script>
-
-<!-- 6. Base Classes (depend on above) -->
-<script src="../4d_generic/base_renderer.js"></script>
-<script src="../4d_generic/base_game.js"></script>
-<script src="../4d_generic/base_board.js"></script>
-
-<!-- 7. Optional: Game-Pattern Modules -->
-<!-- <script src="../4d_generic/entity_system.js"></script> -->
-<!-- <script src="../4d_generic/turn_manager.js"></script> -->
-<!-- <script src="../4d_generic/pathfinding.js"></script> -->
-```
-
-> **Programmatic access:** `ModuleRegistry().load_order()` in `src/shared/` performs topological sort automatically.
-
----
-
-## Dependency Graph
-
-```mermaid
-graph LR
-    QR[quadray.js] --> PROJ[projection.js]
-    QR --> SYN[synergetics.js]
-    QR --> BR[base_renderer.js]
-    QR --> BB[base_board.js]
-    QR --> ES[entity_system.js]
-    PROJ --> BR
-    GL[game_loop.js] --> BG[base_game.js]
-    IC[input_controller.js] --> BG
-    SYN --> BB
-    GU[grid_utils.js] --> BB
-    GU --> PF[pathfinding.js]
-
-    CAM[camera.js]
-    ZOOM[zoom.js]
-    HUD[hud.js]
-    SM[score_manager.js]
-    TM[turn_manager.js]
-
-    style QR fill:#4f46e5,color:#fff
-    style BG fill:#059669,color:#fff
-    style BR fill:#059669,color:#fff
-    style BB fill:#d97706,color:#fff
-    style ES fill:#d97706,color:#fff
-    style TM fill:#d97706,color:#fff
-    style PF fill:#d97706,color:#fff
-```
-
----
-
-## Module Details
-
-### `quadray.js` — Quadray Coordinate Class
-
-**Category:** math · **Dependencies:** none
-
-The single source of truth for Quadray 4D coordinates `(a, b, c, d)`.
-
-| Method/Property | Description |
-|----------------|-------------|
-| `new Quadray(a, b, c, d)` | Construct from 4 components |
-| `.normalized()` | Zero-minimum normalization |
-| `.toXYZ()` | Convert to Cartesian `{x, y, z}` |
-| `Quadray.fromXYZ(x, y, z)` | Static: Cartesian → Quadray |
-| `.add(q)` / `.sub(q)` / `.scale(s)` | Arithmetic operations |
-| `.length()` | Vector magnitude `√((a²+b²+c²+d²)/2)` |
-| `.distanceTo(q)` | Native Quadray 4D distance |
-| `.equals(q, ε)` | Tolerance-based equality |
-| `.toKey()` | Integer-rounded string key for Maps/Sets |
-
----
-
-### `camera.js` — CameraController
-
-**Category:** rendering · **Dependencies:** none
-
-Provides shift-drag rotation for 3D/4D scene navigation.
-
-| Method/Property | Description |
-|----------------|-------------|
-| `new CameraController(canvas)` | Attach to canvas element |
-| `.rotX`, `.rotY` | Current rotation angles |
-| `.getRotation()` | Get `{rotX, rotY}` state |
-
----
-
-### `projection.js` — Quadray Projection
-
-**Category:** rendering · **Dependencies:** `quadray.js`
-
-| Method/Property | Description |
-|----------------|-------------|
-| `projectQuadray(a, b, c, d, camera, zoom)` | Quadray → `{x, y, scale}` screen coords |
-| `drawQuadrayAxes(ctx, camera, zoom)` | Draw labeled ABCD axes on canvas |
-
----
-
-### `zoom.js` — Mouse Wheel Zoom
-
-**Category:** rendering · **Dependencies:** none
-
-| Method/Property | Description |
-|----------------|-------------|
-| `setupZoom(canvas, options)` | Attach wheel listener; returns `{getZoom()}` |
-
----
-
-### `synergetics.js` — IVM Constants & Verification
-
-**Category:** math · **Dependencies:** `quadray.js`
-
-| Constant / Method | Description |
-|-------------------|-------------|
-| `SYNERGETICS.TETRA_VOL` | Tetrahedron volume = 1 |
-| `SYNERGETICS.OCTA_VOL` | Octahedron volume = 4 |
-| `SYNERGETICS.ICOSA_VOL` | Icosahedron volume ≈ 18.51 |
-| `SYNERGETICS.PHI` | Golden ratio (1+√5)/2 |
-| `SYNERGETICS.S3` | √(9/8) ≈ 1.0607 |
-| `verifyGeometricIdentities()` | 8-check Synergetics verification suite |
-
----
-
-### `grid_utils.js` — GridUtils
-
-**Category:** math · **Dependencies:** none
-
-| Method | Description |
-|--------|-------------|
-| `GridUtils.generateGrid(size)` | All raw four-index cells in a `size⁴` box |
-| `GridUtils.generateCanonicalGrid(size)` | Distinct minimum-zero representatives |
-| `GridUtils.neighbors(a,b,c,d)` | Twelve canonical physical IVM neighbor moves |
-| `GridUtils.boundedNeighbors(a,b,c,d,size)` | Those canonical neighbors inside the component bounds |
-| `GridUtils.inBounds(a,b,c,d,size)` | Raw component bounds check |
-| `GridUtils.manhattan(p1,p2)` / `.euclidean(p1,p2)` | Raw four-component distances, not quotient spatial metrics |
-| `GridUtils.depthSort(cells, projectFn)` | Painter's algorithm sort |
-| `GridUtils.createSeededRng(seed)` | Independent deterministic 32-bit simulation stream |
-| `GridUtils.shuffle(arr, rngFn)` | In-place Fisher–Yates shuffle; optional injected RNG |
-
----
-
-### `game_loop.js` — GameLoop
-
-**Category:** engine · **Dependencies:** none
-
-| Method | Description |
-|--------|-------------|
-| `new GameLoop({update, render, tickRate})` | Fixed updates; `tickRate` is milliseconds per tick |
-| `.start()` / `.stop()` / `.togglePause()` | Lifecycle control |
-| `.paused` / `.animationId` | Current pause and scheduled-frame state |
-
-`update(dtSeconds)` receives the fixed duration in **seconds**; render receives
-the accumulator fraction. A frame contributes at most 250 milliseconds.
-Continuous games integrate the supplied duration; discrete boards may ignore it.
-`BaseGame` and generated scaffold controllers forward that same duration.
-Asteroids owns no second wall clock; Doom uses its equivalent fixed-60-Hz
-controller and settles elapsed time before applying live input.
-
-### `graph_field.js` — ConservativeGraphField
-
-**Category:** simulation · **Dependencies:** none
-
-| API | Contract |
+| Source | Actual API |
 |---|---|
-| `new ConservativeGraphField(size, edges)` | Fixed undirected uniform-site graph; duplicate/reversed edges collapse and self-loops are ignored |
-| `.step(values, alpha, out=null, active=null)` | Synchronous `I - alpha*L/dMax` mixing, dimensionless `alpha` in `[0,1]`; optional non-aliasing output and active-site mask |
-| `.maxDegree` | Degree bound of the full constructed graph, retained when masking edges |
+| `quadray.js` | `new Quadray(a=0,b=0,c=0,d=0)`, `clone()`, `normalized()`, `toCartesian()`, `Quadray.fromCartesian(x,y,z)` |
+| Arithmetic | `add(other)` normalizes; `subtract(other)` and `scale(s)` retain raw components |
+| Geometry | `length()`, `distanceTo(other)`, static `Quadray.distance(q1,q2)` use embedded XYZ Euclidean units; static distance accepts structural records |
+| Identity/snapping | `equals(other,epsilon=0.0001)` compares normalized coefficients; `toKey()` normalizes then rounds; static `toIVM(q)` uses `Math.round` on minimum-zero coefficients, not nearest-point FCC search |
+| Metadata | `Quadray.BASIS`, `A/B/C/D`, `ORIGIN`; `cellVolume()` returns the game's 0.375 convention, `cellType(a,b,c,d)` a rounded-sum parity label, not a tessellation constructor |
+| `grid_utils.js` | `GridUtils.generateGrid(size)` enumerates raw `size**4` slots; `generateCanonicalGrid(size)` retains minimum-zero representatives |
+| Keys and bounds | `key(a,b,c,d)` preserves raw identity; `parseKey(k)` returns a record; `inBounds(a,b,c,d,size)` checks raw component bounds |
+| Graph | `neighbors(a,b,c,d)` normalizes twelve moves from `DIRECTIONS`; `boundedNeighbors(...,size)` bounds the normalized result |
+| Metrics | `manhattan(p1,p2)` and `euclidean(p1,p2)` are raw four-coefficient metrics, not embedded physical distances |
+| Utilities | `depthSort(cells,projectFn)` returns projected copies sorted by `pScale`; `randomCoord(size)` uses `Math.random`; `createSeededRng(seed)` gives an independent Mulberry32 stream; `shuffle(arr,rngFn=Math.random)` mutates and returns the array |
 
-For finite concentrations within the numeric range, symmetric edge flux
-preserves closed-graph mass and range up to floating roundoff. Masks disable
-incident edges without deleting stored values. The kernel adds no sources,
-evaporation or saturation. SimAnt separately supplies eight reversible raw
-neighbors, terrain permeability, ten-tick mixing and five-tick evaporation.
-Its raw labels must not be canonicalized through `GridUtils.neighbors`.
-The [suite example](https://github.com/docxology/symergetics/blob/main/examples/suite_interoperability.py)
-compares this generic operator with QuadMath on an explicitly exchanged FCC graph.
+`Quadray.IVM_DIRECTIONS` is the separate eight signed coefficient-axis steps, not the twelve FCC moves. Raw `GridUtils.key` is intentionally different from normalized `Quadray.toKey`. Never merge board occupancy aliases as a generic cleanup.
 
----
+`synergetics.js` exports `SYNERGETICS` (ROOT2, S3, TETRAHEDRAL_ANGLE, BASIS_LENGTH, TETRA_VOL, OCTA_VOL, CUBO_VOL), `angleBetweenQuadrays(q1,q2)` in degrees, `verifyRoundTrip(q,tolerance=0.01)` and `verifyGeometricIdentities()`. It does not expose the Python-only Jitterbug/PHI/icosahedron interface. Numerical identity checks do not prove game rules or physical tiling.
 
-### `input_controller.js` — InputController
+## Camera, projection and renderer
 
-**Category:** input · **Dependencies:** none
+```javascript
+const q = new Quadray(1, 0, 0, 0);
+const opts = { rotX: 0.5, rotY: 0.7, scale: 35,
+               cameraDist: 5, centerX: 300, centerY: 300 };
+const point = projectQuadray(q, opts);
+```
 
-| Method | Description |
-|--------|-------------|
-| `new InputController()` | Create bindings and held-key state; does not attach yet |
-| `.attach()` / `.detach()` | Attach/remove the document keyboard listeners |
-| `.bind(keys, callback, actionName=null)` | Event-driven key or key-array callback |
-| `.isDown(key)` | Polled held-key state |
+`projectQuadray(q,{rotX,rotY,scale,cameraDist,centerX,centerY,target})` takes a Quadray object, not four numbers. `target` is an optional physical XYZ record. Rotation angles are radians; camera distance is embedded XYZ units and output x/y are pixels. The returned `scale` is a perspective multiplier. `drawQuadrayAxes(ctx,opts,axisLen=2)` takes the same options. Projection does not clip points at/behind the camera.
 
----
+`new CameraController(canvas,{mode='shift-drag',sensitivity=0.005,clampX=null}={})` installs canvas mouse listeners and exposes `rotX`, `rotY`, `isDragging`. `left-drag` selects plain-left rotation; shift-drag mode accepts shift or right-button. There is no `getRotation()` method.
 
-### `score_manager.js` — ScoreManager
+`setupZoom(canvas,renderer,{min=10,max=120,zoomIn=1.08,zoomOut=0.92}={})` installs a wheel listener and mutates `renderer.scale`; it returns no zoom controller.
 
-**Category:** engine · **Dependencies:** none
+`new BaseRenderer(canvas,board,opts={})` stores canvas/context and projection properties; no automatic resize is installed. Options include scale, cameraDist, rotX/rotY, bgColor and fontFamily. Subclasses override `render()` and can use `_project(a,b,c,d)`, `_drawAxes()`, `_clearCanvas(color)`, `_drawHUD(lines,opts)`, `_drawCircle(x,y,radius,color)`, `_drawDiamond(x,y,size,fillColor,strokeColor)`.
 
-| Method | Description |
-|--------|-------------|
-| `new ScoreManager(gameKey)` | Create with localStorage key prefix |
-| `.addScore(points)` / `.getScore()` | Score management |
-| `.setLevel(n)` / `.getLevel()` | Level tracking |
-| `.loseLife()` / `.getLives()` | Lives tracking |
-| `.isGameOver()` | Check lives ≤ 0 |
-| `.getHighScore()` / `.saveHighScore()` | Persistent high score |
-| `.reset()` | Reset session |
+`fitToPoints(points,padding=32)` fits physical extents with a bounding sphere, changing target/camera distance/scale, not board labels or physical units. Empty/nonfinite points or insufficient canvas padding can raise `RangeError`. A renderer does not automatically depth-sort or fit a game's board.
 
----
+## GameLoop and BaseGame
 
-### `hud.js` — HUD Manager
+`new GameLoop({update,render,tickRate=1000/60})` accumulates browser milliseconds; `tickRate` is **milliseconds per update**, not Hz. It calls `update(tickRate/1000)` with fixed **seconds** and `render(accumulator/tickRate)` with a fraction. A frame contributes at most 250 ms. Lifecycle: `start()`, `stop()`, `togglePause()`; state includes `paused`, `animationId`, `accumulator`. Stop/start establishes a fresh wall clock but does not itself clear the accumulator.
 
-**Category:** ui · **Dependencies:** none
+`new BaseGame(canvas,hudElement,board,renderer,opts={})` composes existing objects. Options include `tickRate` (default 16 ms), name, zoomOpts, cameraMode. `init()` attaches input and starts the loop. Hooks are `update(dtSeconds)`, `_setupGameInput()` and `_getHUDState()` returning `{text,color}`; input setup runs during base construction. Rendering calls the supplied `renderer.render()` after camera rotation synchronization. `togglePause()` updates HUD; `reset()` stops, clears the accumulator, calls board reset if available, then starts. There is no universal `this.options` API or controller `render()` hook.
 
-| Method | Description |
-|--------|-------------|
-| `new HUD(elementId)` | Attach to DOM element |
-| `.update(state)` | Update display with game state object |
-| `.setStatus(text, color)` | Set status line with color coding |
+Each actual controller owns its integration policy. Discrete boards may ignore dt; entity velocity units must agree with the supplied dt. Default Minecraft controller updates analysis, not its board's physics/time. Doom owns a separate fixed-60-Hz controller.
 
----
+## Input, HUD and scoring
 
-### `base_renderer.js` — BaseRenderer
+- `new InputController()` does not attach listeners. `bind(keys,callback,actionName=null)` accepts a string/array using `KeyboardEvent.key` spelling (space is `' '`). `attach()`/`detach()` use `document`, even though attach declares a target parameter. `isDown(key)` reads held state. No universal mouse/replay/reset subsystem is implied.
+- `new HUD(element)` takes an element, not an element ID. Methods: `set(text,color)`, `playing(text)`, `paused(text)`, `gameOver(text,won=false)`, `warning(text)`; static `livesString(count,emoji)`. No `update(state)` or `setStatus` API.
+- `new ScoreManager({lives=3,level=1,levelThreshold=500,storageKey=null}={})` exposes score/level/lives/highScore/linesCleared fields. `addScore(points)` returns `{leveled}`, `nextLevel()`, `loseLife()` returns game-over boolean (initial zero means unlimited), `addLife()`, `reset()`, `toJSON()`. High-score storage is optional and attempted only with a key; there are no get/set-score/level getters or public save method.
+- `hud-style.css` is styling, not a JS module or game-state manager.
 
-**Category:** rendering · **Dependencies:** `quadray.js`, `projection.js`
+## BaseBoard
 
-| Method | Description |
-|--------|-------------|
-| `new BaseRenderer(canvas)` | Set up 2D context with auto-resize |
-| `.clear()` | Clear canvas |
-| `.drawAxes(camera, zoom)` | Draw Quadray ABCD axes |
-| `.projectQuadray(a,b,c,d,camera,zoom)` | Delegate to `projectQuadray()` |
-| `.drawCell(x, y, size, color)` | Draw a single cell shape |
-| `.drawLine(x1,y1,x2,y2,color)` | Draw a line segment |
+`new BaseBoard(size=6,{lives=3,level=1,verify=true,name}={})` creates an empty raw-keyed `Map`. `getCell(q)` / `setCell(q,value)` take coordinate records; `key(a,b,c,d)` takes four numbers. Helpers: `parseKey(k)`, `inBounds(q)`, `getNeighbors(q)` (bounded canonical), `getAllNeighbors(q)`, raw `manhattanDistance`/`euclideanDistance`, physical `quadrayDistance`, `angleBetween(from,to1,to2)` (Quadray instances), `wrap(v)`, `forEachCell(fn)`, `generateGrid()`.
 
----
+`getMetadata()` delegates to `_baseMetadata()` for score/lives/level/gameOver/size and available reference constants. `_verifyIntegrity()` spot-checks round trips; it does not validate topology or occupancy. `reset()` clears grid/gameOver/score, not every subclass state or life/level field. `DIRECTIONS` delegates to twelve GridUtils moves. `NAMED_DIRECTIONS` currently maps only eight name strings over twelve moves, so the last four names are undefined; do not use it as a complete movement-label contract.
 
-### `base_game.js` — BaseGame
+## Entity, turn and path helpers
 
-**Category:** engine · **Dependencies:** `game_loop.js`, `input_controller.js`
+`new QuadrayEntity(posArray,velArray=null,opts={})` stores raw coefficient records. `update(dt,size)` integrates and optionally wraps; `wrapPosition(size)`, `setVelocity(array)`, `clampSpeed(max)`, `destroy()`, `toQuadray()`, `posKey()` are available. `distTo(other)` is physical, while `euclideanDistTo`, `manhattanDistTo`, radius collision (`collidesWith`) and speed clamping use raw four-component metrics. Time units come from the caller.
 
-| Method | Description |
-|--------|-------------|
-| `new BaseGame(canvas, hudElement, board, renderer, opts)` | Compose actual board/renderer with loop, input, HUD and optional camera/zoom |
-| `.init()` | Attach input and start the loop |
-| `.update(dtSeconds)` | Override game logic per fixed tick |
-| `._setupGameInput()` / `._getHUDState()` | Override game bindings and HUD state |
-| `.togglePause()` / `.reset()` | Pause or reset board and loop |
-| `.loop` | Underlying `GameLoop`; rendering calls `renderer.render()` |
-| `.input` | Underlying `InputController` |
+`EntityManager` provides `add(entity)`, `removeInactive()`, `getByType(type)`, `getActive()`, `update(dt,size)`, `checkCollisions(typeA,typeB,callback)`, `nearest(pos,type)`, `count`, `clear()`. Nearest uses the raw metric. It is not the native engine's entity manager.
 
----
+`new TurnManager(players=['black','white'],{maxHistory=1000}={})` requires at least two players. Properties: currentPlayer, opponent, playerCount, moveCount. Methods: `recordMove(move)`, `nextTurn()`, `recordAndAdvance(move)`, `undo()`, `redo()`, `canUndo()`, `canRedo()`, `lastMoves(n=5)`, `movesBy(player)`, `getMetadata()`, `reset()`. Undo/redo returns entries and changes turn/history only; the game must restore/reapply actual board state. Timestamps use `Date.now()` milliseconds.
 
-### `hud-style.css` — Shared HUD Styles
+`QuadrayPathfinder.bfs(start,goal,isWalkable,size)` and `shortestPath(start,goal,isWalkable,size,costFn)` return inclusive paths or null on canonical physical cells. Default A* uses the IVM hop lower bound; custom finite nonnegative entry costs use a zero heuristic (Dijkstra). `floodFill(seed,canSpread,size,maxCells=Infinity)` includes the seed. `lineOfSight(origin,{da,db,dc,dd},isBlocking,size,maxRange=Infinity)` instead advances raw coefficients without canonicalization, excluding the blocker. `cellsInRange(center,range,size)` uses raw Manhattan distance and excludes center. These are not interchangeable graph/range semantics.
 
-Provides consistent styling for all game HUD overlays, panels, and status bars.
+## ConservativeGraphField
 
----
+`new ConservativeGraphField(size,edges)` deduplicates undirected edges and ignores self-loops. `step(values,alpha,out=null,active=null)` applies synchronous `I-alpha*L/dMax` mixing; alpha is dimensionless in `[0,1]`. Output must not alias input. Masks disable incident edges but retain stored values; maxDegree remains the full graph bound. Equal/opposite edge flux conserves closed-graph mass and range up to finite floating-point roundoff. This is not symmetric-normalized heat, evaporation, sources or a physical diffusion-time calibration. SimAnt supplies its own raw adjacency and update cadence. The kernel is a separate script outside the Python core/optional registry lists.
 
-### `base_board.js` — BaseBoard
-
-**Category:** board · **Dependencies:** `quadray.js`, `grid_utils.js`, `synergetics.js`
-
-Common board logic extracted from 20 game board files. Provides grid operations, geometric verification, distance calculations, and base metadata.
-
-| Method | Description |
-|--------|-------------|
-| `new BaseBoard(size, options)` | Create grid with size and game-specific options |
-| `.getCell(q)` | Get cell value by Quadray position |
-| `.setCell(q, value)` | Set cell value by Quadray position |
-| `.key(q)` | Convert Quadray to string key via `GridUtils.key()` |
-| `.parseKey(key)` | Parse string key back to `{a,b,c,d}` |
-| `.getNeighbors(q)` | In-bounds IVM neighbors via `GridUtils.boundedNeighbors()` |
-| `.manhattanDistance(q1, q2)` | Manhattan distance via `GridUtils.manhattan()` |
-| `.euclideanDistance(q1, q2)` | Raw 4-component distance via `GridUtils.euclidean()` |
-| `.quadrayDistance(q1, q2)` | IVM distance via `Quadray.distance()` |
-| `.angleBetween(from, to1, to2)` | Angle via `angleBetweenQuadrays()` |
-| `._verifyIntegrity()` | Geometric round-trip verification on corners |
-| `.getMetadata()` | Base game state (size, cellCount, gameOver, score) |
-| `BaseBoard.DIRECTIONS` | Static: 8 IVM face-touching direction vectors |
-
----
-
-### `entity_system.js` — QuadrayEntity + EntityManager
-
-**Category:** engine · **Dependencies:** `quadray.js`
-
-Entity management for real-time games (Asteroids, Frogger, Pong, etc.). Handles position, velocity, collision, and world wrapping.
-
-| Class / Method | Description |
-|----------------|-------------|
-| `new QuadrayEntity(options)` | Create entity with position, velocity, radius, type |
-| `.update(dt)` | Advance position by velocity × dt |
-| `.distanceTo(other)` | Distance between two entities |
-| `.collidesWith(other)` | Radius-based collision detection |
-| `.wrapToGrid(size)` | Wrap entity position to grid bounds |
-| `new EntityManager()` | Create empty entity manager |
-| `.add(entity)` | Register an entity |
-| `.remove(entity)` | Remove an entity |
-| `.getByType(type)` | Filter entities by type string |
-| `.updateAll(dt)` | Batch-update all entities |
-| `.detectCollisions(typeA, typeB)` | Find all colliding pairs between two types |
-| `.wrapAll(size)` | Wrap all entity positions |
-
----
-
-### `turn_manager.js` — TurnManager
-
-**Category:** engine · **Dependencies:** none
-
-Turn management for turn-based games (Chess, Checkers, Reversi, etc.). Handles player rotation, move history, and undo/redo.
-
-| Method | Description |
-|--------|-------------|
-| `new TurnManager(players, options)` | Create with player list + optional config |
-| `.getCurrentPlayer()` | Get current player |
-| `.nextTurn()` | Advance to next player |
-| `.recordMove(move)` | Push move onto history stack |
-| `.undo()` | Pop last move and return it |
-| `.redo()` | Reapply last undone move |
-| `.getMoveHistory()` | Full move history array |
-| `.getTurnNumber()` | Current turn count |
-| `.reset()` | Reset turn state |
-| `.getState()` | Serializable snapshot for save/load |
-| `.loadState(state)` | Restore from snapshot |
-
----
-
-### `pathfinding.js` — QuadrayPathfinder
-
-**Category:** board · **Dependencies:** `grid_utils.js`
-
-Pathfinding algorithms for IVM grids. Used by games with AI movement, route planning, or range queries.
-
-| Method | Description |
-|--------|-------------|
-| `new QuadrayPathfinder(options)` | Create pathfinder with size, isBlocked callback |
-| `.bfs(start, goal)` | Breadth-first search → shortest path |
-| `.aStar(start, goal, heuristic)` | A* search with custom heuristic |
-| `.floodFill(start, maxDist)` | All reachable cells within maxDist |
-| `.lineOfSight(from, to)` | Check unobstructed line between positions |
-| `.getRange(center, radius)` | All cells within radius (Manhattan) |
-
----
-
-## Categories Summary
-
-| Category | Modules | Purpose |
-|----------|---------|---------|
-| **math** | `quadray.js`, `synergetics.js`, `grid_utils.js` | 4D coordinate math, constants, grid operations |
-| **rendering** | `camera.js`, `projection.js`, `zoom.js`, `base_renderer.js` | 3D/4D visualization pipeline |
-| **engine** | `game_loop.js`, `score_manager.js`, `base_game.js`, `entity_system.js`, `turn_manager.js` | Game lifecycle, scoring, entity management, turn logic |
-| **board** | `base_board.js`, `pathfinding.js` | Grid board logic, pathfinding algorithms |
-| **input** | `input_controller.js` | Keyboard/mouse event handling |
-| **ui** | `hud.js`, `hud-style.css` | Heads-up display overlays |
-
----
-
-*See also: [architecture.md](architecture.md) · [space_math_reference.md](space_math_reference.md) · [game_template.md](game_template.md)*
+[Python metadata](python_infrastructure.md) · [Python math differences](space_math_reference.md) · [Testing](testing_guide.md)

@@ -1,25 +1,5 @@
-# Screenshots - AI Agent Guidelines
+# Historical browser screenshots and debugging evidence maintenance
 
-## Purpose
+Do not delete or rename historical images without understanding references. Caption new images with date, source snapshot and observed behavior. Avoid promoting a debug filename into a current verification claim.
 
-Development documentation through visual snapshots.
-
-## Guidelines
-
-### Adding Screenshots
-
-- Use descriptive filenames
-- Include date for chronology
-- Note bug/feature context
-
-### Cleanup
-
-- Archive old debug images periodically
-- Keep key milestone screenshots
-- Consider git-lfs for large images
-
-## Do NOT
-
-- Commit screenshots for every small change
-- Store large video files here
-- Delete without checking relevance
+Read the adjacent [directory guide](README.md) before changing this area. Report source inspection separately from executed runtime checks.

@@ -1,86 +1,25 @@
-# 4D Catan - Agent Instructions
+# 4D Catan maintenance — Turn phases, resource tiles and a local heuristic opponent
 
-## Project Overview
+Read the [game guide](README.md), [repository instructions](../../AGENTS.md) and [portfolio contracts](../../docs/games.md) before changing behavior. This folder is a browser game, not the native QuadCraft runtime.
 
-4D Catan adapts the classic resource gathering and trading game to a 4D tetrahedral lattice. Players build settlements, roads, and cities on IVM vertices, collect resources based on dice rolls, and trade with the bank or other players. **Production-ready** with 10 passing tests.
+## Source ownership
 
-## Quick Commands
+- [index.html](index.html) is authoritative for script order, page controls and construction.
+- [js/README.md](js/README.md) maps `CatanBoard`, `CatanRenderer` and `CatanGame` to their actual files.
+- [tests/README.md](tests/README.md) records the actual source paths and historical browser-runner limitations.
 
-```bash
-# Run all tests (10 tests, 100% pass)
-node tests/test_catan.js
+## Preserve game-specific invariants
 
-# Open in browser
-open games/4d_catan/index.html
+Keep board resource accounting separate from controller phases and helper effects. Preserve HTML load order: board constants precede card/trading/robber/AI helpers. Do not infer complete standard-Catan legality or pause ownership from the shared base.
 
-# Start local server (Port 8108)
-./games/run.sh catan
-```
+This is an action-driven turn game, not continuous physics. After a human end-turn, a browser timeout schedules the AI after 500 ms; this timer is independent of the shared render-loop pause.
 
-## Key Directories
+## Supported scope
 
-| Directory | Files | Purpose |
-|-----------|-------|---------|
-| `js/` | 8 modules | Core logic, AI, Cards, Trading, Robber |
-| `tests/` | 1 file | Test suite (10 tests) |
+Building/neighbor rules are this adaptation’s implementation, not standard Catan guarantees: neighbor tiles use a physical-distance threshold and road creation is not a full standard-road legality validator. Action handlers and pending AI timeouts are not globally frozen by loop pause.
 
-## Shared Modules
+Do not infer inherited APIs from scripts merely being loaded. Keep raw storage, normalized physical points, graph edges and display geometry separate. Link shared math rather than copying a conflicting distance formula or fabricated local `quadray.js` API.
 
-Imported via `<script>` tags in `index.html` from `../4d_generic/`:
-`quadray.js`, `camera.js`, `projection.js`, `zoom.js`, `synergetics.js`
+## Verification expectations
 
-## Module Dependency Order
-
-Load in this order:
-
-```
-1. catan_cards.js      # Dev cards & Resource types
-2. catan_board.js      # World map (Tiles, Vertices, Edges)
-3. catan_robber.js     # Robber mechanics
-4. catan_trading.js    # Trade logic
-5. catan_ai.js         # Bot logic
-6. catan_renderer.js   # 3D Rendering
-8. catan_game.js       # Main Controller
-```
-
-## File Inventory
-
-### JavaScript Modules (`js/`)
-
-| File | Key Exports | Purpose |
-|------|-------------|---------|
-| `catan_board.js` | `Board`, `Tile`, `Structure` | Hex-equivalent map in 4D |
-| `catan_cards.js` | `DevCard`, `Resource` | Deck management |
-| `catan_robber.js` | `Robber` | Blocking tiles on 7 roll |
-| `catan_trading.js` | `TradeOffer` | 4:1, 3:1, 2:1 exchanges |
-| `catan_ai.js` | `CatanBot` | Decision making for AI players |
-| `catan_renderer.js` | `Renderer` | Visualizing resources/structures |
-| `catan_game.js` | `Game` | Turn loop, state machine |
-
-### Tests (`tests/`)
-
-| File | Tests | Coverage |
-|------|-------|----------|
-| `test_catan.js` | 10 | Resource production, building rules, road connectivity, trading |
-
-## Key Mechanics
-
-### Topology
-
-- **Tiles**: 12-neighbor IVM cells (effectively 4D hexes).
-- **Settlements**: Placed on Vertices (interstices).
-- **Roads**: Placed on Edges (connecting vertices).
-
-### AI
-
-Bots (`CatanBot`) evaluate potential build spots based on resource variety and probability (pips).
-
-## Verification Checklist
-
-- [ ] All tests pass: `node tests/test_catan.js`
-- [ ] Browser loads without errors
-- [ ] Map generates with diverse resources
-- [ ] Build menu works (Road, Settlement, City)
-- [ ] Dice roll distributes resources
-- [ ] Robber blocks resources
-- [ ] Trade menu works
+From the QuadCraft root, use `python3.13 games/run_games.py --test --game catan` for the registered suites. Also validate the portfolio with `python3.13 games/run_games.py --validate` and inspect the served page for console errors, real controls, camera/zoom and reset behavior. Follow the [repository testing guide](../../docs/development/testing_guide.md); Node logic results alone do not establish browser correctness. Report only checks actually run, without permanent passing-count claims.

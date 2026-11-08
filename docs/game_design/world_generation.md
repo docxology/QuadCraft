@@ -1,666 +1,80 @@
-# QuadCraft World Generation
+# World Generation: Native Cartesian Sampling and Minecraft Raw Slots
 
-This document describes the procedural world generation system used in QuadCraft, focusing on the creation of tetrahedral landscapes and structures.
+The native prototype and portfolio Minecraft initialize different worlds. Neither implements the universal biome/template/plugin framework once described here. This page traces the actual development-checkout code; it contains no runtime or visual-validation receipt.
 
-> **Scope note (verified against the live tree):** the noise/biome/chunking
-> content below describes an aspirational design that does not match any
-> shipped `games/` implementation. The only real world-generation code —
-> `games/4d_minecraft/js/minecraft_board.js` `generateTerrain()` — has no
-> noise functions, no biome map, no L-systems, no Voronoi diagrams, and no
-> chunking: it is a fixed 3-layer stack (`c===0` stone, `c===1` dirt,
-> `c===2` grass at 70% probability) over a bounded, non-chunked `size=8`
-> IVM grid (`new MinecraftBoard(size = 8)`, logged as `8^4 IVM voxel
-> grid`), plus exactly 4 randomly-placed trees and 2 hardcoded diamond
-> blocks. There is no player-position concept in this game (only a
-> rotatable/zoomable camera per `games/4d_minecraft/js/minecraft_renderer.js`),
-> so "dynamic loading based on player position" and "infinite worlds"
-> below do not apply. Treat sections below other than this note as an
-> unimplemented design spec, not current `games/` behavior.
-
-## Overview
-
-QuadCraft's world generation system creates diverse tetrahedral environments using procedural generation techniques adapted for tetrahedral space. The generation process follows a multi-layered approach to create coherent, interesting, and playable worlds.
-
-```mermaid
-graph TD
-    subgraph "World Generation Process"
-        InitialParams["World Parameters"]
-        TerrainGeneration["Terrain Generation"]
-        BiomeDistribution["Biome Distribution"]
-        FeatureGeneration["Feature Generation"]
-        StructurePlacement["Structure Placement"]
-        DetailPass["Detail Pass"]
-    end
-    
-    InitialParams --> TerrainGeneration
-    TerrainGeneration --> BiomeDistribution
-    BiomeDistribution --> FeatureGeneration
-    FeatureGeneration --> StructurePlacement
-    StructurePlacement --> DetailPass
-```
-
-## World Parameters
-
-Each QuadCraft world is initialized with a set of parameters that control the generation process:
-
-```mermaid
-graph TD
-    subgraph "World Parameters"
-        Seed["World Seed"]
-        WorldType["World Type"]
-        TerrainScale["Terrain Scale"]
-        BiomeSettings["Biome Settings"]
-        GenerationFlags["Generation Flags"]
-    end
-    
-    Seed --> RandomGenerator["Random Number Generator"]
-    WorldType --> GenerationStrategy["Generation Strategy"]
-    TerrainScale --> NoiseSettings["Noise Settings"]
-    BiomeSettings --> BiomeDistribution["Biome Distribution"]
-    GenerationFlags --> FeatureToggle["Feature Toggle"]
-```
-
-Key world parameters include:
-- **World Seed**: A numerical value that initializes the random number generator
-- **World Type**: Determines the overall terrain type (e.g., floating islands, continuous terrain, caves)
-- **Terrain Scale**: Controls the scale of terrain features
-- **Biome Settings**: Configures the distribution and characteristics of biomes
-- **Generation Flags**: Toggles specific generation features on or off
-
-## Tetrahedral Space Representation
-
-Unlike traditional voxel games that use cubic grids, QuadCraft uses a tetrahedral grid system for world representation:
-
-```mermaid
-graph TD
-    subgraph "Tetrahedral Grid System"
-        SpaceFilling["Space-Filling Approach"]
-        TetrahedralMesh["Tetrahedral Mesh"]
-        Coordinates["Quadray Coordinates"]
-        ChunkSystem["Tetrahedral Chunks"]
-    end
-    
-    SpaceFilling --> RegularTetrahedra["Regular Tetrahedra"]
-    SpaceFilling --> Octahedra["Octahedral Gaps"]
-    
-    TetrahedralMesh --> VertexData["Vertex Data"]
-    TetrahedralMesh --> FaceData["Face Data"]
-    
-    Coordinates --> QuadrayConversion["Quadray Conversion"]
-    Coordinates --> WorldIndexing["World Indexing"]
-    
-    ChunkSystem --> ChunkBoundaries["Chunk Boundaries"]
-    ChunkSystem --> ChunkLoading["Chunk Loading"]
-```
-
-The tetrahedral grid uses:
-- Regular tetrahedra arranged in a space-filling pattern
-- Quadray coordinates to index positions in tetrahedral space
-- Custom chunk system designed for tetrahedral elements
-- Specialized mesh generation for rendering tetrahedral blocks
-
-## Noise Generation for Tetrahedral Space
-
-Procedural noise functions are adapted for tetrahedral space to generate coherent terrain:
-
-```mermaid
-graph TD
-    subgraph "Noise Functions"
-        SimplexNoise["Simplex Noise"]
-        FractalNoise["Fractal Noise"]
-        DomainWarping["Domain Warping"]
-        TetrahedralAdaptation["Tetrahedral Adaptation"]
-    end
-    
-    SimplexNoise --> BaseNoise["Base Terrain"]
-    FractalNoise --> Roughness["Terrain Roughness"]
-    DomainWarping --> TerrainDistortion["Terrain Distortion"]
-    TetrahedralAdaptation --> QuadrayMapping["Quadray Mapping"]
-    
-    subgraph "Noise Composition"
-        HeightMap["Height Map"]
-        DensityField["Density Field"]
-        BiomeNoise["Biome Noise"]
-        FeatureNoise["Feature Noise"]
-    end
-    
-    BaseNoise --> HeightMap
-    BaseNoise --> DensityField
-    Roughness --> HeightMap
-    Roughness --> DensityField
-    TerrainDistortion --> DensityField
-    QuadrayMapping --> DensityField
-```
-
-Key noise generation features:
-- **Adapted Simplex Noise**: Modified for tetrahedral space
-- **Fractal Brownian Motion**: Creates natural-looking terrain variations
-- **Domain Warping**: Adds natural distortions to avoid regular patterns
-- **Tetrahedral-Specific Noise**: Custom noise functions that work well in quadray coordinate space
-- **Multi-layered Noise**: Combination of multiple noise functions for complex terrain
+[Design index](README.md) · [Coordinate contract](../quadray_coordinates.md) · [Block storage](block_system.md) · [Geometry boundaries](../mathematics/tetrahedral_geometry.md).
 
 ## Terrain Generation Algorithm
 
-The terrain generation algorithm creates the base landscape structure:
+### Native Prototype
 
-```mermaid
-sequenceDiagram
-    participant WorldGenerator
-    participant NoiseGenerator
-    participant TetrahedralGrid
-    participant ChunkManager
-    
-    WorldGenerator->>NoiseGenerator: Initialize with seed
-    WorldGenerator->>ChunkManager: Request chunk generation
-    ChunkManager->>WorldGenerator: Request terrain for chunk
-    WorldGenerator->>NoiseGenerator: Generate 3D noise field
-    NoiseGenerator->>WorldGenerator: Return noise values
-    WorldGenerator->>WorldGenerator: Apply terrain function
-    WorldGenerator->>TetrahedralGrid: Determine solid/empty cells
-    TetrahedralGrid->>WorldGenerator: Return tetrahedral occupancy
-    WorldGenerator->>ChunkManager: Return generated chunk data
-```
+[TetraChunk.generate()](../../src/core/world/TetraChunk.cpp) clears existing elements and invokes a static [TerrainGenerator](../../src/core/world/TerrainGenerator.h). The generator:
 
-The terrain generation process:
-1. **Initialization**: Set up noise generators with the world seed
-2. **Chunk Request**: Generate terrain chunk by chunk
-3. **Noise Field**: Create a 3D noise field for the chunk
-4. **Terrain Function**: Apply mathematical functions to the noise to determine terrain shape
-5. **Tetrahedral Mapping**: Map the terrain function to tetrahedral grid cells
-6. **Block Assignment**: Determine which tetrahedral cells are solid and which are empty
-7. **Block Type Selection**: Assign appropriate block types based on position and biome
+1. Samples an $8\times8\times8$ Cartesian grid inside each side-16 Cartesian chunk, giving sample-cube side 2.
+2. Constructs each sample cube's eight corners and visits five hardcoded four-corner index groups.
+3. Averages each group's four vertices to obtain an anchor.
+4. Chooses a block type from Cartesian height and field values.
+5. Converts a non-air anchor into chunk-local quadrays and stores its block ID.
 
-## Special Considerations for Tetrahedral Terrain
+Only anchors and IDs survive this process. The native rendered element uses separate fixed offsets; it does **not** retain each group's cube-corner vertices. Therefore the five groups do not establish a faithful rendered cube subdivision, nonoverlap or a space-filling regular tetrahedral honeycomb.
 
-Generating terrain in tetrahedral space requires special considerations:
+### Native Noise Generation
 
-```mermaid
-graph TD
-    subgraph "Tetrahedral Terrain Challenges"
-        Connectivity["Connectivity"]
-        Orientation["Tetrahedron Orientation"]
-        Transitions["Smooth Transitions"]
-        FaceAlignment["Face Alignment"]
-    end
-    
-    Connectivity --> PathfindingConsiderations["Pathfinding Considerations"]
-    Connectivity --> Accessibility["Accessibility Checks"]
-    
-    Orientation --> ConsistentPatterns["Consistent Patterns"]
-    Orientation --> SpaceFillingMethod["Space-Filling Method"]
-    
-    Transitions --> BiomeBlending["Biome Blending"]
-    Transitions --> HeightTransitions["Height Transitions"]
-    
-    FaceAlignment --> BuildingSurfaces["Building Surfaces"]
-    FaceAlignment --> NavigationSimplicity["Navigation Simplicity"]
-```
+The method named `simplexNoise()` actually sums four sine terms, normalizes them, and returns a deterministic field. `fractalNoise()` combines repeated frequency/amplitude-scaled evaluations and maps the result to approximately `[0,1]`. It is not a Perlin or simplex-noise implementation despite older comments and names.
 
-Key tetrahedral terrain considerations:
-- **Connectivity**: Ensuring that terrain is appropriately connected for player navigation
-- **Tetrahedron Orientation**: Maintaining consistent orientation patterns for predictable building
-- **Smooth Transitions**: Creating natural transitions between different terrain heights and types
-- **Face Alignment**: Aligning tetrahedral faces to create flat surfaces where appropriate
-- **Special Structures**: Generating tetrahedral-specific structures that showcase the geometry
+Defaults in the constructor include terrain scale 0.02, terrain amplitude 32, cave scale 0.1, cave threshold 0.7, four base octaves, persistence 0.5 and lacunarity 2. These are source configuration values, not measured optimal tuning ranges or a user settings UI. No seed parameter is exposed by this generator.
 
-## Biome System
+### Native Block Assignment
 
-The biome system determines the distribution of different environments:
-
-```mermaid
-graph TD
-    subgraph "Biome System"
-        BiomeNoise["Biome Noise Maps"]
-        Climate["Climate Parameters"]
-        BiomeTypes["Biome Types"]
-        Transitions["Biome Transitions"]
-    end
-    
-    BiomeNoise --> Temperature["Temperature Map"]
-    BiomeNoise --> Humidity["Humidity Map"]
-    BiomeNoise --> Elevation["Elevation Map"]
-    
-    Climate --> BiomeSelection["Biome Selection"]
-    
-    BiomeTypes --> Mountains["Tetrahedral Mountains"]
-    BiomeTypes --> Forests["Crystal Forests"]
-    BiomeTypes --> Plains["Geometric Plains"]
-    BiomeTypes --> Oceans["Fluid Volumes"]
-    BiomeTypes --> Caves["Tetrahedral Caverns"]
-    
-    Transitions --> GradientBlending["Gradient Blending"]
-    Transitions --> BorderFeatures["Border Features"]
-```
-
-The biome generation process:
-1. **Climate Parameter Generation**: Create temperature, humidity, and other climate maps
-2. **Biome Mapping**: Map climate parameters to biome types
-3. **Biome Detailing**: Add biome-specific features and block types
-4. **Transition Zones**: Create smooth transitions between different biomes
-5. **Special Features**: Add biome-specific landmarks and structures
-
-### Tetrahedral Biome Types
-
-QuadCraft features several unique biome types designed for tetrahedral space:
-
-```mermaid
-graph TD
-    subgraph "Tetrahedral Biome Types"
-        Mountains["Tetrahedral Peaks"]
-        Plains["Geometric Plains"]
-        Forests["Crystal Forests"]
-        Caves["Fractal Caverns"]
-        Islands["Floating Tetrahedra"]
-        Oceans["Fluid Volumes"]
-    end
-    
-    Mountains --> SharpPeaks["Sharp Peaks"]
-    Mountains --> RidgeLines["Ridge Lines"]
-    
-    Plains --> RegularPatterns["Regular Patterns"]
-    Plains --> FlatAreas["Building-Friendly Areas"]
-    
-    Forests --> CrystalTrees["Crystal Tree Formations"]
-    Forests --> GeometricVegetation["Geometric Vegetation"]
-    
-    Caves --> NestedTetrahedra["Nested Tetrahedra"]
-    Caves --> VoidSpaces["Void Spaces"]
-    
-    Islands --> DisconnectedTerrain["Disconnected Terrain"]
-    Islands --> FloatingFormations["Floating Formations"]
-    
-    Oceans --> LiquidSimulation["Liquid Simulation"]
-    Oceans --> GeometricShores["Geometric Shores"]
-```
-
-Each biome has unique characteristics:
-- **Tetrahedral Peaks**: Mountain ranges with sharp edges and defined faces
-- **Geometric Plains**: Flat areas with subtle tetrahedral patterns ideal for building
-- **Crystal Forests**: Forests of crystal-like tetrahedral formations resembling trees
-- **Fractal Caverns**: Underground networks of tetrahedral caves with varying sizes
-- **Floating Tetrahedra**: Disconnected islands of tetrahedral terrain floating in space
-- **Fluid Volumes**: Areas filled with liquid contained within tetrahedral boundaries
-
-## Feature Generation
-
-After the base terrain and biomes are established, various features are added to the world:
-
-```mermaid
-graph TD
-    subgraph "Feature Generation"
-        Structures["Structures"]
-        Resources["Resources"]
-        DetailFeatures["Detail Features"]
-        EnvironmentalObjects["Environmental Objects"]
-    end
-    
-    Structures --> Buildings["Tetrahedral Buildings"]
-    Structures --> Monuments["Geometric Monuments"]
-    Structures --> Ruins["Ancient Ruins"]
-    
-    Resources --> Minerals["Mineral Deposits"]
-    Resources --> Crystals["Crystal Formations"]
-    Resources --> SpecialBlocks["Special Blocks"]
-    
-    DetailFeatures --> SmallFormations["Small Formations"]
-    DetailFeatures --> TerrainDetail["Terrain Detail"]
-    
-    EnvironmentalObjects --> Flora["Geometric Flora"]
-    EnvironmentalObjects --> Fauna["Tetrahedral Fauna"]
-    EnvironmentalObjects --> Particles["Environmental Particles"]
-```
-
-The feature generation process:
-1. **Structure Placement**: Determine locations for large structures
-2. **Resource Distribution**: Place resources based on biome type and depth
-3. **Detail Features**: Add small features to increase visual interest
-4. **Environmental Objects**: Place flora, fauna, and other environmental objects
-
-### Structure Generation
-
-Structures in QuadCraft are generated using template-based and procedural approaches:
-
-```mermaid
-sequenceDiagram
-    participant StructureGenerator
-    participant Template
-    participant TerrainAdapter
-    participant ChunkManager
-    
-    StructureGenerator->>ChunkManager: Find suitable locations
-    ChunkManager->>StructureGenerator: Return potential locations
-    StructureGenerator->>Template: Load structure template
-    Template->>StructureGenerator: Return structure data
-    StructureGenerator->>TerrainAdapter: Adapt structure to terrain
-    TerrainAdapter->>StructureGenerator: Return adapted structure
-    StructureGenerator->>ChunkManager: Place structure in chunks
-```
-
-Structure generation features:
-- **Template System**: Pre-designed structure templates that can be placed in the world
-- **Procedural Generation**: Algorithmic generation of unique structures
-- **Terrain Adaptation**: Modification of structures to fit the local terrain
-- **Style Variation**: Different architectural styles based on biome and location
-- **Functional Structures**: Structures with specific gameplay functions
+`determineBlockType` evaluates a base height field plus a mountain term, a three-octave cave field and a separate ore field. Below the terrain height, cave values can produce air; otherwise surface/subsurface/deep thresholds choose sand or grass, dirt, ore or stone. Above the surface but below Cartesian height 5 it can choose water. These are threshold rules, not a temperature/humidity biome classifier, fluid solver or ecology system.
 
 ## Chunk Management
 
-The world is divided into tetrahedral chunks for efficient memory management and generation:
+[World](../../src/core/world/World.h) owns cubic **Cartesian** chunks. Each key is the floor of Cartesian position divided by `CHUNK_SIZE`, independently on each axis, including negative coordinates. Local quadrays come from subtracting that chunk's Cartesian origin and applying the continuous inverse.
 
-```mermaid
-classDiagram
-    class ChunkManager {
-        +std::map<ChunkCoord, Chunk*> chunks
-        +loadChunk(ChunkCoord coord)
-        +unloadChunk(ChunkCoord coord)
-        +getChunk(ChunkCoord coord)
-        +generateChunk(ChunkCoord coord)
-        +areNeighborsLoaded(ChunkCoord coord)
-    }
-    
-    class Chunk {
-        +ChunkCoord position
-        +std::vector<Block*> blocks
-        +bool isModified
-        +bool isGenerated
-        +generate()
-        +getBlock(QuadrayCoord localCoord)
-        +setBlock(QuadrayCoord localCoord, BlockType type)
-        +serialize()
-        +deserialize(Data data)
-    }
-    
-    class WorldGenerator {
-        +uint32_t seed
-        +NoiseGenerator noiseGen
-        +BiomeGenerator biomeGen
-        +StructureGenerator structGen
-        +generateTerrain(Chunk* chunk)
-        +populateBiome(Chunk* chunk, BiomeType biome)
-        +placeStructures(Chunk* chunk)
-        +applyDetailPass(Chunk* chunk)
-    }
-    
-    ChunkManager o-- Chunk
-    ChunkManager --> WorldGenerator
-```
+`getChunk` creates an empty chunk if absent; `getOrCreateChunk` generates a newly created chunk. These operations are not interchangeable generation guarantees. Native update paths generate an approximate spherical neighborhood of chunk indices and may unload distant nonvisible chunks, with source-defined distance/height adjustments. This is native behavior, not a feature of Minecraft's board map. It does not establish persistent infinite worlds: there is no generation seed/persistence guarantee implied by these methods.
 
-Chunk management features (aspirational — not implemented in `games/`):
-- **Tetrahedral Chunking**: Division of the world into tetrahedral chunks
-- **Dynamic Loading**: Loading and unloading chunks based on player position
-- **Generation Priority**: Prioritizing generation of visible chunks
-- **Chunk Serialization**: Saving and loading chunks to/from disk
-- **Chunk Boundaries**: Special handling of block connections at chunk boundaries
+## Portfolio Minecraft Initial Terrain
 
-**Verified real behavior:** `games/4d_minecraft/js/minecraft_board.js`
-`MinecraftBoard` holds the entire world as a single, fully-resident `Map`
-over a bounded `size=8` (`8^4`) grid with no chunk manager, no
-loading/unloading, and no player-position dependency (there is no player
-position at all — only a camera).
+[MinecraftBoard](../../games/4d_minecraft/js/minecraft_board.js) defaults to `size=8` and stores all blocks in one resident raw-key `Map`. `generateTerrain()` clears that map, then:
 
-### Chunk Coordinate System
+- Loops `a`, `b`, and `d` in `[0,size)` and `c` over 0, 1, 2.
+- Fills `c=0` with stone and `c=1` with dirt.
+- Adds grass at `c=2` when `Math.random() > 0.3` (70% probability per slot).
+- Makes four random tree-placement attempts, with wood at `c=3..5` and a leaf neighborhood at `c=6`.
+- Writes diamonds at `(3,3,0,3)` and `(4,4,0,4)`.
+- Adds two sand records and one water record at fixed labels.
 
-Chunks use a specialized coordinate system to efficiently index tetrahedral space:
+Tree attempts can overlap; four attempts are not a guarantee of four distinct trees. Leaf offsets are not bounds-checked, and fixed decorations do not adapt to every constructor size. `setBlock` and `placeBlock` also do not enforce `size` bounds. Thus `size=8` describes the initial sampling and helper bounds, **not a hard boundary on all stored records**. There is no chunk streaming or player-position-based world loading in this game.
 
-```mermaid
-graph TD
-    subgraph "Chunk Coordinate System"
-        GlobalCoords["Global Coordinates"]
-        ChunkCoords["Chunk Coordinates"]
-        LocalCoords["Local Coordinates"]
-        Conversion["Coordinate Conversion"]
-    end
-    
-    GlobalCoords --> Quadray["Quadray (a,b,c,d)"]
-    
-    ChunkCoords --> ChunkIndices["Chunk Indices (i,j,k)"]
-    ChunkCoords --> ChunkOrigin["Chunk Origin"]
-    
-    LocalCoords --> LocalIndices["Local Indices"]
-    LocalCoords --> BlockPositioning["Block Positioning"]
-    
-    Conversion --> GlobalToChunk["Global to Chunk"]
-    Conversion --> ChunkToLocal["Chunk to Local"]
-    Conversion --> LocalToGlobal["Local to Global"]
-```
+`Math.random()` supplies grass/tree choices without an exposed seeded generation contract. Resetting does not reproduce an identical seed-controlled world.
 
-The coordinate system allows for (aspirational — not implemented in `games/`):
-- **Efficient Indexing**: Quick lookup of blocks within the world
-- **Spatial Partitioning**: Dividing the world into manageable chunks
-- **Level of Detail**: Potential for multi-resolution chunk representation
-- **Infinite Worlds**: Support for theoretically infinite world sizes
+## Raw Slots Versus Physical Cells
 
-**Verified real behavior:** the real world is a small, fixed `size=8`
-(`8^4`) grid (`games/4d_minecraft/js/minecraft_board.js` `constructor(size
-= 8)`), not an infinite or dynamically-loaded world.
+`GridUtils.key(a,b,c,d)` preserves the tuple literally. An integer common offset changes the storage label but leaves the projected point unchanged. Initial raw layers therefore must not be described as a unique physical voxelization. The nominal $\mathrm{size}^4$ label space differs from minimum-zero canonical point enumeration, which has $\mathrm{size}^4-(\mathrm{size}-1)^4$ points within the same component extent.
 
-## World Generation Implementation
+Some helper operations use minimum-normalized `GridUtils.neighbors()`, even while the board stores raw labels. This mixed convention matters when interpreting connectivity, fill percentage and aliasing; see the [canonical occupancy contract](../quadray_coordinates.md#usage-across-games).
 
-The world generation system uses the following classes and algorithms:
+## World Updates After Generation
 
-```mermaid
-classDiagram
-    class NoiseGenerator {
-        +uint32_t seed
-        +float frequency
-        +int octaves
-        +float lacunarity
-        +float persistence
-        +float getValue(float x, float y, float z)
-        +float getFractal(float x, float y, float z)
-        +float getDomainWarping(float x, float y, float z)
-    }
-    
-    class TerrainFunction {
-        +float evaluate(float x, float y, float z)
-        +float getHeightAt(float x, float z)
-        +bool isSolid(float x, float y, float z)
-    }
-    
-    class BiomeGenerator {
-        +NoiseGenerator climateNoise
-        +std::map<ClimateParams, BiomeType> biomeMap
-        +BiomeType getBiomeAt(float x, float y, float z)
-        +ClimateParams getClimateAt(float x, float y, float z)
-        +float getTemperature(float x, float z)
-        +float getHumidity(float x, float z)
-    }
-    
-    class StructureGenerator {
-        +std::vector<StructureTemplate> templates
-        +uint32_t seed
-        +bool canPlaceStructure(Structure* structure, Chunk* chunk)
-        +void placeStructure(Structure* structure, Chunk* chunk)
-        +Structure* generateStructure(StructureType type, Vector3 position)
-    }
-    
-    WorldGenerator --> NoiseGenerator
-    WorldGenerator --> TerrainFunction
-    WorldGenerator --> BiomeGenerator
-    WorldGenerator --> StructureGenerator
-```
+The board exposes falling/spreading/time methods, but [MinecraftGame.update()](../../games/4d_minecraft/js/minecraft_game.js) only refreshes cached analysis. The [page's own animation callback](../../games/4d_minecraft/index.html) updates sidebar/status displays; it does not advance board physics/time. Consequently displayed time and a night-capable sky renderer do not establish a running day/night simulation in the default game.
 
-## Advanced Generation Techniques
+Craft Planks and Craft Glass buttons on that page directly invoke the board's inventory conversions. Those are real UI actions, distinct from the inactive physics/time update path. See [block model methods](block_system.md#block-crafting-and-processing).
 
-QuadCraft employs several advanced techniques for world generation:
+## Design Considerations, Not Implemented Systems
 
-```mermaid
-graph TD
-    subgraph "Advanced Techniques"
-        LSystem["L-Systems"]
-        ImplicitSurfaces["Implicit Surfaces"]
-        Voronoi["Voronoi Diagrams"]
-        TetrahedralSubdivision["Tetrahedral Subdivision"]
-    end
-    
-    LSystem --> CrystallineGrowth["Crystalline Growth"]
-    LSystem --> RecursiveStructures["Recursive Structures"]
-    
-    ImplicitSurfaces --> SmoothTerrain["Smooth Terrain"]
-    ImplicitSurfaces --> OrganicShapes["Organic Shapes"]
-    
-    Voronoi --> CellularPatterns["Cellular Patterns"]
-    Voronoi --> RegionDivision["Region Division"]
-    
-    TetrahedralSubdivision --> DetailGeneration["Detail Generation"]
-    TetrahedralSubdivision --> LODSystem["LOD System"]
-```
+A future terrain design could choose reproducible seeded fields, explicit biome classification, structured feature placement and validated tetrahedral cells. Those choices would need to specify:
 
-Advanced generation techniques include:
-- **L-Systems**: For generating crystal-like structures and fractals
-- **Implicit Surfaces**: Creating smooth, continuous terrain surfaces
-- **Voronoi Diagrams**: Generating cellular patterns and region division
-- **Tetrahedral Subdivision**: Adding detail through recursive subdivision
-- **Procedural Patterns**: Creating repeating motifs specific to tetrahedral geometry
+- Whether state belongs to canonical physical cells or independent raw game slots.
+- The cell complex and shared-face rules, not just point coordinates.
+- Which sampling scale and Euclidean or tetra-unit volumes are meant.
+- How generation, modification and persistence interact across chunks.
 
-## Cave and Tunnel Generation
+L-systems, Voronoi regions, domain warping, climate blending, template adaptation, generation-event plugins and infinite saveable worlds are not supplied as current runnable APIs here. No `NoiseGenerator`, `BiomeGenerator`, `StructureGenerator` or plugin-hook recipe is implied by this discussion.
 
-Underground features are generated using specialized algorithms:
+## Related Reading
 
-```mermaid
-graph TD
-    subgraph "Cave Generation"
-        CaveNoise["Cave Noise"]
-        TunnelSystem["Tunnel System"]
-        CavityFormation["Cavity Formation"]
-        UndergroundFeatures["Underground Features"]
-    end
-    
-    CaveNoise --> DensityThreshold["Density Threshold"]
-    CaveNoise --> NoiseWorms["Noise Worms"]
-    
-    TunnelSystem --> PathGeneration["Path Generation"]
-    TunnelSystem --> Intersections["Tunnel Intersections"]
-    
-    CavityFormation --> ChamberGeneration["Chamber Generation"]
-    CavityFormation --> VoidPockets["Void Pockets"]
-    
-    UndergroundFeatures --> Crystals["Crystal Formations"]
-    UndergroundFeatures --> Aquifers["Tetrahedral Aquifers"]
-    UndergroundFeatures --> Minerals["Mineral Veins"]
-```
-
-Cave generation features:
-- **3D Noise**: Using 3D noise functions to carve out cave systems
-- **Tunnel Algorithms**: Generating connecting tunnel networks
-- **Chamber Generation**: Creating large underground chambers
-- **Feature Placement**: Adding special features like crystal formations
-- **Fluid Pockets**: Underground lakes and lava pools
-
-## World Generation Parameters
-
-The world generation system offers various parameters for customization:
-
-```mermaid
-graph TD
-    subgraph "Generation Parameters"
-        TerrainParams["Terrain Parameters"]
-        BiomeParams["Biome Parameters"]
-        StructureParams["Structure Parameters"]
-        FeatureParams["Feature Parameters"]
-    end
-    
-    TerrainParams --> TerrainScale["Terrain Scale"]
-    TerrainParams --> TerrainRoughness["Terrain Roughness"]
-    TerrainParams --> TerrainHeight["Maximum Height"]
-    
-    BiomeParams --> BiomeScale["Biome Scale"]
-    BiomeParams --> BiomeFrequency["Biome Frequency"]
-    BiomeParams --> BiomeVariety["Biome Variety"]
-    
-    StructureParams --> StructureDensity["Structure Density"]
-    StructureParams --> StructureScale["Structure Scale"]
-    StructureParams --> StructureVariety["Structure Variety"]
-    
-    FeatureParams --> FeatureDensity["Feature Density"]
-    FeatureParams --> ResourceAbundance["Resource Abundance"]
-    FeatureParams --> DetailLevel["Detail Level"]
-```
-
-These parameters allow for:
-- **Custom Worlds**: Creation of worlds with specific characteristics
-- **Varied Gameplay**: Different world types for different gameplay experiences
-- **Performance Tuning**: Adjusting generation complexity based on hardware capabilities
-- **Creative Expression**: Enabling players to create worlds that match their vision
-
-## World Types
-
-QuadCraft supports different world types with unique generation characteristics:
-
-```mermaid
-graph TD
-    subgraph "World Types"
-        Standard["Standard World"]
-        FloatingIslands["Floating Islands"]
-        Cavernous["Cavernous World"]
-        Flat["Flat World"]
-        Custom["Custom World"]
-    end
-    
-    Standard --> ContinuousTerrain["Continuous Terrain"]
-    Standard --> FullFeatureSet["Full Feature Set"]
-    
-    FloatingIslands --> DisconnectedLand["Disconnected Land Masses"]
-    FloatingIslands --> VerticalChallenges["Vertical Challenges"]
-    
-    Cavernous --> MostlyHollow["Mostly Hollow"]
-    Cavernous --> UndergroundFocus["Underground Focus"]
-    
-    Flat --> BuildingFocused["Building-Focused"]
-    Flat --> MinimalTerrain["Minimal Terrain"]
-    
-    Custom --> UserDefined["User-Defined Parameters"]
-    Custom --> ScriptedGeneration["Scripted Generation"]
-```
-
-Each world type has specific generation rules:
-- **Standard World**: Balanced terrain with mountains, plains, and varied biomes
-- **Floating Islands**: Disconnected tetrahedral islands floating in space
-- **Cavernous World**: Minimal surface with extensive underground cave systems
-- **Flat World**: Flat terrain ideal for creative building
-- **Custom World**: User-defined world with customizable parameters
-
-## World Generation Events
-
-The generation system fires events at different stages for modifying the generation process:
-
-```mermaid
-sequenceDiagram
-    participant Generator
-    participant EventSystem
-    participant Plugins
-    
-    Generator->>EventSystem: Fire PreGeneration event
-    EventSystem->>Plugins: Notify plugins
-    Plugins->>Generator: Modify generation parameters
-    
-    Generator->>Generator: Generate base terrain
-    Generator->>EventSystem: Fire PostTerrainGeneration event
-    EventSystem->>Plugins: Notify plugins
-    Plugins->>Generator: Add terrain modifications
-    
-    Generator->>Generator: Generate biomes
-    Generator->>EventSystem: Fire PostBiomeGeneration event
-    EventSystem->>Plugins: Notify plugins
-    Plugins->>Generator: Add biome modifications
-    
-    Generator->>Generator: Generate features
-    Generator->>EventSystem: Fire PostFeatureGeneration event
-    EventSystem->>Plugins: Notify plugins
-    Plugins->>Generator: Add custom features
-    
-    Generator->>Generator: Final pass
-    Generator->>EventSystem: Fire PostGeneration event
-    EventSystem->>Plugins: Notify plugins
-    Plugins->>Generator: Final modifications
-```
-
-This event-based approach allows for:
-- **Extensibility**: Easy addition of new generation features
-- **Modding Support**: Enabling mods to modify world generation
-- **Custom Generation**: Support for custom generation plugins
-- **Generation Hooks**: Providing entry points for generation modifications
-
-## Conclusion
-
-The QuadCraft world generation system creates unique tetrahedral worlds that challenge traditional voxel game conventions. By adapting procedural generation techniques to tetrahedral space, QuadCraft offers players diverse, interesting, and mathematically elegant environments to explore and build in. 
+- [Current gameplay boundaries](gameplay_overview.md)
+- [IVM topology and volume accounting](../mathematics/ivm_synergetics.md)
+- [Implementation architecture](../architecture.md)
+- [Games portfolio](../games.md)

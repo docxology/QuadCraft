@@ -1,20 +1,15 @@
-# 4D Sokoban — Agent Instructions
+# 4D Sokoban — Model and runtime maintenance
 
-## Overview
+Read the [game guide](README.md), [module ownership](js/README.md), [test scope](tests/README.md) and [portfolio contracts](../../docs/games.md) before changing behavior.
 
-Box-pushing puzzle on 4D IVM grid. Push boxes onto goals using 12 IVM directions (permutations of 0,1,1,2). Keys 1-9,0,Q,W select direction.
+## Preserve the implemented boundary
 
-## Architecture
+Do not infer canonical adjacency from `BaseBoard` inheritance or shared direction names. Preserve the actual direct-offset rule and explicitly distinguish random generation from a solvability guarantee.
 
-| File | Class | Extends | Purpose |
-|------|-------|---------|---------|
-| `js/sokoban_board.js` | `SokobanBoard` | `BaseBoard` | Grid state, push logic, win detection |
-| `js/sokoban_renderer.js` | `SokobanRenderer` | `BaseRenderer` | 3D-projected rendering |
-| `js/sokoban_game.js` | `SokobanGame` | `BaseGame` | Keyboard input, HUD |
+Keyboard events perform complete moves/pushes and win checks. The inherited `BaseGame.update` is empty; no autonomous physics advances boxes.
 
-## Commands
+[index.html](index.html) instantiates `SokobanGame` after the actual shared imports and local board/renderer/controller scripts. Inheritance or an imported helper is not evidence that this game uses every shared system. Keep rules in `SokobanBoard`, projected drawing in `SokobanRenderer` and browser input/lifecycle in `SokobanGame`.
 
-```bash
-python3 ../../run_games.py --game sokoban              # Launch on port 8122
-node tests/test_sokoban.js  # Run unit tests
-```
+## Evidence and commands
+
+Run commands from the QuadCraft repository root; launch with `python3.13 games/run_games.py --game sokoban`. See [tests/README.md](tests/README.md) for the Node and harness commands. Report exercised checks, not saved counts, production-readiness or inferred canvas coverage. Review the actual controls in the game guide rather than copying another game's bindings.

@@ -1,80 +1,15 @@
-# 4D Minesweeper — Agent Instructions
+# 4D Minesweeper — Model and runtime maintenance
 
-## Project Overview
+Read the [game guide](README.md), [module ownership](js/README.md), [test scope](tests/README.md) and [portfolio contracts](../../docs/games.md) before changing behavior.
 
-Mine-counting puzzle with IVM adjacency in 4D. Standalone browser application built on Quadray coordinates.
+## Preserve the implemented boundary
 
-## Quick Commands
+Keep canonical enumeration, safe-zone placement, count caching and flood traversal on the same physical adjacency. Flags must remain hidden during safe flood expansion.
 
-```bash
-# Run tests (23 tests)
-node tests/test_minesweeper.js
+`MinesweeperGame.update()` is intentionally empty: mouse handlers perform reveal and flag operations. Zero-count flood reveal skips flagged sites; win detection counts revealed safe cells.
 
-# Open in browser
-open index.html
+[index.html](index.html) instantiates `MinesweeperGame` after the actual shared imports and local board/renderer/controller scripts. Inheritance or an imported helper is not evidence that this game uses every shared system. Keep rules in `MinesweeperBoard`, projected drawing in `MinesweeperRenderer` and browser input/lifecycle in `MinesweeperGame`.
 
-# Start local server
-python3 -m http.server 8121
-```
+## Evidence and commands
 
-## Shared Modules
-
-Imported via `<script>` tags in `index.html` from `../4d_generic/`:
-`quadray.js`, `camera.js`, `projection.js`, `zoom.js`, `synergetics.js`
-
-## Module Dependency Order
-
-Load in this order to avoid reference errors:
-
-```text
-1. minesweeper_board.js     # Board/world state (needs Quadray)
-2. minesweeper_renderer.js  # Canvas rendering (needs Quadray, Board)
-3. minesweeper_game.js      # Controller (needs all above)
-```
-
-## File Inventory
-
-### JavaScript Modules (`js/`)
-
-| File | Key Exports | Purpose |
-|------|-------------|---------|
-| `minesweeper_board.js` | `MinesweeperBoard` | Mine placement, adjacency counting, reveal/flag state |
-| `minesweeper_renderer.js` | `MinesweeperRenderer` | Grid rendering with number colors, flag markers, mine reveal animation |
-| `minesweeper_game.js` | `MinesweeperGame` | Click handling, flood-fill reveal, win/lose detection, timer |
-
-### Tests (`tests/`)
-
-| File | Tests | Coverage |
-|------|-------|----------|
-| `test_minesweeper.js` | 23 | Board creation, cell operations, reset |
-| `test.html` | — | Browser test runner |
-
-## Game Rules Summary
-
-- IVM grid contains hidden mines at Quadray positions
-- Reveal a cell to see count of adjacent mines (IVM neighbors)
-- 4D adjacency means up to 8 neighbors per cell (Quadray octant)
-- Flag suspected mines, reveal all safe cells to win
-- Hit a mine = game over
-
-## Code Standards
-
-- **Language**: ES6+ JavaScript (classes, const/let, arrow functions)
-- **Comments**: JSDoc for public functions
-- **Indentation**: 4 spaces
-- **Export Pattern**: Browser + Node.js dual support
-
-```javascript
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { ClassName };
-}
-```
-
-## Verification Checklist
-
-- [ ] All tests pass: `node tests/test_minesweeper.js`
-- [ ] Browser loads: `open index.html`
-- [ ] Game plays (basic interaction)
-- [ ] Shift+drag rotates view
-- [ ] Reset button works
-- [ ] Console shows no errors
+Run commands from the QuadCraft repository root; launch with `python3.13 games/run_games.py --game minesweeper`. See [tests/README.md](tests/README.md) for the Node and harness commands. Report exercised checks, not saved counts, production-readiness or inferred canvas coverage. Review the actual controls in the game guide rather than copying another game's bindings.

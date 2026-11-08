@@ -1,262 +1,47 @@
-# Architecture
-
-Code structure and module organization.
-
----
-
-## Directory Structure
-
-```text
-games/4d_chess/
-├── index.html          # Main game page
-├── README.md           # Project overview
-├── js/
-│   ├── quadray.js      # Core coordinate system
-│   ├── chess_pieces.js       # Chess piece definitions
-│   ├── chess_board.js        # 4D game board
-│   ├── chess_renderer.js     # 3D visualization
-│   ├── chess_game.js         # Game controller
-│   ├── chess_storage.js      # Save/load functionality
-│   └── chess_analysis.js     # Geometric analysis
-├── docs/
-│   ├── README.md       # Documentation index
-│   ├── api-reference.md
-│   ├── quadray-math.md
-│   ├── game-rules.md
-│   └── architecture.md # This file
-└── tests/
-    ├── test.html       # Browser test runner
-    └── test_chess.js     # Unit tests (83 tests)
-```
-
----
+# Quadray Chess architecture — browser wiring, canonical board and TurnManager state
 
 ## Module Dependencies
 
-```
-┌─────────────┐
-│  quadray.js │  Core math (no dependencies)
-└──────┬──────┘
-       │
-       v
-┌─────────────┐
-│  chess_pieces.js  │  Uses Quadray for positions/movement
-└──────┬──────┘
-       │
-       v
-┌─────────────┐
-│   chess_board.js  │  Uses Pieces, Quadray
-└──────┬──────┘
-       │
-       v
-┌─────────────┬─────────────┬─────────────┐
-│ chess_renderer.js │   chess_game.js   │ chess_analysis.js │
-│   (Board)   │(Board,Rend) │   (Board)   │
-└─────────────┴──────┬──────┴─────────────┘
-                     │
-                     v
-              ┌─────────────┐
-              │ chess_storage.js  │  (Game serialization)
-              └─────────────┘
+The live [index.html](../index.html) loads the shared classic-script helpers first, then local scripts in this order:
+
+```text
+chess_pieces.js
+chess_board.js
+chess_renderer.js
+chess_fpv_renderer.js
+chess_storage.js
+chess_analysis.js
+chess_game.js
 ```
 
----
+There is no local `js/quadray.js`; the canonical class comes from [4d_generic](../../4d_generic/README.md). This browser stack is independent of the native C++ engine and historical browser/server experiments.
 
 ## Module Responsibilities
 
-### quadray.js
-
-- **Purpose**: 4D tetrahedral coordinate system
-- **Exports**: `Quadray`, `ROOT2`, `S3`
-- **Key role**: Mathematical foundation
-- **Methods**: clone, normalized, toCartesian, fromCartesian, add, subtract, scale, distance, distanceTo, equals, toKey
-
-### chess_pieces.js
-
-- **Purpose**: Chess piece definitions and movement
-- **Exports**: `Piece`, `King`, `Queen`, `Rook`, `Bishop`, `Knight`, `Pawn`, `PieceType`, `PlayerColor`, `createPiece`
-- **Key role**: Movement rules for each piece type
-- **Piece types**: 6 (King, Queen, Rook, Bishop, Knight, Pawn)
-
-### chess_board.js
-
-- **Purpose**: Game board state management
-- **Exports**: `Board`, `BOARD_CONFIG`
-- **Key role**: Position validation, move execution, check detection
-- **Constants**: `TOTAL_PIECES_PER_SIDE: 12`, `TOTAL_PIECES: 24`
-
-### chess_renderer.js
-
-- **Purpose**: 3D visualization on HTML5 Canvas
-- **Exports**: `Renderer`
-- **Key role**: Project 4D → 2D, draw pieces/grid/UI
-- **Features**: Glow effects, math panel, numbered move indicators
-
-### chess_game.js
-
-- **Purpose**: Main game controller
-- **Exports**: `Game`, `GAME_VERSION`, `DEFAULT_CONFIG`
-- **Key role**: User interaction, turn management, game flow
-- **Version**: 1.0.0
-
-### chess_storage.js
-
-- **Purpose**: Save/load game state
-- **Exports**: `exportGameState`, `importGameState`, `downloadJSON`, `handleFileUpload`, `generateSaveFilename`
-- **Key role**: Serialization to JSON (v1.0 format)
-
-### chess_analysis.js
-
-- **Purpose**: Geometric and strategic analysis
-- **Exports**: `calculateCenterControl`, `calculateMobilityScore`, `calculatePieceSpread`, `calculateMaterialScore`, `getPositionMetrics`, `createMoveLog`, `logGameMetrics`, `getDistanceStats`
-- **Key role**: Game metrics and logging
-
----
+- [Pieces](../js/chess_pieces.js): enums, factory and directed pseudo-legal destinations.
+- [Board](../js/chess_board.js): canonical rounded keys, prescribed setup, occupancy/captures, normalized inclusive bounds and check queries.
+- [Overview renderer](../js/chess_renderer.js): projected board, pieces, move highlights, screen picking and geometric HUD.
+- [FPV renderer](../js/chess_fpv_renderer.js): selected-piece view, local directions and visible pieces; no new board dimension.
+- [Controller](../js/chess_game.js): BaseGame subclass, input, selection, turn/history ownership, random autoplay and end messages.
+- [Storage](../js/chess_storage.js): legacy object serialization and browser file I/O; record-schema compatibility is incomplete.
+- [Analysis](../js/chess_analysis.js): material, generated-move count, fixed-center heuristic, pairwise physical spread and legacy flat-history readouts.
 
 ## Data Flow
 
-### Game Loop
+HTML constructs `new Game(canvas,hudElement)` and calls `init()`. BaseGame attaches key input and starts the shared render loop. A click is picked by the overview renderer; selection calls `piece.getValidMoves(board)`. A chosen destination calls `Game.makeMove`, which mutates the board, records/advances TurnManager, updates capture score and queries the next player’s generated moves/check flag.
 
-```
-User Input → handleClick() → selectPiece()/makeMove()
-                                    │
-                                    v
-                              Board.movePiece()
-                                    │
-                                    v
-                           Check game state
-                           (check/checkmate)
-                                    │
-                                    v
-                              render() ────→ Canvas
-```
+The board mutator does not enforce full legality; move generation does not filter self-check. See [rules](game-rules.md) before treating a terminal message as standard chess adjudication.
 
-### Rendering Pipeline
+## Game Loop
 
-```
-Board positions → project() → 2D coordinates → Canvas draw
-     │
-     └── Each piece → getSymbol() → Draw piece glyph
-```
+The loop uses fixed-second callbacks at `1000/30` milliseconds per tick. Chess does not integrate piece motion over dt: `update()` synchronizes display state and the optional FPV view. Random autoplay is a separate `setInterval` using `autoPlaySpeed` in milliseconds. Loop pause does not cancel that interval or gate every command. Reset clears autoplay and resets board/selection/turn state.
 
----
+## History and storage boundary
+
+`TurnManager.recordAndAdvance` appends wrappers containing player, `move`, turn number and timestamp. `Game.currentPlayer` and `Game.moveHistory` are getter-only views of the manager. Legacy storage/history-analysis functions expect flat `from/to/captured` records and import assigns those getter-only properties. The exposed Save/Load UI therefore must not be documented as a working controller round-trip.
 
 ## Browser vs Node.js
 
-All modules support both environments:
+Piece/board/storage/analysis modules expose CommonJS exports used by the Node suite. Browser controllers/renderers also depend on shared globals and DOM/Canvas state; requiring a single controller file is not a standalone runtime recipe. [Tests](../tests/README.md) use helper game objects for storage, not the actual controller, and the historical HTML runner has stale dependencies.
 
-```javascript
-// Export for Node.js
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { ClassName };
-}
-```
-
-### Browser Usage
-
-```html
-<script src="js/quadray.js"></script>
-<script src="js/chess_pieces.js"></script>
-<!-- ... -->
-```
-
-### Node.js Usage
-
-```javascript
-const { Quadray } = require('./js/quadray.js');
-const { Board } = require('./js/chess_board.js');
-```
-
----
-
-## Event System
-
-| Event | Handler | Action |
-|-------|---------|--------|
-| mousedown | onMouseDown | Select/move piece |
-| mousemove | onMouseMove | Hover effects, drag rotate |
-| mouseup | onMouseUp | End drag |
-| wheel | wheel handler | Zoom |
-| keydown | keydown handler | Shortcuts (R, 1-9, Space, A) |
-
----
-
-## Extension Points
-
-### Adding New Piece Types
-
-1. Create class extending `Piece` in `chess_pieces.js`
-2. Implement `getValidMoves(board)` method
-3. Add to `PieceType` enum
-4. Add symbol in `getSymbol()` method
-5. Update `createPiece()` factory
-
-### Adding New Analysis Metrics
-
-1. Add function in `chess_analysis.js`
-2. Export function
-3. Call from `getPositionMetrics()`
-4. Update UI panel if needed
-
-### Adding New UI Features
-
-1. Add HTML in `index.html`
-2. Add CSS styles
-3. Add handler method in `Game` class
-4. Connect via onclick or event listener
-
----
-
-## Testing Strategy
-
-### Test Coverage Summary
-
-| Module | Base Tests | Extended Tests | Total |
-|--------|------------|----------------|-------|
-| Quadray Class | 12 | 5 | 17 |
-| Piece Classes | 8 | 5 | 13 |
-| Board Class | 7 | 6 | 13 |
-| Movement Rules | 4 | — | 4 |
-| Game State | 2 | — | 2 |
-| Math Accuracy | 5 | — | 5 |
-| Storage Module | 3 | 3 | 6 |
-| Analysis Module | 5 | 4 | 9 |
-| Edge Cases | 5 | — | 5 |
-| Geometric Verification | — | 9 | 9 |
-| **Total** | **51** | **32** | **83** |
-
-### Unit Tests (`test_chess.js`)
-
-- Quadray arithmetic and conversion
-- Piece creation and movement
-- Board operations
-- Game state validation
-- Storage serialization
-- Analysis metrics
-
-### Browser Tests
-
-- Visual rendering
-- User interaction
-- Move execution
-- Save/load cycle
-
-### Running Tests
-
-```bash
-# CLI
-cd tests && node test_chess.js
-
-# Browser
-open tests/test.html
-```
-
----
-
-## Version Information
-
-| Component | Version |
-|-----------|---------|
-| Game | 1.0.0 |
-| Save Format | 1.0 |
-| Board Config | PIECES_PER_SIDE: 12 |
+[Module map](../js/README.md) · [API reference](api-reference.md) · [Contribution guide](../CONTRIBUTING.md).

@@ -1,172 +1,52 @@
-# Python Infrastructure — `src/`
+# Python launcher and portfolio-analysis interfaces
 
-> **Note on 4D Geometry & Nomenclature**: "4D" in QuadCraft strictly means **Synergetics** geometry (Quadray tetrahedral coordinates on an IVM; 12 neighbors = permutations of `(0, 1, 1, 2)`). Canonical statement: [GAMES_INDEX.md](../GAMES_INDEX.md#note-on-4d-geometry--nomenclature).
+Python tooling under [`src/`](../src/) manages files and static serving; it is not the browser simulation runtime. Imports below assume the QuadCraft repository root is on Python's import path. Use Python 3.13; no third-party Python package is required by these modules.
 
-> Reference for the Python package that powers game registration, launching, testing, validation, scaffolding, analytics, shared-module metadata, and coordinate math.
+## Package map
 
----
+| Module | Public entrypoints and scope |
+|---|---|
+| `core/config.py` | Constants for ports, files and module-policy lists; see [path caveat](configuration.md) |
+| `core/registry.py` | `GAMES`, `load_config(path)`, `get_port(key, base_port=None)` |
+| `server/launcher.py` | `GameServer(key, base_port, games_dir, open_browser=True)`; `start() -> bool`, `stop()` |
+| `qa/testing.py` | `run_tests(games_dir: Path, game_keys=None) -> bool` |
+| `qa/validation.py` | `validate_game(games_dir, key) -> list[str]`, `check_shared_dir(games_dir)`, `audit_all(games_dir) -> bool` |
+| `scaffold/__init__.py` | `GameScaffold`, a file generator, not a complete game |
+| `analytics/__init__.py` | `GameAnalytics`, `GameMetrics`, `SuiteReport`; textual file metrics |
+| `shared/__init__.py` | `JSModule`, `ModuleRegistry`, `resolve_module_path(filename)`; JS metadata, not executable JS |
+| `board/` | `BoardAudit`, `AuditResult`, `BoardCatalog`, `BoardInfo`; heuristic source scans |
+| `space/` | Floating-point `Quadray`, transforms, geometry, grid and reference constants |
 
-## Package Structure
+`src/__init__.py` re-exports selected interfaces. `check_shared_dir` and `migrate_board` are imported from their defining modules, not that facade. Do not use obsolete `games.src.registry`, `games.src.config` or `games.src.testing` paths.
 
-```text
-games/src/
-├── __init__.py       # Unified public API (54 exports)
-├── core/             # Core infrastructure
-│   ├── config.py     # Shared constants (ports, paths, module lists)
-│   └── registry.py   # GAMES dict + load_config() + get_port()
-├── server/           # Serving infrastructure
-│   └── launcher.py   # GameServer + QuietHTTPHandler
-├── qa/               # Quality Assurance
-│   ├── testing.py    # Node.js + Python test runner
-│   └── validation.py # Structural audit engine
-├── scaffold/         # GameScaffold code generator
-├── analytics/        # GameAnalytics + health scoring
-├── shared/           # ModuleRegistry + JSModule metadata
-├── board/            # BoardAudit + BoardCatalog (migration tracking, board inventory)
-└── space/            # Quadray / IVM / XYZ / geometry
-```
-
----
-
-## `config.py` — Shared Constants
-
-| Constant | Type | Value | Purpose |
-|----------|------|-------|---------|
-| `REPO_ROOT` | `str` | Auto-detected | Repository root path |
-| `GAMES_DIR` | `str` | `{REPO_ROOT}/games` | Games directory |
-| `GENERIC_DIR` | `str` | `{GAMES_DIR}/4d_generic` | Shared JS modules |
-| `BASE_PORT` | `int` | `8100` | Default starting port |
-| `SHARED_MODULES` | `list[str]` | 12 filenames | Required JS modules from `4d_generic/` |
-| `REQUIRED_FILES` | `list[str]` | `[\"index.html\", \"AGENTS.md\"]` | Required files per game |
-| `REQUIRED_JS_PATTERNS` | `dict` | `{board, renderer, game}` | Expected `js/` file naming patterns |
-| `LOG_PREFIX` | `str` | `"[QuadCraft]"` | Logging prefix |
-
-> See [configuration.md](configuration.md) for full config details.
-
----
-
-## `registry.py` — Game Registry
-
-The canonical mapping of game keys → metadata. Drives launching, testing, and validation.
+## Explicit-path library use
 
 ```python
-GAMES = {
-    "chess":    {"dir": "4d_chess",    "name": "4D Chess",    "port_offset": 0},
-    "checkers": {"dir": "4d_checkers", "name": "4D Checkers", "port_offset": 1},
-    # ... 30 entries total
-}
+from pathlib import Path
+from games.src.analytics import GameAnalytics
+from games.src.board import BoardAudit, BoardCatalog
+
+games = Path("games").resolve()
+report = GameAnalytics(games_dir=str(games), generic_dir=str(games / "4d_generic")).full_report()
+print(report.summary())
+print(BoardAudit(games).migration_report())
+print(BoardCatalog(games).summary_report())
 ```
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `dir` | `str` | Directory name (`4d_<key>`) |
-| `name` | `str` | Display name |
-| `port_offset` | `int` | Added to `base_port` for serving |
+The default paths in `core/config.py` currently nest `games/games`; the CLI avoids them. Read [configuration](configuration.md) before using default constructors or interpreting missing-file reports. `ModuleRegistry` has no root constructor parameter and its `JSModule.path` uses that default.
 
-### Functions
+## Shared-module metadata
 
-| Function | Signature | Description |
-|----------|-----------|-------------|
-| `load_config` | `(config_path: str) → dict` | Load JSON config file with game selections |
-| `get_port` | `(game_key: str, base_port: int \| None = None) → int` | Compute a game's HTTP port (`base_port + port_offset`, defaults to `config.BASE_PORT`) |
+`JSModule(name, filename, category, description, depends_on=[])` exposes `path`, `exists`, `subfolder`. `ModuleRegistry` offers `get(filename)`, `all_modules()`, `by_category(category)`, `categories()`, `load_order()`, `missing_modules()`, `coverage_report()`. `load_order()` returns module metadata in dependency order; it does not import scripts or inject HTML. Its sixteen JS definitions omit the additional graph kernel and CSS. `resolve_module_path(filename)` returns an existing default-root/subfolder path or `None`; file presence is not test coverage. For deployment paths use the actual checkout root explicitly rather than interpreting this registry as a full runtime loader.
 
----
+## Board scanning and migration
 
-## `launcher.py` — HTTP Server
+`BoardAudit(games_dir=None)` returns `AuditResult(game_key, board_file, extends_base_board, local_methods, missing_import)` from `scan_game(Path)` or `scan_all()`. Its `missing_import` flag is a text heuristic, not resolved dependency analysis.
 
-### `QuietHTTPHandler`
+`BoardCatalog(games_dir=None)` supplies `scan_game`, `scan_all`, `find_shared_methods(min_count=3)` and `summary_report()`. `BoardInfo` records class/file, line count, methods, heuristic pattern and detected helper names. Both tools inspect one matching board per directory; catalogs are not complete JS parsers. A local override can be intentional and is not automatically dead code.
 
-Extends `SimpleHTTPRequestHandler` with suppressed per-request logging.
+`games.src.board.migrate.migrate_board(board_path, dry_run)` performs textual require/extends/super additions and returns change flags; it does not reconcile raw storage, reset, constructors or rule semantics. Its CLI's `GAMES_DIR` currently points into `games/src`, so it is not a reliable portfolio-wide migration command. Inspect a dry-run and each actual caller before any separately authorized migration; documentation work does not run `--apply`.
 
-### `GameServer`
+## Further references
 
-Serves a single game on its own HTTP port.
-
-| Method | Signature | Description |
-|--------|-----------|-------------|
-| `__init__` | `(game_key, base_port, games_dir, open_browser=True)` | Configure server from registry |
-| `start()` | `→ bool` | Start HTTP server in background thread |
-| `stop()` | `→ None` | Shutdown server |
-
-**Key design:** The server serves the **parent `games/` directory** as the document root, so `../4d_generic/` relative paths resolve correctly from any game's `index.html`.
-
-### `open_url(url)`
-
-Platform-aware browser launcher (macOS `open`, Linux `xdg-open`, Windows `os.startfile`).
-
----
-
-## `testing.py` — Test Runner
-
-### `run_tests(games_dir, game_keys=None) → bool`
-
-Orchestrates all tests. Returns `True` if everything passes.
-
-**Execution flow:**
-
-1. **Shared tests** — recursively discover `test_*.js` below `games/tests/` and `4d_generic/tests/` for a full run; omit the aggregate shared runner to avoid double counting
-2. **Python tests** — recursively discover `games/tests/**/test_*.py` via `_run_python_test()`
-3. **Per-game tests** — `4d_<game>/tests/test_*.js` for each requested game
-
-### Internal Details
-
-| Function | What it does |
-|----------|-------------|
-| `_run_test_file(tf, cwd, label)` | Run one `.js` file via `node`; parse `N passed, M failed` summaries from stdout/stderr |
-| `_run_python_test(tf, cwd, label)` | Run one `.py` file and parse unittest output; process failure remains a test failure |
-
-**Fallback parsing:** If no structured results line is found, count `✅`/`❌` lines. A nonzero process exit always fails, even if an earlier summary reported success. Failing file names and captured diagnostics are printed.
-
-> See [testing_guide.md](testing_guide.md) for writing tests.
-
----
-
-## `validation.py` — Structural Audit
-
-### `validate_game(games_dir, key) → list[str]`
-
-Checks a single game for:
-
-| # | Check | Details |
-|---|-------|---------|
-| 1 | Directory exists | `4d_<key>/` must exist |
-| 2 | Required files | `index.html`, `js/`, `tests/` with `test_*.js` |
-| 3 | No local quadray.js | Should use shared from `4d_generic/` |
-| 4 | Shared imports | `index.html` must import all 12 `SHARED_MODULES` entries (`quadray.js`, `synergetics.js`, `grid_utils.js`, `camera.js`, `projection.js`, `zoom.js`, `base_renderer.js`, `game_loop.js`, `base_game.js`, `score_manager.js`, `input_controller.js`, `hud.js`) |
-| 5 | AGENTS.md | Must exist |
-| 6 | Board logic | `*_board.js` must exist and be ≥200 bytes |
-| 7 | Renderer not scaffold | No `[scaffold]` markers or TODO stubs |
-| 8 | Game controller not scaffold | No scaffold markers |
-
-**ES-module exemption:** Games in `ES_MODULE_GAMES` (currently `{"doom"}`) skip checks 3–4.
-
-### `check_shared_dir(games_dir) → list[str]`
-
-Verifies `games/4d_generic/` contains all required shared modules.
-
-### `audit_all(games_dir) → bool`
-
-Full validation: shared dir + all registered games. Prints formatted report.
-
----
-
-## `__init__.py` — Public API
-
-All 54 exports (`len(src.__all__)`) are available from `from games.src import ...`:
-
-| Category | Exports |
-|----------|---------|
-| Config | `REPO_ROOT`, `GAMES_DIR`, `GENERIC_DIR`, `SHARED_DIR_NAME`, `BASE_PORT`, `SHARED_MODULES`, `OPTIONAL_SHARED_MODULES`, `ALL_SHARED_MODULES`, `REQUIRED_FILES`, `REQUIRED_JS_PATTERNS`, `LOG_PREFIX` |
-| Registry | `GAMES`, `load_config`, `get_port` |
-| Launcher | `GameServer` |
-| Testing | `run_tests` |
-| Validation | `validate_game`, `audit_all` |
-| Scaffold | `GameScaffold` |
-| Analytics | `GameAnalytics`, `SuiteReport`, `GameMetrics` |
-| Shared | `ModuleRegistry`, `JSModule`, `resolve_module_path` |
-| Board | `BoardAudit`, `AuditResult`, `BoardCatalog`, `BoardInfo` |
-| Space | `Quadray`, `IVM`, `SYNERGETICS`, `quadray_to_xyz`, `xyz_to_quadray`, `project_quadray`, `rotate_xyz`, `ScreenPoint`, `project_basis_axes`, `IVMGrid`, `Jitterbug`, `angle_between`, `distance`, `manhattan_4d`, `euclidean_4d`, `verify_round_trip`, `verify_geometric_identities`, `CheckResult`, `VerificationReport`, `generate_grid`, `neighbors`, `bounded_neighbors`, `in_bounds`, `depth_sort`, `random_coord` |
-
----
-
-*See also: [architecture.md](architecture.md) · [scaffold_guide.md](scaffold_guide.md) · [analytics_reporting.md](analytics_reporting.md) · [space_math_reference.md](space_math_reference.md)*
+[Launch](launch_operations.md) · [QA](testing_guide.md) · [Scaffold](scaffold_guide.md) · [Analytics](analytics_reporting.md) · [Space math](space_math_reference.md) · [Browser APIs](shared_modules_reference.md)

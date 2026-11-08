@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Documents describing gameplay mechanics and user experience.
+Documents distinguish source-defined gameplay from bounded design discussions. Use the [coordinate contract](../quadray_coordinates.md) and [design index](README.md); do not combine native, browser-painter and portfolio features into a nonexistent common engine.
 
 ## Audience
 
@@ -22,19 +22,19 @@ Core game experience:
 
 ### world_generation.md
 
-Procedural content:
+Source-specific generation:
 
-- Terrain algorithms
-- Biome distribution
-- Feature placement
+- Native Cartesian sampling and sine-based fields
+- Minecraft raw-slot terrain initialization and bounds limitations
+- Model methods versus default-loop integration
 
 ### block_system.md
 
 Building system:
 
-- Shape types
-- Placement rules
-- Properties
+- Native elements, painter brushes and raw game slots as separate representations
+- Actual placement, inventory and key policies
+- Material flags and names versus unimplemented mechanical properties
 
 ### controls_and_navigation.md
 
@@ -48,26 +48,26 @@ Input handling:
 
 Building in tetrahedral space:
 
-- Slope, angle, and structural-integrity principles for non-cubic voxels
-- Named building patterns (helix, geodesic dome, smooth tunnels)
-- Techniques for stable, aesthetically pleasing structures
+- Explicit geometric paths and symmetry exercises
+- Ideal solids versus actual native meshes and game markers
+- Design hypotheses, not structural stability or easier-building guarantees
 
 ## Guidelines
 
 ### Updating for Gameplay Changes
 
-1. Document intended behavior
-2. Note differences from Minecraft (familiar reference)
-3. Include screenshots where helpful
-4. Keep controls section accurate
+1. Trace controls and features through the actual entrypoint, controller, model and renderer.
+2. Distinguish implemented model methods from methods invoked by the ordinary game loop.
+3. Correct misleading body text, rather than adding a warning over invented API recipes.
+4. Preserve useful navigation and describe check evidence only when exercised under the assignment's policy.
 
 ### Balancing Considerations
 
 When documenting gameplay values:
 
-- Note current values
-- Explain rationale
-- Suggest tuning ranges
+- Identify source-defined values and their units, not assumed optimal tuning.
+- Present rationale and possible changes as design hypotheses unless measured.
+- Do not claim structural, learning or performance advantages from coordinates alone.
 
 ### Player Perspective
 

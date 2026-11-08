@@ -1,80 +1,25 @@
-# 4D Bomberman — Agent Instructions
+# 4D Bomberman maintenance — Raw-grid bombs and logical-tick explosions
 
-## Project Overview
+Read the [game guide](README.md), [repository instructions](../../AGENTS.md) and [portfolio contracts](../../docs/games.md) before changing behavior. This folder is a browser game, not the native QuadCraft runtime.
 
-Grid-based bombing with destructible walls in 4D IVM space. Standalone browser application built on Quadray coordinates.
+## Source ownership
 
-## Quick Commands
+- [index.html](index.html) is authoritative for script order, page controls and construction.
+- [js/README.md](js/README.md) maps `BombermanBoard`, `BombermanRenderer` and `BombermanGame` to their actual files.
+- [tests/README.md](tests/README.md) records the actual source paths and historical browser-runner limitations.
 
-```bash
-# Run tests (22 tests)
-node tests/test_bomberman.js
+## Preserve game-specific invariants
 
-# Open in browser
-open index.html
+Preserve raw keys and the eight signed movement/explosion directions. Keep logical bomb ticks separate from fixed-second loop callback units; examine paused event callbacks explicitly.
 
-# Start local server
-python3 -m http.server 8119
-```
+One `board.step()` runs per 200 ms loop tick. Bomb timers and enemy motion are logical-step quantities; they are not seconds passed to a continuous integrator.
 
-## Shared Modules
+## Supported scope
 
-Imported via `<script>` tags in `index.html` from `../4d_generic/`:
-`quadray.js`, `camera.js`, `projection.js`, `zoom.js`, `synergetics.js`
+Pause stops scheduled steps, but movement/bomb key callbacks only guard game-over state, not pause. Shared pathfinding/entity scripts being loaded does not make every board action use them. This is not a physical tetrahedral tessellation.
 
-## Module Dependency Order
+Do not infer inherited APIs from scripts merely being loaded. Keep raw storage, normalized physical points, graph edges and display geometry separate. Link shared math rather than copying a conflicting distance formula or fabricated local `quadray.js` API.
 
-Load in this order to avoid reference errors:
+## Verification expectations
 
-```text
-1. bomberman_board.js     # Board/world state (needs Quadray)
-2. bomberman_renderer.js  # Canvas rendering (needs Quadray, Board)
-3. bomberman_game.js      # Controller (needs all above)
-```
-
-## File Inventory
-
-### JavaScript Modules (`js/`)
-
-| File | Key Exports | Purpose |
-|------|-------------|---------|
-| `bomberman_board.js` | `BombermanBoard` | IVM grid, block types, bomb timers, explosion propagation |
-| `bomberman_renderer.js` | `BombermanRenderer` | Top-down IVM grid with bomb animations and explosion effects |
-| `bomberman_game.js` | `BombermanGame` | Bomb placement, explosion chain logic, enemy AI, and power-ups |
-
-### Tests (`tests/`)
-
-| File | Tests | Coverage |
-|------|-------|----------|
-| `test_bomberman.js` | 22 | Board creation, cell operations, reset |
-| `test.html` | — | Browser test runner |
-
-## Game Rules Summary
-
-- Place bombs that explode along IVM axes
-- Explosions destroy soft blocks and enemies
-- Power-ups increase blast range and bomb count
-- Navigate 4D grid to trap and eliminate enemies
-- Win by being last player standing
-
-## Code Standards
-
-- **Language**: ES6+ JavaScript (classes, const/let, arrow functions)
-- **Comments**: JSDoc for public functions
-- **Indentation**: 4 spaces
-- **Export Pattern**: Browser + Node.js dual support
-
-```javascript
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { ClassName };
-}
-```
-
-## Verification Checklist
-
-- [ ] All tests pass: `node tests/test_bomberman.js`
-- [ ] Browser loads: `open index.html`
-- [ ] Game plays (basic interaction)
-- [ ] Shift+drag rotates view
-- [ ] Reset button works
-- [ ] Console shows no errors
+From the QuadCraft root, use `python3.13 games/run_games.py --test --game bomberman` for the registered suites. Also validate the portfolio with `python3.13 games/run_games.py --validate` and inspect the served page for console errors, real controls, camera/zoom and reset behavior. Follow the [repository testing guide](../../docs/development/testing_guide.md); Node logic results alone do not establish browser correctness. Report only checks actually run, without permanent passing-count claims.

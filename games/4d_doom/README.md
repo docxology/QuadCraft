@@ -1,87 +1,53 @@
-# 4D DOOM — Synergetics Hyperdimensional FPS
+# 4D Doom — Raw-label dungeon traversal with an AB-slice raycaster
 
-A Wolfenstein-3D-style raycasting FPS operating in **4D Quadray tetrahedral coordinates** on an **IVM (Isotropic Vector Matrix) grid** — Fuller's Synergetics geometry brought to life as a playable first-person shooter.
+A first-person browser shooter using a sparse raw four-index dungeon and a two-dimensional AB raycast view at the player’s current C/D slice.
 
-We utilize a **True 4D DDA Raycaster** tracing rays across 4 intersecting IVM hyperplanes simultaneously, completely removing traditional 2D Euclidean fallbacks for collision, hit-scanning, spacing, and dynamic lighting. Rendered with a stunning high-fidelity vignette and active CRT-scanline atmospheric aesthetic overlay.
+“4D” is the portfolio name. Physical Quadray projection has rank three; raw board labels may deliberately carry additional game state. See the [portfolio coordinate/time contract](../../docs/games.md).
+
+## Quick Start
+
+From the QuadCraft repository root, with Python 3.13 and a modern browser:
+
+```bash
+python3.13 games/run_games.py --game doom
+```
+
+Serve the parent `games/` tree, not this game directory alone: [index.html](index.html) loads sibling `../4d_generic/` assets. No JavaScript bundling step is needed. The static launcher is not a multiplayer backend.
+
+## Game Mechanics
+
+`DoomMap.cells` keys distinguish raw `(a,b,c,d)` labels, including physically gauge-equivalent labels. Missing/out-of-bounds cells are walls. Movement and line-of-sight traverse this raw occupancy; physical ranges and sphere-hit checks use the shared Quadray metric. Eight signed label neighbors and parity-based tetra/octa names are game metadata, not a regular physical tetrahedral tessellation.
+
+### Clock and lifecycle
+
+Doom has its own fixed 60 Hz accumulator, not BaseGame/GameLoop. `advanceFrame(elapsedMs)` takes milliseconds, caps each interval at 250 ms and retains fractional ticks. `settleTime(now)` consumes old-input time before live input changes. Movement, weapon cooldowns and enemy logic are per simulation tick; FX receive milliseconds.
+
+## Key Controls
+
+Click Start or the canvas to construct DoomGame and request pointer lock. WASD moves/strafe in AB; Q/E or Left/Right turn; Z/X change D; Space/left Shift change C. Mouse looks while locked; primary click fires; 1–3 select owned weapons; G cycles grid overlays; R respawns only after death.
 
 ## Architecture
 
-| Module | Role |
-|--------|------|
-| `doom_config.js` | IVM constants, cell types, weapons, rendering config |
-| `doom_board.js` | IVM sparse map (Map-based), room generation, 4D slice extraction |
-| `doom_entities.js` | Player/Enemy/Projectile with Quadray helpers |
-| `doom_physics.js` | Pure Quadray distance algorithms and True 4D DDA raycasting |
-| `doom_renderer.js` | True 4D dynamic lighting, IVM wall textures (tetra/octa) |
-| `doom_hud_synergetics.js` | Synergetics analysis panel, animated hit-markers |
-| `doom_synergetics.js` | Tetravolumes, IVM grid, coordination, polyhedra (T:O:C=1:4:20), 8 geometric identity checks |
-| `doom_game.js` | Game controller wiring modules + Synergetics HUD |
-| `quadray.js` | Quadray coordinate class with IVM utilities |
+- [Model](js/doom_board.js): `DoomMap` owns dungeon occupancy; `DoomGame` owns actors and gameplay state.
+- [Renderer](js/doom_renderer.js): `DoomRenderer` — Canvas wall-column DDA on the current AB slice, sprites, weapon/HUD/minimap and layered decorative geometry/FX.
+- [Controller](js/doom_game.js): `DoomGame` wires input and lifecycle.
+- [Module guide](js/README.md) describes additional helpers and load boundaries.
 
-## Synergetics Features
-
-- **IVM World Model**: Integer Quadray coordinates ARE IVM vertices — no cubic approximation
-- **Tetravolume Metrics**: Live volume calculation using Fuller's unit (regular tetra = 1 tetravolume)
-- **Polyhedra Detection**: Real-time T:O:C (1:4:20) identification in wall structure
-- **8 Geometric Identity Checks**: Verified on startup (basis lengths, tetrahedral angles, round-trip conversion, S3 constant, etc.)
-- **Synergetics HUD**: Tetravolumes · IVM fill · Coordination numbers · Polyhedra counts · Center of mass · Cell parity
-- **Quadray Compass**: 4 color-coded tetrahedral axes (A=Red, B=Green, C=Blue, D=Yellow)
-- **IVM Minimap**: Diagonal grid overlay showing tetrahedral structure
-
-## Controls
-
-| Key | Action |
-|-----|--------|
-| WASD | Move/Strafe |
-| Mouse | Look |
-| Left mouse button | Press to shoot; hold for automatic weapons (after mouse capture) |
-| Q/E | Keyboard Turn |
-| Z/X | Hyper-Strafe (D-axis) |
-| Space/Shift | Elevate (C-axis) |
-| 1/2/3 | Switch Weapon |
-| R | Respawn (when dead) |
-
-## Simulation and weapon queries
-
-Gameplay advances in fixed **1/60-second ticks**, independently of display
-refresh. `DoomGame.advanceFrame(elapsedMs)` accepts milliseconds, clamps each
-elapsed interval to 250 ms, and retains fractional ticks. Movement, AI, weapon cooldowns,
-particles and FX share those ticks; FX receives an explicit millisecond duration.
-Rendering does not advance the world. Existing tuning is unchanged: forward
-movement is 3.6 raw A/B units per second and the pistol cooldown is 200 ms.
-
-`DoomGame.settleTime(now)` is the single wall-time entry point used by frames and
-live input. It advances the previous input state first, then keyboard, look and
-fire commands take effect. Elapsed time is consumed once, so a shot pressed at
-240 ms after the previous frame is not aged through that preceding interval.
-`shoot()` itself never reads a clock: automatic shots already belong to the
-fixed-tick update. Respawn resets both the accumulator and wall-time baseline;
-the replacement player advances only through time since respawn.
-
-With the canvas captured, primary-button down fires once and enables held fire
-for automatic weapons; up clears the hold without shooting. The subsequent
-`click` only requests capture if needed, never fires a duplicate shot. Losing
-mouse capture or window focus settles then clears all held movement/fire input.
-The first uncaptured click requests mouse look rather than firing.
-
-`Physics.firstObstruction(start, end)` traverses the closed raw four-index segment
-in order and returns `{t, cell, position}` (fractional segment parameter) or
-`null`. LOS and deployed weapon hitscan reuse this traversal. Cells remain
-independent raw labels, including at simultaneous crossings and the map boundary.
-`Physics.traceShot(origin, angle, enemies, maxRawDistance=20)` compares the first
-wall against exact ray intersections with each living enemy's **0.8 Cartesian-unit
-radius**; the earliest intersection wins, with walls winning ties. Its
-`rawDistance` is an A/B ray parameter, not a physical Cartesian distance.
-
+The wall renderer is an AB DDA through `getSlice(c,d)`, not a simultaneous four-axis physical raycaster. `firstObstruction` traverses a closed raw four-index segment; `traceShot` casts an AB raw ray with physical enemy radius. Pointer-lock rejection is surfaced by the controller; keyboard turning remains available. There is no shared P-pause lifecycle here.
 
 ## Testing
 
-Run `node games/4d_doom/tests/test_doom.js` from the repository root, or open
-`tests/test_doom.html` in a browser. Behavioral regressions cover raw-cell LOS,
-live thin/near/end-boundary weapon shots, enemy hit ordering and physical radius,
-and equivalent simulation state under 60 Hz, 120 Hz and catch-up frame partitions.
-Kernel regressions also exercise the same live-command methods used by listeners:
-late shots, held automatic fire, releases, blur/capture-loss clearing, movement
-press/release ownership and replacement-world movement after late respawn.
-Actual pointer capture and deployed down/hold/up/blur routing require a real
-browser with successful mouse capture; kernel checks do not substitute for that.
+From the repository root:
+
+```bash
+python3.13 games/run_games.py --test --game doom
+```
+
+[Tests and limitations](tests/README.md) distinguish logic checks from actual browser interaction. No saved count or production-readiness claim replaces current results.
+
+## Documentation
+
+- [Maintenance instructions](AGENTS.md)
+- [Shared modules](../4d_generic/README.md)
+- [Game index](../GAMES_INDEX.md)
+- [QuadCraft](../../README.md)

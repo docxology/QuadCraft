@@ -1,190 +1,106 @@
 # Quadray Coordinates: A Comprehensive Analysis of Tetrahedral Coordinate Systems
 
-Quadray coordinates represent a fascinating approach to spatial geometry that utilizes the tetrahedral form as its fundamental structure. This report examines the mathematical foundation, historical development, practical applications, and philosophical implications of this coordinate system, with special attention to its relationship with conventional XYZ coordinates and connection to R. Buckminster Fuller's Synergetics.
+This technical/historical discussion explains quadrays using QuadCraft's declared scale and orientation. It is not a claim that historical authors' software is part of the game. Read the [canonical coordinate contract](../quadray_coordinates.md) and [mathematical reference](../mathematics/quadray_coordinates.md) first; return to the [papers index](README.md).
 
 ## Origins and Definition of Quadray Coordinates
 
-Quadray coordinates, also known as caltrop, tetray, or Chakovian coordinates (named after David Chako), were developed by Darrel Jarmusch in 1981 as an alternative to traditional Cartesian coordinates. This system belongs to a broader category of simplicial coordinates, which use a simplex (in this case, a tetrahedron) as the basis polyhedron[^1].
-
-The fundamental structure of quadray coordinates consists of four basis vectors that extend from the center of a regular tetrahedron to its four corners. These vectors are represented by the coordinate addresses (1,0,0,0), (0,1,0,0), (0,0,1,0), and (0,0,0,1) respectively[^1]. Unlike traditional Cartesian coordinates, which utilize three mutually orthogonal axes, quadray coordinates employ four non-orthogonal vectors that provide a unique perspective on spatial relationships.
+Kirby Urner's [*An Introduction to Quadrays*](https://www.grunch.net/synergetics/quadintro.html), first posted in 1997 and revised in 2000, describes four rays from a regular tetrahedron's center to its vertices. This primary account supplies the geometric construction and normalization examples. It does not by itself establish priority for every historical naming or invention claim, so no such attribution is asserted here.
 
 ### Mathematical Properties
 
-A critical mathematical property of quadray coordinates is that the four basis vectors sum to zero when properly normalized. This means that multiples of (1,1,1,1) can be added to any quadray coordinate without changing the actual point in space being referenced[^6]. This redundancy allows for various normalization strategies:
+Let $\mathbf1=(1,1,1,1)$ and let $E$ be the QuadCraft embedding below. Its four columns sum to zero, its rank is 3, and its kernel is exactly $\operatorname{span}\{\mathbf1\}$. Physical vectors therefore form $\mathbb R^4/\operatorname{span}\{\mathbf1\}$, not Euclidean four-space. Addresses $q$ and $q+t\mathbf1$ denote the same point.
 
-1. Keeping all coordinates non-negative with at least one coordinate set to zero
-2. Setting the sum of all coordinates to equal 1 (barycentric coordinates)
-3. Setting the sum of all coordinates to equal 0 (zero-sum normalization)[^6]
-
-Each normalization method offers computational advantages for different applications, demonstrating the flexibility of the quadray system.
+Subtracting $\min(q)$ gives a unique minimum-zero representative in exact arithmetic. Subtracting the mean gives a zero-sum representative. Neither is a physical fixed-sum constraint. Dividing by the sum is **not** gauge normalization: it generally moves the point. To choose the sum-one representative for the centered tetrahedron, add $(1-\sum_iq_i)\mathbf1/4$. Those affine coefficients need not all be nonnegative; they are nonnegative precisely inside the tetrahedron.
 
 ## Geometric Foundation and Tetrahedral Structure
 
-The geometric foundation of quadray coordinates is fundamentally tied to tetrahedral structures. In a quadray system, the "game of quadrays" begins with a regular tetrahedron and four rays pointing from its center to the four corners[^3].
-
-This tetrahedral structure is not arbitrary but connects to fundamental patterns in nature. In chemistry, tetrahedral molecular geometry describes arrangements where a central atom is located at the center with four substituents at the corners of a tetrahedron, with bond angles of approximately 109.5° when all substituents are identical[^2]. This same geometric pattern forms the basis for quadray coordinates.
-
 ### Tetrahedral Versus Cartesian Perspectives
 
-The tetrahedral approach of quadray coordinates offers a distinctively different perspective from Cartesian coordinates. Where Cartesian coordinates establish a privileged "cubic" frame of reference with three mutually perpendicular axes, quadray coordinates establish a tetrahedral frame that some argue better reflects certain natural systems[^7].
+The generators have pairwise angle $\arccos(-1/3)$, about $109.47^\circ$. They span the same three-dimensional Euclidean space as Cartesian coordinates. A Cartesian basis has three independent vectors, not six; counting its positive and negative rays is a different convention. Four tetrahedral rays positively span space because their sum is zero, not because they introduce an extra spatial dimension.
 
-Kirby Urner, a prominent advocate for quadray coordinates, notes that traditional Cartesian coordinates with positive and negative directions actually utilize six basis vectors (positive and negative for each of three axes), while quadray coordinates can reach any point with only positive scaling of four basis vectors[^7]. This difference has both mathematical and philosophical implications.
+Tetrahedral molecular arrangements and close-packed sphere models are useful geometric analogies. They are not evidence that one coordinate frame is universally more natural, isotropic, or computationally efficient than another. Discrete tetrahedral symmetry is not invariance under every rotation.
 
 ## Converting Between XYZ and Quadray Coordinates
 
-A critical aspect of understanding quadray coordinates is the conversion between this system and traditional XYZ coordinates. The relationship between these systems can be formalized through specific conversion algorithms.
+[Native `Quadray.h`](../../src/core/coordinate/Quadray.h) and [shared game `quadray.js`](../../games/4d_generic/quadray.js) are the primary implementation sources for the formulas here. Other historical implementations may choose different units or orientations.
 
 ### XYZ to Quadray Conversion
 
-Converting from XYZ to quadray coordinates involves a transformation that maps the three-dimensional Cartesian space onto the four-dimensional quadray space. The procedure can be expressed as:
+For Cartesian $(x,y,z)$, set
 
-```
-procedure xyz2quad(x,y,z)
-  q(1) = 1/root2 * (iif(x>=0,x, 0)+iif(y>=0,y, 0)+iif(z>=0,z, 0))
-  q(2) = 1/root2 * (iif(x>=0,0,-x)+iif(y>=0,0,-y)+iif(z>=0,z, 0))
-  q(3) = 1/root2 * (iif(x>=0,0,-x)+iif(y>=0,y, 0)+iif(z>=0,0,-z))
-  q(4) = 1/root2 * (iif(x>=0,x, 0)+iif(y>=0,0,-y)+iif(z>=0,0,-z))
-  simplify()
-endproc
-```
+$$r=\frac{1}{2\sqrt2}(x+y+z,-x-y+z,-x+y-z,x-y-z).$$
 
-This algorithm accounts for the signs of the XYZ coordinates and distributes them appropriately across the four quadray coordinates, followed by a normalization step[^11].
+Then return $r-\min(r)\mathbf1$. The source implements the equivalent positive-part construction followed by minimum subtraction. This is a real-valued inverse representative, not rounding to an integer lattice. The inverse is source-specific: changing the forward embedding changes this formula.
 
 ### Quadray to XYZ Conversion
 
-Converting from quadray back to XYZ coordinates is somewhat simpler:
+$$E(a,b,c,d)=\frac{1}{\sqrt2}(a-b-c+d,\ a-b+c-d,\ a+b-c-d).$$
 
-```
-procedure quad2xyz(a,b,c,d)
-  x = 1/root2 * (a - b - c + d)
-  y = 1/root2 * (a - b + c - d)
-  z = 1/root2 * (a + b - c - d)
-endproc
-```
-
-This conversion directly maps the four quadray values to three Cartesian coordinates through a linear transformation[^11].
+Coefficient-unit generators have length $\sqrt{3/2}$, generator-endpoint separation is 2, and common offsets disappear. A Cartesian axis permutation or global rescaling is a different embedding convention, even if the abstract quotient is the same.
 
 ### Volumetric Considerations
 
-When converting between XYZ and IVM (Isotropic Vector Matrix, another term used in Fuller's work), there exists a volumetric conversion constant S3 of approximately 1.06066. This indicates that volumes calculated in the two systems will differ by this factor[^4]. This mathematical relationship reveals the different ways these coordinate systems partition and measure space.
+A regular tetrahedron of Cartesian edge $L$ has volume $L^3/(6\sqrt2)$. In this embedding, the tetrahedron formed by the four generator endpoints has edge 2 and Cartesian volume $2\sqrt2/3$. If that tetrahedron defines one tetravolume, then
+
+$$V_{\rm tet}=\frac{3}{2\sqrt2}V_{\rm XYZ}=\sqrt{9/8}\,V_{\rm XYZ}.$$
+
+This is an explicit **volume-unit choice**, not a universal coordinate Jacobian or a rule to rescale all lengths and areas. See [IVM units](../mathematics/ivm_synergetics.md).
 
 ## Quadray Coordinates and Polyhedra
 
-One of the most striking applications of quadray coordinates is their ability to elegantly represent various polyhedra through simple integer coordinates.
-
 ### Concentric Hierarchy of Polyhedra
 
-The four quadrays can be linearly combined to provide integer coordinates for several key polyhedra:
+Under $E$, the following vertex sets describe centered regular polyhedra:
 
-1. The inverse tetrahedron: (0,1,1,1), (1,0,1,1), (1,1,0,1), (1,1,1,0)
-2. The octahedron: All permutations of {1,1,0,0} (six vertices)
-3. The cuboctahedron: All permutations of {2,1,1,0} (twelve vertices)[^1]
+| Shape | Coefficients | Cartesian dimensions |
+| --- | --- | --- |
+| Tetrahedron | Four permutations of $(1,0,0,0)$ | Edge 2; circumradius $\sqrt{3/2}$ |
+| Inverse tetrahedron | Four permutations of $(0,1,1,1)$ | Negatives of the tetrahedron vertices |
+| Octahedron | Six permutations of $(1,1,0,0)$ | Vertices on Cartesian axes at radius $\sqrt2$; edge 2 |
+| Cuboctahedron | Twelve permutations of $(0,1,1,2)$ | Vertex radius and edge length 2 |
 
-These simple coordinate representations reveal the elegant mathematical relationships between these polyhedra. In particular, the cuboctahedron coordinates are significant because they represent the points where a sphere would touch its twelve neighbors in a cubic close packing arrangement, also known as the Isotropic Vector Matrix (IVM) in Fuller's Synergetics[^1].
+The cuboctahedral vectors are the 12 contact directions of an FCC sphere-center lattice with unit-radius spheres. They are not the nearest-neighbor set of **all** integer quadray classes. The full integer quotient projects to a BCC-type set; restricting component sum modulo 4 selects one of four FCC cosets. The twelve edge-difference steps preserve that residue. A physical lattice and a chosen graph on it must be specified separately.
 
 ## Kirby Urner's Contributions and Implementation
 
-Kirby Urner has been instrumental in developing and popularizing quadray coordinates through his writings, software implementations, and philosophical explorations. His website at grunch.net contains detailed explanations of quadray coordinate systems and their relationships to Fuller's work[^3][^7].
-
-Urner has developed Python implementations of quadray coordinates, available on GitHub, which provide practical tools for working with these coordinate systems. His implementation includes methods for converting between vector systems, calculating distances, and normalizing coordinates[^9].
-
-One significant aspect of Urner's work is exploring the "Tetravolumes" concept, which examines volume calculations in tetrahedral coordinate systems. This connects to Fuller's alternative approach to spatial measurement and geometry[^8].
+Urner's [*Quadrays and XYZ*](https://www.grunch.net/synergetics/quadxyz.html), first posted October 16, 1997, explicitly discusses relative scale and orientation before giving conversions. Its procedural formulas agree with the convention used above. His introduction also explains zero-minimum and zero-sum gauges and warns that distance constants depend on the selected units.
 
 ### Programming Implementations
 
-The mathematical concepts of quadray coordinates have been implemented in various programming languages. Tom Ace provides C++ implementations of quadray formulas[^6], while Kirby Urner offers Python implementations with classes such as `Qvector` that handle the conversion between coordinate systems[^9].
+Tom Ace's [*Quadray formulas*](https://www.minortriad.com/quadray.html) provides C++ normalization, metric, cross-product, and rotation examples. Its declared generator length is 1, unlike QuadCraft's $\sqrt{3/2}$. Its zero-sum dot-product factor $4/3$ therefore cannot be copied as QuadCraft's metric factor. These are external mathematical implementations, not exported QuadCraft APIs.
 
-A key method in Urner's Python implementation is the quadray method within the Vector class:
-
-```python
-def quadray(self):
-    """
-    Return self as a quadray Vector (Vector -> Qvector)
-    A linear combo of self.xyz and the xyz basis spokes as Qvectors
-    Negative coefficients will create oppositely pointing Qvectors
-    """
-    return (self.x * Qvector((root2, 0, 0, root2)) +
-            self.y * Qvector((root2, 0, root2, 0)) +
-            self.z * Qvector((root2, root2, 0, 0)))
-```
-
-This method demonstrates how an XYZ vector can be expressed as a linear combination of quadray basis vectors[^9].
+The current native and shared game classes implement their own operations. [`GridUtils`](../../games/4d_generic/grid_utils.js) also has raw coefficient-space distances; those are not the embedded physical distance supplied by `Quadray.distance`.
 
 ## Connection to Fuller's Synergetics and 4D Geometry
 
-The concept of quadray coordinates is closely linked to R. Buckminster Fuller's "4D geometry" or "Synergetics." Fuller's work proposes an alternative approach to spatial geometry that emphasizes patterns and relationships rather than arbitrary coordinate systems[^1].
-
 ### The "4D" Interpretation
 
-The term "4D" in Fuller's work does not necessarily refer to a fourth spatial dimension in the conventional sense but rather to the four-directional nature of the quadray system. The four basis vectors provide a different perspective on three-dimensional space, allowing for what Fuller describes as "four-dimensional" thinking[^1].
-
-The IVM (Isotropic Vector Matrix) represents a key concept in Fuller's geometry, describing the closest packing of spheres and the vectors connecting their centers. This arrangement naturally connects to the quadray coordinate system, where the twelve vectors pointing to the vertices of a cuboctahedron correspond to the directions to neighboring spheres in this packing arrangement[^1].
+Historical Synergetics vocabulary and repository `4d_*` names do not change the rank of $E$. Physical quadrays describe three-dimensional points with four redundant coefficients. A raw four-index game state can keep extra label distinctions, but its non-injective XYZ projection does not make those labels four independent physical spatial directions.
 
 ## Philosophical Implications of Quadray Coordinates
 
-Beyond their mathematical utility, quadray coordinates carry philosophical implications about how we conceptualize and represent space. Kirby Urner explores these philosophical dimensions in his writings.
-
 ### Challenging Cartesian Paradigms
 
-Quadray coordinates challenge the dominance of Cartesian coordinates and suggest alternative ways of thinking about space. While Cartesian coordinates impose a cubic frame with three mutually perpendicular axes, quadray coordinates present a tetrahedral frame that some argue better reflects certain natural systems[^7].
-
-Urner suggests that the quadray approach may be more in tune with certain natural forms and processes. The tetrahedral frame doesn't privilege any particular direction and allows for a more relational understanding of spatial positions[^7].
+Alternative coordinates can expose useful symmetries and support educational comparisons. They do not invalidate Cartesian geometry or prove superior cognition, realism, or performance. Such claims need evidence beyond a change of notation.
 
 ### Scalar Multiplication and Negation
 
-An interesting philosophical point raised by Urner concerns the nature of scalar multiplication and negation. In traditional vector algebra, negative scaling is treated as a simple operation, but Urner suggests distinguishing between "strict" scaling (expanding or contracting without changing orientation) and negation (rotating a vector by 180 degrees)[^7].
-
-This distinction offers a different perspective on what constitutes a "basis" for a coordinate system and highlights how quadrays can reach any point in space with only positive scaling of the four basis vectors, unlike Cartesian coordinates which require negative values for points outside the positive octant[^7].
+Scalar multiplication is component-wise on equivalence classes. The negative of $q$ is represented by $-q$; its minimum-zero form is $\max(q)\mathbf1-q$. For example, $-(1,0,0,0)$ is equivalent to $(0,1,1,1)$. Reversing the tuple order is not general negation. In three dimensions, inversion $v\mapsto-v$ is not one fixed proper rotation acting on all vectors.
 
 ## Applications in Modern Mathematics and Computing
 
-While quadray coordinates may seem primarily theoretical, they have practical applications in various fields.
-
 ### Computational Geometry
 
-In computational geometry, alternative coordinate systems like quadrays can provide more elegant and efficient solutions to certain problems. The ability to represent polyhedra with simple integer coordinates facilitates calculations and transformations[^1].
+Integer labels make the polyhedral vertex sets above compact. They do not by themselves define faces, cell volumes, a valid tessellation, collision shapes, or a speedup. Native [`TetrahedralElement`](../../src/core/world/TetrahedralElement.h) has a separately defined mesh; its offsets must not be identified with the regular generator tetrahedron.
 
 ### Volumetric Calculations
 
-The ivm-xyz project on GitHub explores the relationship between volumetric calculations in different coordinate systems. This work includes comparison between traditional XYZ calculations and those performed in IVM (Isotropic Vector Matrix) coordinates, with a conversion constant of approximately 1.06066 between the two systems[^4].
+Use actual embedded vertices and $|\det(v_1-v_0,v_2-v_0,v_3-v_0)|/6$ for Cartesian tetrahedral volume. Convert to tetravolumes only after declaring the reference tetrahedron. A gameplay `cellVolume()` constant does not establish the volume of every rendered or stored cell.
 
 ### Educational Tools
 
-Quadray coordinates serve as valuable educational tools for exploring alternative geometric perspectives. They help students and researchers challenge conventional spatial thinking and consider different approaches to coordinate geometry[^3].
+Common-offset examples, the rank-three matrix, and comparisons between gauge choices make useful exercises. Distinguish affine barycentric coordinates, physical quadray vectors, and raw game board slots instead of conflating them as a single "4D" construction.
 
 ## Conclusion
 
-Quadray coordinates represent a fascinating alternative to traditional Cartesian coordinates, offering a tetrahedral perspective on spatial geometry that connects to both natural forms and mathematical elegance. Their development by Darrel Jarmusch and subsequent exploration by figures like Kirby Urner have revealed rich mathematical properties and philosophical implications.
-
-The relationship between quadray coordinates and traditional XYZ coordinates can be formalized through specific conversion algorithms, allowing practitioners to move between these systems as needed. The elegant representation of polyhedra through simple integer coordinates demonstrates the mathematical power of this approach.
-
-Through connections to R. Buckminster Fuller's Synergetics and the concept of the Isotropic Vector Matrix, quadray coordinates invite us to reconsider our fundamental understanding of space and geometry. They challenge the dominance of Cartesian thinking and offer alternative frameworks that may better reflect certain natural systems and relationships.
-
-As computational tools for working with quadray coordinates continue to develop, this coordinate system may find increasing applications in fields ranging from crystallography to computational geometry, offering new perspectives on spatial relationships and geometric forms.
-
-<div style="text-align: center">⁂</div>
-
-[^1]: https://en.wikipedia.org/wiki/Quadray_coordinates
-
-[^2]: https://en.wikipedia.org/wiki/Tetrahedral_molecular_geometry
-
-[^3]: https://www.grunch.net/synergetics/quadintro.html
-
-[^4]: https://coda.io/@daniel-ari-friedman/math4wisdom/ivm-xyz-40
-
-[^5]: https://en.wikipedia.org/wiki/Isotropic_quadratic_form
-
-[^6]: https://www.minortriad.com/quadray.html
-
-[^7]: https://www.grunch.net/synergetics/quadphil.html
-
-[^8]: https://www.youtube.com/watch?v=dwFoqo5vyfU
-
-[^9]: https://github.com/4dsolutions/m4w/blob/main/qrays.py
-
-[^10]: https://en.wikipedia.org/wiki/Quadratic_form
-
-[^11]: https://www.grunch.net/synergetics/quadxyz.html
-
-[^12]: https://math.stackexchange.com/questions/1583507/a-quadratic-form-is-positive-definite-iff-its-set-of-isotropic-vectors-is-trivia
-
+Quadrays provide a redundant tetrahedral representation of Euclidean three-space. Their mathematical value is compatible with conventional linear algebra, explicit units, and careful source-specific conversions. For maintained usage, consult the [canonical coordinate contract](../quadray_coordinates.md), [tetrahedral geometry](../mathematics/tetrahedral_geometry.md), and linked source rather than treating this historical discussion as an engine feature inventory.

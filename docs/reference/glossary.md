@@ -1,263 +1,285 @@
 # QuadCraft Glossary
 
-This document provides definitions for the specialized terminology used throughout the QuadCraft documentation. It serves as a quick reference for developers and players to understand the unique concepts related to tetrahedral geometry, coordinate systems, and gameplay mechanics.
+Definitions for the development checkout. Mathematical terms do not by themselves establish implemented gameplay features. The [canonical quadray contract](../quadray_coordinates.md) governs coordinate conventions; [interfaces](../ui/user_interface.md) names the actual UI surfaces.
 
 ## A
 
 ### Adjacent Tetrahedra
 
-Tetrahedra that share a triangular face with each other. In QuadCraft, players and entities can move between adjacent tetrahedra through their shared faces.
+Geometrically, tetrahedra sharing a triangular face. A game's neighbor relation is not automatically face adjacency: specify the graph and model. The sandbox census uses eight signed coefficient steps, while `GridUtils.neighbors` uses twelve different canonical steps.
 
 ### Ambient Occlusion
 
-A shading technique used to calculate how exposed each point in a scene is to ambient lighting, creating more realistic shadows in corners and crevices of tetrahedral structures.
+A shading concept estimating obstruction of ambient light. This definition is not a claim of an implemented tetrahedral ambient-occlusion pipeline.
 
 ## B
 
 ### Block
 
-The fundamental building unit in QuadCraft, shaped as a tetrahedron rather than a cube. Blocks form the basis of the game world and can be placed, modified, and removed by players.
+A stored material/occupancy record. Native [`TetrahedralElement`](../../src/core/world/TetrahedralElement.h) associates a normalized position and block ID with a four-vertex display model. [`MinecraftBoard`](../../games/4d_minecraft/js/minecraft_board.js) instead stores material IDs under raw four-component string keys. Neither name alone proves a space-filling physical cell.
 
 ### Broad Phase Collision
 
-The first step in collision detection that quickly eliminates pairs of objects that cannot possibly collide, optimized in QuadCraft for tetrahedral space.
+A coarse candidate-filtering stage in collision detection. It is general terminology, not evidence of a shared QuadCraft collision subsystem.
 
 ## C
 
+### Canonical Representative
+
+A selected representative of a common-offset equivalence class. QuadCraft's zero-minimum gauge subtracts `min(a,b,c,d)` from every coefficient. This is not unit-length normalization, integer rounding or a fixed-sum constraint.
+
 ### Cartesian Coordinates
 
-The conventional (x, y, z) coordinate system used as an intermediary in QuadCraft's rendering and physics calculations. Quadray coordinates are often converted to Cartesian coordinates for compatibility with standard 3D libraries.
+Three orthogonal coordinates `(x,y,z)` for Euclidean physical space. Native/shared-game quadrays use `(a-b-c+d, a-b+c-d, a+b-c-d)/sqrt(2)`; browser experiment variants must be checked against their own source. See [coordinate conversion](#coordinate-conversion).
 
 ### Chunk
 
-A volumetric section of the game world containing multiple tetrahedral blocks. The world is divided into chunks for efficient memory management, loading, and rendering.
+In the native [`World`](../../src/core/world/World.h), a region indexed by three Cartesian integers. The world-space half-open cube has side `TetraChunk::CHUNK_SIZE`; elements inside it use chunk-local quadray keys. A chunk is not a four-dimensional hypercube or a proof that its display tetrahedra tile the region.
+
+### Common-Offset Equivalence
+
+`q` and `q+t(1,1,1,1)` have the same Cartesian image. The four basis vectors sum to zero, so the physical map has rank three. For example, `(0,0,0,0)` and `(1,1,1,1)` denote the same physical point but may be separate raw game slots.
 
 ### Coordinate Conversion
 
-The process of translating between different coordinate systems in QuadCraft, particularly between Quadray and Cartesian coordinates.
+Mapping between coefficient records and Cartesian points. Native [`Quadray.h`](../../src/core/coordinate/Quadray.h) and shared-game [`quadray.js`](../../games/4d_generic/quadray.js) implement the forward map above and a sign-split, zero-minimum inverse. Inverses, scale, orientation and snapping are source-specific; do not substitute another package's conversion or assume rounding searches for the nearest physical lattice point. See the [canonical contract](../quadray_coordinates.md).
 
 ## F
 
 ### Face (Tetrahedral)
 
-One of the four triangular faces that form a tetrahedral block. Each face connects to another tetrahedral block in the game world, or forms part of the visible surface.
+One of four triangular boundary faces of a tetrahedron. A game statistic called “exposed faces” need not count those triangles; Minecraft's analysis counts contacts in an eight-direction raw-label graph.
 
 ## G
 
 ### Global Coordinates
 
-The coordinate system used to specify absolute positions in the QuadCraft world, combining aspects of both Quadray and Cartesian coordinates.
+Positions relative to the world origin, as opposed to a chunk's local origin. The native world converts physical positions to Cartesian chunk indices, then to local quadrays for storage; it does not mix two independent physical spaces.
 
 ### Greedy Meshing
 
-An optimization technique for generating 3D meshes that combines adjacent faces with identical properties, adapted in QuadCraft for tetrahedral geometry.
+Combining compatible faces into larger primitives. Native [`ChunkMesher.cpp`](../../src/render/mesh/ChunkMesher.cpp) emits individual exposed triangular faces; do not call that a greedy meshing implementation.
 
 ## L
 
 ### Level of Detail (LOD)
 
-A technique used to decrease the complexity of 3D models as they move away from the camera. In QuadCraft, this is specially adapted for tetrahedral structures.
+Reducing representation detail with view distance or another criterion. Chunk culling and render-count limits are not automatically a geometric LOD system.
 
 ### Local Coordinates
 
-Coordinates relative to a specific chunk, used to locate blocks within that chunk's boundaries.
+Coordinates relative to a declared origin. Native `worldToChunkSpace` subtracts the chunk's Cartesian origin before converting back to quadrays; four coefficient-wise chunk indices are not used.
 
 ## N
 
 ### Narrow Phase Collision
 
-The detailed collision detection process that accurately determines if and how objects interact, specialized in QuadCraft for tetrahedral shapes.
+Detailed intersection/contact testing after candidate selection. A projected square hit test or sampled occupancy ray is not an exact tetrahedron collision solver.
+
+### Native Canonical Occupancy
+
+Native world access groups physical positions by Cartesian chunk and chunk-local quadrays. [`TetraChunk.h`](../../src/core/world/TetraChunk.h) normalizes keys for hashing/equality; hashing uses exact float hashes while equality uses a small epsilon. This is not an integer-quantized key contract or a guarantee that arbitrary nearly equal floating values hash identically. It differs from the portfolio's raw-key storage.
 
 ### Non-Euclidean Geometry
 
-Geometry that does not follow the principles of Euclidean geometry. QuadCraft's tetrahedral space can exhibit non-Euclidean properties in certain configurations.
+Geometry with a non-Euclidean metric/structure. A non-orthogonal tetrahedral coordinate basis does **not** make QuadCraft's physical geometry non-Euclidean; its forward map and distance are Euclidean in three dimensions.
 
 ## O
 
 ### Orientation (Tetrahedral)
 
-The specific arrangement of a tetrahedron in space, defined by the positions of its four vertices. In QuadCraft, there are several possible orientations for tetrahedral blocks.
+The arrangement of a tetrahedron's vertices relative to a reference frame. A tetrahedron has four vertices in three-dimensional space. Browser labels Z/C denote experiment-specific shape constructions, not extra physical dimensions.
 
 ## P
 
 ### Pathfinding
 
-The process of finding a route between two points in the game world, made more complex in QuadCraft due to the tetrahedral structure of the environment.
+Route search on a declared navigation graph. A twelve-step neighbor helper, raw coefficient Manhattan distance and eight-step game census describe different graphs; do not silently equate their distances or connectivity.
 
 ### Procedural Generation
 
-The algorithmic creation of game content, adapted in QuadCraft to generate tetrahedral landscapes, structures, and features.
+Algorithmic creation of world/board content. The native terrain experiment and game-specific generators are separate implementations, not evidence of a common biome/structure API.
 
 ## Q
 
 ### Quadray Coordinates
 
-The four-component coordinate system (a, b, c, d) used in QuadCraft to represent positions in tetrahedral space. Each component corresponds to the distance from one of the four vertices of a reference tetrahedron.
+Four coefficients `(a,b,c,d)` along tetrahedral basis directions, representing Euclidean 3D points **modulo a common additive offset**. They are not four independent Euclidean axes, distances from four vertices or fixed-sum barycentric weights. Normalizing by the minimum chooses a representative without changing the physical point. See [canonical quadrays](../quadray_coordinates.md).
 
 ## R
 
+### Raw Game Label
+
+A four-component record used as a game-state identifier without gauge reduction. [`GridUtils.key`](../../games/4d_generic/grid_utils.js) preserves its four inputs; `generateGrid(size)` enumerates `size^4` labels. Common-offset aliases can therefore be distinct board slots at one projected physical location. In contrast, `Quadray.toKey()` normalizes and rounds, and `generateCanonicalGrid(size)` enumerates zero-minimum integer representatives. These APIs are not interchangeable without changing game state semantics.
+
 ### Raycasting
 
-A technique used to determine what objects intersect with a straight line (ray) in 3D space. In QuadCraft, raycasting is adapted for tetrahedral geometry for block selection, line-of-sight calculations, and other purposes.
+Querying a ray for intersections. Native [`Input.h`](../../src/game/Input.h) samples world occupancy along a camera ray. Minecraft's [`hitTest`](../../games/4d_minecraft/js/minecraft_renderer.js) instead selects a projected square face in screen space; it is not a physical triangle-ray intersection.
 
 ### Regular Tetrahedron
 
-A tetrahedron with four congruent equilateral triangular faces. The standard block in QuadCraft is based on a regular tetrahedron.
+A tetrahedron with six equal edges. The native `TetrahedralElement.getVertices()` offsets are not a regular tetrahedron despite their source comments: with `size=0.5`, squared edges 0–1 and 2–3 are `5/9` and `2/9`. Do not transfer ideal regular-tetrahedron volumes or tiling properties to that display model.
 
 ## S
 
 ### Space-Filling Tetrahedra
 
-A special arrangement of tetrahedra that completely fills three-dimensional space without gaps or overlaps. QuadCraft uses space-filling tetrahedra for its world structure.
+A claim requiring a specified tessellation. Congruent regular tetrahedra alone do not tile Euclidean 3D space. The ideal tetrahedral–octahedral honeycomb uses both regular tetrahedra and octahedra. Quadray labels or a tetrahedral display mesh alone do not demonstrate a gap-free voxel partition.
 
 ### Spatial Partitioning
 
-A technique used to divide the game world into regions for efficient collision detection and rendering, specialized in QuadCraft for tetrahedral space.
+Dividing data/space into regions for lookup and rendering. Native Cartesian chunks are one concrete example; an octree is a different structure and is not implied by chunking.
 
 ## T
 
 ### Tetrahedron
 
-A polyhedron with four triangular faces, four vertices, and six edges. The fundamental geometric shape used in QuadCraft instead of the cubes found in traditional voxel games.
+A polyhedron with four triangular faces, four vertices and six edges. “Tetrahedral” describes geometry, not a fourth spatial dimension.
 
 ### Tetrahedral Grid
 
-The three-dimensional lattice formed by regularly arranged tetrahedra, serving as the structural framework for the QuadCraft world.
+An ambiguous informal name. Specify whether it means an ideal tetrahedral–octahedral honeycomb, lattice sites/contact edges, native chunk occupancy, or raw game labels. These have different boundaries and adjacency.
 
 ### Tetrahedral Meshing
 
-The process of generating 3D triangular meshes for rendering tetrahedral blocks, optimized for the unique geometry of QuadCraft.
+Creating triangle meshes for tetrahedral models. Native [`ChunkMesher`](../../src/render/mesh/ChunkMesher.cpp) emits triangles from element vertices, insets them slightly and translates them by the Cartesian chunk origin. This render pipeline does not certify a space-filling tessellation or validate its geometry.
 
 ## V
 
 ### Vertex (Tetrahedral)
 
-One of the four corner points of a tetrahedral block. Each vertex is shared by multiple adjacent tetrahedra in the game world.
+One of a tetrahedron's four corners. An occupied lattice site, a block center and a model vertex need not be the same object.
 
 ### Voxel
 
-A 3D pixel, typically cubic in most voxel games, but in QuadCraft, the fundamental volumetric unit is a tetrahedral voxel.
+A volume element in a specified discretization. In QuadCraft, distinguish the intended voxel world from stored occupancy records and rendered markers. Do not infer measured solid volume from record count without a declared cell shape, scale and non-overlap rule.
 
 ## W
 
 ### World Generation
 
-The process of creating the game environment using procedural algorithms, adapted in QuadCraft for tetrahedral terrain, structures, and biomes.
+Creating terrain or a game's initial board. Consult the owning implementation; generated point locations do not alone establish tessellation, collision boundaries or a shared world format.
 
 ## Technical Concepts
 
 ### Entity Component System (ECS)
 
-The architectural pattern used in QuadCraft where game objects (entities) are composed of data components and processed by systems. This is adapted to handle the unique requirements of tetrahedral space.
+An architecture organizing entity data into components and systems. This is a general definition, not a claim that every native/browser/game path uses ECS.
 
 ### Frustum Culling
 
-A rendering optimization technique that avoids drawing objects that are not currently visible to the camera, adapted in QuadCraft for tetrahedral chunks.
+Rejecting objects outside the camera view volume. Native `Game::render()` applies a chunk bounding-sphere/frustum check; it is not exact per-face visibility or a UI occlusion test.
 
 ### Marching Tetrahedra
 
-A specialized version of the marching cubes algorithm used for generating surfaces from volumetric data, adapted for QuadCraft's tetrahedral geometry.
+An isosurface-extraction technique subdividing a scalar field into tetrahedra. Native element-face emission is not marching tetrahedra.
+
+### Model and Voxel Boundaries
+
+A render model's triangles, a stored occupancy graph and the boundary of a union of physical cells are distinct. Native elements supply a four-vertex model; Minecraft renders projected square markers and derives graph statistics from stored labels. Its “Shared Faces”/“Exposed Faces” statistics use eight signed coefficient directions, not measured triangle contacts; “Center of Mass” is the equal-weight mean of stored block positions, not an integrated uniform-solid centroid. The `size^4` fill denominator and per-record volume assignment are model conventions, not measurements of unique physical FCC cells or a rendered solid. See [`minecraft_analysis.js`](../../games/4d_minecraft/js/minecraft_analysis.js).
 
 ### Octree
 
-A tree data structure where each internal node has exactly eight children, used in QuadCraft (with modifications) for spatial partitioning of tetrahedral blocks.
+A spatial tree with eight children per internal node. Native chunk maps are not octrees; the term does not imply an implemented subsystem.
 
 ### Quaternion
 
-A mathematical notation used to represent orientations and rotations in 3D space, particularly important in QuadCraft for handling rotations in tetrahedral space.
+A four-component algebraic representation used for 3D rotations. Four quaternion components do not mean four physical spatial axes. The browser painting experiment has a quaternion-camera path independent of its quadray position representation.
 
 ### SIMD (Single Instruction, Multiple Data)
 
-A class of parallel processing instructions that perform the same operation on multiple data points simultaneously, used in QuadCraft to optimize physics and rendering calculations.
+Parallel arithmetic on multiple values per instruction. This general term is not evidence of explicit SIMD physics/render kernels in QuadCraft.
 
 ## Game-Specific Terms
 
 ### Biome
 
-A distinct region in the game world with specific environmental characteristics, adapted in QuadCraft to fit the tetrahedral landscape.
+A region with shared environmental characteristics. Treat specific biome generation as implementation-dependent, not a universal feature of every game.
 
 ### Crafting
 
-The game mechanic of combining materials to create new items or blocks, with unique patterns reflecting tetrahedral geometry in QuadCraft.
+Combining inventory resources according to a recipe. The Minecraft page wires two real operations: one wood to four planks and one sand to one glass, implemented by `MinecraftBoard.craft`. This is not the earlier proposed rotatable tetrahedral recipe-grid UI.
 
 ### Tetrahedral Compass
 
-A specialized navigation tool in QuadCraft that helps players orient themselves in tetrahedral space, displaying directions relative to the tetrahedral grid.
+A design term for a navigation display. Native F2 draws colored basis lines; the sandbox draws projected basis arrows. Neither is the fully featured compass-ring widget previously described in these docs.
 
 ### Tetrahedral Portal
 
-A special structure that allows players to teleport between different locations or dimensions in the QuadCraft world, designed with tetrahedral geometry.
+A conceptual teleportation structure, not an established shared gameplay feature or API.
 
 ### Tetraforming
 
-The QuadCraft equivalent of "terraforming" - reshaping the environment by placing and removing tetrahedral blocks to create structures and landscapes.
+Informal design vocabulary for modifying a tetrahedral-themed environment. Concrete placement/removal behavior is defined separately by each controller/model.
 
 ### Tetravolume
 
-The unit of volume in the Synergetics system of mensuration, where the volume of a regular tetrahedron equals 1. This produces elegant whole-number ratios for other polyhedra (cube = 3, octahedron = 4, rhombic dodecahedron = 6, cuboctahedron = 20). See [IVM & Synergetics](../mathematics/ivm_synergetics.md).
+Volume relative to a declared reference regular tetrahedron. In the native/shared Cartesian scale, a regular tetrahedron of edge 2 has Euclidean volume `2*sqrt(2)/3` and is assigned one tetra-unit; multiply Cartesian volume by `sqrt(9/8)`. Minecraft's analysis assigns `0.375` tetra-units per raw stored block record; this does not measure the native display tetrahedron or prove non-overlapping physical occupancy. See [volume conventions](../mathematics/ivm_synergetics.md).
 
 ### Tower Defense Path
 
-A pre-defined route through an IVM grid along which enemies advance in the 4D Tower Defense game. Pathfinding uses the alternating tetrahedra/octahedra cell structure to determine valid traversal directions.
+A route used by the tower-defense game model. Its graph and traversal rules must come from that game's board/controller, not from an assumption that every quadray step crosses a physical tetrahedron face. See the [portfolio](../games.md).
 
 ## Coordinate & Grid Terms
 
 ### CCP (Cubic Close-Packed) / FCC (Face-Centered Cubic)
 
-The sphere-packing arrangement underlying the Isotropic Vector Matrix. Connecting the centers of closest-packed equal spheres produces the IVM grid of alternating tetrahedra and octahedra.
+Names for the same ideal closest-packed equal-sphere center arrangement. Each site has twelve nearest contacts. Not all integer quadrays automatically form one FCC lattice: the full projected integer set is BCC-type; the twelve `GridUtils.DIRECTIONS` preserve component sum modulo four and act within an FCC-type sublattice. See [`grid_utils.js`](../../games/4d_generic/grid_utils.js) and [canonical coordinates](../quadray_coordinates.md).
 
 ### Cell Parity
 
-The classification of each cell in the IVM grid as either a tetrahedron or an octahedron. Parity is determined from the quadray coordinate sum and is used in several games for gameplay mechanics (e.g., enemy spawning in 4D Doom, path routing in 4D Tower Defense).
+`Quadray.cellType` in the shared game module labels a record `tetra` or `octa` from the parity of the rounded coefficient sum. This is a game classification helper, not a derivation of a unique physical cell decomposition, its face adjacency or its volume.
 
 ### Concentric Hierarchy
 
-The nested sequence of polyhedra centered at the same origin in the Synergetics system: tetrahedron (1) → cube (3) → octahedron (4) → rhombic dodecahedron (6) → cuboctahedron (20), all measured in tetravolumes. See [IVM & Synergetics](../mathematics/ivm_synergetics.md).
+A Synergetics family of suitably scaled ideal polyhedra with relative volumes tetrahedron 1, cube 3, octahedron 4, rhombic dodecahedron 6 and cuboctahedron 20. These ratios require the reference geometry; they are not volumes of arbitrary same-edge models or automatic occupancy counts. See [IVM & Synergetics](../mathematics/ivm_synergetics.md).
 
 ### Cuboctahedron / Vector Equilibrium (VE)
 
-The 20-tetravolume polyhedron formed by the centers of the 12 nearest neighbors around any sphere in the IVM's closest-packed arrangement. Fuller called it the "Vector Equilibrium" (VE) because all of its radial vectors are equal in length to its edge vectors. It sits at the top of the Concentric Hierarchy and is the shape a cuboctahedron collapses through during the Jitterbug Transformation. See [IVM & Synergetics](../mathematics/ivm_synergetics.md).
+A polyhedron with eight triangular and six square faces. The twelve nearest neighbors of an ideal FCC site form a cuboctahedral shell; radial and edge lengths agree. Its Synergetics reference volume is 20 tetra-units. See [IVM & Synergetics](../mathematics/ivm_synergetics.md).
 
 ## Mathematics & Physics Terms
 
 ### Hitscan
 
-An instantaneous ray-based attack mechanic (no projectile travel time) used in 4D Doom. The hitscan ray is cast along the player's look direction and tested against enemy bounding volumes in tetrahedral space.
+An attack resolved by a ray query without projectile travel time. This describes a possible game mechanic, not a shared physics/rendering API; consult the relevant game implementation.
 
 ### IVM (Isotropic Vector Matrix)
 
-A space frame of alternating tetrahedra and octahedra formed by closest-packing equal spheres. The IVM is the underlying grid structure for QuadCraft's world. Every edge is equal length (isotropic) and every node has 12 nearest neighbors. See [IVM & Synergetics](../mathematics/ivm_synergetics.md).
+The ideal closest-packed lattice/contact framework associated with the tetrahedral–octahedral honeycomb. Distinguish its twelve contacts from the eight signed basis steps and from raw board labels. `GridUtils.neighbors` canonicalizes its twelve physical step results; raw-key maps need not merge all aliases. See [canonical quadrays](../quadray_coordinates.md).
 
 ### Jitterbug Transformation
 
-A dynamic geometric transformation where a cuboctahedron (20 tetravolumes) contracts through an icosahedral phase to an octahedron (4 tetravolumes). Demonstrates the relationship between 5-fold and 6-fold symmetry in the IVM.
+A geometric transformation relating cuboctahedral configurations to other configurations, including an octahedral endpoint. Mentioning it is conceptual background, not evidence of an implemented UI animation or game mechanic.
 
 ### Octet Truss
 
-The structural framework corresponding to the IVM (Alexander Graham Bell's term). Composed of alternating tetrahedra and octahedra, it provides maximum structural efficiency and forms the physical interpretation of QuadCraft's game grid.
+A framework based on tetrahedral and octahedral units. It is geometric/engineering background, not a claim that QuadCraft simulates structural loads or realizes a maximum-efficiency physical structure.
 
 ### S3 Constant
 
-The volumetric conversion factor between XYZ cubic volumes and Synergetics tetravolumes: S3 = √(9/8) ≈ 1.06066. Used throughout the engine and games for volume and density calculations. See [IVM & Synergetics](../mathematics/ivm_synergetics.md).
+`sqrt(9/8)`, used for the declared native/shared Cartesian-to-tetra-unit volume convention. A volume multiplier depends on coordinate scale and reference tetrahedron; it cannot be transferred unchanged to another embedding. It does not add a physical dimension or convert an arbitrary block count into solid volume. See [canonical contract](../quadray_coordinates.md) and [IVM volume conventions](../mathematics/ivm_synergetics.md).
 
 ### Synergetics
 
-R. Buckminster Fuller's system of mathematical mensuration using the tetrahedron as the unit of volume (instead of the cube). Provides the philosophical and geometric foundation for QuadCraft's coordinate system and world structure. See [IVM & Synergetics](../mathematics/ivm_synergetics.md).
+Buckminster Fuller's geometric/mensuration framework, used as conceptual background and in shared game constants/helpers. A philosophical association is not proof of the geometry, physics or gameplay claims of a particular implementation.
 
 ### Volume Ratio
 
-The ratio of a polyhedron's volume to a reference tetrahedron in the Synergetics system. Key ratios: tetrahedron = 1, cube = 3, octahedron = 4, rhombic dodecahedron = 6, cuboctahedron = 20.
+A quotient of volumes under stated scaling and reference units. State whether the operands are ideal polyhedra, integrated solids, model cells or assigned per-record values.
 
 ## Development Terms
 
 ### Pheromone Trail
 
-A gameplay mechanic in 4D SimAnt where ants deposit virtual pheromones along their path in quadray space. Other ants follow high-pheromone paths using a concentration gradient to navigate toward food sources.
+A concentration/trace metaphor used in ant-simulation gameplay. Specific deposition and movement rules belong to the SimAnt implementation, not a common quadray geometry contract.
 
 ### Run Script
 
-A shell script (`run_<game>.sh`) or Python launcher (`run_games.py`) used to start one or more of the 30 standalone browser games with a local HTTP server. See [Games Overview](../games.md).
+A game launcher/server convenience script. See [games overview](../games.md) for actual entry points; the existence of a launcher does not establish a deployed game server.
 
 ### Standalone Architecture
 
-The design pattern used by all 12 QuadCraft browser games, where each game is a self-contained folder with its own HTML entry point, JavaScript modules, and tests — no shared build step or server dependency.
+Game-specific HTML entry points and controllers/renderers with reusable code under [`games/4d_generic/`](../../games/4d_generic/). “Standalone” does not mean no shared modules, no local HTTP serving or a self-contained single HTML file.
+
+[Reference index](README.md) · [Canonical coordinates](../quadray_coordinates.md) · [UI documentation](../ui/README.md) · [Documentation index](../README.md)

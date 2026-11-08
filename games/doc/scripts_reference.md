@@ -1,125 +1,24 @@
-# Scripts Reference — `scripts/`
+# Portfolio maintenance utilities and write effects
 
-> **Note on 4D Geometry & Nomenclature**: "4D" in QuadCraft strictly means **Synergetics** geometry (Quadray tetrahedral coordinates on an IVM; 12 neighbors = permutations of `(0, 1, 1, 2)`). Canonical statement: [GAMES_INDEX.md](../GAMES_INDEX.md#note-on-4d-geometry--nomenclature).
+Source: [`scripts/`](../scripts/). Commands below assume the QuadCraft repository root. These utilities are not one safe “refresh everything” pipeline; inspect writes and review handcrafted content before using them.
 
-> Maintenance and automation scripts for the QuadCraft game portfolio.
+| Script | Actual behavior | Important limitation |
+|---|---|---|
+| `regenerate_scripts.py` | Reads registry and `games/scripts/_run_template.sh`, writes/chmods `games/run_<key>.sh` | Relative template/output paths require repository-root cwd; does not update master run.sh key list |
+| `_run_template.sh` | Template for central-launcher per-game wrappers | Distinct from the inline GameScaffold local run.sh |
+| `generate_test_html.py` | Overwrites `tests/test.html` for entries in its hardcoded TEST_CONFIG | Only its original configured subset, not discovery of every suite; template references local `../js/quadray.js` and shims require/module, so it is not the current real-browser gate |
+| `ensure_agents_md.py` | Creates absent AGENTS.md for registry entries | Leaves existing files alone; generic template has historical assumptions and must be source-reviewed |
+| `audit_docs.py` | Prints presence/minimum-line status of README/AGENTS in configured infra and 4d_* directories | Read-only; length is not accuracy and issues do not produce a semantic documentation audit |
+| `fix_docs.py` | Creates missing README/AGENTS files for hardcoded target lists | Does not repair formatting, stale links or existing content; generated stubs need real source-backed replacement |
+| `generate_matrix.py` | Prints HTML filename-substring module usage table for registered games | Read-only; imported text is not runtime use/inheritance and its list omits graph_field/CSS |
+| `update_tests.py` | Writes test-count replacements to selected game README/AGENTS using a hardcoded table | Not live test execution; do not use to establish current totals or reinstate timeless count claims |
 
----
+Examples for separately authorized maintenance:
 
-## Script Inventory
-
-```text
-games/scripts/
-├── _run_template.sh           # Launcher wrapper template (delegates to run_games.py)
-├── regenerate_scripts.py      # Generate launcher wrapper scripts from template
-├── generate_test_html.py      # Generate browser-based test HTML pages
-├── ensure_agents_md.py        # Ensure every game has an AGENTS.md
-├── audit_docs.py              # Audit documentation completeness
-├── fix_docs.py                # Auto-fix common documentation issues
-├── AGENTS.md                  # Agent instructions for scripts/
-└── README.md                  # Scripts overview
+```sh
+python3.13 games/scripts/regenerate_scripts.py
+python3.13 games/scripts/generate_matrix.py
+python3.13 games/scripts/audit_docs.py
 ```
 
----
-
-## Script Details
-
-### `regenerate_scripts.py`
-
-**Purpose:** Generate or update launcher wrapper scripts for all registered games.
-
-```bash
-python3 games/scripts/regenerate_scripts.py
-```
-
-- Reads the `GAMES` dict from `src/core/registry.py`
-- Applies `_run_template.sh` with game-specific substitutions
-- Creates `games/run_<game>.sh` wrapper scripts that delegate to `run_games.py`
-- **When to run:** After adding a new game to the registry
-
----
-
-### `_run_template.sh`
-
-**Purpose:** Template for launcher wrapper scripts that delegate to `run_games.py`.
-
-Provides:
-
-- Game key resolution
-- Port configuration (from command-line arg or default)
-- Delegation to centralized `run_games.py --game` launcher
-
-**Template variables:** `GAMENAME`, `DISPLAYNAME`, `GAMEDIR`, `DEFAULTPORT`
-
----
-
-### `generate_test_html.py`
-
-**Purpose:** Generate HTML test runner pages for browser-based test execution.
-
-```bash
-python3 games/scripts/generate_test_html.py
-```
-
-- Scans all game directories for `tests/test_*.js` files
-- Generates an HTML page that loads and runs tests in the browser
-- Useful for debugging tests with browser DevTools
-
----
-
-### `ensure_agents_md.py`
-
-**Purpose:** Ensure every game directory has an `AGENTS.md` file.
-
-```bash
-python3 games/scripts/ensure_agents_md.py
-```
-
-- Scans all `4d_*` directories
-- Creates `AGENTS.md` from template if missing
-- Reports which files were created vs already existed
-- **When to run:** After scaffolding new games, as a safety net
-
----
-
-### `audit_docs.py`
-
-**Purpose:** Check documentation completeness across all game directories.
-
-```bash
-python3 games/scripts/audit_docs.py
-```
-
-- Verifies presence of `README.md`, `AGENTS.md` in each game
-- Checks for empty or stub documentation files
-- Reports missing or incomplete docs
-
----
-
-### `fix_docs.py`
-
-**Purpose:** Auto-fix common documentation issues.
-
-```bash
-python3 games/scripts/fix_docs.py
-```
-
-- Fixes formatting inconsistencies
-- Updates stale references
-- Normalizes README structure across games
-- **Review changes** after running — not all fixes may be desirable
-
----
-
-## Workflow Integration
-
-| Scenario | Script to Use |
-|----------|--------------|
-| Added new game to registry | `regenerate_scripts.py` → `ensure_agents_md.py` |
-| Pre-release documentation check | `audit_docs.py` |
-| Batch fix doc formatting | `fix_docs.py` |
-| Generate browser test page | `generate_test_html.py` |
-
----
-
-*See also: [contributing.md](contributing.md) · [game_template.md](game_template.md) · [python_infrastructure.md](python_infrastructure.md)*
+The first command writes wrappers; the latter two print reports. Do not treat audit_docs success, a module matrix, generated test pages or historical count synchronization as verification. The [QA guide](testing_guide.md) and [Chromium instructions](../tests/browser/README.md) identify current logic/browser entrypoints. [Scaffold guide](scaffold_guide.md) describes that generator's separate write and path issues.

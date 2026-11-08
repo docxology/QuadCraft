@@ -1,78 +1,9 @@
-# Game Logic
+# Native Game loop, input and sampled block picking
 
-This directory contains the main game loop, input handling, and game state management.
+[Game.h](Game.h)/[Game.cpp](Game.cpp) coordinate GLFW, world, camera, mesher, mesh cache and shaders. [../main.cpp](../main.cpp) constructs `Game(800,600,"QuadCraft")`, calls `initialize()` and then `run()`; `cleanup()` handles resources. There is no documented INIT/LOADING/PAUSED gameplay state machine.
 
-## Files
+`run()` computes variable GLFW deltas in seconds, caps at 0.05, calls private `update()` then `render()`, swaps buffers and polls events. Frame pacing uses busy waiting; this is not the portfolio fixed-step loop. `update()` calls `Input::processInput`, generates nearby chunks and budgets mesh regeneration. Camera movement can mark all chunks dirty, so dirty caching is not restricted to block edits.
 
-| File | Purpose |
-|------|---------|
-| `Game.cpp` | Main game loop and state management |
-| `Game.h` | Game class interface |
-| `Input.h` | Input handling and key mappings |
+[Input.h](Input.h) owns GLFW callbacks and `processInput(float,Camera&,World&)`. F1/F2 toggle wireframe/coordinate overlay through `GameInputDelegate`; left click initially captures the mouse, then captured mouse buttons request removal/placement. Read the actual key handlers for movement/capture variants rather than assuming browser bindings.
 
-## Game Class
-
-The Game class orchestrates all game systems:
-
-### Responsibilities
-
-- **Initialization**: Set up OpenGL, load resources
-- **Main Loop**: Update → Render cycle
-- **State Management**: Current mode, pause state
-- **System Coordination**: Link input, world, rendering
-
-### Main Loop
-
-```cpp
-while (!glfwWindowShouldClose(window)) {
-    update(deltaTime);   // processes input + world updates
-    render();
-    swapBuffers();
-    pollEvents();
-}
-```
-
-## Input System
-
-Comprehensive input handling:
-
-### Movement Controls
-
-| Key | Action |
-|-----|--------|
-| W, A, S, D | Move forward/left/back/right |
-| Space | Move up |
-| Left Shift | Move down |
-| Arrow Keys | Drone-like movement (always active) |
-| Page Up/Down | Vertical movement |
-
-### Interaction Controls
-
-| Key | Action |
-|-----|--------|
-| Left Mouse | Remove block (or capture mouse) |
-| Right Mouse | Place block |
-| Tab | Toggle mouse capture |
-| Escape | Release mouse / exit |
-
-### View Controls
-
-| Key | Action |
-|-----|--------|
-| F1 | Toggle wireframe mode |
-| F2 | Toggle quadray overlay |
-| Mouse Wheel | Zoom |
-
-## State Machine
-
-```text
-INIT → LOADING → PLAYING ↔ PAUSED
-                    ↓
-                  EXIT
-```
-
-## Integration Points
-
-- **World**: Block queries and modifications
-- **Camera**: View position and orientation
-- **Renderer**: Draw calls and state changes
+`castRayFromCamera` is a private sampled ray march using a base 0.05 Cartesian step (sometimes halved), testing `World::getBlock` at converted points. The previous sample supplies placement adjacency. It does not intersect tetrahedron faces or guarantee hitting every rendered element. Camera motion has no collision/gravity solver; browser ball physics and saves are not native Game features.

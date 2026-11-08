@@ -1,58 +1,7 @@
-# Save Files
+# Browser snapshot formats and compatibility limits
 
-This directory contains JSON save files for game states.
+`quadraygrid4/` and `quadraygrid5/` preserve historical JSON snapshots; filenames include timestamps and optional scenario descriptions. They are user/debugging data, not native saves or a server-managed save catalog.
 
-## Directory Structure
+Inspected grid4 samples contain `type`, `selq`, `camera`, `camPos/camQ`, `textBoxToEval`, `grid`, `ccp`, option/brush fields and sometimes `V`. Grid5 archives can contain `V`; current `../index.html` instead writes `root` for the current room through StateMap and checks `quadcraft_quadraygrid5_state` in LoadMap. Thus even matching filename prefixes do not prove current load compatibility. There is no universal `{dots,shapes,metadata}` schema or documented automatic migration.
 
-```text
-saves/
-├── quadraygrid4/     # Saves from QuadrayGrid4 version
-└── quadraygrid5/     # Saves from QuadrayGrid5 version
-```
-
-## File Format
-
-Save files are named with pattern:
-
-```text
-quadcraft_quadgrid{N}_{timestamp}.json
-```
-
-Example: `quadcraft_quadgrid4_1756388399.8885.json`
-
-## JSON Structure
-
-```json
-{
-  "dots": [
-    {"a": 1, "b": 0, "c": 0, "d": 0, "type": "..."}
-  ],
-  "shapes": [
-    {"position": {...}, "type": "octahedron"}
-  ],
-  "camera": {
-    "position": {...},
-    "rotation": {...}
-  },
-  "metadata": {
-    "version": "...",
-    "timestamp": "..."
-  }
-}
-```
-
-## Notable Saves
-
-Some saves include specific scenarios:
-
-- `*_poolOfManyBalls.json` - Physics testing with many balls
-- `*_testVInJson.json` - Velocity data testing
-- `*_bugSeeingBallsInsideCCPVolume.json` - Debug scenario
-
-## Usage
-
-These saves can be:
-
-- Loaded directly in the browser application
-- Shared between browser instances (via server)
-- Used for testing and debugging
+Use the producing snapshot's serializer/loader as authority. Preserve original files before experimenting. LocalStorage quicksaves and downloaded files are separate from [JSP in-memory synchronization](../../server/README.md); none implies durable server backups. No load round trips were run in this audit.

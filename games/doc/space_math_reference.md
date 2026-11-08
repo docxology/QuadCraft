@@ -1,188 +1,60 @@
-# Space Math Reference — `src/space/`
+# Python quadray, projection and grid helpers
 
-> **Note on 4D Geometry & Nomenclature**: "4D" in QuadCraft strictly means **Synergetics** geometry (Quadray tetrahedral coordinates on an IVM; 12 neighbors = permutations of `(0, 1, 1, 2)`). Canonical statement: [GAMES_INDEX.md](../GAMES_INDEX.md#note-on-4d-geometry--nomenclature).
+Source: [`src/space/`](../src/space/). These are floating-point helpers, not exact-rational geometry or a four-dimensional Euclidean model. The [canonical portfolio contracts](../../docs/games.md) own gauge, orientation and unit conventions; [suite interoperability](https://github.com/docxology/symergetics/blob/main/docs/synergetics-suite.md) covers exchange with the scientific packages.
 
-
-> Python implementation of Quadray, IVM, XYZ, and geometry math — parity with the JavaScript foundation in `4d_generic/`.
-
----
-
-## Package Structure
-
-```text
-games/src/space/
-├── __init__.py      # Re-exports all public symbols (16 total)
-├── quadrays.py      # Quadray coordinate class
-├── ivm.py           # IVM constants (SYNERGETICS)
-├── xyz.py           # Cartesian ↔ Quadray transforms, projection, rotation
-└── geometry.py      # Angles, distances, verification suite, grid generation
-```
-
----
-
-## `quadrays.py` — Quadray Class
-
-4D tetrahedral coordinates `(a, b, c, d)` with four basis vectors from the centre of a regular tetrahedron.
-
-### Class: `Quadray`
+## Quadray objects and metrics
 
 ```python
-from games.src.space import Quadray
+from games.src.space import Quadray, distance, angle_between
 
 q = Quadray(1, 0, 0, 0)
-print(q.to_xyz())              # (0.7071, 0.7071, 0.7071)
-print(Quadray.from_xyz(1, 0, 0))  # Normalized Quadray
+xyz = q.to_xyz()
+same_point = Quadray(2, 1, 1, 1)
+physical_separation = distance(q, same_point)
 ```
 
-| Method / Property | Returns | Description |
-|-------------------|---------|-------------|
-| `Quadray(a, b, c, d)` | `Quadray` | Construct from 4 floats |
-| `.clone()` | `Quadray` | Independent copy |
-| `.normalized()` | `Quadray` | Zero-minimum normalization (min component → 0) |
-| `.to_xyz()` | `(x, y, z)` | Convert to Cartesian via tetrahedron-vertex mapping |
-| `Quadray.from_xyz(x, y, z)` | `Quadray` | Classmethod: Cartesian → normalized Quadray |
-| `+`, `-`, `*`, `-q` | `Quadray` | Arithmetic (addition normalizes; subtraction preserves sign) |
-| `.length()` | `float` | `√((a²+b²+c²+d²)/2)` |
-| `.distance_to(other)` | `float` | Euclidean distance |
-| `.equals(other, ε=1e-4)` | `bool` | Tolerance-based equality after normalization |
-| `.to_key()` | `str` | Integer-rounded key for hash maps |
-| `.as_tuple()` | `(a,b,c,d)` | Sequence interface |
-| `len(q)` → `4` | `int` | Always 4 |
+`Quadray(a=0,b=0,c=0,d=0)` stores floats. Its `normalized()` subtracts the minimum coefficient, selecting a gauge rather than making a unit vector. `to_xyz()` and `from_xyz(x,y,z)` use the shared/native embedding; each coefficient-unit basis vector has XYZ norm `sqrt(3/2)`, not `1/sqrt(2)`. Common-offset aliases have zero physical distance.
 
-### Basis Vectors
+| API | Behavior |
+|---|---|
+| `clone()`, `as_tuple()`, iteration/indexing | Copy or access four coefficients |
+| `q1 + q2` | New normalized result |
+| `q1 - q2`, `q * scalar`, `-q` | New raw result, no gauge reduction |
+| `length()`, `distance_to(other)`, `distance(q1,q2)` | Embedded Cartesian Euclidean units, gauge-invariant |
+| `equals(other, epsilon=1e-4)` | Compare normalized coefficients with tolerance |
+| `to_key()` | Normalize then Python `round` each coefficient; not raw occupancy identity or nearest-FCC search |
+| `Quadray.A/B/C/D`, `.BASIS`, `.ORIGIN` | Coefficient-unit basis and origin objects |
+| `angle_between(q1,q2)` | XYZ dot-product angle in degrees; returns zero for a zero vector |
+| `manhattan_4d(q1,q2)`, `euclidean_4d(q1,q2)` | Raw four-coefficient metrics, not physical distance |
 
-| Constant | Value | Description |
-|----------|-------|-------------|
-| `Quadray.A` | `(1, 0, 0, 0)` | Basis vector A |
-| `Quadray.B` | `(0, 1, 0, 0)` | Basis vector B |
-| `Quadray.C` | `(0, 0, 1, 0)` | Basis vector C |
-| `Quadray.D` | `(0, 0, 0, 1)` | Basis vector D |
-| `Quadray.ORIGIN` | `(0, 0, 0, 0)` | Origin |
-| `Quadray.BASIS` | `[A, B, C, D]` | All four basis vectors |
+Tolerance equality and rounded hashing are not a general exact-coordinate key scheme. Python half-even `round` differs from JavaScript `Math.round` at ties; do not assume cross-language snapped keys are interchangeable.
 
-### Key Constants
+## Projection interfaces
 
-| Name | Value | Formula |
-|------|-------|---------|
-| `ROOT2` | `1.4142...` | `√2` |
-| `S3` | `1.0607...` | `√(9/8)` |
-
----
-
-## `ivm.py` — IVM Constants
-
-Isotropic Vector Matrix constants from Buckminster Fuller's Synergetics.
-
-### Class: `IVM`
-
-| Constant | Value | Description |
-|----------|-------|-------------|
-| `IVM.TETRA_VOL` | `1.0` | Tetrahedron volume (unit) |
-| `IVM.OCTA_VOL` | `4.0` | Octahedron = 4× tetrahedron |
-| `IVM.ICOSA_VOL` | `≈18.51` | Icosahedron volume |
-| `IVM.CUBOCTA_VOL` | `20.0` | Cuboctahedron = 20× tetrahedron |
-| `IVM.PHI` | `1.6180...` | Golden ratio `(1+√5)/2` |
-| `IVM.D_TO_R` | `0.9994...` | D-unit → R-unit conversion factor |
-
-### Alias: `SYNERGETICS`
-
-`SYNERGETICS` is an alias for `IVM` — both are exported and equivalent.
-
----
-
-## `xyz.py` — Coordinate Transforms
-
-| Function | Signature | Description |
-|----------|-----------|-------------|
-| `quadray_to_xyz` | `(q: Quadray) → (x,y,z)` | Quadray → Cartesian |
-| `xyz_to_quadray` | `(x,y,z) → Quadray` | Cartesian → normalized Quadray |
-| `project_quadray` | `(a,b,c,d, rot_x, rot_y, zoom) → (px, py, scale)` | 4D → 2D screen coords with rotation + perspective |
-| `rotate_xyz` | `(x,y,z, rot_x, rot_y) → (x',y',z')` | Apply 3D rotation matrix |
-
----
-
-## `geometry.py` — Geometry Functions
-
-### Distance & Angle
-
-| Function | Signature | Description |
-|----------|-----------|-------------|
-| `angle_between` | `(q1, q2) → float` | Angle in degrees between two Quadrays (via Law of Cosines) |
-| `distance` | `(q1, q2) → float` | Native Quadray Euclidean distance (IVM length) |
-| `manhattan_4d` | `(q1, q2) → float` | Manhattan distance over 4 components |
-| `euclidean_4d` | `(q1, q2) → float` | Raw 4-component Cartesian-equivalent Euclidean |
-
-### Grid Operations
-
-| Function | Signature | Description |
-|----------|-----------|-------------|
-| `generate_grid` | `(size: int) → list[Quadray]` | All cells in `size⁴` integer grid |
-| `in_bounds` | `(a,b,c,d, size) → bool` | Bounds check `[0, size)` |
-| `neighbors` | `(a,b,c,d) → list[tuple]` | 12 kissing neighbours (unbounded) |
-| `bounded_neighbors` | `(a,b,c,d, size) → list[tuple]` | In-bounds neighbours only |
-| `depth_sort` | `(cells, project_fn?) → list[dict]` | Painter's algorithm sort |
-| `random_coord` | `(size) → Quadray` | Random integer Quadray in `[0, size)` |
-
-### Directions
+`quadray_to_xyz(q)` and `xyz_to_quadray(x,y,z)` delegate to `Quadray`. `rotate_xyz(x,y,z,rot_x=0,rot_y=0)` applies Y then X rotation, angles in radians.
 
 ```python
-DIRECTIONS = [
-    (1,0,0,0), (-1,0,0,0),
-    (0,1,0,0), (0,-1,0,0),
-    (0,0,1,0), (0,0,-1,0),
-    (0,0,0,1), (0,0,0,-1),
-]
+from games.src.space import project_quadray, project_basis_axes
+
+point = project_quadray(q, rot_x=0.5, rot_y=0.7, scale=35,
+                       camera_dist=5, center_x=300, center_y=300)
+axes = project_basis_axes(axis_len=2)
 ```
 
-### Verification Suite
+`project_quadray(q, *, rot_x=0, rot_y=0, scale=35, camera_dist=5, center_x=300, center_y=300)` returns `ScreenPoint(x,y,scale)`. Screen coordinates are pixels; the last field is the perspective multiplier. Camera distance is in embedded XYZ units. The Python function substitutes 1 at a zero perspective denominator and has no physical `target` option, unlike current browser projection; neither is a general clipping/occlusion engine. `project_basis_axes` takes the same keyword options plus `axis_len=2` and returns labeled/color-coded origin/tip records.
 
-```python
-from games.src.space.geometry import verify_geometric_identities
+## Raw grids and canonical adjacency
 
-report = verify_geometric_identities(tolerance=0.01)
-print(report.summary())
-assert report.all_passed
-```
+`generate_grid(size)` returns all `size**4` raw `Quadray` labels in `[0,size)`; those are not all distinct physical points. `neighbors(a,b,c,d)` returns twelve normalized `Quadray` objects using permutations of `(0,1,1,2)`. `bounded_neighbors(...,size)` normalizes before checking component bounds with `in_bounds(a,b,c,d,size)`. These moves preserve component sum modulo four; the full canonical integer set contains separate residue sublattices. Do not replace a game's raw adjacency with this graph without auditing its rules.
 
-**8-Check Suite:**
+`random_coord(size)` uses Python's global random generator for raw labels. `depth_sort(cells, project_fn=None)` returns new dictionaries with `quadray`, `px`, `py`, `pscale`, sorted ascending by `pscale`. Its callback receives four numbers and must return a dictionary (`x`, `y`, `scale`), not a `ScreenPoint` tuple. Without a callback it uses a raw coefficient-sum heuristic, not physical camera depth.
 
-| # | Check | Expected |
-|---|-------|----------|
-| 1 | Basis vector lengths | ≈ `0.7071` |
-| 2 | Tetrahedral angles | ≈ `109.47°` |
-| 3 | Octahedral complement | ≈ `90°` |
-| 4 | Opposite pair distance | ≈ `1.4142` |
-| 5 | Round-trip fidelity | `Quadray → XYZ → Quadray` identity |
-| 6 | Triangle inequality | `d(A,B) + d(B,C) ≥ d(A,C)` |
-| 7 | S3 constant validation | `√(9/8) ≈ 1.0607` |
-| 8 | Volume ratios | `1 : 4 : 20` (Tetra : Octa : Cubocta) |
+## Reference constants and bounded claims
 
-### Data Classes
+`IVM` and `SYNERGETICS` name the same `SynergeticsConstants` instance, not a class. Constants include `TETRA_VOL=1`, `OCTA_VOL=4`, `CUBO_VOL=20`, `ICOSA_VOL≈18.512296`, `BASIS_LENGTH=sqrt(3/2)`, `D_OVER_R=2`, `PHI`, `S3=sqrt(9/8)`. `volume_xyz_to_ivm` multiplies by S3; the inverse divides. These reference volume units do not establish that arbitrary board slots tile physical space or each represent a regular tetrahedron.
 
-| Class | Purpose |
-|-------|---------|
-| `CheckResult` | Single check: `name`, `description`, `expected`, `actual`, `passed` |
-| `VerificationReport` | Collection of CheckResults: `all_passed`, `pass_count`, `summary()` |
+`IVMGrid(frequency=1)` exposes formula-based `vertex_count`, `tetra_count`, `octa_count`, `edge_length`, `volume_tetra()` and `volume_octa()`. It does not generate or verify a mesh/tessellation. `Jitterbug.volume_at_angle(theta_deg)` is clamped piecewise-linear interpolation through its three stored reference volumes; `phases()` returns those reference records, not exact moving-polyhedron geometry.
 
----
+`verify_round_trip(q,tolerance=0.01)` returns `CheckResult`. `verify_geometric_identities(tolerance=0.01)` returns `VerificationReport(checks)` with `all_passed`, `pass_count`, `summary()`. Checks cover basis norms/angles, origin, selected round trips, distance symmetry, triangle inequality, S3 and stored volume ratios. These numerical spot checks are neither formal proofs nor whole-game verification.
 
-## JS ↔ Python Parity Matrix
-
-| Capability | JavaScript (`4d_generic/`) | Python (`src/space/`) |
-|-----------|---------------------------|----------------------|
-| Quadray class | `quadray.js` → `Quadray` | `quadrays.py` → `Quadray` |
-| Normalization | `.normalized()` | `.normalized()` |
-| XYZ conversion | `.toXYZ()` / `Quadray.fromXYZ()` | `.to_xyz()` / `Quadray.from_xyz()` |
-| Arithmetic | `.add()` / `.sub()` / `.scale()` | `+` / `-` / `*` operators |
-| Distance | `.distanceTo()` | `.distance_to()` |
-| Key generation | `.toKey()` | `.to_key()` |
-| IVM constants | `SYNERGETICS.*` | `IVM.*` / `SYNERGETICS.*` |
-| Verification | `verifyGeometricIdentities()` | `verify_geometric_identities()` |
-| Grid generation | `GridUtils.generateGrid()` | `generate_grid()` |
-| Neighbours | `GridUtils.getNeighbors()` | `neighbors()` |
-| Depth sort | `GridUtils.depthSort()` | `depth_sort()` |
-| Projection | `projectQuadray()` | `project_quadray()` |
-
----
-
-*See also: [shared_modules_reference.md](shared_modules_reference.md) · [architecture.md](architecture.md) · [testing_guide.md](testing_guide.md)*
+JavaScript uses `toCartesian`, `fromCartesian`, `subtract`, `GridUtils.neighbors`; do not copy invented `toXYZ`, `fromXYZ`, `sub`, or `getNeighbors` names into browser examples. See [actual browser APIs](shared_modules_reference.md).

@@ -1,293 +1,111 @@
-# Quadray Coordinate System
+# Quadray Mathematics: Rank-Three Geometry and Gauge-Invariant Distance
 
-## Overview
-
-The Quadray coordinate system is a four-dimensional coordinate system specifically designed for representing positions in tetrahedral space. Unlike the traditional Cartesian coordinate system with its three perpendicular axes, Quadray uses four non-orthogonal vectors emanating from the center of a regular tetrahedron to its vertices.
-
-```mermaid
-graph TD
-    O((Origin)) --- A((a))
-    O --- B((b))
-    O --- C((c))
-    O --- D((d))
-    
-    style O fill:#f9f,stroke:#333,stroke-width:2px
-    style A fill:#9cf,stroke:#333,stroke-width:2px
-    style B fill:#9cf,stroke:#333,stroke-width:2px
-    style C fill:#9cf,stroke:#333,stroke-width:2px
-    style D fill:#9cf,stroke:#333,stroke-width:2px
-```
+Four quadray coefficients describe ordinary Euclidean 3D geometry. This page derives the mathematics; the [canonical implementation contract](../quadray_coordinates.md) specifies source signatures, units, rounding and occupancy. [Mathematics index](README.md) · [Geometry](tetrahedral_geometry.md) · [IVM units](ivm_synergetics.md).
 
 ## Mathematical Foundation
 
 ### Basis Vectors
 
-The Quadray system is defined by four basis vectors pointing from the center of a regular tetrahedron to its vertices.
+QuadCraft embeds the coefficient directions as
 
-**Theoretical Unit Vectors** (Length = 1):
+$$
+e_a=(1,1,1)/\sqrt2,\quad e_b=(-1,-1,1)/\sqrt2,\quad
+ e_c=(-1,1,-1)/\sqrt2,\quad e_d=(1,-1,-1)/\sqrt2.
+$$
 
-1. **a**: $(1, 1, 1) / \sqrt{3}$
-2. **b**: $(-1, -1, 1) / \sqrt{3}$
-3. **c**: $(-1, 1, -1) / \sqrt{3}$
-4. **d**: $(1, -1, -1) / \sqrt{3}$
-
-**Computational Basis Vectors** (Used in Code):
-In the QuadCraft codebase (`src/core/coordinate/Quadray.h`), the basis vectors are scaled by $1/\sqrt{2} \approx 0.7071$. This results in vectors with magnitude $\sqrt{1.5} \approx 1.225$.
-
-1. **a**: $(1, 1, 1) / \sqrt{2}$
-2. **b**: $(-1, -1, 1) / \sqrt{2}$
-3. **c**: $(-1, 1, -1) / \sqrt{2}$
-4. **d**: $(1, -1, -1) / \sqrt{2}$
-
-> [!NOTE]
-> This computational scaling ensures that a unit step in Quadray space (e.g., from `(0,0,0,0)` to `(1,0,0,0)`) results in a Cartesian displacement of length $\sqrt{1.5}$ and a Tetrahedral edge length of 2.0.
-
-```mermaid
-graph LR
-    subgraph "Computational Basis Vectors"
-        A["a: (1,1,1)/√2"]
-        B["b: (-1,-1,1)/√2"]
-        C["c: (-1,1,-1)/√2"]
-        D["d: (1,-1,-1)/√2"]
-    end
-```
+Each has length $\sqrt{3/2}$; distinct directions have dot product $-1/2$. Their mutual angle is $\arccos(-1/3)\approx109.47^\circ$. Their sum is zero, so they are a redundant generating frame, not four linearly independent basis vectors. Replacing the denominator by $\sqrt3$ would produce a different, unit-length convention, not the native implementation.
 
 ### Properties of Quadray Coordinates
 
-1. **Redundancy**: A point in 3D space can be represented by multiple equivalent quadray coordinates.
-2. **Normalization**: To address this redundancy, we use zero-minimum normalization, ensuring at least one coordinate is zero.
-3. **Tetrahedral Symmetry**: The system naturally represents tetrahedral structures and symmetries.
+For $\mathbf1=(1,1,1,1)$, $E(q+t\mathbf1)=E(q)$. Conversely, equal Cartesian images differ by a common offset. The physical space is $\mathbb R^4/\operatorname{span}(\mathbf1)$, of rank three. No fixed component sum is imposed on arbitrary quadrays.
+
+Two useful choices of representative are:
+
+- **Minimum zero:** $N(q)=q-\min_iq_i\mathbf1$. Components are nonnegative and at least one is zero.
+- **Sum zero:** $P(q)=q-\tfrac14(\sum_iq_i)\mathbf1$. Components may be negative.
+
+These represent the same point. The minimum-zero sum varies with the point; it is not generally zero or one. Neither gauge is unit-vector normalization.
 
 ### Algebraic Formulation
 
-The conversion from Quadray $(q_a, q_b, q_c, q_d)$ to Cartesian $(x, y, z)$ can be expressed as a linear combination of the computational basis vectors:
+$$
+E(q)=\frac1{\sqrt2}
+\begin{bmatrix}1&-1&-1&1\\1&-1&1&-1\\1&1&-1&-1\end{bmatrix}q.
+$$
 
-$$
-\vec{v} = q_a \vec{a} + q_b \vec{b} + q_c \vec{c} + q_d \vec{d}
-$$
-
-Substituting the basis vector values:
-
-$$
-\begin{bmatrix} x \\ y \\ z \end{bmatrix} = \frac{1}{\sqrt{2}} \begin{bmatrix} 1 & -1 & -1 & 1 \\ 1 & -1 & 1 & -1 \\ 1 & 1 & -1 & -1 \end{bmatrix} \begin{bmatrix} q_a \\ q_b \\ q_c \\ q_d \end{bmatrix}
-$$
+The matrix has kernel $\operatorname{span}(\mathbf1)$ and Gram matrix $2I-\tfrac12\mathbf1\mathbf1^T$. This explains both redundancy and the metric below.
 
 ## Conversion Between Coordinate Systems
 
 ### Cartesian to Quadray
 
-The conversion from Cartesian coordinates (x, y, z) to Quadray coordinates (a, b, c, d) is implemented as:
+A sum-zero inverse is
 
-```mermaid
-graph TD
-    Start["Input: Vector3(x,y,z)"] --> Scale["scale = 1.0 / √2"]
-    Scale --> CompA["a = scale * (max(0,x) + max(0,y) + max(0,z))"]
-    Scale --> CompB["b = scale * (max(0,-x) + max(0,-y) + max(0,z))"]
-    Scale --> CompC["c = scale * (max(0,-x) + max(0,y) + max(0,-z))"]
-    Scale --> CompD["d = scale * (max(0,x) + max(0,-y) + max(0,-z))"]
-    CompA --> Quadray["Quadray(a,b,c,d)"]
-    CompB --> Quadray
-    CompC --> Quadray
-    CompD --> Quadray
-    Quadray --> Normalize["return normalized()"]
-```
+$$
+q_0=\frac1{2\sqrt2}(x+y+z,-x-y+z,-x+y-z,x-y-z).
+$$
 
-In code:
-
-```cpp
-static Quadray fromCartesian(const Vector3& v) {
-    const float scale = 1.0f / ROOT2;
-    
-    float a = scale * (std::max(0.0f, v.x) + std::max(0.0f, v.y) + std::max(0.0f, v.z));
-    float b = scale * (std::max(0.0f, -v.x) + std::max(0.0f, -v.y) + std::max(0.0f, v.z));
-    float c = scale * (std::max(0.0f, -v.x) + std::max(0.0f, v.y) + std::max(0.0f, -v.z));
-    float d = scale * (std::max(0.0f, v.x) + std::max(0.0f, -v.y) + std::max(0.0f, -v.z));
-    
-    Quadray result(a, b, c, d);
-    return result.normalized();
-}
-```
+The native/shared inverse returns $N(q_0)$ using equivalent sign-split expressions. This is a continuous inverse of the rank-three embedding, not an inverse into four independent coordinates. It does not round or snap to a lattice. See [actual method signatures](../quadray_coordinates.md#implementation-in-quadcraft).
 
 ### Quadray to Cartesian
 
-The conversion from Quadray coordinates (a, b, c, d) to Cartesian coordinates (x, y, z) is implemented as:
+$$
+x=(a-b-c+d)/\sqrt2,\quad y=(a-b+c-d)/\sqrt2,\quad z=(a+b-c-d)/\sqrt2.
+$$
 
-```mermaid
-graph TD
-    Start["Input: Quadray(a,b,c,d)"] --> Scale["scale = 1.0 / √2"]
-    Scale --> CalcX["x = scale * (a - b - c + d)"]
-    Scale --> CalcY["y = scale * (a - b + c - d)"]
-    Scale --> CalcZ["z = scale * (a + b - c - d)"]
-    CalcX --> Vector["Vector3(x,y,z)"]
-    CalcY --> Vector
-    CalcZ --> Vector
-    Vector --> Return["return Vector3"]
-```
-
-In code:
-
-```cpp
-Vector3 toCartesian() const {
-    const float scale = 1.0f / ROOT2;
-    float x = scale * (a - b - c + d);
-    float y = scale * (a - b + c - d);
-    float z = scale * (a + b - c - d);
-    return Vector3(x, y, z);
-}
-```
+For the suite scale-one map $(X,Y,Z)$, native $(x,y,z)=(X,Z,Y)/\sqrt2$. Preserve this orientation and scale when comparing lengths, signed determinants or volumes across projects.
 
 ## Normalization
 
-To address the redundancy in Quadray coordinates, we use zero-minimum normalization, which ensures that at least one of the four coordinates is zero:
+Examples are exact mathematical statements, not runtime test receipts:
 
-```mermaid
-graph TD
-    Start["Input: Quadray(a,b,c,d)"] --> FindMin["minVal = min(a,b,c,d)"]
-    FindMin --> SubtractMin["Subtract minVal from all coordinates"]
-    SubtractMin --> Return["return Quadray(a-minVal, b-minVal, c-minVal, d-minVal)"]
-```
+| Tuple | Minimum-zero representative | Native Cartesian image |
+| --- | --- | --- |
+| `(0,0,0,0)` | `(0,0,0,0)` | `(0,0,0)` |
+| `(1,1,1,1)` | `(0,0,0,0)` | `(0,0,0)` |
+| `(2,1,1,1)` | `(1,0,0,0)` | `(1,1,1)/sqrt(2)` |
+| `(0.5,0.5,0,0)` | unchanged | `(0,0,1/sqrt(2))` |
 
-In code:
-
-```cpp
-Quadray normalized() const {
-    float minVal = std::min({a, b, c, d});
-    return Quadray(a - minVal, b - minVal, c - minVal, d - minVal);
-}
-```
+The last row is the midpoint between coefficient endpoints $e_a$ and $e_b$. `(1,1,0,0)` is their **sum**, not their midpoint. The centroid of all four endpoints is the physical origin, represented by `(0.25,0.25,0.25,0.25)` or any common-offset tuple.
 
 ## Computational Implementation Details
 
 ### Hashing Strategy
 
-Efficient storage of sparse tetrahedral data requires a robust hashing strategy. Since `Quadray` coordinates are floating-point values, standard equality checks are risky. The system uses **canonical integer mapping** via zero-minimum normalization before hashing.
-
-Detailed in `src/core/world/TetraChunk.h`:
-
-1. **Normalize**: $q' = \text{normalized}(q)$
-2. **Quantize**: Map floating point components to discrete quantization buckets (if necessary) or hash directly if using integer-aligned grid points.
-3. **Combine**: Use a bitwise XOR combination of component hashes.
-
-```cpp
-struct QuadrayHash {
-    std::size_t operator()(const Quadray& q) const {
-        Quadray normalized = q.normalized();
-        // ... hash combination of a, b, c, d ...
-        return h1 ^ (h2 << 1) ^ (h3 << 2) ^ (h4 << 3);
-    }
-};
-```
+Canonicalization and storage are separate contracts. Native [TetraChunk](../../src/core/world/TetraChunk.h) hashes minimum-zero **float** components; it does not quantize them to integers. Its epsilon comparator and exact hash can disagree for nearby values. Shared-game `Quadray.toKey()` normalizes and rounds, whereas `GridUtils.key()` stores the raw tuple. See [occupancy distinctions](../quadray_coordinates.md#native-world-occupancy); do not substitute one key policy for another without changing game semantics.
 
 ### Equality Checks
 
-Equality implies geometric equivalence:
-$$q_1 \equiv q_2 \iff \text{normalized}(q_1) \approx \text{normalized}(q_2)$$
-
-This is critical for `unordered_map` lookups in `TetraChunk`.
+Mathematically $q\sim r$ iff $N(q)=N(r)$. Implementations differ: shared-game `equals` compares normalized components approximately, while the modular browser experiment compares raw components exactly. Numerical equality and raw game-label identity are not universal geometric predicates.
 
 ## Distance Calculation
 
-Distance is the Euclidean norm of the Cartesian image of the component
-difference $\Delta=q_1-q_2$:
+For $\Delta=q-r$,
 
 $$
-D^2=\frac{
-(\Delta a-\Delta b-\Delta c+\Delta d)^2+
-(\Delta a-\Delta b+\Delta c-\Delta d)^2+
-(\Delta a+\Delta b-\Delta c-\Delta d)^2}{2}.
+\begin{aligned}
+d^2&=\frac{(\Delta a-\Delta b-\Delta c+\Delta d)^2+(\Delta a-\Delta b+\Delta c-\Delta d)^2+(\Delta a+\Delta b-\Delta c-\Delta d)^2}{2}\\
+&=2\sum_i\Delta_i^2-\tfrac12(\sum_i\Delta_i)^2
+=2\|P(\Delta)\|_2^2.
+\end{aligned}
 $$
 
-This vanishes for any common-offset difference $(t,t,t,t)$, not just the
-all-zero tuple. A basis direction has length $\sqrt{3/2}$, and two distinct
-basis endpoints are distance $2$ apart. The former coefficient-only formula
-$\sqrt{\sum_i\Delta_i^2/2}$ does not respect the gauge and is not this metric.
-See the [native implementation](../../src/core/coordinate/Quadray.h) and the
-[suite unit mapping](https://github.com/docxology/symergetics/blob/main/docs/synergetics-suite.md).
+This is positive definite on equivalence classes, but only semidefinite on raw quadruples: any common-offset difference has zero length. A coefficient-unit direction has length $\sqrt{3/2}$ and distinct coefficient endpoints are distance $2$ apart. Raw coefficient $L^1$/$L^2$ metrics can be legitimate game-label heuristics, but are not this physical metric.
 
 ## Tetrahedral Grid System
 
-The Quadray coordinate system naturally defines a tetrahedral grid, where integer coordinates represent vertices of tetrahedra.
+Integer coefficients alone do not specify a tetrahedral-octahedral cell complex. Their complete physical image has $\sqrt2(x,y,z)$ integral with all three coordinates of the same parity: a BCC-type point set. A chosen FCC contact subset or honeycomb needs additional lattice/cell definitions.
 
-```mermaid
-graph TD
-    subgraph "Example Tetrahedral Grid Points"
-        P1["(1,0,0,0): Vertex 1"]
-        P2["(0,1,0,0): Vertex 2"]
-        P3["(0,0,1,0): Vertex 3"]
-        P4["(0,0,0,1): Vertex 4"]
-        P5["(1,1,0,0): Edge Midpoint"]
-        P6["(1,1,1,0): Face Center"]
-        P7["(1,1,1,1): Tetrahedron Center"]
-    end
-```
+The shared game's `IVM_DIRECTIONS` are eight signed single-coefficient steps. The 12-vector closest-packing contact set is different: the permutations of `(0,1,1,2)` give native vectors of the form $(0,\pm\sqrt2,\pm\sqrt2)$ and coordinate permutations, each of length 2. Neither set establishes mesh face adjacency by itself. See [IVM connection](ivm_synergetics.md#connection-to-quadcraft).
 
 ## Applications in QuadCraft
 
-### 1. Block Positioning
-
-Each tetrahedral block in QuadCraft is positioned using Quadray coordinates. This makes the representation of the tetrahedral grid much more natural than using Cartesian coordinates.
-
-```mermaid
-graph TD
-    subgraph "Tetrahedral Block Positioning"
-        B1["Block at (1,0,0,0)"]
-        B2["Block at (0,1,0,0)"]
-        B3["Block at (1,1,0,0)"]
-        B4["Block at (1,1,1,0)"]
-    end
-```
-
-### 2. Navigation and Movement
-
-Player movement in QuadCraft is tracked in both Cartesian and Quadray coordinates:
-
-```mermaid
-sequenceDiagram
-    participant Player
-    participant Cartesian as Cartesian System
-    participant Quadray as Quadray System
-    
-    Player->>Cartesian: Move (dx, dy, dz)
-    Cartesian->>Quadray: Convert to quadray
-    Quadray->>Player: Report new quadray position
-    Note over Player,Quadray: Player can see both coordinate systems
-```
-
-### 3. Raycasting in Tetrahedral Space
-
-Raycasting for block selection uses both coordinate systems:
-
-```mermaid
-graph TD
-    Start["Cast ray from camera position"] --> Conv1["Convert camera position to quadray"]
-    Conv1 --> Dir["Calculate ray direction in cartesian"]
-    Dir --> Step["Step along ray"]
-    Step --> Check["Check block at current quadray position"]
-    Check -- "Block found" --> Return["Return block"]
-    Check -- "No block" --> Step
-```
+Coordinates supply anchors for native elements, Cartesian camera positions and projected game labels. Native ray interaction samples a Cartesian ray and queries stored keys; it is not an exact ray/tetrahedron intersection algorithm. In Minecraft, selection is a renderer screen hit test on raw slots. These are different consumers of the same point embedding, not a common physics engine.
 
 ## The S3 Constant
 
-The S3 constant (approximately 1.06066 or precisely √(9/8)) is used for volumetric conversions between coordinate systems:
-
-```cpp
-constexpr float S3 = 1.0606601717798212f; // sqrt(9/8)
-```
-
-This constant represents the ratio between the volumes of equivalent shapes in Cartesian and Quadray systems.
-
-$$ S_3 = \sqrt{\frac{9}{8}} \approx 1.06066 $$
-
-It arises from the volume ratio of a unit tetrahedron relative to specific cubic packings. In the QuadCraft engine, `S3` is essential for normalizing density and mass calculations when converting between absolute game units and tetrahedral grid units.
+The ideal regular tetrahedron with vertices $e_a,e_b,e_c,e_d$ has edge 2, Cartesian volume $2\sqrt2/3$ and declared native IVM volume 1. Hence $S_3=3/(2\sqrt2)$. [IVM units](ivm_synergetics.md#the-s3-constant) derives this convention and separates game accounting from geometric volume.
 
 ## Advantages of Quadray Coordinates
 
-1. **Natural Representation of Tetrahedral Space**: The four basis vectors align perfectly with tetrahedral geometry.
-2. **Elegant Coordinate Values**: Many important geometric points have simple integer coordinates.
-3. **Simplified Distance Calculations**: For normalized coordinates, distance calculations are straightforward.
-4. **Direct Mapping to Tetrahedral Elements**: Each tetrahedral element maps cleanly to quadray coordinates.
-
-## Conclusion
-
-The Quadray coordinate system provides an elegant mathematical foundation for the tetrahedral voxel system in QuadCraft. By using this system, the game can represent tetrahedral structures more naturally than would be possible with traditional Cartesian coordinates.
+Quadrays expose tetrahedral symmetry, convenient polyhedral labels and a simple common-offset gauge. They remain coordinates for Euclidean space; oblique axes do not create non-Euclidean curvature, a fourth physical dimension, a collision solver or automatic computational savings.

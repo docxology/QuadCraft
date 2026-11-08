@@ -1,36 +1,7 @@
-# Tests — Agent Instructions
+# Maintaining shared logic and runtime test boundaries
 
-## Overview
+Read [testing guide](../doc/testing_guide.md) and the target suite's implementing source. Full `run_games.py --test` recursively discovers shared test_*.js/test_*.py, including shared/ and space/ subdirectories; it skips the aggregate test_all_shared.js runner. Per-game discovery uses direct tests/test_*.js. Do not reintroduce the obsolete nonrecursive-discovery claim.
 
-This directory contains the **shared module test suites** for the QuadCraft engine's `4d_generic/` modules. These tests verify the core math, rendering, and infrastructure libraries that all 30 games depend on.
+Node suites must report executed checks and fail nonzero on failures; Python files run directly under unittest with the launcher's interpreter. Missing runtimes, nonzero exits and empty/all-skipped runs remain failures. Add checks for uncertain consumer-visible transitions/geometry/resources, not incidental wording or default existence.
 
-## File Inventory
-
-| File | Tests | Coverage |
-|------|-------|----------|
-| `shared/test_all_shared.js` | — | Integration runner — executes all shared test files |
-| `shared/test_camera.js` | 8 | CameraController (rotation, zoom, reset, state) |
-| `shared/test_projection.js` | 6 | projectQuadray(), drawQuadrayAxes() |
-| `shared/test_zoom.js` | 5 | setupZoom() (wheel events, min/max clamping) |
-| `shared/test_base_game.js` | 10 | BaseGame lifecycle (init, start, pause, reset, events) |
-| `shared/test_base_renderer.js` | 10 | BaseRenderer (canvas setup, projection, axes) |
-| `shared/test_grid_utils.js` | 8 | GridUtils (IVM neighbors, distance, depth sorting) |
-| `shared/test_hud.js` | 6 | HUD rendering (panel layout, text, stats) |
-| `shared/test_score_manager.js` | 8 | ScoreManager (win/loss tracking, persistence) |
-| `test_config.py` | — | Python testing for `src.core.config` |
-| `test_registry.py` | — | Python testing for `src.core.registry` |
-| `test_validation.py` | — | Python testing for `src.qa.validation` |
-| `space/test_geometry.py` | — | Python testing for src.space.geometry |
-
-## Usage
-
-```bash
-# Run all shared module tests
-node tests/shared/test_all_shared.js
-
-# Run individual JS test suite
-node tests/shared/test_camera.js
-
-# Run Python infrastructure tests (mirrors src/ topology)
-python3 -m pytest tests/
-```
+Node browser doubles do not establish actual canvas/input behavior. The [Chromium gate](browser/README.md) independently exercises real runtime objects, selected legal fixtures and screenshots; keep pointer-lock denial truthful. Respect current task restrictions on running suites and report only exercised verification.

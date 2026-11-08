@@ -1,174 +1,77 @@
-# IVM & Synergetics
+# IVM Geometry: Contact Topology, Tetra-Units, and Game Accounting
 
-The Isotropic Vector Matrix (IVM) and R. Buckminster Fuller's Synergetics provide the geometric and volumetric foundation for QuadCraft's tetrahedral coordinate system.
+The Isotropic Vector Matrix (IVM) motivates tetrahedral-octahedral geometry and close-packing terminology. It does not establish that every QuadCraft storage record is a nonoverlapping physical cell. Start with the [coordinate contract](../quadray_coordinates.md), then distinguish the [native mesh](tetrahedral_geometry.md#implementation-in-quadcraft) from [game models](../game_design/block_system.md).
 
-## Overview
-
-```mermaid
-flowchart TD
-    subgraph "Synergetics Mensuration"
-        Tetra["Tetrahedron\n= 1 tetravolume"]
-        Octa["Octahedron\n= 4 tetravolumes"]
-        Cube["Cube\n= 3 tetravolumes"]
-        RD["Rhombic Dodecahedron\n= 6 tetravolumes"]
-        VE["Cuboctahedron (VE)\n= 20 tetravolumes"]
-    end
-
-    Tetra -->|"×4"| Octa
-    Tetra -->|"×3"| Cube
-    Tetra -->|"×6"| RD
-    Tetra -->|"×20"| VE
-```
+[Mathematics index](README.md) · [Quadray derivation](quadray_coordinates.md) · [Glossary](../reference/glossary.md).
 
 ## Isotropic Vector Matrix (IVM)
 
-The IVM is a space-filling framework of alternating tetrahedra and octahedra, formed by closest-packing equal spheres (CCP/FCC arrangement). Every sphere is tangent to 12 neighbors, and the centers of those 12 neighbors define a **cuboctahedron** (which Fuller called the "Vector Equilibrium" or VE).
-
-### Key Properties
-
-| Property | Value |
-| -------- | ----- |
-| Coordination number | 12 |
-| Space-filling shapes | Tetrahedra + Octahedra |
-| Volume ratio (Octa:Tetra) | 4:1 |
-| Edge length | All edges equal (isotropic) |
-| Dual of the Octet Truss | The IVM itself |
+In the FCC (cubic close-packed) sphere arrangement, each sphere touches 12 equal neighbors. Neighbor centers form a cuboctahedron. Connecting appropriate centers produces the tetrahedral-octahedral honeycomb; regular tetrahedra alone do not tile Euclidean 3D space. Twelve nearest contacts at a node are not twelve faces of a tetrahedron: point coordination and cell face adjacency are different graphs.
 
 ### Connection to QuadCraft
 
-- The QuadCraft engine's tetrahedral grid is the IVM
-- Each cell in the grid is either a tetrahedron or an octahedron
-- The 4 basis vectors of the Quadray coordinate system point from the center of a tetrahedron to its 4 vertices — these are IVM edge vectors
-- The 12 navigation directions in-game correspond to the 12 IVM edge vectors from any node
+[GridUtils.DIRECTIONS](../../games/4d_generic/grid_utils.js) contains the 12 permutations of `(0,1,1,2)`. Under the native embedding these are coordinate permutations of $(0,\pm\sqrt2,\pm\sqrt2)$, of length 2. `neighbors()` adds each direction and minimum-normalizes; `boundedNeighbors()` then filters component bounds. These steps preserve component-sum modulo four on integer equivalence classes. That residue is a lattice classification, not a constraint that the full sum remain constant.
+
+By contrast, [Quadray.IVM_DIRECTIONS](../../games/4d_generic/quadray.js) consists of eight signed single-coefficient steps of length $\sqrt{3/2}$. The complete integer quadray quotient is BCC-type, with four FCC sublattices selected by component-sum modulo four. A four-coefficient frame is not itself the 12-contact neighbor set.
+
+Native [TetraChunk](../../src/core/world/TetraChunk.cpp) computes four candidate neighbors from element-face centers. It does not use the shared game's contact graph. Do not infer equality of these topologies from the common IVM name.
 
 ## Synergetics Volume Ratios
 
-Fuller's Synergetics uses the **regular tetrahedron** (not the cube) as the unit of volume. This produces elegant whole-number ratios for the concentric hierarchy of polyhedra:
-
 ### Concentric Hierarchy
 
-```mermaid
-flowchart LR
-    subgraph "Concentric Hierarchy (Unit Edge)"
-        T["Tetrahedron = 1"]
-        C["Cube = 3"]
-        O["Octahedron = 4"]
-        RD["Rhombic Dodeca = 6"]
-        VE["Cuboctahedron = 20"]
-    end
+A consistent hierarchy chooses a regular tetrahedron of **native edge length 2** as volume 1. The following ratios require compatible relative scales, not a claim that every shape has edge length 1:
 
-    T --> C --> O --> RD --> VE
-```
+| Shape and native scale | Euclidean volume | Native IVM tetra-units |
+| --- | --- | --- |
+| Regular tetrahedron, edge 2 | $2\sqrt2/3$ | 1 |
+| Cube with vertices $(\pm1,\pm1,\pm1)/\sqrt2$, edge $\sqrt2$ | $2\sqrt2$ | 3 |
+| Regular octahedron, edge 2 | $8\sqrt2/3$ | 4 |
+| Rhombic dodecahedron with cube vertices above and axial vertices $\pm\sqrt2$ | $4\sqrt2$ | 6 |
+| Cuboctahedron, edge 2 | $40\sqrt2/3$ | 20 |
 
-| Polyhedron | Tetravolumes | XYZ Volume | Tetravolume ÷ XYZ Volume |
-| ---------- | ------------ | ---------- | ------------------------ |
-| Tetrahedron | 1 | √2/12 ≈ 0.1178 | 12/√2 = 6√2 ≈ 8.485 |
-| Cube | 3 | 1 (by definition for edge = 1) | 3 |
-| Octahedron | 4 | √2/3 ≈ 0.4714 | 12/√2 = 6√2 ≈ 8.485 |
-| Rhombic Dodecahedron | 6 | √2 ≈ 1.4142 | 6/√2 = 3√2 ≈ 4.243 |
-| Cuboctahedron (VE) | 20 | 5√2/3 ≈ 2.357 | 12/√2 = 6√2 ≈ 8.485 |
-
-> **Note:** These per-row ratios are *not* the S3 constant — dividing this
-> table's own Tetravolumes by its own XYZ Volumes never yields S3
-> (≈1.06066); it yields 6√2 (≈8.485) for the tetrahedron, octahedron, and
-> cuboctahedron (which all use the edge-1 convention), 3√2 (≈4.243) for the
-> rhombic dodecahedron, and 3 for the cube. S3 is a distinct constant with
-> its own derivation — see below.
+For example, the edge-2 cube would instead have volume $8$ and IVM volume $6\sqrt2$; applying the hierarchy's `cube = 3` to it would silently change scale. Shape names without dimensions are insufficient for mensuration.
 
 ### The S3 Constant
 
-The constant **S3** converts between XYZ cubic volumes and Synergetics tetravolumes:
+For the declared edge-2 tetrahedron,
 
-$$S_3 = \sqrt{\frac{9}{8}} \approx 1.06066$$
+$$
+V_{\mathrm{tetra,QC}}=\frac{2^3}{6\sqrt2}=\frac{2\sqrt2}{3},\qquad
+S_3=\frac1{V_{\mathrm{tetra,QC}}}=\frac3{2\sqrt2}=\sqrt{9/8}.
+$$
 
-**Derivation**: S3 is *not* the ratio for a unit-edge (edge = 1) tetrahedron
-— that ratio is 12/√2 = 6√2 ≈ 8.485 (see the table above), not S3. S3 comes
-from the tetrahedron QuadCraft actually uses as its computational IVM unit:
-the tetrahedron formed by the four Quadray basis vectors, which — per
-[Quadray Coordinates (Mathematics)](quadray_coordinates.md) — has **edge
-length 2**, not 1:
+Thus $V_{\mathrm{IVM}}=S_3V_{\mathrm{QC}}$. This factor depends on the embedding and unit tetrahedron. For a tetrahedron with **edge 1**, the factor would be $6\sqrt2$, not $S_3$.
 
-- XYZ volume of a regular tetrahedron with edge 2: V = 2³ × √2/12 = 8√2/12 = 2√2/3 ≈ 0.9428
-- Synergetics tetravolume = 1 (by definition — this is the unit cell)
-- Ratio: Synergetics volume ÷ XYZ volume = 1 ÷ (2√2/3) = 3/(2√2) = 3√2/4 = √(9/8) = **S3** ✓
+QuadMath/symergetics scale-one XYZ has edge $2\sqrt2$ for the coefficient-endpoint tetrahedron and Euclidean volume $8/3$. There $V_{\mathrm{IVM}}=(3/8)V_{\mathrm{XYZ}}$. QuadCraft's axis swap reverses signed orientation, while its length scaling reduces unsigned volume by $1/(2\sqrt2)$; both conventions give IVM volume 1 for the same coefficient endpoints. An arbitrary integer-coordinate tetrahedron need not have an integer number of native tetra-units.
 
-In code:
-
-```cpp
-constexpr float S3 = 1.0606601717798212f; // sqrt(9/8)
-```
-
-```javascript
-// games/4d_generic/js/quadray.js
-const IVM = {
-    VOLUME_RATIOS: {
-        TETRAHEDRON: 1,
-        CUBE: 3,
-        OCTAHEDRON: 4,
-        RHOMBIC_DODECAHEDRON: 6,
-        CUBOCTAHEDRON: 20
-    },
-    S3: Math.sqrt(9/8)
-};
-```
+The constant is declared in [native Quadray.h](../../src/core/coordinate/Quadray.h) and the [shared game module](../../games/4d_generic/quadray.js). Its presence does not imply a mass, density or structural-mechanics solver.
 
 ## Cell Parity
 
-In the IVM grid, every cell is either a tetrahedron or an octahedron. This **parity** property is used by several QuadCraft games:
+`Quadray.cellType(a,b,c,d)` rounds each component separately, sums the results, and returns `tetra` for even sums and `octa` for odd sums. It is a **game classification rule**, not a derivation of actual cell vertices, volume, orientation or face incidence. For integer inputs, an integer common offset changes the sum by a multiple of four and preserves parity. Rounding arbitrary real representatives is not a gauge-invariant geometric cell classifier.
 
-### Determining Parity
+Minecraft attaches this label to render records and metadata. Native `TetrahedralElement` has no corresponding parity-selected octahedral mesh. The monolithic browser experiment has its own named tetra/octa brush shapes; do not merge those conventions.
 
-Given a quadray coordinate `(a, b, c, d)` (normalized), the cell parity can be determined from the coordinate sum:
+## Game Volume Accounting
 
-```javascript
-function cellParity(a, b, c, d) {
-    const sum = a + b + c + d;
-    // Even coordinate sum → tetrahedron; odd coordinate sum → octahedron
-    return Math.round(sum) % 2 === 0 ? 'tetra' : 'octa';
-}
-```
+The shared `Quadray.cellVolume()` returns `0.375`. [Minecraft analysis](../../games/4d_minecraft/js/minecraft_analysis.js) uses the same value via
 
-### Game Usage
+$$\left(\frac1{\sqrt2}\right)^3S_3=\frac38.$$
 
-| Game | Parity Usage |
-| ---- | ------------ |
-| 4D Doom | Enemy spawning based on cell type |
-| 4D Tower Defense | Path routing through tetra/octa cells |
-| 4D Minecraft | Block orientation determined by parity |
-| 4D Chess | Board cell coloring |
+This is a **per-record accounting convention**, equivalent to converting a hypothetical Cartesian cube of side $1/\sqrt2$ with $S_3$. It is not the ideal unit tetrahedron's volume (1), not the octahedron's volume (4), and not an integration over the renderer's square markers or native tetrahedral vertices. Multiplying raw occupied-slot count by $3/8$ does not deduplicate common-offset aliases or measure the union of physical solids. HUD fill/density/coordination analyses depend on their declared label and neighbor conventions; they are not experimental measurements of continuum matter.
 
 ## Jitterbug Transformation
 
-The **Jitterbug** is a dynamic transformation where a cuboctahedron (20 tetravolumes) contracts through an icosahedral phase to an octahedron (4 tetravolumes). This demonstrates:
-
-- The relationship between 5-fold and 6-fold symmetry
-- How the VE (cuboctahedron) is the "zero-phase" of the IVM
-- Volume contraction from 20 → ~18.51 → 4 tetravolumes
-
-While not directly used in gameplay, the Jitterbug illustrates the deep geometric relationships that the IVM encodes.
+The cuboctahedron-to-octahedron jitterbug is a geometric transformation discussed in Synergetics. Numerical intermediate volumes depend on the chosen linkage and scale. QuadCraft's constants and volume ratios are not an implementation of that continuous mechanism; this page supplies no gameplay command for it.
 
 ## Octet Truss
 
-The **Octet Truss** (Alexander Graham Bell's term) is the structural framework corresponding to the IVM:
-
-- Composed of alternating tetrahedra and octahedra
-- Each node connects to 12 nearest neighbors via equal-length struts
-- Maximum structural efficiency (strength-to-weight ratio)
-- Used in architecture (space frames) and crystallography (FCC lattice)
-
-In QuadCraft, the Octet Truss is the physical interpretation of the game grid — every edge in the truss is a potential navigation path.
+The octet-truss connection is a useful structural analogy: a tetrahedral-octahedral bar framework can have 12 equal struts at an interior FCC node. Strength, stability and efficiency depend on materials, joints and loads. No universal strength-to-weight optimum or in-game structural integrity is established by the coordinate system.
 
 ## References
 
-- **Fuller, R. Buckminster.** *Synergetics: Explorations in the Geometry of Thinking.* (1975, 1979)
-- **Urner, Kirby.** Quadray coordinates and IVM-related Python implementations. [grunch.net](http://www.grunch.net/synergetics/)
-- **Coxeter, H.S.M.** *Regular Polytopes.* — Mathematical foundations for polyhedral geometry
-- **QuadCraft Games**: `games/4d_generic/tests/test_synergetics.js` — Synergetics constant validation suite
-
-## Cross-References
-
-- [Quadray Coordinates (Implementation)](../quadray_coordinates.md) — coordinate conversions and the S3 constant
-- [Quadray Coordinates (Mathematics)](quadray_coordinates.md) — basis vectors, hashing, and distance formulas
-- [Tetrahedral Geometry](tetrahedral_geometry.md) — tetrahedron properties, mesh generation, barycentrics
-- [Games Overview](../games.md) — how individual games use IVM concepts
-- [Glossary](../reference/glossary.md) — definitions for IVM, Synergetics, S3, CCP, and related terms
+- R. Buckminster Fuller, *Synergetics: Explorations in the Geometry of Thinking* (1975; *Synergetics 2*, 1979): historical mensuration context, not a QuadCraft API specification.
+- [Shared source constants and geometric helpers](../../games/4d_generic/synergetics.js): implementation evidence, not independent experimental validation.
+- [Tetrahedral formulas and barycentric coordinates](tetrahedral_geometry.md): volume and containment mathematics.
+- [World generation implementations](../game_design/world_generation.md): actual native and game-model boundaries.

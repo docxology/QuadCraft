@@ -1,23 +1,5 @@
-# JavaScript Library - AI Agent Guidelines
+# Var.js provenance and browser state-tree integration maintenance
 
-## Var.js
+Preserve provenance, license and upstream source documentation. Audit all page callers before modifying proxy built-ins, serialization or version rules. Keep game logic in the page rather than assuming this dependency is a universal game engine.
 
-This is a utility library that provides extended functionality.
-
-### When to Modify
-
-- Adding new mathematical operations
-- Extending variable type support
-- Performance optimizations
-
-### When NOT to Modify
-
-- For game-specific logic (use game code instead)
-- Unless you understand all usages
-
-## Guidelines
-
-- Test thoroughly after changes
-- Maintain backward compatibility
-- Document new functions
-- Consider file size impact
+Read the adjacent [directory guide](README.md) before changing this area. Report source inspection separately from executed runtime checks.

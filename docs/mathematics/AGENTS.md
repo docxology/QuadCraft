@@ -2,20 +2,20 @@
 
 ## Critical: Foundational Content
 
-This documentation describes the mathematical basis of the entire project.
+These pages distinguish ideal mathematics from actual source representations. Use the [canonical coordinate contract](../quadray_coordinates.md) for implementation conventions and [mathematics index](README.md) for navigation.
 
 ## Accuracy Requirements
 
-- All formulas must be correct
-- Verify against implementation
-- Test examples work correctly
-- Cross-check with original sources
+- Preserve rank-three/common-offset geometry; never infer four physical axes or a fixed component sum.
+- Bind implementation claims to source and distinguish native floating keys from raw game slots.
+- Distinguish ideal regular tetrahedra from actual native offsets and projected game markers.
+- Do not describe source inspection as an exercised runtime or numerical check. Follow the assignment's check policy.
 
 ## Document Purposes
 
 ### quadray_coordinates.md
 
-The four-dimensional coordinate system:
+The rank-three coordinate system represented by four coefficients:
 
 - Mathematical definition
 - Conversion formulas
@@ -26,18 +26,18 @@ The four-dimensional coordinate system:
 
 Geometric foundation:
 
-- Tetrahedron properties
-- Space-filling arrangements
-- Shape relationships
-- Mesh generation math
+- Ideal tetrahedron properties and explicit units
+- Space-filling arrangements versus unvalidated prototype geometry
+- Source-defined mesh and marker boundaries
+- Barycentric containment mathematics versus exposed runtime APIs
 
 ### ivm_synergetics.md
 
 IVM and Synergetics volume ratios:
 
-- Isotropic Vector Matrix (IVM) as closest-packed tetrahedra/octahedra
-- Synergetics mensuration (tetravolume-based volume ratios for tetrahedron, octahedron, cube, rhombic dodecahedron, cuboctahedron/VE)
-- Cuboctahedron (Vector Equilibrium) and 12-neighbor closest-packing properties
+- FCC contact topology versus the full integer quadray point set and game neighbor conventions
+- Explicitly scaled tetra-unit volume ratios and native versus scale-one XYZ conversions
+- Per-record game accounting versus measured physical union volumes
 
 ## Guidelines
 
@@ -45,10 +45,10 @@ IVM and Synergetics volume ratios:
 
 When updating mathematical formulas:
 
-1. Verify correctness algebraically
-2. Test with implementation
-3. Check edge cases (origin, axes)
-4. Update all related documents
+1. Derive the formula in an explicit embedding and unit convention.
+2. Compare implementation claims with current source, including inverse and rounding semantics.
+3. Account for gauge shifts, degeneracy and floating-point limits.
+4. Update affected links and descriptions without inventing runtime evidence.
 
 ### Adding Examples
 

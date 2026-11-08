@@ -1,46 +1,7 @@
-# Entity System
+# Native Euler camera and frustum interface
 
-This directory contains entity components for the game world.
+[Camera.h](Camera.h) contains `Camera`, `Frustum` and `CameraMovement`; there is no general entity registry or player physics body.
 
-## Files
+`Camera::position` and basis vectors are Cartesian `Vector3`. `processKeyboard(CameraMovement,float deltaTime)` uses seconds, movement speed and a capped distance-dependent factor. `processMouseMovement(float,float,bool constrainPitch=true)` updates Euler yaw/pitch (degrees); pitch clamps to ±89 degrees. This native implementation is not the quaternion browser camera.
 
-| File | Purpose |
-|------|---------|
-| `Camera.h` | Player camera with view management |
-
-## Camera System
-
-The camera provides the player's view into the tetrahedral world.
-
-### Features
-
-- **Position**: 3D location in world space
-- **Orientation**: Yaw, pitch for look direction
-- **View Matrix**: Transformation for rendering
-- **Frustum**: View volume for culling
-
-### Key Functions
-
-```cpp
-// View matrix for rendering
-Matrix4 getViewMatrix() const;
-
-// Update camera based on input
-void processKeyboard(Direction direction, float deltaTime);
-void processMouseMovement(float xoffset, float yoffset);
-void processMouseScroll(float yoffset);
-```
-
-### Movement Modes
-
-1. **Drone-like**: Arrow keys always active
-2. **FPS-like**: WASD when mouse captured
-3. **Vertical**: Page Up/Down or Space/Shift
-
-### Integration
-
-The camera integrates with:
-
-- **Input System**: Receives movement commands
-- **Rendering**: Provides view/projection matrices
-- **World**: Position determines chunk loading
+`getViewMatrix()` returns `std::vector<float>` in column-major order; `getProjectionMatrix(float aspect,float nearPlane,float farPlane) const` returns the projection. `getQuadrayPosition()` converts current position; `getPositionQuadray()` accesses the cached value updated by movement. `Frustum::sphereInFrustum` tests bounding spheres, not occlusion. Drone roll fields/methods do not imply quaternion orientation or collision constraints. Camera movement can pass through terrain.

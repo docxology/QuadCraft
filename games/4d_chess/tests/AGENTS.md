@@ -1,54 +1,15 @@
-# Test Suite - Agent Instructions
+# 4D Quadray Chess test maintenance
 
-## Overview
+Read [suite scope and commands](README.md) and [game instructions](../AGENTS.md). The test files are JavaScript behavior checks, not proof that every shared module or browser path is covered.
 
-Test suite for 4D Quadray Chess (91 tests, 100% pass rate).
+## Behavior to preserve
 
-## Files
+Preserve canonical keys, inclusive normalized bounds and directed piece offsets. Keep pseudo-legal move generation distinct from check detection. Audit real TurnManager records before claiming persistence/history compatibility.
 
-| File | Purpose |
-|------|---------|
-| test_chess.js | Main, runnable test suite (all 91 tests — `node test_chess.js`) |
-| lib_runner.js | Shared TestRunner class (helper, not run directly) |
-| lib_quadray.js | Quadray coordinate test helpers (helper, not run directly) |
-| lib_geometry.js | IVM verification helpers (helper, not run directly) |
-| test.html | Browser visual runner |
+## Evidence limits
 
-## Running Tests
+Quadray/piece/board behavior, movement examples, math, analysis and storage helper objects, and edge cases. The suite does not instantiate the actual browser Game for its legacy storage round-trip checks.
 
-```bash
-# Node.js CLI
-node test_chess.js
+`test.html` references missing local `../js/quadray.js` and does not load the current shared/storage dependency chain. The `lib_*.js` files are separate helper material, not proof of live-controller behavior.
 
-# Browser
-open test.html
-```
-
-## Test Coverage
-
-| Module | Tests |
-|--------|-------|
-| Quadray | 17 (12 + 5 extended) |
-| Pieces | 13 (8 + 5 extended) |
-| Board | 13 (7 + 6 extended) |
-| Movement Rules | 4 |
-| Game State | 2 |
-| Geometry | 9 |
-| Analysis | 9 (5 + 4 extended) |
-| Storage | 6 (3 + 3 extended) |
-| Edge Cases | 5 |
-| Math | 5 |
-| FPVRenderer | 8 |
-
-## Adding Tests
-
-1. Add `test.it()` inside appropriate `test.describe()` block
-2. Use assertions: `assertEqual`, `assertTrue`, `assertApprox`
-3. Run `node test_chess.js` to verify
-
-## Assertions
-
-- `test.assertEqual(actual, expected, message)`
-- `test.assertTrue(condition, message)`
-- `test.assertFalse(condition, message)`
-- `test.assertApprox(actual, expected, tolerance, message)`
+Prefer genuine consumer-visible state transitions and geometry checks over file-existence, source-text, wording or fixed-count assertions. Test actual game interfaces when changing them; helper objects do not establish controller integration. Keep suite output/exit status compatible with the [launcher test runner](../../src/qa/testing.py), and report only executed results. Browser interaction is a separate verification gate.

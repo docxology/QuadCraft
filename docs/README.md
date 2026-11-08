@@ -1,180 +1,70 @@
-# QuadCraft Documentation
+# QuadCraft documentation: implementation, games, and design context
 
-Welcome to the QuadCraft documentation. This comprehensive documentation suite covers all aspects of the QuadCraft project, from mathematical foundations to gameplay mechanics, the 30-game portfolio, and technical implementation.
+## Choose an implementation
 
-```mermaid
-flowchart TD
-    subgraph Core
-        README["docs/README.md"]
-        Architecture["architecture.md"]
-        QuadrayCoords["quadray_coordinates.md"]
-    end
+QuadCraft contains a C++17 tetrahedral prototype, historical browser/server geometry experiments and a separate thirty-game browser portfolio. They share quadray ideas, not one unified engine/API. Start with [architecture boundaries](architecture.md).
 
-    subgraph Mathematics
-        QuadrayCoordinates["quadray_coordinates.md"]
-        TetrahedralGeometry["tetrahedral_geometry.md"]
-        IVMSynergetics["ivm_synergetics.md"]
-    end
-
-    subgraph GameDesign["Game Design"]
-        GameplayOverview["gameplay_overview.md"]
-        WorldGeneration["world_generation.md"]
-        BlockSystem["block_system.md"]
-        ControlsNavigation["controls_and_navigation.md"]
-    end
-
-    subgraph Games["Games Portfolio (30 Games)"]
-        GamesDoc["games.md"]
-        ChessEtc["4D Chess, Checkers, Reversi, ..."]
-    end
-
-    subgraph UI["User Interface"]
-        UserInterface["user_interface.md"]
-        InterfaceDesign["interface_design.md"]
-    end
-
-    subgraph Development["Development (17 docs)"]
-        CoreSystems["Core Systems"]
-        JSImplementation["JavaScript"]
-        AdvancedFeatures["Advanced Features"]
-        MultiplayerModding["Multiplayer & Modding"]
-        Testing["Testing Guide"]
-    end
-
-    subgraph Reference
-        Glossary["glossary.md"]
-    end
-
-    subgraph Other["Technical Papers"]
-        Papers["4 research papers"]
-    end
-
-    README --> Mathematics
-    README --> GameDesign
-    README --> Games
-    README --> UI
-    README --> Development
-    README --> Reference
-    README --> Other
-```
-
-## Documentation Contents
-
-### Core Documentation
-
-- [Architecture Overview](architecture.md) - High-level overview of the QuadCraft architecture and design philosophy.
-- [Quadray Coordinates](quadray_coordinates.md) - Implementation of the quadray coordinate system in QuadCraft.
-
-### Mathematics
-
-- [Quadray Coordinates](mathematics/quadray_coordinates.md) - Detailed explanation of the quadray coordinate system used for tetrahedral space representation.
-- [Tetrahedral Geometry](mathematics/tetrahedral_geometry.md) - Mathematical principles of tetrahedral geometry and its application in QuadCraft.
-- [IVM & Synergetics](mathematics/ivm_synergetics.md) - Isotropic Vector Matrix, Synergetics volume ratios, and the concentric hierarchy.
-
-### Game Design
-
-- [Gameplay Overview](game_design/gameplay_overview.md) - Core gameplay mechanics, modes, and player experience flow.
-- [World Generation](game_design/world_generation.md) - Procedural generation of tetrahedral worlds, biomes, and structures.
-- [Block System](game_design/block_system.md) - The tetrahedral block system that forms the foundation of QuadCraft.
-- [Controls and Navigation](game_design/controls_and_navigation.md) - Player controls and navigation in tetrahedral space.
-- [Advanced Building Techniques](game_design/advanced_building_techniques.md) - Guide to structural principles and creative patterns.
-
-### Games Portfolio
-
-- [Games Overview](games.md) - All 30 standalone 4D browser games built on the Quadray coordinate system.
-
-> [!TIP]
-> See [games/README.md](../games/README.md) and [GAMES_INDEX.md](../games/GAMES_INDEX.md) for launch scripts, the full 30-game list with per-game test counts, and the standalone architecture.
-
-### User Interface
-
-- [User Interface](ui/user_interface.md) - UI design, components, and player interaction systems.
-- [Interface Design](ui/interface_design.md) - Detailed interface design specifications and styling guidelines.
-
-### Development
-
-#### Implemented Systems
-
-| Document | Description | Status |
-|---|---|---|
-| [**Chunk System**](development/chunk_system.md) | Tetrahedral chunk architecture. | ✅ Implemented |
-| [**Coordinate System**](mathematics/quadray_coordinates.md) | 4D Quadray math & implementation. | ✅ Implemented |
-| [**Tetrahedral Geometry**](mathematics/tetrahedral_geometry.md) | Geometric properties & barycentrics. | ✅ Implemented |
-| [**API Reference**](development/api_reference.md) | Core C++ API documentation. | ✅ Active |
-| [**JavaScript Implementation**](development/javascript_implementation.md) | JS-based prototyping logic. | ✅ Active |
-
-#### Design Specifications (Planned/In-Progress)
-
-| Document | Description | Status |
-|---|---|---|
-| [**Physics System**](development/physics_system.md) | Planned C++ physics architecture. | 🚧 Design Spec |
-| [**Entity System**](development/entity_system.md) | Planned ECS architecture. | 🚧 Design Spec |
-| [**Multiplayer System**](development/multiplayer_system.md) | Network architecture design. | 🚧 Design Spec |
-| [**Modding Guide**](development/modding_guide.md) | Planned modding API structure. | 🚧 Design Spec |
-
-#### Development Guides
-
-| Document | Description |
+| Goal | Start here |
 |---|---|
-| [**Setup Guide**](development/setup_guide.md) | Development environment setup. |
-| [**Asset Creation**](development/asset_creation_guide.md) | Creating assets for QuadCraft. |
-| [**Performance Optimization**](development/javascript_performance_optimization.md) | JS performance techniques. |
-| [**Cone Plane Intersection**](development/cone_plane_intersection_rendering.md) | Specific rendering detail. |
-| [**Gamepad Integration**](development/gamepad_integration_guide.md) | Input handling guide. |
-| [**CCP Ball Grid**](development/ccp_ball_grid_system.md) | Close-Centered Packing grid system. |
-| [**Paintbrush System**](development/paintbrush_system.md) | Pattern painting tools. |
-| [**Quaternion Camera**](development/quaternion_camera_system.md) | Quaternion-based camera controls. |
-| [**Realtime Code Evaluation**](development/realtime_code_evaluation.md) | Dynamic code execution system. |
-| [**Testing Guide**](development/testing_guide.md) | Test infrastructure across C++ and JS games. |
+| Build native or serve browser games | [Setup guide](development/setup_guide.md) |
+| Run/check a game | [Portfolio and runtime contracts](games.md), [catalog](../games/GAMES_INDEX.md) |
+| Work on native world/meshes | [Chunk lifecycle](development/chunk_system.md), [C++ API](development/api_reference.md) |
+| Understand browser geometry snapshots | [JavaScript map](development/javascript_implementation.md) |
+| Verify changes | [Testing commands and coverage limits](development/testing_guide.md) |
+| Find specialized implementation topics | [Development guide index](development/README.md) |
 
-### Reference
+The implementation guides replace hypothetical SDK/class recipes with actual source interfaces. Conceptual sections remain explicitly design context. In particular there is no shipped native ECS, general rigid-body physics engine, mod loader, asset importer or production multiplayer service.
 
-- [Glossary](reference/glossary.md) - Terminology and definitions.
+## Core documentation
 
-### Technical Papers
+- [Architecture: runtime families and ownership](architecture.md)
+- [Quadray coordinates in the implementation](quadray_coordinates.md)
+- [Games: raw slots, physical graphs, time, RNG and transport](games.md)
 
-See [other/](other/) for in-depth technical papers and analysis documents:
+Physical quadrays describe three dimensions modulo a common coefficient offset. Raw four-index game slots may intentionally remain independent. Never infer physical topology or metric from a game's “4D” title alone.
 
-- [QuadCraft Technical Framework](other/QuadCraft_%20Technical%20Framework%20for%20a%20Tetrahedral-B.md) - Formal system architecture paper.
-- [Quadray Coordinates Analysis](other/Quadray%20Coordinates_%20A%20Comprehensive%20Analysis%20of%20T.md) - Comprehensive coordinate analysis.
-- [Geometric Formalization](other/Quadray%20Coordinates_%20Technical%20and%20Geometric%20Forma.md) - Rigorous geometric treatment.
-- [Dimensional Conversion Supplement](other/Technical%20Supplement_%20Dimensional%20Conversion%20Betwe.md) - Conversion algorithms between coordinate systems.
+## Mathematics
 
-## How to Use This Documentation
+- [Quadray foundations](mathematics/quadray_coordinates.md)
+- [Tetrahedral geometry](mathematics/tetrahedral_geometry.md)
+- [IVM and Synergetics](mathematics/ivm_synergetics.md)
 
-This documentation is designed to be read in multiple ways depending on your needs:
+Use the implementation's declared scale/orientation when transferring equations. Native/shared JS use a Y/Z exchange and `1/sqrt(2)` scale relative to the suite's default mathematical embedding; see the [suite guide](https://github.com/docxology/symergetics/blob/main/docs/synergetics-suite.md).
 
-1. **For Players**: Start with the [Gameplay Overview](game_design/gameplay_overview.md) and [Controls and Navigation](game_design/controls_and_navigation.md) sections to understand the core gameplay mechanics.
+## Game design and controls
 
-2. **For Game Enthusiasts**: Try the [Games Portfolio](#games-portfolio) — all 30 games run directly in the browser with zero build step. See [Quick Start](../games/README.md#quick-start) for launch instructions.
+- [Gameplay overview](game_design/gameplay_overview.md)
+- [World generation](game_design/world_generation.md)
+- [Block system](game_design/block_system.md)
+- [Controls and navigation](game_design/controls_and_navigation.md)
+- [Advanced building techniques](game_design/advanced_building_techniques.md)
 
-3. **For World Builders**: Explore the [Block System](game_design/block_system.md) and [World Generation](game_design/world_generation.md) sections to understand how to create and manipulate the tetrahedral world.
+Read each page's implementation/design scope. For a portfolio game's actual controls and state, use its own page and source rather than assuming native or historical experiment controls apply.
 
-4. **For Developers**: Begin with the [Architecture Overview](architecture.md) (or the detailed [Technical Architecture](development/architecture.md)) and dive into the mathematical foundations in the [Mathematics](#mathematics) section.
+## Browser geometry experiments
 
-5. **For UI/UX Designers**: Focus on the [User Interface](ui/user_interface.md) and [Interface Design](ui/interface_design.md) documentation.
+- [CCP range storage](development/ccp_ball_grid_system.md)
+- [Cone-plane sphere silhouettes](development/cone_plane_intersection_rendering.md)
+- [Brush masks and composition](development/paintbrush_system.md)
+- [Quaternion-array camera](development/quaternion_camera_system.md)
+- [Gamepad polling](development/gamepad_integration_guide.md)
+- [Trusted eval and its limits](development/realtime_code_evaluation.md)
+- [JSP state synchronization](development/multiplayer_system.md)
 
-6. **For Researchers**: See the [Technical Papers](#technical-papers) and [IVM & Synergetics](mathematics/ivm_synergetics.md) for the mathematical and theoretical foundations.
+These are snapshot-specific experiments, not features available in every game. Static HTTP serving does not execute JSP, and direct eval is not a sandbox.
 
-## Conventions Used in Documentation
+## User interface and reference
 
-Throughout this documentation, we use the following conventions:
+- [UI index](ui/README.md), [user interface](ui/user_interface.md), [interface design](ui/interface_design.md)
+- [Glossary](reference/glossary.md)
+- [Technical papers](other/): [framework](other/QuadCraft_%20Technical%20Framework%20for%20a%20Tetrahedral-B.md), [coordinate analysis](other/Quadray%20Coordinates_%20A%20Comprehensive%20Analysis%20of%20T.md), [geometric formalization](other/Quadray%20Coordinates_%20Technical%20and%20Geometric%20Forma.md), [conversion supplement](other/Technical%20Supplement_%20Dimensional%20Conversion%20Betwe.md)
 
-- **Mermaid Diagrams**: Visual representations of systems, processes, and relationships.
-- **Code Snippets**: Examples of implementation in C++ and JavaScript where appropriate.
-- **Cross-References**: Links to related documentation sections for easy navigation.
-- **Status Badges**: ✅ Implemented, 🚧 Design Spec, to distinguish working code from planned features.
+Research/design prose is not evidence that an API or gameplay subsystem exists. Follow linked implementing code before reusing a recipe.
 
-## Contributing to Documentation
+## Contributing to documentation
 
-The QuadCraft documentation is an evolving resource. To contribute:
-
-1. Fork the repository
-2. Make your changes or additions
-3. Submit a pull request with a clear description of your modifications
-
-When contributing, please maintain the existing style and format of the documentation.
+Keep page titles specific, navigation modular and examples bound to actual signatures. Link shared contracts rather than copying inconsistent formulas or test totals. Label historical receipts by date/version; commands describe what to run, not a new passing result. Update indexes and inbound heading links when reorganizing a page. See [documentation maintenance rules](AGENTS.md).
 
 ## License
 
-This project is licensed under the Apache 2.0 License. See the [LICENSE](../LICENSE) file for details.
+See [LICENSE](../LICENSE) for Apache 2.0 terms.

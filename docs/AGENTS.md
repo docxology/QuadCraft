@@ -1,81 +1,24 @@
-# Documentation - AI Agent Guidelines
+# Documentation maintenance: runtime scope and evidence
 
-## Overview
+[Documentation index](README.md) · [Development-specific rules](development/AGENTS.md)
 
-This directory contains comprehensive documentation for QuadCraft. See README.md for the full documentation index.
+## Structure and authority
 
-## Structure
+`architecture.md` distinguishes native, historical browser/server experiments and the portfolio. `games.md` owns the local shared time/RNG/raw-versus-physical graph contracts. `development/` documents real source interfaces and explicitly bounded design ideas. Mathematics, game-design, UI, reference and technical-paper directories may discuss concepts beyond implemented functionality; do not promote those concepts to API claims.
 
-```text
-docs/
-├── README.md                # Documentation index (central hub)
-├── architecture.md          # System architecture overview (summary)
-├── quadray_coordinates.md   # Quadray implementation in QuadCraft
-├── games.md                 # 30-game portfolio overview
-├── development/             # Technical implementation guides (18 docs)
-│   ├── architecture.md      # Detailed technical architecture (846 lines)
-│   ├── chunk_system.md      # Tetrahedral chunk management
-│   ├── entity_system.md     # ECS architecture
-│   ├── physics_system.md    # Physics & collision
-│   ├── javascript_implementation.md
-│   ├── setup_guide.md       # Dev environment setup
-│   ├── testing_guide.md     # Test infrastructure (C++ & JS)
-│   └── ...                  # 11 more guides
-├── game_design/             # Gameplay documentation (5 docs)
-├── mathematics/             # Mathematical foundations (3 docs)
-│   ├── quadray_coordinates.md  # Detailed quadray math
-│   ├── tetrahedral_geometry.md # Geometry & barycentrics
-│   └── ivm_synergetics.md     # IVM & Synergetics volume ratios
-├── other/                   # Reference papers (4 papers)
-├── reference/               # Glossary and terminology
-└── ui/                      # UI/UX documentation
-```
+## Updating a technical page
 
-## Key Relationships
+1. Inspect the exact source declaration, active code path and consumer, not only nearby comments or old documentation.
+2. State the runtime/entry point and link its implementation. Source paths from `docs/` start `../src/` or `../games/`; from `development/` they start `../../`.
+3. Preserve the distinction between physical quadray equivalence and intentionally independent raw game slots.
+4. Document time units and random-stream ownership at real caller boundaries. Conservative graph transport is not symmetric-normalized heat.
+5. Remove fictional working recipes rather than prefixing them with a warning. Retain useful proposals as decisions/requirements, not invented classes, imports or commands.
+6. Update hub/subdirectory navigation and inbound heading fragments after renaming. Avoid saved line/test counts as structural truth.
 
-| Docs Area | Source Code | Games |
-|-----------|-----------|-------|
-| `mathematics/` | `src/core/coordinate/` | All 30 games (`games/4d_generic/quadray.js`, shared) |
-| `development/architecture.md` | `src/core/`, `src/render/`, `src/game/` | — |
-| `development/javascript_implementation.md` | `src/browser/`, `src/js/` | Browser games |
-| `game_design/` | `src/game/`, `src/browser/` | `games/4d_minecraft/` |
+## Verification wording
 
-## Guidelines
+Build commands belong in [setup](development/setup_guide.md), checks in [testing](development/testing_guide.md). Graphics-free CTest, Node/Python logic, catalog validation and Chromium interaction/rendering prove different things. Report only observed outputs from exercised commands; a dated historical receipt is not a current green status. Preserve immutable tagged/released documentation and user-generated artifacts.
 
-### Updating Documentation
+## Style and accessibility
 
-1. Keep synchronized with code changes in both `src/` and `games/`
-2. Use consistent formatting
-3. Include Mermaid diagrams where helpful
-4. Cross-reference related documents
-5. Update `docs/README.md` index when adding new docs
-
-### Adding New Documents
-
-1. Place in appropriate subdirectory
-2. Add to `docs/README.md` index **and** the subdirectory's `README.md`
-3. Link from related documents
-4. Follow existing style
-
-### Document Format
-
-- Use Markdown with GitHub extensions
-- Mermaid for diagrams
-- Code blocks with language tags
-- Consistent heading hierarchy
-
-## Content Standards
-
-### Technical Accuracy
-
-- Verify code examples work against actual source
-- Update when implementations change
-- Note version-specific details
-- Distinguish implemented (✅) from planned (🚧) features
-
-### Accessibility
-
-- Clear, concise writing
-- Define technical terms (link to [glossary](reference/glossary.md))
-- Provide examples
-- Link to prerequisites
+Use informative topic titles, short sections, source-backed examples and descriptive relative links. Prefer a compact ownership/data-flow explanation to a huge speculative class diagram. Define mathematical scale/gauge explicitly or link the canonical contract. Do not claim complete multiplayer, modding, physics or asset support without real implementation evidence.

@@ -1,51 +1,7 @@
-# JavaScript Experiments
+# QuadrayGrid snapshots and focused geometry experiments
 
-This directory contains HTML/JavaScript experimental prototypes for QuadCraft development.
+`QuadrayGrid.html`, `QuadrayGrid2.html`, `QuadrayGrid3.html`, `QuadrayGrid4.html` and dated HTML preserve different stages of the experiment. The numeric suffix is a snapshot identity, not a production-support promise. `MergedTwoGrids.html`/`MergingTwoGrids.html` explore grid merging; `CrystalDefectCCPBalls.html` explores packing defects; `octahedronAutomata.html` and `simpleGrid.html` are separate demonstrations.
 
-## Directory Structure
+[Split browser scripts](browser/README.md) and its standalone HTML are another branch of the experiment. [Saved examples](saves/README.md) belong to historical grid4 serialization. Associated images document historical observations, not current runtime verification.
 
-```
-experiments/
-├── browser/                    # Complete modular browser version
-├── saves/                      # Save files from experiments
-├── QuadrayGrid.html            # Original prototype
-├── QuadrayGrid2.html           # Version 2
-├── QuadrayGrid3.html           # Version 3 (12-direction fixes)
-├── QuadrayGrid4.html           # Current main version
-├── MergedTwoGrids.html         # Grid merging demo
-├── MergingTwoGrids.html        # Grid merge experiment
-├── CrystalDefectCCPBalls.html  # Crystal defect simulation
-├── octahedronAutomata.html     # Octahedron cellular automata
-└── simpleGrid.html             # Basic grid demonstration
-```
-
-## Experiment Descriptions
-
-### QuadrayGrid Series
-
-Evolution of the main quadray visualization:
-
-1. **QuadrayGrid.html** - Original basic implementation
-2. **QuadrayGrid2.html** - Added more features
-3. **QuadrayGrid3.html** - Fixed 12-direction navigation (was duplicates)
-4. **QuadrayGrid4.html** - Current production version with full features
-
-### Specialized Experiments
-
-| Experiment | Purpose |
-|------------|---------|
-| `MergedTwoGrids.html` | Visualizing combined grid structures |
-| `CrystalDefectCCPBalls.html` | Crystal lattice defect simulation |
-| `octahedronAutomata.html` | Cellular automata on octahedral grid |
-| `simpleGrid.html` | Basic grid for testing |
-
-## Screenshots
-
-Many experiments have associated screenshots (`.png`, `.jpg` files) documenting their visual output at various stages.
-
-## Running Experiments
-
-Most experiments can be opened directly in a browser. Some may require:
-
-- Local HTTP server (for module imports)
-- Specific save files to load
+Serve the checkout with `python3.13 -m http.server 8080` when HTTP loading is needed, then navigate to the exact file under `/src/js/experiments/`. Static HTTP serving does not enable JSP synchronization. Inspect each page's dependencies and controls before using it.

@@ -1,7 +1,5 @@
-# occamsjsonds/ — Agent Notes
+# OccamsJSONDS provenance and JSP integration maintenance
 
-OccamsJSONDS JSON datastore: `JsonDS.java` + `JsonDS.class` (+ inner class
-`JsonDS$1.class`) and `TestJsonDS.java` + `TestJsonDS.class`. Source and compiled
-artifacts live side by side — after editing the `.java`, recompile or the `.class`
-goes stale (classic Tomcat-classses gotcha). The parent-level READMEs document
-the webapp contract.
+Keep upstream license/provenance and detailed Java source documentation unchanged during documentation work. Inspect JsonDS.java before changing helper examples. Recompilation is needed after Java edits; no such source edits or runtime checks are part of this documentation pass.
+
+Read the adjacent [directory guide](README.md) before changing this area. Report source inspection separately from executed runtime checks.

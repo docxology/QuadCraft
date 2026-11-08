@@ -1,57 +1,53 @@
-# 4D Quadray Backgammon
+# 4D Backgammon — Dice-driven race on a projected 24-point track
 
-A standalone implementation of Backgammon using **Quadray coordinates** and the **Isotropic Vector Matrix (IVM)** tetrahedral geometry.
+A two-player dice race on 24 logical points arranged along four colored Quadray lanes.
 
-![4D Backgammon](https://img.shields.io/badge/4D-Backgammon-blue?style=for-the-badge)
+“4D” is the portfolio name. Physical Quadray projection has rank three; raw board labels may deliberately carry additional game state. See the [portfolio coordinate/time contract](../../docs/games.md).
 
 ## Quick Start
 
-### Option 1: Run Script (Recommended)
+From the QuadCraft repository root, with Python 3.13 and a modern browser:
 
 ```bash
-# From the repository root:
-./games/run.sh backgammon
+python3.13 games/run_games.py --game backgammon
 ```
-This starts a local server on port 8106 and opens the browser.
 
-### Option 2: Manual Server
-
-```bash
-cd games/4d_backgammon
-python3 -m http.server 8106
-open http://localhost:8106
-```
+Serve the parent `games/` tree, not this game directory alone: [index.html](index.html) loads sibling `../4d_generic/` assets. No JavaScript bundling step is needed. The static launcher is not a multiplayer backend.
 
 ## Game Mechanics
 
-- **4D Geometry**: Board coordinates (a, b, c, d) map to tetrahedral space.
-- **No install step**: No build tooling or package manager needed. Open `index.html` (via a local server) to play — it loads the shared `../4d_generic/` modules (Quadray, camera, grid utils, etc.) plus this game's own 3 scripts; see Architecture below.
-- **Tests**: Unit tests in `tests/` ensure logic correctness.
+`points`, `bar`, `borne` and remaining dice own the race state. The board supplies hitting, bar re-entry, bearing-off checks and a winner; `pointToQuadray(i)` supplies a distinct physical display position for each logical point. The track is not the shared 12-neighbor FCC graph.
+
+### Clock and lifecycle
+
+Turns change through board actions, not elapsed-time integration. The shared loop provides camera/HUD rendering; it does not roll dice or advance pieces automatically.
 
 ## Key Controls
 
-- **Click/Tap**: Select/Interact
-- **Drag**: Rotate 3D View
-- **Scroll**: Zoom
+Click once to roll when dice are absent; then click a point with a valid move. The controller takes the first valid move from that point rather than asking for a destination. N starts a new board, R resets scoring/board and P pauses the loop. Shift+drag rotates; the wheel zooms.
 
 ## Architecture
 
-```
-games/4d_backgammon/
-├── index.html           # Entry point (loads 14 shared ../4d_generic/ scripts, then the 3 below)
-├── js/
-│   ├── backgammon_board.js  # Game State & Logic (uses shared Quadray/GridUtils/etc.)
-│   ├── backgammon_renderer.js # Canvas Visualization
-│   └── backgammon_game.js   # Controller
-└── tests/
-    └── test_backgammon.js   # Node.js Unit Tests
+- [Model](js/backgammon_board.js): `BackgammonBoard` owns game state and rules.
+- [Renderer](js/backgammon_renderer.js): `BackgammonRenderer` — Projected lane axes, track points and checker stacks, dice/status overlays and numbered-point hit testing.
+- [Controller](js/backgammon_game.js): `BackgammonGame` wires input and lifecycle.
+- [Module guide](js/README.md) describes additional helpers and load boundaries.
 
-../4d_generic/            # Shared modules used by this game (and 29 others):
-├── quadray.js            # 4D Coordinate Math
-├── camera.js, projection.js, zoom.js, synergetics.js, game_loop.js,
-│   input_controller.js, grid_utils.js, base_board.js, turn_manager.js,
-│   base_renderer.js, base_game.js, hud.js, score_manager.js
+Board-level bar/bearing-off support is broader than the point-click UI: the renderer hit test selects numbered track points. Do not describe this as a complete standard Backgammon interface or an automatic opponent.
+
+## Testing
+
+From the repository root:
+
+```bash
+python3.13 games/run_games.py --test --game backgammon
 ```
 
----
-*Part of the [QuadCraft](../../) project.*
+[Tests and limitations](tests/README.md) distinguish logic checks from actual browser interaction. No saved count or production-readiness claim replaces current results.
+
+## Documentation
+
+- [Maintenance instructions](AGENTS.md)
+- [Shared modules](../4d_generic/README.md)
+- [Game index](../GAMES_INDEX.md)
+- [QuadCraft](../../README.md)

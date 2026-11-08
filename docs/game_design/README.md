@@ -1,67 +1,44 @@
-# Game Design Documentation
+# Game Design Guide: Implemented Prototypes and Bounded Design Ideas
 
-Gameplay mechanics, world generation, block system, and controls documentation for QuadCraft.
+QuadCraft's native engine experiment, browser painter and standalone portfolio games have different state, rendering and controls. These pages describe source-defined behavior and mark conceptual discussions locally, rather than presenting a combined feature list.
 
 ## Contents
 
-| Document | Description |
+| Document | Purpose |
 | --- | --- |
-| [gameplay_overview.md](gameplay_overview.md) | Core gameplay mechanics, modes, and player experience |
-| [world_generation.md](world_generation.md) | Procedural terrain, biomes, and structure generation |
-| [block_system.md](block_system.md) | Tetrahedral block types, placement, and material properties |
-| [controls_and_navigation.md](controls_and_navigation.md) | Keyboard/mouse controls, camera movement |
-| [advanced_building_techniques.md](advanced_building_techniques.md) | Structural principles, patterns, and building tips |
+| [Gameplay overview](gameplay_overview.md) | Entrypoints, implemented interaction loops and limits of mode/progression claims |
+| [World generation](world_generation.md) | Native sine-field Cartesian sampling versus Minecraft's raw-slot initial terrain |
+| [Block system](block_system.md) | Real registries, keys, meshes, inventory and callable model operations |
+| [Controls and navigation](controls_and_navigation.md) | Source-specific native, painter and portfolio keyboard/mouse behavior |
+| [Building exercises](advanced_building_techniques.md) | Mathematical paths/symmetry and explicitly bounded construction ideas, not implemented generators or structural physics |
 
-## Design in Practice: The 30 Games
+## Geometry Before Gameplay Claims
 
-These design principles come to life in the 30 standalone browser games under `games/` (see [`games/GAMES_INDEX.md`](../../games/GAMES_INDEX.md) for the live count and per-game breakdown). Each applies tetrahedral geometry differently:
+The [canonical coordinate contract](../quadray_coordinates.md) is the prerequisite: physical quadrays are rank-three common-offset equivalence classes. Games may retain independent raw four-index labels that project to the same physical location. The word `4D`, a tetra/octa parity label or a volume counter does not establish a four-dimensional physical world or validated nonoverlapping solid cells.
 
-| Design Concept | Exemplified By |
-| -------------- | -------------- |
-| Block placement/removal | ⛏️ 4D Minecraft |
-| Tetrahedral movement | 🚀 4D Asteroids, 🐜 4D SimAnt |
-| Turn-based strategy in 4D | ♟️ 4D Chess, 🏁 4D Checkers, ⚫ 4D Reversi |
-| Resource economy | 🏝️ 4D Catan, 🏰 4D Tower Defense |
-| FPS combat mechanics | 👹 4D Doom |
-| Cellular automata | 🧬 4D Life |
-| Pattern matching | 🀄 4D Mahjong |
-| Dice-driven movement | 🎲 4D Backgammon |
+For ideal formulas versus actual native shapes and game markers, see [tetrahedral geometry](../mathematics/tetrahedral_geometry.md). For contact graphs and counting conventions, see [IVM units](../mathematics/ivm_synergetics.md).
 
-See [Games Overview](../games.md) for the full portfolio, launch instructions, and architecture.
+## Design in Practice: Portfolio Games
+
+The [portfolio index](../../games/GAMES_INDEX.md) lists individual board, strategy, building and arcade entrypoints. They share selected helpers, not a universal movement, modding, physics or save-game engine. A feature in one title is not inherited by every title.
+
+For a concrete building example, Minecraft uses click placement at `+C`, Alt+click removal, raw-key occupancy and finite inventory. It paints square markers and provides Craft Planks/Glass buttons. Its board has physics/time methods, but the ordinary controller update only refreshes analysis. These distinctions are part of the current design, not evidence of a common survival simulation.
 
 ## Quick Reference
 
-### Core Controls
-
-Controls vary per game (see each game's `Input`/`Camera` columns in
-[`games/GAMES_INDEX.md`](../../games/GAMES_INDEX.md)), but most share the
-`4d_generic/` `CameraController` and `zoom.js` modules:
-
-| Input | Action | Source |
-| --- | ------ | ------ |
-| Click | Primary action (place block, select piece, etc. — per game) | e.g. `games/4d_minecraft/js/minecraft_game.js` `_bindMouse()` |
-| Alt+Click | Secondary action (e.g. remove block) | `games/4d_minecraft/js/minecraft_game.js` `_bindMouse()` |
-| Shift+drag (or right-click drag) | Rotate camera (`shift-drag` mode — most games) | `games/4d_generic/camera.js` |
-| Left-click drag | Rotate camera (`left-drag` mode — chess/checkers-pattern games) | `games/4d_generic/camera.js` |
-| Scroll wheel | Zoom | `games/4d_generic/zoom.js` |
-| 1-8/1-9 | Select item/block type (board- and building-games) | e.g. `games/4d_minecraft/` |
-| Keyboard (WASD/arrows) | Movement (arcade titles: Asteroids, Snake, Pac-Man, Doom, etc.) | see `Input` column in `GAMES_INDEX.md` |
-
-There is no universal debug-overlay or menu key (F1/F2/Esc) across `games/`
-— no F-key bindings exist in any game's JS.
-
-### Block Cell Types
-
-QuadCraft's IVM grid distinguishes cells by coordinate-sum parity, not by a
-four-orientation lookup table:
-
-| Cell type | Rule | Source |
-| ---- | ----- | ---------- |
-| `tetra` | `(a+b+c+d) % 2 === 0` | `games/4d_generic/quadray.js` `Quadray.cellType()` |
-| `octa` | `(a+b+c+d) % 2 !== 0` | `games/4d_generic/quadray.js` `Quadray.cellType()` |
+| Topic | Canonical local page |
+| --- | --- |
+| Actual ten-type Minecraft selection and camera gestures | [Controls](controls_and_navigation.md#portfolio-4d-minecraft) |
+| Native free-camera movement and shortcut caveats | [Native controls](controls_and_navigation.md#native-prototype-controls) |
+| Raw labels versus physical point identity | [Coordinate contract](../quadray_coordinates.md#usage-across-games) |
+| Cell parity versus real mesh shape | [Block models](block_system.md#block-orientation--game-parity-labels) |
+| Board-callable updates versus active game loop | [Gameplay boundaries](gameplay_overview.md#model-methods-versus-active-game-behavior) |
 
 ## Cross-References
 
-- [Architecture](../architecture.md) — system design overview
-- [Mathematics](../mathematics/README.md) — coordinate system and geometry
-- [Games Portfolio](../games.md) — live implementations of these designs
+- [Interface overview](../ui/user_interface.md)
+- [Architecture](../architecture.md)
+- [Games overview](../games.md)
+- [Mathematics guide](../mathematics/README.md)
+- [Glossary](../reference/glossary.md)
+- [Documentation index](../README.md)

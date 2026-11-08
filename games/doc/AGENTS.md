@@ -1,8 +1,5 @@
-# doc/ — Agent Notes
+# Maintaining portfolio reference guides
 
-Portfolio-level documentation for the games collection (verified 2026-08-29):
-`architecture.md`, `configuration.md`, `contributing.md`, `game_template.md`,
-`scaffold_guide.md`, `analytics_reporting.md`, `launch_operations.md`,
-`python_infrastructure.md`. The `game_template.md` + `scaffold_guide.md` pair is
-the canonical recipe for adding a new 4D game. Per-game docs live in each game's
-folder, not here.
+This directory owns launcher, Python tooling and shared browser references. Read [the hub](README.md), [repository documentation rules](../../docs/AGENTS.md) and [canonical portfolio contracts](../../docs/games.md) first.
+
+Document source signatures and real entrypoints; link canonical units/gauge/time/RNG rules rather than duplicating a competing contract. Per-game controls belong with the actual game. Distinguish text scans, logic tests and real Chromium scenarios; none alone establishes complete gameplay. Do not publish timeless test totals, inferred adoption or unmeasured completeness percentages. Preserve filenames and repair navigation when headings change.

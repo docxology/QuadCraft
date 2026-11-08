@@ -1,74 +1,25 @@
-# 4D Life - Agent Instructions
+# 4D Life maintenance — Raw four-label toroidal cellular automaton
 
-## Project Overview
+Read the [game guide](README.md), [repository instructions](../../AGENTS.md) and [portfolio contracts](../../docs/games.md) before changing behavior. This folder is a browser game, not the native QuadCraft runtime.
 
-4D Life is an implementation of Conway's Game of Life on a 4D toroidal grid (IVM lattice). Cells have up to 12 neighbors. **Production-ready** with 8 passing tests.
+## Source ownership
 
-## Quick Commands
+- [index.html](index.html) is authoritative for script order, page controls and construction.
+- [js/README.md](js/README.md) maps `LifeBoard`, `LifeRenderer` and `LifeGame` to their actual files.
+- [tests/README.md](tests/README.md) records the actual source paths and historical browser-runner limitations.
 
-```bash
-# Run all tests (8 tests, 100% pass)
-node tests/test_life.js
+## Preserve game-specific invariants
 
-# Open in browser
-open games/4d_life/index.html
+Preserve the raw Set and 80-offset toroidal update rule; do not replace it with GridUtils’s twelve-neighbor graph. Keep the wall-clock speed gate distinct from the shared loop’s fixed-second callback units.
 
-# Start local server (Port 8103)
-./games/run.sh life
-```
+The shared loop has a 500 ms update tick. Inside `update()`, `performance.now()` gates at most one generation by the separate `speed` millisecond threshold (initially 200). Thus the displayed speed is not a guaranteed generation interval; this is not fixed-dt continuous integration.
 
-## Key Directories
+## Supported scope
 
-| Directory | Files | Purpose |
-|-----------|-------|---------|
-| `js/` | 3 modules | Core logic (Quadray, Board, Renderer, Game) |
-| `tests/` | 1 file | Test suite (8 tests) |
+Raw common-offset aliases remain distinct automaton cells even when they project to the same physical point. Named patterns are seed shapes, not verified oscillators/gliders under these nonstandard B5/S4–8 rules. This is not ordinary Conway B3/S23 or a twelve-neighbor FCC automaton.
 
-## Shared Modules
+Do not infer inherited APIs from scripts merely being loaded. Keep raw storage, normalized physical points, graph edges and display geometry separate. Link shared math rather than copying a conflicting distance formula or fabricated local `quadray.js` API.
 
-Imported via `<script>` tags in `index.html` from `../4d_generic/`:
-`quadray.js`, `camera.js`, `projection.js`, `zoom.js`, `synergetics.js`
+## Verification expectations
 
-## Module Dependency Order
-
-Load in this order:
-
-```
-1. life_board.js   # Grid state & Rules
-2. life_renderer.js# Canvas rendering
-3. life_game.js    # Loop & Controls
-```
-
-## File Inventory
-
-### JavaScript Modules (`js/`)
-
-| File                 | Key Exports     | Purpose                  |
-|----------------------|-----------------|--------------------------|
-| `quadray.js`         | `Quadray`       | Coordinates              |
-| `life_board.js`      | `Board`, `Cell` | Sparse map of live cells |
-| `life_renderer.js`   | `Renderer`      | Projection               |
-| `life_game.js`       | `Game`          | Tick loop, speed control |
-
-### Tests (`tests/`)
-
-| File           | Tests | Coverage                                |
-|----------------|-------|-----------------------------------------|
-| `test_life.js` | 8     | Birth, Survival, Overcrowding, Wrapping |
-
-## Game Rules (Conway in 4D)
-
-- **Neighbors**: 12 (IVM coordination number)
-- **Birth**: Dead cell with exactly 3 live neighbors becomes live.
-- **Survival**: Live cell with 2 or 3 neighbors stays live.
-- **Death**: <2 (underpopulation) or >3 (overpopulation) dies.
-- **Wraparound**: Logic handles toroidal boundaries on all 4 axes.
-
-## Verification Checklist
-
-- [ ] All tests pass: `node tests/test_life.js`
-- [ ] Browser loads without errors
-- [ ] Cells toggle on click
-- [ ] Simulation runs/pauses
-- [ ] Patterns propagate correctly
-- [ ] Clear button wipes board
+From the QuadCraft root, use `python3.13 games/run_games.py --test --game life` for the registered suites. Also validate the portfolio with `python3.13 games/run_games.py --validate` and inspect the served page for console errors, real controls, camera/zoom and reset behavior. Follow the [repository testing guide](../../docs/development/testing_guide.md); Node logic results alone do not establish browser correctness. Report only checks actually run, without permanent passing-count claims.

@@ -1,9 +1,10 @@
 # TODO — QuadCraft backlog
 
-> Single canonical backlog for this repo. When an item is done, mark `[x]` with date and
-> evidence, or remove it. Verification commands: `python3 games/run_games.py --validate`,
-> `python3 games/run_games.py --test` (both run in CI: `.github/workflows/games-tests.yml`;
-> doc links run in CI: `.github/workflows/doc-links.yml`).
+> Canonical maintenance backlog and historical completion receipts. The completed
+> rounds below are dated records, not current feature, test-count or green-status
+> claims. Current verification commands and coverage boundaries are in
+> [the testing guide](docs/development/testing_guide.md); examples use Python 3.13.
+> When closing an item, record its date and actual evidence or remove it.
 
 ## Completed (Round 3, 2026-09-05)
 

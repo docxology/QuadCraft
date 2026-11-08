@@ -1,62 +1,7 @@
-# Tomcat Server
+# External Tomcat deployment and JSP runtime boundary
 
-Apache Tomcat deployment for QuadCraft backend.
+This tree contains `webapps/QuadCraft/`, not a Tomcat distribution, server.xml or launcher scripts. Install/manage Tomcat externally; copying the webapp under its webapps directory exposes the context `/QuadCraft` according to the container configuration.
 
-## Directory Structure
+The operational endpoint is `QuadCraft/QuadCraftAjax.jsp`; its request body is JSON and its action switch, not HTTP method or query parameter alone, selects behavior. Read [the full protocol](../README.md) before writing clients. A static Python HTTP server cannot execute JSP.
 
-```text
-tomcat/
-└── webapps/
-    └── QuadCraft/           # Deployed web application
-        ├── QuadCraftAjax.jsp
-        ├── index.html_goesHere.txt
-        └── WEB-INF/
-            └── classes/
-                └── immutable/
-                    └── occamsjsonds/   # Compiled Java classes + sources
-```
-
-## Deployment
-
-### Prerequisites
-
-- Apache Tomcat 8+ installed
-- Java 8+ runtime
-
-### Installation
-
-1. Copy `webapps/QuadCraft` to `$CATALINA_HOME/webapps/`
-2. Start Tomcat: `$CATALINA_HOME/bin/startup.sh` (Tomcat's own launcher, not a script in this directory)
-3. Access: `http://localhost:8080/QuadCraft/`
-
-### Configuration
-
-- Port: Default 8080 (configure in `server.xml`)
-- Context path: `/QuadCraft`
-
-## Webapp Contents
-
-### QuadCraftAjax.jsp
-
-AJAX endpoint for game operations:
-
-- POST: Save game state
-- GET: Load game state
-
-### WEB-INF/classes/immutable/occamsjsonds
-
-Java sources (and compiled classes):
-
-- `JsonDS.java` - JSON data structure handling
-- `TestJsonDS.java` - Test code
-
-## Integration
-
-Browser clients connect via:
-
-```javascript
-fetch('http://localhost:8080/QuadCraft/QuadCraftAjax.jsp', {
-  method: 'POST',
-  body: JSON.stringify(gameState)
-});
-```
+`WEB-INF/classes/immutable/occamsjsonds/` includes Java sources and checked-in bytecode. Recompilation/classloader reload must be handled if sources change; source/bytecode parity and Java/Tomcat version compatibility were not exercised in this audit. There is no root Java file matching the old wildcard compilation recipe. The placeholder index note does not deploy the current browser's external Var.js automatically.

@@ -1,80 +1,15 @@
-# 4D Space Invaders — Agent Instructions
+# 4D Space Invaders — Model and runtime maintenance
 
-## Project Overview
+Read the [game guide](README.md), [module ownership](js/README.md), [test scope](tests/README.md) and [portfolio contracts](../../docs/games.md) before changing behavior.
 
-Wave-based shooting with formation movement in 4D. Standalone browser application built on Quadray coordinates.
+## Preserve the implemented boundary
 
-## Quick Commands
+Document `SpaceInvadersBoard`, `SpaceInvadersRenderer` and `SpaceInvadersGame` rather than invented Invaders aliases. Keep raw hit keys and logical counters distinct from physical projection.
 
-```bash
-# Run tests (22 tests)
-node tests/test_space_invaders.js
+`SpaceInvadersGame.update()` polls ship movement and calls one `board.step()` per 100 ms logical tick. Formation schedules, shooting cooldown and bullets are tick-based, not dt-integrated. Shared entity-system imports do not make these arrays an `EntityManager` world.
 
-# Open in browser
-open index.html
+[index.html](index.html) instantiates `SpaceInvadersGame` after the actual shared imports and local board/renderer/controller scripts. Inheritance or an imported helper is not evidence that this game uses every shared system. Keep rules in `SpaceInvadersBoard`, projected drawing in `SpaceInvadersRenderer` and browser input/lifecycle in `SpaceInvadersGame`.
 
-# Start local server
-python3 -m http.server 8117
-```
+## Evidence and commands
 
-## Shared Modules
-
-Imported via `<script>` tags in `index.html` from `../4d_generic/`:
-`quadray.js`, `camera.js`, `projection.js`, `zoom.js`, `synergetics.js`
-
-## Module Dependency Order
-
-Load in this order to avoid reference errors:
-
-```text
-1. space_invaders_board.js     # Board/world state (needs Quadray)
-2. space_invaders_renderer.js  # Canvas rendering (needs Quadray, Board)
-3. space_invaders_game.js      # Controller (needs all above)
-```
-
-## File Inventory
-
-### JavaScript Modules (`js/`)
-
-| File | Key Exports | Purpose |
-|------|-------------|---------|
-| `space_invaders_board.js` | `InvadersBoard` | Alien formation grid, projectile tracking, shield state |
-| `space_invaders_renderer.js` | `InvadersRenderer` | Formation rendering with depth, projectile trails, shield damage |
-| `space_invaders_game.js` | `InvadersGame` | Wave spawning, collision detection, scoring, and difficulty scaling |
-
-### Tests (`tests/`)
-
-| File | Tests | Coverage |
-|------|-------|----------|
-| `test_space_invaders.js` | 22 | Board creation, cell operations, reset |
-| `test.html` | — | Browser test runner |
-
-## Game Rules Summary
-
-- Alien formations advance in 4D Quadray patterns
-- Player fires projectiles along IVM axes
-- Aliens speed up as fewer remain
-- Shields provide destructible cover
-- UFO bonus targets appear periodically
-
-## Code Standards
-
-- **Language**: ES6+ JavaScript (classes, const/let, arrow functions)
-- **Comments**: JSDoc for public functions
-- **Indentation**: 4 spaces
-- **Export Pattern**: Browser + Node.js dual support
-
-```javascript
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { ClassName };
-}
-```
-
-## Verification Checklist
-
-- [ ] All tests pass: `node tests/test_space_invaders.js`
-- [ ] Browser loads: `open index.html`
-- [ ] Game plays (basic interaction)
-- [ ] Shift+drag rotates view
-- [ ] Reset button works
-- [ ] Console shows no errors
+Run commands from the QuadCraft repository root; launch with `python3.13 games/run_games.py --game space_invaders`. See [tests/README.md](tests/README.md) for the Node and harness commands. Report exercised checks, not saved counts, production-readiness or inferred canvas coverage. Review the actual controls in the game guide rather than copying another game's bindings.

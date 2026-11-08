@@ -1,45 +1,30 @@
-# Mathematics Documentation
+# Mathematics Guide: Quadray Geometry, Mesh Boundaries, and IVM Units
 
-Mathematical foundations of QuadCraft's tetrahedral coordinate system.
+Begin with the [canonical coordinate contract](../quadray_coordinates.md), which fixes the development checkout's embedding, inverse signatures, units, floating-point limits and native/game occupancy distinctions.
 
 ## Contents
 
-| Document | Description |
+| Document | Purpose |
 | --- | --- |
-| [quadray_coordinates.md](quadray_coordinates.md) | Quadray coordinate system — basis vectors, conversion formulas, hashing, distance |
-| [tetrahedral_geometry.md](tetrahedral_geometry.md) | Tetrahedral geometry — properties, mesh generation, barycentrics |
-| [ivm_synergetics.md](ivm_synergetics.md) | IVM & Synergetics — volume ratios, concentric hierarchy, S3 constant |
+| [Quadray coordinate mathematics](quadray_coordinates.md) | Rank-three common-offset quotient, gauges, inverse, physical metric and lattice distinctions |
+| [Tetrahedral geometry](tetrahedral_geometry.md) | Ideal solid formulas, actual native nonregular offsets, barycentric containment mathematics and screen-marker boundaries |
+| [IVM and Synergetics](ivm_synergetics.md) | Twelve-contact topology, explicitly scaled volume hierarchy, S3 conversion and per-record game accounting |
 
 ## Key Concepts
 
-### Quadray Coordinates
-
-Four-component coordinate system `(a, b, c, d)` where vectors point from the center of a regular tetrahedron to its vertices. All coordinates are non-negative after normalization.
-
-### IVM (Isotropic Vector Matrix)
-
-The space-filling grid of alternating tetrahedra and octahedra that underlies QuadCraft's world. In Synergetics, the tetrahedron is the unit of volume:
-
-| Shape | Tetravolumes |
-| ----- | ------------ |
-| Tetrahedron | 1 |
-| Cube | 3 |
-| Octahedron | 4 |
-| Rhombic Dodecahedron | 6 |
-| Cuboctahedron (VE) | 20 |
-
-### Key Formulas
-
-**Quadray → Cartesian** (scale = 1/√2):
-
-- x = scale × (a − b − c + d)
-- y = scale × (a − b + c − d)
-- z = scale × (a + b − c − d)
-
-**S3 Constant**: √(9/8) ≈ 1.06066 — converts between XYZ and Synergetics volumes.
+- **Physical quadrays:** four coefficients modulo a common additive offset, not four independent spatial axes or mandatory constant-sum coordinates.
+- **Minimum-zero gauge:** subtract the smallest component. This selects a nonnegative representative; it does not set vector length or component sum.
+- **Native/shared embedding:** $(x,y,z)=(a-b-c+d,a-b+c-d,a+b-c-d)/\sqrt2$. Coefficient-unit directions have length $\sqrt{3/2}$.
+- **Inverse:** continuous and gauge-selecting; integer snapping and nearest-lattice selection are separate operations.
+- **Occupancy:** native chunks use normalized floating quadrays, while games such as Minecraft can retain physically coincident raw-label aliases.
+- **Geometry:** a point anchor, a cell type label, a rendered marker and a validated solid boundary are not the same object.
+- **IVM volume units:** with the ideal edge-2 regular tetrahedron defined as volume 1, $V_{\mathrm{IVM}}=\sqrt{9/8}\,V_{\mathrm{QC}}$. This does not make the actual native prototype mesh regular or the game's `0.375` per-record counter a measured union volume.
 
 ## Cross-References
 
-- [Quadray implementation in QuadCraft](../quadray_coordinates.md) — engine-level overview
-- [Games Portfolio](../games.md) — all 30 games use quadray coordinates
-- [Glossary](../reference/glossary.md) — definitions for IVM, Synergetics, S3, etc.
+- [Gameplay implementation boundaries](../game_design/gameplay_overview.md)
+- [Block representations](../game_design/block_system.md)
+- [Source-specific controls](../game_design/controls_and_navigation.md)
+- [Glossary](../reference/glossary.md)
+- [Maintained historical discussions](../other/README.md)
+- [Documentation index](../README.md)

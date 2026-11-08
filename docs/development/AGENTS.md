@@ -1,54 +1,24 @@
-# Development Documentation - AI Agent Guidelines
+# Maintaining source-backed development guides
 
-## Purpose
+[Development index](README.md) · [Documentation rules](../AGENTS.md)
 
-Technical guides for developers working on QuadCraft.
+## Scope each claim to a runtime
 
-## Document Categories
+- Native: `src/core/`, `src/game/`, `src/render/`, C++17/CMake/GLFW/OpenGL.
+- Historical experiments: the exact HTML snapshot under `src/browser/` or `src/js/experiments/`; newer Var-tree storage differs from older maps.
+- Portfolio: game-prefixed JavaScript under `games/4d_<key>/`, shared helpers under `games/4d_generic/`, registry/launcher/QA under `games/src/`.
+- JSP: the experimental state merge endpoint, not the portfolio static server or a native multiplayer implementation.
 
-### Core Systems (Most Critical)
+Do not describe one runtime's class, save format or coordinate helper as another's API.
 
-- `architecture.md` - Overall design
-- `chunk_system.md` - World partitioning
-- `entity_system.md` - Game objects
+## Evidence and examples
 
-Changes to these affect fundamental architecture.
+Read the implementing declaration and callers before documenting signatures. Link to source with paths relative to this directory (`../../src/...` or `../../games/...`). Native namespace is `QuadCraft`; shared JS `fromCartesian` takes three numbers. Preserve raw-label identity where rules require it and use the [canonical portfolio contracts](../games.md) for time/RNG/graphs.
 
-### JavaScript Implementation
+No fake component hierarchies, headers, mod installers, asset loaders, physics solvers or network tools. Conceptual material must explain design decisions without posing as working recipes. Existing code comments can also be stale: inspect actual branches and call sites (for example, disabled surface caching).
 
-- `javascript_implementation.md` - Browser version
-- `javascript_performance_optimization.md` - Speed tuning
-- `realtime_code_evaluation.md` - Dynamic code
+## Navigation and verification
 
-Most actively used for browser development.
+Keep the [development index](README.md) and [documentation hub](../README.md) aligned with each page's scope. Prefer topic-specific titles and short guides over repeated system diagrams. Preserve or migrate inbound heading anchors when renaming sections.
 
-### Advanced Features
-
-Specialized systems with complex implementations:
-
-- Cone-plane intersection for rendering
-- CCP ball grid for physics
-- Paintbrush for creation tools
-
-## Guidelines
-
-### Updating Documents
-
-1. Keep synchronized with code
-2. Update code examples when implementations change
-3. Note deprecated approaches
-4. Version-tag significant changes
-
-### Adding Documents
-
-1. Follow existing naming conventions (snake_case)
-2. Add to README.md index
-3. Cross-reference related docs
-4. Include practical examples
-
-### Quality Standards
-
-- Accurate code examples
-- Clear explanations
-- Diagrams for complex concepts
-- Step-by-step instructions for setup
+Commands and test coverage belong in [setup](setup_guide.md) and [testing](testing_guide.md). Do not turn old counts or source inspection into a new passing receipt. Report only checks actually run, and distinguish native graphics-free tests from rendering, structural validation from gameplay, and pointer-capture denial from exercised capture controls.

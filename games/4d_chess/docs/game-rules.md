@@ -1,162 +1,40 @@
-# Game Rules
+# Quadray Chess rules — actual turns, captures and limitations
 
-How to play 4D Quadray Chess.
-
----
-
-## Overview
-
-4D Quadray Chess is a chess variant played in four-dimensional tetrahedral space. The game uses traditional chess pieces with movement rules adapted for the Quadray coordinate system.
-
----
+This is a local chess-inspired variant, not an implementation of every orthodox chess rule. [Piece movement](piece-movement.md) describes the source’s directed pseudo-legal moves.
 
 ## Board
 
-- **Coordinates**: (a, b, c, d) where each component ranges from 0 to 4
-- **Positions**: Normalized lattice points in 4D space
-- **Visualization**: Projected to 3D for display
-
----
+`Board(4)` enumerates canonical zero-minimum positions with each normalized component ≤4. Physical coordinates are rank three modulo common offset, not 5^4 independent physical slots. Bounds differ from games using exclusive `[0,size)` raw extents. The prescribed setup has twelve pieces per side; its Black knight at `(0,5,0,0)` lies beyond the default declared board extent, so the setup should not be described as uniformly in bounds.
 
 ## Pieces
 
-Each side starts with **12 pieces**:
-
-| Piece | Count | Symbol |
-|-------|-------|--------|
-| King | 1 | ♔/♚ |
-| Queen | 1 | ♕/♛ |
-| Rooks | 2 | ♖/♜ |
-| Bishops | 2 | ♗/♝ |
-| Knights | 2 | ♘/♞ |
-| Pawns | 4 | ♙/♟ |
-
----
+Each side starts with a king, queen, two rooks, two bishops, two knights and four pawns. White starts; the controller advances its TurnManager after a selected move. Capturing removes the enemy at the destination and adds it to the capturer’s captured-piece list.
 
 ## Movement Rules
 
-### King ♔
+| Piece | Generated offsets |
+| --- | --- |
+| King | One positive basis step |
+| Rook | Positive single-basis slides |
+| Bishop | Positive two-basis-pair slides |
+| Queen | Rook plus Bishop destinations |
+| Knight | Twelve ordered positive +2/+1 offsets |
+| Pawn | White +A / Black +B advance; forward-plus-other-axis captures |
 
-Moves **1 step** in any of the four Quadray directions.
-
-```
-Available moves from any position:
-  +a, +b, +c, +d (4 directions)
-```
-
-### Queen ♕
-
-Combines **Rook + Bishop** movement. Can slide any distance along single axes or diagonals.
-
-### Rook ♖
-
-Slides **any distance** along a single Quadray axis.
-
-```
-Movement along one axis:
-  +na, -na, +nb, -nb, +nc, -nc, +nd, -nd
-  (where n = 1, 2, 3, ...)
-```
-
-### Bishop ♗
-
-Moves **diagonally** where two axes change simultaneously.
-
-```
-Example diagonal movements:
-  +a+b, +a-b, +a+c, +a-c, +a+d, +a-d
-  +b+c, +b-c, +b+d, +b-d
-  +c+d, +c-d
-  (6 diagonal directions)
-```
-
-### Knight ♘
-
-Moves in **L-shape**: +2 in one axis, +1 in another.
-
-```
-Example knight moves:
-  +2a+1b, +2a+1c, +2a+1d, +2b+1a, ...
-  (12 possible directions)
-```
-
-### Pawn ♙
-
-- **White pawns**: Advance along +a axis
-- **Black pawns**: Advance along +b axis
-- **Capture**: Diagonal movement (+a+c, +a+d for white)
-- **Initial move**: Can move 2 squares forward
-
----
-
-## Turn Order
-
-1. **White** moves first
-2. Players alternate turns
-3. Must move on your turn (no passing)
-
----
+Bounds/occupancy reduce the available destinations. Sliders do not pass through occupied points. There is no castling, en passant or promotion. The piece generators do not exclude moves leaving one’s own king in check.
 
 ## Winning Conditions
 
-### Checkmate
-
-The opponent's King is in check with no legal escape moves.
-
-### King Capture
-
-If a King is captured, that player loses immediately.
-
-### Stalemate
-
-If a player has no legal moves but is not in check, the game is a **draw**.
-
----
+After a move, the controller computes the next player’s check flag and whether any generated moves exist. With no moves it announces checkmate if checked, otherwise stalemate. It can also end play on king capture. Because `hasLegalMoves` counts pseudo-legal destinations, these labels do not certify orthodox checkmate/stalemate correctness.
 
 ## Controls
 
-| Action | Control |
-|--------|---------|
-| Select piece | Click on piece |
-| Move | Click destination or press 1-9 |
-| Random move | Space or M key |
-| Auto-play | A key |
-| Rotate view | Drag mouse |
-| Zoom | Scroll wheel or +/- |
-| Reset game | R key |
-| Save game | Click 💾 button |
-| Load game | Click 📂 button |
+Click an own piece and then a highlighted destination. Keys 1–9 select the first displayed choices; Escape deselects. Space/M chooses a random move and A toggles interval-driven random autoplay. R/N reset; Shift+drag rotates; wheel or +/− zooms. P stops/restarts the shared display loop, but click/key actions and autoplay are not uniformly pause-gated.
 
----
+S/L and the Save/Load buttons expose legacy persistence code; see [notation and record compatibility](notation.md), not a guaranteed restore workflow. The selected-piece camera is a second projected view, not movement in an extra physical dimension.
 
 ## Strategy Tips
 
-1. **Control the center** - Central positions have more influence
-2. **Develop pieces** - Get all pieces into active positions
-3. **Watch all 4 axes** - Threats can come from any direction
-4. **Use the Knight** - L-shaped moves are hard to block
-5. **Coordinate pieces** - Combine piece movements for attacks
+Inspect actual highlighted moves and blockers; do not assume familiar reciprocal rook/king directions, standard promotion races or established mating patterns. [Strategy/readout notes](chess-theory.md) are exploratory, not a solved or measured-strength theory.
 
----
-
-## Visual Indicators
-
-| Indicator | Meaning |
-|-----------|---------|
-| Yellow ring | Selected piece |
-| Green circles | Valid move destinations |
-| Numbers | Move selection (1-9) |
-| Purple highlight | Hovered position |
-
----
-
-## FAQ
-
-**Q: Why 4D?**
-A: The Quadray coordinate system naturally extends to 4 dimensions, creating richer gameplay possibilities.
-
-**Q: Is this harder than regular chess?**
-A: The additional axis adds complexity, but the piece movements follow consistent rules.
-
-**Q: Can I play against another person?**
-A: Yes! Players take turns on the same screen, or use auto-play for AI demonstration.
+[Game guide](../README.md) · [Quadray mathematics](quadray-math.md) · [Tests](../tests/README.md).

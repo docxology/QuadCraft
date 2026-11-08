@@ -1,75 +1,25 @@
-# 4D Asteroids - Agent Instructions
+# 4D Asteroids maintenance — Continuous wrapped flight and swept collisions
 
-## Project Overview
+Read the [game guide](README.md), [repository instructions](../../AGENTS.md) and [portfolio contracts](../../docs/games.md) before changing behavior. This folder is a browser game, not the native QuadCraft runtime.
 
-4D Asteroids is an arcade-style game where the player pilots a ship through a 4D hypserspace. The game features continuous movement, inertia, and "screen wrapping" across 4 dimensions. **Production-ready** with 8 passing tests.
+## Source ownership
 
-## Quick Commands
+- [index.html](index.html) is authoritative for script order, page controls and construction.
+- [js/README.md](js/README.md) maps `AsteroidsBoard`, `AsteroidsRenderer` and `AsteroidsGame` to their actual files.
+- [tests/README.md](tests/README.md) records the actual source paths and historical browser-runner limitations.
 
-```bash
-# Run all tests (8 tests, 100% pass)
-node tests/test_asteroids.js
+## Preserve game-specific invariants
 
-# Open in browser
-open games/4d_asteroids/index.html
+Keep raw periodic state separate from physical nearest-image distance. Preserve the independent seeded RNG and event-time ordering, including residual fragment flight and pending respawn cancellation on reset.
 
-# Start local server (Port 8104)
-./games/run.sh asteroids
-```
+`GameLoop` calls `update(dt)` with fixed seconds at a 16 ms tick. Thrust is integrated with that dt; UFO fire, projectile expiry, shields and the 1.5-second respawn are simulation-time events. The shared loop caps catch-up at 250 ms. Pause rejects gameplay commands as well as updates.
 
-## Key Directories
+## Supported scope
 
-| Directory | Files | Purpose |
-|-----------|-------|---------|
-| `js/` | 3 modules | Core logic (Quadray, Board, Renderer, Game) |
-| `tests/` | 1 file | Test suite (12 tests) |
+Raw labels are not four independent physical axes. Ship speed is capped in raw coefficient space, while collision radii are physical. Shift is both a hyperspace key and the camera-drag modifier.
 
-## Shared Modules
+Do not infer inherited APIs from scripts merely being loaded. Keep raw storage, normalized physical points, graph edges and display geometry separate. Link shared math rather than copying a conflicting distance formula or fabricated local `quadray.js` API.
 
-Imported via `<script>` tags in `index.html` from `../4d_generic/`:
-`quadray.js`, `camera.js`, `projection.js`, `zoom.js`, `synergetics.js`
+## Verification expectations
 
-## Module Dependency Order
-
-Load in this order:
-
-```
-1. asteroids_board.js    # Physics & Entity state (Ship, Asteroids)
-2. asteroids_renderer.js # Canvas rendering
-3. asteroids_game.js     # Controller loop & Input
-```
-
-## File Inventory
-
-### JavaScript Modules (`js/`)
-
-| File | Key Exports | Note |
-|------|-------------|------|
-| `asteroids_board.js` | `Board`, `Entity`, `Ship`, `Asteroid` | Handles physics updates |
-| `asteroids_renderer.js` | `Renderer` class | |
-| `asteroids_game.js` | `Game` controller | |
-
-### Tests (`tests/`)
-
-| File | Tests | Coverage |
-|------|-------|----------|
-| `test_asteroids.js` | 12 | Movement, wrapping, collision detection, asteroid splitting |
-
-## Key Concepts
-
-### 4D Wrapping
-
-The game world is a 4-torus. When an object leaves the bound (e.g., a > 4), it wraps to the opposite side (a = -4). This is implemented in `Board.update()`.
-
-### Inertia
-
-The ship has a velocity vector `(dv_a, dv_b, dv_c, dv_d)`. Thrust adds to this vector; friction/drag slowly reduces it.
-
-## Verification Checklist
-
-- [ ] All tests pass: `node tests/test_asteroids.js`
-- [ ] Browser loads without errors
-- [ ] Ship moves with inertia (Arrow keys)
-- [ ] Spacebar fires projectiles
-- [ ] Asteroids split when hit
-- [ ] Wrapping works across all boundaries
+From the QuadCraft root, use `python3.13 games/run_games.py --test --game asteroids` for the registered suites. Also validate the portfolio with `python3.13 games/run_games.py --validate` and inspect the served page for console errors, real controls, camera/zoom and reset behavior. Follow the [repository testing guide](../../docs/development/testing_guide.md); Node logic results alone do not establish browser correctness. Report only checks actually run, without permanent passing-count claims.

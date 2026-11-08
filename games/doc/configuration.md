@@ -1,161 +1,44 @@
-# Configuration Reference
+# Game selection, ports and tooling path defaults
 
-> **Note on 4D Geometry & Nomenclature**: "4D" in QuadCraft strictly means **Synergetics** geometry (Quadray tetrahedral coordinates on an IVM; 12 neighbors = permutations of `(0, 1, 1, 2)`). Canonical statement: [GAMES_INDEX.md](../GAMES_INDEX.md#note-on-4d-geometry--nomenclature).
+Source: [`run_games.py`](../run_games.py), [`core/registry.py`](../src/core/registry.py), [`core/config.py`](../src/core/config.py).
 
-> All configuration surfaces for the QuadCraft games framework.
+## CLI and JSON precedence
 
----
+From the QuadCraft repository root:
 
-## Configuration Sources
-
-| Source | Location | Format | Scope |
-|--------|----------|--------|-------|
-| `config.py` | `src/core/config.py` | Python constants | Infrastructure defaults |
-| `games_*.json` | (User-provided) | JSON config | Deployment overrides |
-| `registry.py` | `src/core/registry.py` | Python dict | Game definitions |
-| CLI flags | `run_games.py` | argparse | Per-invocation overrides |
-
----
-
-## `src/core/config.py` — Infrastructure Constants
-
-### Paths
-
-| Constant | Value | Description |
-|----------|-------|-------------|
-| `REPO_ROOT` | Auto-detected | Repository root (2 levels up from `config.py`) |
-| `GAMES_DIR` | `{REPO_ROOT}/games` | Games directory |
-| `GENERIC_DIR` | `{GAMES_DIR}/4d_generic` | Shared JS module directory |
-
-### Networking
-
-| Constant | Value | Description |
-|----------|-------|-------------|
-| `BASE_PORT` | `8100` | Default starting port for game servers |
-
-### Shared Module List
-
-```python
-SHARED_MODULES = [
-    "quadray.js", "camera.js", "projection.js", "zoom.js",
-    "synergetics.js", "input_controller.js", "game_loop.js",
-    "hud.js", "score_manager.js", "grid_utils.js",
-    "base_renderer.js", "base_game.js",
-]
+```sh
+python3.13 games/run_games.py --game chess doom --base-port 9000 --no-browser
+python3.13 games/run_games.py --config games/games_config.json
 ```
 
-Used by: `validation.py` (import checks), `shared/ModuleRegistry`, `analytics/GameAnalytics`
-
-### Required Files
-
-```python
-REQUIRED_FILES = ["index.html", "AGENTS.md"]
-```
-
-Used by: `analytics/GameAnalytics` (health scoring)
-
-### JS Patterns
-
-```python
-REQUIRED_JS_PATTERNS = {
-    "board":    "{game}_board.js",
-    "renderer": "{game}_renderer.js",
-    "game":     "{game}_game.js",
-}
-```
-
-Used by: `scaffold/GameScaffold` (file generation)
-
-### Logging
-
-| Constant | Value | Description |
-|----------|-------|-------------|
-| `LOG_PREFIX` | `"[QuadCraft]"` | Prefix for log messages |
-
----
-
-## `games_config.json` — Runtime Config
+JSON format (all fields optional):
 
 ```json
-{
-    "games": ["chess", "checkers", "reversi", ...],
-    "base_port": 8100,
-    "open_browser": true
-}
+{"games": ["chess", "doom"], "base_port": 9000, "open_browser": false}
 ```
 
-| Field | Type | Default | Description |
-|-------|------|---------|-------------|
-| `games` | `string[]` | All 30 | Game keys to launch |
-| `base_port` | `int` | `8100` | Starting port number |
-| `open_browser` | `bool` | `true` | Auto-open browser windows |
+This is JSON loading, not schema validation. `load_config(path)` parses and returns the object; the CLI rejects unknown game keys.
 
-**Usage:**
+Actual control flow is important:
 
-```bash
-python3 run_games.py --config games_config.json
-```
+1. `--validate` exits before other modes; `--list` is next and uses the CLI base port without reading JSON.
+2. `--config` selects games before `--all` or `--game`. Missing JSON `games` defaults to every registry key.
+3. JSON `base_port` overrides the CLI value, even an explicit `--base-port`.
+4. JSON `open_browser` overrides `--no-browser` if present; otherwise the flag controls it.
+5. `--test` executes the selected suite instead of starting servers. Without selection it runs the full portfolio.
 
-> **Tip:** Create alternative config files for subsets (e.g., `arcade_config.json` with just arcade games).
+An empty selection launches nothing; in test mode an explicit empty selection is not a full run. These are current implementation semantics, not a general “CLI always wins” policy.
 
----
+## Registry and module lists
 
-## Port Mapping
+`GAMES[key]` contains `dir`, `name`, `port_offset`; `get_port(key, base_port=None)` adds the offset to 8100 unless another base is provided. The [inventory](../GAMES_INDEX.md) lists all thirty offsets (0–29).
 
-Each game's port = `base_port + port_offset` (from `registry.py`).
+`SHARED_MODULES` lists twelve classic JS filenames; `OPTIONAL_SHARED_MODULES` adds `base_board.js`, `entity_system.js`, `turn_manager.js`, `pathfinding.js`. `ALL_SHARED_MODULES` concatenates those lists. These are tooling policies, not a complete disk inventory: `graph_field.js` and `hud-style.css` are outside these lists. Doom skips classic import/local-copy validation.
 
-| Offset | Game | Port (base_port 8100) |
-|--------|------|------------------------|
-| 0 | chess | 8100 |
-| 1 | checkers | 8101 |
-| 2 | reversi | 8102 |
-| 3 | life | 8103 |
-| 4 | asteroids | 8104 |
-| 5 | simant | 8105 |
-| 6 | backgammon | 8106 |
-| 7 | minecraft | 8107 |
-| 8 | catan | 8108 |
-| 9 | tower_defense | 8109 |
-| 10 | doom | 8110 |
-| 11 | mahjong | 8111 |
-| 12 | tetris | 8112 |
-| 13 | snake | 8113 |
-| 14 | pong | 8114 |
-| 15 | breakout | 8115 |
-| 16 | pacman | 8116 |
-| 17 | space_invaders | 8117 |
-| 18 | frogger | 8118 |
-| 19 | bomberman | 8119 |
-| 20 | connect_four | 8120 |
-| 21 | minesweeper | 8121 |
+`REQUIRED_FILES` is `index.html`, `AGENTS.md`. `REQUIRED_JS_PATTERNS` records the board/renderer/game naming convention, but the structural validator searches filename globs rather than enforcing that exact trio. See [testing](testing_guide.md).
 
-> **Custom ports:** Use `--base-port N` on the CLI or `"base_port": N` in the config file.
+## Known path-default limitation
 
----
+In this checkout `config.py` computes `REPO_ROOT` as `games/`, not the repository root. Consequently `GAMES_DIR` is `games/games/` and `GENERIC_DIR` nests below it. `run_games.py` avoids these defaults by deriving its actual root from its own file.
 
-## Validation Configuration
-
-`validation.py` uses hardcoded constants:
-
-| Constant | Value | Purpose |
-|----------|-------|---------|
-| `SHARED_MODULES` | all 12 entries from `core/config.py` (`quadray.js`, `synergetics.js`, `grid_utils.js`, `camera.js`, `projection.js`, `zoom.js`, `base_renderer.js`, `game_loop.js`, `base_game.js`, `score_manager.js`, `input_controller.js`, `hud.js`) | Imports checked in `index.html` |
-| `SHARED_DIR_NAME` | `"4d_generic"` | Expected shared module directory |
-| `ES_MODULE_GAMES` | `{"doom"}` | Games exempt from shared-import checks |
-| `EXPECTED_BOARD_METHODS` | `["getCell", "setCell"]` | Expected board API (warning only) |
-
----
-
-## Precedence
-
-When multiple sources set the same value, the precedence is:
-
-```text
-CLI flags  >  Config JSON  >  config.py defaults
-```
-
-For example, `--base-port 9000` overrides `"base_port": 8100` from JSON, which overrides `BASE_PORT = 8100` from `config.py`.
-
----
-
-*See also: [launch_operations.md](launch_operations.md) · [python_infrastructure.md](python_infrastructure.md) · [game_template.md](game_template.md)*
+For library consumers pass explicit `Path("games").resolve()` values to server/QA/board/analytics APIs from the repository root. `GameScaffold` has no directory constructor parameter: set its `game_dir` explicitly before creating files (see [scaffold guide](scaffold_guide.md)). `ModuleRegistry`/`JSModule.path` and `resolve_module_path` retain the flawed default, so default presence reports are not reliable evidence that a real shared file is missing. No source fix is implied by these documentation examples.

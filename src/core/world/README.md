@@ -1,71 +1,9 @@
-# World System
+# Native sparse chunks and procedural terrain limits
 
-This directory contains the world generation and management systems.
+[World.h](World.h) maps Cartesian integer chunk triples to `shared_ptr<TetraChunk>`. Chunk coordinates use floor division, including negative positions; `TetraChunk::CHUNK_SIZE` is 16 Cartesian units. Local element keys are normalized quadrays, not global chunk indices.
 
-## Files
+`World::getBlock/setBlock` convert world quadrays to chunk-local coordinates; `getOrCreateChunk`, `generateChunksAround`, `updateChunks`, `getDirtyChunks` and dirty marking manage the synchronous lifecycle. `TetraChunk::generate()` clears and regenerates procedural contents. Chunk unload/recreation is not persistent storage. See [canonical chunk lifecycle](../../../docs/development/chunk_system.md).
 
-| File | Purpose |
-|------|---------|
-| `World.h` | Central world management |
-| `TetraChunk.h` | Chunk data structure (header) |
-| `TetraChunk.cpp` | Chunk implementation |
-| `TerrainGenerator.h` | Procedural terrain generation |
-| `Block.h` | Block type definitions |
-| `TetrahedralElement.h` | Individual voxel element |
+[TerrainGenerator.h](TerrainGenerator.h) samples an 8×8×8 Cartesian grid per chunk, derives five candidate centers per cell and chooses air/stone/dirt/grass/sand/water/ore with deterministic sine-based multioctave functions. Despite helper names/comments, this is not a seeded Perlin/simplex library or a biome system.
 
-## Architecture
-
-```text
-World
-├── Manages collection of TetraChunks
-├── Handles chunk loading/unloading
-├── Provides block access interface
-└── Coordinates terrain generation
-
-TetraChunk
-├── Fixed-size spatial partition
-├── Contains TetrahedralElements
-├── Tracks dirty state for mesh regeneration
-└── Sparse storage for memory efficiency
-
-TerrainGenerator
-├── Fractal noise functions
-├── Height map generation
-├── Feature placement (caves, ores, water)
-└── Biome determination
-```
-
-## Key Concepts
-
-### Chunk System
-
-Chunks partition the world into manageable pieces:
-
-- Fixed dimensions for predictable memory usage
-- Load chunks near player, unload distant ones
-- Dirty flag triggers mesh regeneration
-
-### Tetrahedral Elements
-
-Each element represents a single tetrahedral voxel:
-
-- Position in quadray coordinates
-- Block type reference
-- Optional metadata
-
-### Block Types
-
-Blocks define material properties:
-
-- Visual appearance (color, texture)
-- Physical properties (solid, liquid)
-- Interaction behavior
-
-## Terrain Features
-
-The terrain generator creates:
-
-- **Mountains**: Higher frequency noise
-- **Caves**: 3D noise for cavities
-- **Ore Veins**: Clustered deposits
-- **Water**: Below certain elevation
+[TetrahedralElement.h](TetrahedralElement.h) stores position/material and uses fixed vertex offsets. Those offsets are not a regular tetrahedron, and the generated center arrangement plus reflected-neighbor heuristic is not a demonstrated face-to-face tessellation. `TetraChunk::getNeighbors` reflects center-to-face directions; mesh face visibility is therefore heuristic. Block flags are material metadata, not fluid dynamics or rigid-body simulation. Float hashing with epsilon equality also deserves care for arbitrary off-grid positions.

@@ -1,73 +1,7 @@
-# Mesh Generation
+# Native Vertex buffers and heuristic chunk meshing
 
-This directory contains mesh data structures and chunk-to-mesh conversion.
+[Mesh.h](Mesh.h) defines `Vertex { Vector3 position, normal, color; float texCoordU, texCoordV; }`. `Mesh::create(const std::vector<Vertex>&, const std::vector<unsigned int>&)` uploads data; `render() const` and `render(int) const` draw it. `isInitialized`, vertex/index counts and the destructor manage/query GPU state. There are no public `upload/bind/draw/clear` methods.
 
-## Files
+[ChunkMesher.cpp](ChunkMesher.cpp) creates a mesh from non-air elements, offsets local vertices by the Cartesian chunk origin, applies a small inward inset, assigns per-face vertex colors and emits three separate vertices per rendered triangle. It does not share vertices or batch by texture. Texture coordinates are currently unused zeros.
 
-| File | Purpose |
-|------|---------|
-| `Mesh.h` | Mesh class definition |
-| `Mesh.cpp` | Mesh implementation |
-| `ChunkMesher.h` | Chunk meshing interface |
-| `ChunkMesher.cpp` | Chunk meshing implementation |
-
-## Mesh Class
-
-Represents renderable geometry:
-
-### Data
-
-```cpp
-struct Vertex {
-    Vector3 position;
-    Vector3 normal;
-    Vector2 texcoord;
-    Color color;
-};
-
-std::vector<Vertex> vertices;
-std::vector<uint32_t> indices;
-```
-
-### OpenGL Resources
-
-- Vertex Array Object (VAO)
-- Vertex Buffer Object (VBO)
-- Element Buffer Object (EBO)
-
-### Methods
-
-```cpp
-void upload();      // Send to GPU
-void bind();        // Bind for rendering
-void draw();        // Issue draw call
-void clear();       // Free GPU resources
-```
-
-## ChunkMesher
-
-Converts TetraChunk data to renderable Mesh:
-
-### Process
-
-1. Iterate tetrahedral elements
-2. Generate faces for visible surfaces
-3. Apply face culling (skip internal faces)
-4. Calculate normals
-5. Assign colors/texcoords
-6. Build vertex/index arrays
-
-### Optimizations
-
-- Only mesh visible faces
-- Share vertices where possible
-- Batch by block type
-- Cache meshes until chunk dirty
-
-## Tetrahedral Face Generation
-
-Each tetrahedron has 4 triangular faces:
-
-- Visibility determined by neighbor occupancy
-- Normal points outward
-- Winding order for correct culling
+Face visibility queries the world through reflected-neighbor positions and air/transparent flags. This is a prototype heuristic: element vertex offsets are not regular and face indexing/reflection does not prove a consistent tessellation. Normal direction correction is not a proof of triangle winding correctness. The element processing guard can truncate large chunks. Dirty regeneration is budgeted by Game, including invalidation on camera movement; there is no demonstrated sub-10ms guarantee.

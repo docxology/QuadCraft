@@ -1,128 +1,42 @@
-# Scaffold Guide — `GameScaffold`
+# GameScaffold generation and integration limits
 
-> **Note on 4D Geometry & Nomenclature**: "4D" in QuadCraft strictly means **Synergetics** geometry (Quadray tetrahedral coordinates on an IVM; 12 neighbors = permutations of `(0, 1, 1, 2)`). Canonical statement: [GAMES_INDEX.md](../GAMES_INDEX.md#note-on-4d-geometry--nomenclature).
+Source: [`src/scaffold/__init__.py`](../src/scaffold/__init__.py). This generator writes a starter implementation, not finished gameplay or release-ready browser integration.
 
-
-> Generate a fully structured new game directory from templates, ready for game-specific implementation.
-
----
-
-## Quick Start
+## Actual constructor and creation API
 
 ```python
+from pathlib import Path
 from games.src.scaffold import GameScaffold
 
-scaffold = GameScaffold("puzzle", "4D Puzzle", grid_size=6, tick_rate=20)
+scaffold = GameScaffold("puzzle", "4D Puzzle", grid_size=6, tick_rate=20,
+                        optional_modules=["base_board.js"])
+# Run from the QuadCraft repository root; correct the known default path.
+scaffold.game_dir = Path("games/4d_puzzle").resolve()
 path = scaffold.create()
-print(f"Created: {path}")
-
-# Verify structure
 issues = scaffold.validate()
-assert len(issues) == 0, f"Validation failed: {issues}"
 ```
 
----
+`GameScaffold(game_key,display_name,*,grid_size=8,tick_rate=16,optional_modules=None)` has no `games_dir` constructor argument. `tick_rate` is **milliseconds per tick**, not updates per second. Optional names must belong to the configured optional list: base_board, entity_system, turn_manager, pathfinding JS filenames; unknown names raise `ValueError`. Adding an optional import does not cause generated classes to use it.
 
-## `GameScaffold` Class
+`create(*,overwrite=False) -> Path` rejects an existing target with `FileExistsError` unless overwrite is enabled. Overwrite rewrites generated files without deleting unrelated ones. `validate()` checks required docs/index and the three named JS files, not playability or behavior. The default target inherits the [nested games/games path defect](configuration.md); the explicit `game_dir` assignment above avoids it without claiming a source fix.
 
-### Constructor
+## Generated output
 
-```python
-GameScaffold(
-    game_key: str,        # Registry key (e.g. "puzzle")
-    display_name: str,    # Display name (e.g. "4D Puzzle")
-    *,
-    grid_size: int = 8,   # Default grid dimension
-    tick_rate: int = 16,  # GameLoop updates per second
-)
-```
+| File | Current generated behavior |
+|---|---|
+| `js/<key>_board.js` | Standalone class; raw `size**4` array of `{a,b,c,d,value}`; no getCell/setCell or BaseBoard inheritance; empty `step()` plus reset |
+| `js/<key>_renderer.js` | Standalone canvas renderer and `_project`; not BaseRenderer inheritance |
+| `js/<key>_game.js` | Standalone controller composing InputController/GameLoop; `init`, `update(dtSeconds)` forwarding to board step, reset and HUD helpers |
+| `index.html` | Core imports plus requested optional imports, fixed canvas, constructed controller and `init()` |
+| `manifest.json` | key, name, dir, grid_size, tick_rate, shared_modules, optional_modules; not read by the launcher as registry/config |
+| `AGENTS.md` | Generated local architecture/control notes |
+| `run.sh` | Legacy inline local HTTP command, not the central wrapper template |
+| `tests/test_<key>.js` | Basic creation/reset assertions, not implemented rule tests |
 
-### Methods
+Class names capitalize underscore-separated parts and append Board/Renderer/Game. The generator does not register the key, allocate a port, add documentation navigation or add a Chromium scenario.
 
-| Method | Returns | Description |
-|--------|---------|-------------|
-| `create(overwrite=False)` | `Path` | Create full directory structure; raises if exists (unless `overwrite=True`) |
-| `validate()` | `list[str]` | Check that all required files exist; returns list of issues |
+## Known browser integration limitations
 
----
+The generated renderer currently calls `projectQuadray(a,b,c,d,this)`, while the real shared function requires `(Quadray,options)`. Its camera is not synchronized into renderer rotation, and the generated local `run.sh` serves the individual directory, breaking sibling shared imports. Replace these integration defects in a separately authorized new-game implementation before treating output as playable; use [actual shared APIs](shared_modules_reference.md) and [central launch operations](launch_operations.md). Basic generated tests and `validate()` do not catch these defects.
 
-## Generated File Structure
-
-> **Known bug:** `GameScaffold(...).create()` called with no explicit `games_dir` override writes into `GAMES_DIR` from `core/config.py`, which resolves to `{REPO_ROOT}/games` — but `REPO_ROOT` is already the `games/` directory itself, so the scaffold lands in a nested `games/games/4d_<key>/` path, not `games/4d_<key>/` as shown below. `run_games.py` sidesteps the same `REPO_ROOT`/`GAMES_DIR` ambiguity elsewhere by always resolving `games_dir = Path(__file__).parent.resolve()` (`run_games.py:73`) rather than importing `GAMES_DIR`; `GameScaffold` currently has no `games_dir` constructor parameter to do the same, so this needs a code fix (or manual `scaffold.game_dir` correction) before relying on the Quick Start example below as-is.
-
-Running `GameScaffold("puzzle", "4D Puzzle").create()` generates (assuming a correct `games_dir`):
-
-```text
-games/4d_puzzle/
-├── index.html                  # Entry point with shared module imports
-├── AGENTS.md                   # Game-specific agent instructions
-├── run.sh                      # Standalone launch script
-├── manifest.json               # Game metadata
-├── js/
-│   ├── puzzle_board.js         # Board/world state class
-│   ├── puzzle_renderer.js      # Canvas rendering class
-│   └── puzzle_game.js          # Game controller class
-└── tests/
-    └── test_puzzle.js          # Unit test skeleton
-```
-
-### Generated File Details
-
-| File | Generator | Key Contents |
-|------|-----------|-------------|
-| `index.html` | `_write_html()` | Full `<script>` tag block importing all 12 shared modules + 3 game modules |
-| `{key}_board.js` | `_write_board()` | `PuzzleBoard` class with grid array, `getCell()`/`setCell()`, `reset()` |
-| `{key}_renderer.js` | `_write_renderer()` | `PuzzleRenderer` class (no inheritance), `render()` with `_project()` cell projection |
-| `{key}_game.js` | `_write_game()` | `PuzzleGame` class (no inheritance), `init()`/`update()` (no args)/`reset()`, `_setupInput()`/`_updateHUD()` helpers; rendering happens inline via the `GameLoop` render callback (`this.renderer.render()`), not a public `render()` method on the game class |
-| `run.sh` | `_write_run_sh()` | Standalone bash script built inline as a Python f-string (no `_run_template.sh` file is read); serves the game directory itself on port 8080, which is document-root-incorrect relative to how `GameServer` serves the parent `games/` directory |
-| `AGENTS.md` | `_write_agents_md()` | Game-specific agent instructions with architecture notes |
-| `manifest.json` | `_write_manifest()` | `{key, name, dir, grid_size, tick_rate, shared_modules, optional_modules}` (no `version` field) |
-
-### Class Naming Convention
-
-The scaffold auto-generates PascalCase class names from the game key:
-
-| Game Key | Board Class | Renderer Class | Game Class |
-|----------|-------------|----------------|------------|
-| `puzzle` | `PuzzleBoard` | `PuzzleRenderer` | `PuzzleGame` |
-| `tower_defense` | `TowerDefenseBoard` | `TowerDefenseRenderer` | `TowerDefenseGame` |
-
----
-
-## End-to-End Workflow
-
-After scaffolding, complete these steps to make the game fully operational:
-
-```bash
-# 1. Generate the scaffold
-python3 -c "from games.src.scaffold import GameScaffold; GameScaffold('puzzle', '4D Puzzle').create()"
-
-# 2. Register in registry.py — add entry to GAMES dict in src/core/registry.py
-# 3. Implement game logic in js/ files
-# 4. Write tests in tests/test_puzzle.js
-# 5. Regenerate shell scripts
-python3 games/scripts/regenerate_scripts.py
-
-# 6. Run validation
-python3 run_games.py --validate
-
-# 7. Run tests
-python3 run_games.py --test --game puzzle
-
-# 8. Add to GAMES_INDEX.md
-```
-
-> See [contributing.md](contributing.md) for the full step-by-step guide.
-
----
-
-## Parameters Reference
-
-| Parameter | Default | Effect on Generated Code |
-|-----------|---------|--------------------------|
-| `grid_size` | `8` | Sets `this.size = {grid_size}` in board constructor; grid is `size⁴` |
-| `tick_rate` | `16` | Sets `new GameLoop(update, {tick_rate})` in game controller |
-
----
-
-*See also: [game_template.md](game_template.md) · [contributing.md](contributing.md) · [python_infrastructure.md](python_infrastructure.md)*
+The generated board `step` is deliberately empty. Implement real rules and meaningful transitions rather than retaining the generated assertions as evidence of completion. Follow [contributing](contributing.md) and [game layout](game_template.md) for integration, unique registry offset and browser verification.

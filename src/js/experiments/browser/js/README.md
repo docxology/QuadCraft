@@ -1,75 +1,12 @@
-# JavaScript Modules
+# Classic-script globals, initialization and integration gaps
 
-This directory contains the modular JavaScript implementation of QuadCraft.
+These JavaScript files declare top-level classes, objects and initialization helpers, not ES `export` APIs. `main.js` coordinates `gameState`, renderer, camera and analysis globals; file ordering and host DOM are required.
 
-## Directory Structure
+- [core](core/README.md): GameState, input/controller, Canvas renderer, camera, save/load and code evaluation.
+- [math](math/README.md): Quadray, Q/T helpers, direction initialization and shape corners/triangles.
+- [analysis](analysis/README.md): Logger, analyzer, visualizer and TimeSeriesAnalyzer.
+- [utils](utils/README.md): constants/configuration and helper namespace.
 
-```
-js/
-├── main.js           # Application entry point
-├── core/             # Game engine modules
-├── math/             # Mathematical utilities
-├── analysis/         # Analysis and visualization
-└── utils/            # Constants and utilities
-```
+The split startup has integration gaps: `initializeModules()` initializes directions after other setup, while GameState/controller constructors already depend on direction globals; `update()` calls `camera.update(deltaTime)`, while Camera exposes other methods rather than that update interface. These files therefore require integration work, not just an HTML module tag. No runtime repair is implied by this documentation.
 
-## Module Dependency Graph
-
-```
-main.js
-├── utils/constants.js
-├── math/quadray.js
-├── math/geometry.js
-├── core/gameState.js
-├── core/gameController.js
-├── core/renderer.js
-├── core/camera.js
-├── core/saveLoadController.js
-├── core/codeExecutor.js
-├── analysis/logger.js
-├── analysis/analyzer.js
-├── analysis/visualizer.js
-└── analysis/timeSeriesAnalyzer.js
-```
-
-## Module Categories
-
-### Core (`core/`)
-
-Game engine functionality:
-
-- `gameState.js` - Central state management
-- `gameController.js` - Input handling
-- `renderer.js` - 3D rendering
-- `camera.js` - View control
-- `saveLoadController.js` - Persistence
-- `codeExecutor.js` - Dynamic code execution
-
-### Math (`math/`)
-
-Mathematical foundations:
-
-- `quadray.js` - Quadray coordinate class
-- `geometry.js` - Shape generation
-
-### Analysis (`analysis/`)
-
-Tools for analyzing gameplay:
-
-- `logger.js` - Coordinate logging
-- `analyzer.js` - Statistical analysis
-- `visualizer.js` - Heatmaps and grids
-- `timeSeriesAnalyzer.js` - Time-based tracking
-
-### Utils (`utils/`)
-
-Shared utilities:
-
-- `constants.js` - Configuration and constants
-
-## Usage
-
-```javascript
-import { Quadray } from './math/quadray.js';
-import { GameState } from './core/gameState.js';
-```
+Do not infer standalone functionality from a class appearing here. Timestamp/interval clocks use browser milliseconds unless a calculation explicitly converts to seconds.

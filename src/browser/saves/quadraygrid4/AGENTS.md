@@ -1,6 +1,5 @@
-# quadraygrid4/ — Agent Notes
+# QuadrayGrid4 archived browser snapshots maintenance
 
-JSON save files (`quadcraft_quadgrid4_*.json`) written by the QuadrayGrid4
-browser build (timestamps + free-form suffixes in filenames, e.g. one marked
-`_bugSeeingBallsInsideCCPVolume`). User data, not code — do not edit or rename;
-the contract is documented in the existing README.md here.
+Treat snapshots as user data: do not edit, rename or delete them. Record producer/version when interpreting a scenario and keep observed load results separate from filename-based inference.
+
+Read the adjacent [directory guide](README.md) before changing this area. Report source inspection separately from executed runtime checks.
