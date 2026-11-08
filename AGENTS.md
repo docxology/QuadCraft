@@ -1,116 +1,51 @@
-# QuadCraft - AI Agent Guidelines
+# QuadCraft source and documentation maintenance
 
-## Project Overview
+## Start with the runtime boundary
 
-QuadCraft is a tetrahedral-based voxel game using quadray coordinates, inspired by Minecraft. The project explores an alternative to cubic voxels using tetrahedral geometry and a four-dimensional coordinate system.
+Read [README.md](README.md), [architecture](docs/architecture.md) and scoped instructions before editing. QuadCraft contains a native C++17 prototype, historical browser/server geometry experiments and thirty portfolio games. They do not share one world/entity/render/save/network runtime.
 
-## Key Technologies
+| Area | Source and scope |
+|---|---|
+| Native | `src/core/`, `src/game/`, `src/render/`; CMake, GLFW, GLEW, OpenGL |
+| Browser experiments | Exact HTML snapshot under `src/browser/` or `src/js/experiments/`; local JS helpers differ from portfolio helpers |
+| Server experiment | `src/server/tomcat/webapps/QuadCraft/QuadCraftAjax.jsp`; polled Var-tree state merge, not authenticated multiplayer |
+| Portfolio | `games/4d_<key>/`, shared `games/4d_generic/`, Python launcher/QA `games/src/` |
 
-| Component | Technology | Location |
-|-----------|------------|----------|
-| Native Engine | C++17, OpenGL, GLEW, GLFW3 | `src/core/`, `src/game/`, `src/render/` |
-| Browser Game | JavaScript, HTML5 Canvas | `src/browser/`, `src/js/` |
-| Server Backend | Java, JSP, Tomcat | `src/server/` |
-| Build System | CMake 3.16+ | `CMakeLists.txt` |
+## Coordinate and storage contracts
 
-## Core Concepts
-
-### Quadray Coordinate System
-
-The quadray system uses four coordinates `(a, b, c, d)` instead of three Cartesian coordinates `(x, y, z)`:
-
-- Based on tetrahedral geometry with 4 basis vectors from tetrahedron center to vertices
-- Common-offset equivalence: `q` and `q + t(1,1,1,1)` represent the same 3D point; normalize by subtracting the minimum component
-- Enables precise tetrahedral grid navigation without floating-point errors
-- Conversion functions in `src/core/coordinate/Quadray.h` and `src/js/experiments/browser/js/math/quadray.js`
-
-### Tetrahedral Voxels
-
-- Blocks are tetrahedra instead of cubes
-- Space filled with octahedrons and two types of tetrahedrons (Z and C)
-- Allows more natural representation of slopes and curves
-- Each cube conceptually divided into 5 tetrahedra
-
-## Architecture Patterns
+Physical quadrays are common-offset equivalence classes of four coefficients with rank three. Native/shared JavaScript use
 
 ```text
-┌─────────────────────────────────────────────────────────┐
-│                    Game Layer                           │
-│  (Input handling, game loop, user interface)            │
-├─────────────────────────────────────────────────────────┤
-│                  Rendering Layer                        │
-│  (Mesh generation, shaders, depth sorting)              │
-├─────────────────────────────────────────────────────────┤
-│                    Core Layer                           │
-│  (Coordinates, world management, chunks, blocks)        │
-└─────────────────────────────────────────────────────────┘
+(x,y,z) = (a-b-c+d, a-b+c-d, a+b-c-d) / sqrt(2)
 ```
 
-## Development Guidelines
+Zero-minimum normalization is a gauge choice, not Euclidean unit normalization. Preserve each implementation's declared scale and orientation. Float native coordinates are not exact arithmetic.
 
-### When Modifying Coordinate Systems
+Native chunk keys are Cartesian integer triples, selected by floor division including negative positions. Inside chunks, element keys are local quadrays; mesh vertices add the Cartesian chunk origin. Read [chunk lifecycle](docs/development/chunk_system.md) before changing generation or dirty invalidation.
 
-- Preserve common-offset equivalence; a fixed component sum is not required
-- Test conversions between quadray and Cartesian in both directions
-- The 12 core navigation directions must preserve grid alignment
+Portfolio raw labels may intentionally preserve aliases. `GridUtils.generateGrid/key` keep raw identity; canonical generation/neighbors describe physical points. Do not normalize every board key or interchange raw four-coefficient metrics with `Quadray.distance`. [Portfolio contracts](docs/games.md) own the exact graph/time/RNG distinctions.
 
-### When Working with Rendering
+## Source modification rules
 
-- Triangle sorting is critical for proper depth ordering
-- Cone-plane intersection technique used for accurate sphere rendering
-- Chunk-based mesh caching for performance
+- Inspect declarations and real callers before changing/documenting interfaces. Native namespace is `QuadCraft`; C++ `fromCartesian` accepts `Vector3`, shared JS accepts three numbers, historical HTML has separate APIs.
+- Native ownership is direct `Game`/`World`/`Camera`/`Input`/`ChunkMesher`, not a shipped ECS or physics world.
+- Shader code is embedded in `Game.cpp`; current meshes use vertex colors, not an imported texture/model pipeline.
+- Native block picking is sampled ray marching, not exact tetrahedron intersection. Camera movement is not collision physics.
+- Older browser maps and newer Var-tree storage/save formats differ; identify the snapshot before copying code.
+- Direct browser eval is trusted page-privileged code, not a sandbox or mod loader.
+- A static portfolio HTTP server is not the JSP endpoint or a multiplayer backend.
+- Do not claim unimplemented modding, networking, physics, assets or LOD features from conceptual documents.
 
-### When Modifying Game State
+## Time and random ownership
 
-- Central state management in `src/js/experiments/browser/js/core/gameState.js` (browser) or `src/game/Game.cpp` (native)
-- Use dirty flags to trigger mesh regeneration only when needed
-- Save format is JSON with quadray coordinates
+Shared portfolio `GameLoop` accumulates milliseconds and passes fixed seconds to updates; individual logical-tick/specialized controllers remain authoritative. Native and historical browser loops use clamped variable deltas. Do not add a second dt multiplication or apply new input retroactively to accumulated time.
 
-## File Naming Conventions
+Use existing injected random streams where consumers expose them; there is no universal seeded replay/reset API. Conservative graph transport exchanges equal/opposite edge flux and is not symmetric-normalized heat. Masks disable edges rather than deleting stored field mass.
 
-- C++ headers: `PascalCase.h`
-- C++ source: `PascalCase.cpp`
-- JavaScript modules: `camelCase.js`
-- Documentation: `snake_case.md`
+## Build and verification routing
 
-## Testing Approach
+[Setup](docs/development/setup_guide.md) contains native dependencies/build options and HTTP launch instructions. [Testing](docs/development/testing_guide.md) separates graphics-free CTest, Node/Python logic, catalog validation and real Chromium rendering/input. Examples explicitly use Python 3.13 without changing repository pins. Report only checks actually exercised; old counts/dated receipts are not current green evidence.
 
-- Browser version can be tested directly by opening HTML files
-- Native version requires CMake build (`./build.sh`)
-- Save/load functionality uses localStorage (browser) or JSON files
+## Documentation maintenance
 
-## Documentation Structure
-
-- `/docs/` - Comprehensive documentation
-- `/docs/development/` - Technical implementation guides
-- `/docs/game_design/` - Gameplay mechanics
-- `/docs/mathematics/` - Mathematical foundations
-- Each source directory contains its own README.md and AGENTS.md
-
-## Common Tasks
-
-### Adding a New Block Type
-
-1. Define block properties in `Block.h` / block system
-2. Add to block registry
-3. Update mesh generation for new geometry
-4. Add any special rendering effects
-
-### Modifying Terrain Generation
-
-1. Edit `TerrainGenerator.h` or equivalent noise functions
-2. Terrain uses fractal noise adapted for tetrahedral space
-3. Test with various seed values
-
-### Adding New Controls
-
-1. Browser: Update `gameController.js` and `Input.h`
-2. Native: Modify `Input.h` and `Game.cpp`
-3. Document in controls section of README
-
-## Performance Considerations
-
-- Chunk loading/unloading based on player distance
-- Sparse storage (only non-air elements stored)
-- View frustum culling for rendering
-- Efficient quadray-to-Cartesian conversion cached where possible
+Read [docs/AGENTS.md](docs/AGENTS.md) and [development rules](docs/development/AGENTS.md). Use source-backed signatures, informative topic titles and canonical cross-links. Remove fictional recipes rather than placing a warning before them. Retain useful design questions as explicitly conceptual material. Keep hub navigation and inbound heading links synchronized; preserve immutable release artifacts and user-generated output.

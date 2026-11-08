@@ -1,80 +1,15 @@
-# 4D Minecraft - Agent Instructions
+# 4D Minecraft — Model and runtime maintenance
 
-## Project Overview
+Read the [game guide](README.md), [module ownership](js/README.md), [test scope](tests/README.md) and [portfolio contracts](../../docs/games.md) before changing behavior.
 
-4D Minecraft allows players to place and remove tetrahedral blocks in a procedurally generated IVM (Isotropic Vector Matrix) world. It features a hotbar, multiple block types, and a first-person fly camera logic adapted for tetrahedral space. **Production-ready** with 11 passing tests.
+## Preserve the implemented boundary
 
-## Quick Commands
+Do not silently wire board physics into the analysis-only controller. Preserve raw block occupancy and face-based picking. External world edits must invalidate analysis with `markAnalysisDirty()`.
 
-```bash
-# Run all tests (11 tests, 100% pass)
-cd tests && node test_minecraft.js
+The board exposes `stepPhysics()`, `stepTime()`, `update()` (both steps), and `craft(recipeType)`. However, the default `MinecraftGame.update()` only refreshes cached analysis; it does not call `board.update()`, so sand/water and day/night do not advance automatically. Board physics drops sand/water along -C and uses bounded canonical neighbors for water spreading.
 
-# Start local server (Port 8107)
-./games/run.sh minecraft
+[index.html](index.html) instantiates `MinecraftGame` after the actual shared imports and local board/renderer/controller scripts. Inheritance or an imported helper is not evidence that this game uses every shared system. Keep rules in `MinecraftBoard`, projected drawing in `MinecraftRenderer` and browser input/lifecycle in `MinecraftGame`.
 
-# Open directly in browser
-open games/4d_minecraft/index.html
-```
+## Evidence and commands
 
-## Key Directories
-
-| Directory | Files | Purpose |
-|-----------|-------|---------|
-| `js/` | 3 modules | Core logic (Quadray, Board, Renderer, Game) |
-| `tests/` | 1 file | Test suite (74 tests) |
-
-## Shared Modules
-
-Imported via `<script>` tags in `index.html` from `../4d_generic/`:
-`quadray.js`, `camera.js`, `projection.js`, `zoom.js`, `synergetics.js`
-
-## Module Dependency Order
-
-Load in this order to avoid reference errors:
-
-```
-1. minecraft_board.js    # World state, chunks, block storage
-2. minecraft_renderer.js # Canvas 3D rendering
-3. minecraft_game.js     # Controller, UI, Input handling
-```
-
-## File Inventory
-
-### JavaScript Modules (`js/`)
-
-| File | Key Exports |
-|------|-------------|
-| `minecraft_board.js` | `Board` class, `Chunk` management, `BLOCK_TYPES` |
-| `minecraft_renderer.js` | `Renderer` class, `drawTestChunk`, `projectPoint` |
-| `minecraft_game.js` | `Game` class, input event listeners |
-
-### Tests (`tests/`)
-
-| File | Tests | Coverage |
-|------|-------|----------|
-| `test_minecraft.js` | 74 | Block placement, removal, coordinate conversion, chunk boundaries |
-
-## Code Standards
-
-- **Language**: ES6+ JavaScript
-- **Comments**: JSDoc for public methods
-- **Indentation**: 4 spaces
-- **Coordinates**: Always use `Quadray` instances for world positions, `(x,y,z)` for rendering only.
-
-## Key Classes & Data Structures
-
-| Class/Obj | Source | Purpose |
-|-----------|--------|---------|
-| `Board` | minecraft_board.js | Manages sparse map of blocks: `Map<string, blockId>` |
-| `Renderer` | minecraft_renderer.js | Handles canvas drawing context, camera projection |
-| `Game` | minecraft_game.js | Main loop, manages `Board` and `Renderer` instances |
-| `BLOCK_TYPES`| minecraft_board.js | Enum of block IDs (1=Grass, 2=Dirt, etc.) |
-
-## Verification Checklist
-
-- [ ] Tests pass: `node tests/test_minecraft.js`
-- [ ] Game loads without error
-- [ ] Movement (WASD) and Look (Mouse) work
-- [ ] Block placement (Right Click) and removal (Left Click) work
-- [ ] Block selection (1-9) updates hotbar UI
+Run commands from the QuadCraft repository root; launch with `python3.13 games/run_games.py --game minecraft`. See [tests/README.md](tests/README.md) for the Node and harness commands. Report exercised checks, not saved counts, production-readiness or inferred canvas coverage. Review the actual controls in the game guide rather than copying another game's bindings.

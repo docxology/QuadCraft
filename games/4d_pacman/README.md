@@ -1,28 +1,34 @@
-# 👾 4D Pac-Man
+# 4D Pac-Man — Wrapped raw maze movement and ghost decisions
 
-Eat all the pellets in the 4D hypermaze!
+Collect pellets and power pellets while avoiding four ghosts; clearing a maze starts the next level.
 
-## How to Play
+## Quick Start
 
-Navigate your Pac-Man through a 5x5x5x5 grid.
+From the QuadCraft repository root:
 
-- **Goal**: Clear all yellow pellets.
-- **Power Pellets (Orange)**: Eat these to turn ghosts blue and eat them for big points!
-- **Ghosts**: Avoid Blinky (Red), Pinky (Pink), and Inky (Cyan) unless they are blue.
+```bash
+python3.13 games/run_games.py --game pacman
+```
 
-## 4D Controls
+The launcher serves the parent `games/` tree, including shared `4d_generic/` scripts. Do not serve only this game folder. [index.html](index.html) constructs `PacmanGame(canvas, hudElement)` and calls `init()`; its script order is authoritative. There is no bundling step.
 
-The maze has 4 spatial dimensions. Use these keys to move:
+## Model and timing
 
-| Direction | Keys |
-|-----------|------|
-| **Left / Right** | Arrow ← / → or A / D |
-| **Up / Down** | Arrow ↑ / ↓ or W / S |
-| **Forward / Back** | Q / E |
-| **Ana / Kata** | Z / X |
+`PacManBoard` stores walls, pellets and collisions by raw four-index keys on a wrapped size-5 board. `DIRECTIONS` contains the twelve nonnegative permutations of `(0,1,1,2)`. Movement adds these vectors and wraps each component without gauge reduction; the displayed ±axis names are not literal signed single-axis moves. Ghost decisions greedily minimize raw Manhattan distance to personality/state targets; the loaded pathfinding helper is not used for these decisions.
 
-## Interface
+`PacmanGame.update()` calls one logical `board.step()` at a 150 ms loop interval. Board movement, pellet collection, ghost movement and power/fruit counters advance per step; this is not dt-scaled continuous transport.
 
-- **P**: Pause Game
-- **R**: Reset Game
-- **Shift + Drag**: Rotate Camera (Look around 4D space)
+Physical Quadrays have rank three modulo a common offset; four gameplay labels do not imply four independent physical axes. See [portfolio geometry and runtime contracts](../../docs/games.md) for shared units, gauges and timing.
+
+## Controls
+
+Arrow Up/Down/Right/Left select direction indices 0/1/2/3 (W/S/D/A aliases); E/Q select 4/5; X/Z select 6/7. The remaining four board directions have no keyboard binding. N starts a new game, R resets, P pauses; Shift+drag rotates and the wheel zooms.
+
+## Source and tests
+
+- [JavaScript modules and projection/picking](js/README.md): model, renderer and controller ownership.
+- [Maintenance guidance](AGENTS.md): game-specific invariants.
+- [Test entrypoints and limits](tests/README.md): actual local suites and browser-runner differences.
+- [Portfolio index](../GAMES_INDEX.md): launcher catalog.
+
+These interfaces are source-audited development-checkout behavior, not a claim that tests or browser checks were run for this page.

@@ -5,7 +5,7 @@ Run explicitly from this directory:
 ```sh
 npm ci --ignore-scripts --no-audit --no-fund
 npx --no-install playwright install --with-deps chromium
-npm test
+PYTHON=python3.13 npm test
 ```
 
 The lock pins Playwright **1.65.0**, resolved from the [primary npm registry](https://registry.npmjs.org/@playwright/test/1.65.0). Chromium and its system prerequisites must be installed; missing packages, browsers or Python cause failure, not a skip. Set `PYTHON` to a Python executable if `python3` is not the intended interpreter.
@@ -33,3 +33,5 @@ Application access for interactive debugging is `page.evaluate(() => game.board)
 Initial/final screenshots, console logs, server logs, JSON outcomes and failure traces go to a unique OS temporary directory printed at startup. Each `results.json` entry names its screenshots and, on failure, its trace; new scenarios also record exercised controls and state/projection details. `BROWSER_DIAGNOSTICS_DIR` may choose a parent directory **outside the repository**. CI uploads execution evidence on success and failure; traces are saved on failure. Inspect a trace with `npx --no-install playwright show-trace /absolute/path/to/<game>-trace.zip`.
 
 This package is directory-local and deliberately has no root `type: module` change. The `.mjs` entry point is not named `test_*.js` or `test_*.py`; ordinary portfolio Node/Python QA discovery does not invoke the browser gate.
+
+These are selected real-runtime scenarios, not exhaustive rule coverage or a current green receipt. Browser clocks and helper `advance(page, ms)` durations are milliseconds; application updates retain the seconds/logical-tick contracts documented in the [canonical portfolio contracts](../../../docs/games.md). Shared-helper signatures are documented in the [browser API reference](../../doc/shared_modules_reference.md).

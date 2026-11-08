@@ -1,11 +1,5 @@
-# Immutable Package
+# Immutable Java package namespace for JSP JSON helpers
 
-Root package for immutable utility classes.
+`occamsjsonds/` is the bundled dependency package; `immutable` is its Java namespace, not an application-wide immutability guarantee. See [library integration](occamsjsonds/README.md) and [classpath lifecycle](../README.md).
 
-## Sub-packages
-
-| Package | Purpose |
-|---------|---------|
-| `occamsjsonds/` | JSON data structure library |
-
-See parent [classes/README.md](../README.md) for overview.
+The JSP maintains mutable references to shared tree snapshots and coordinates writes separately. This package does not supply native saves, user identities or storage services.

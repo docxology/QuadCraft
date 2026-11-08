@@ -1,51 +1,35 @@
-# User Interface Documentation
+# QuadCraft Interfaces and Controls
 
-UI design, components, and interaction documentation for QuadCraft.
+QuadCraft has multiple experimental interfaces and game-specific pages, not one universal HUD. These documents describe the development checkout from source; runtime usability and accessibility are not certified here. All position displays follow the [canonical coordinate contract](../quadray_coordinates.md).
 
 ## Contents
 
 | Document | Description |
 | --- | --- |
-| [user_interface.md](user_interface.md) | UI design system, layout, and components |
-| [interface_design.md](interface_design.md) | Detailed interface design specifications |
+| [user_interface.md](user_interface.md) | Browser/native/game surfaces, implemented controls and source caveats |
+| [interface_design.md](interface_design.md) | Actual layout/module boundaries and explicitly bounded design discussion |
+| [AGENTS.md](AGENTS.md) | Guidance for maintaining this documentation |
 
 ## Interface Layout
 
-```text
-┌──────────────────────────────────────────────┐
-│  Crosshair (center)                          │
-│  ┌──────────┐                 ┌────────────┐ │
-│  │ Block    │                 │ Coordinates│ │
-│  │ Selector │                 │ Display    │ │
-│  │ (1-9)    │                 │ (x,y,z)   │ │
-│  └──────────┘                 │ (a,b,c,d) │ │
-│                               └────────────┘ │
-│  ┌──────────────────────────────────────────┐ │
-│  │ Hotbar                                   │ │
-│  └──────────────────────────────────────────┘ │
-└──────────────────────────────────────────────┘
-```
+- [Browser painting page](../../src/browser/index.html): HTML controls above a Canvas 2D viewport, with hide/show, camera, paintbrush, file/cookie and server-experiment controls.
+- [Standalone analysis experiment](../../src/js/experiments/browser/QuadCraft_Complete_Standalone.html): control/analysis panels and its own Canvas/controller implementation.
+- [Native experiment](../../src/game/Game.cpp): OpenGL world, optional colored basis lines, FPS/chunk window-title report and console diagnostics; no common inventory hotbar/menu framework.
+
+Mouse mappings differ between the two browser experiments. See [surface-specific controls](user_interface.md#block-selection-interface).
 
 ## Design Principles
 
-- **Clean & Minimal** — UI elements don't obstruct the 3D viewport
-- **Dark Theme** — semi-transparent overlays with high contrast text
-- **Information-Dense** — show both Cartesian and Quadray coordinates
-- **Keyboard-Driven** — most actions accessible via keyboard shortcuts
-- **Responsive** — adapts to window size changes
+Documentation should identify the exact entry point, distinguish source-defined behavior from runtime evidence, and avoid treating a projected marker as a physical solid boundary. Four quadray coefficients represent rank-three Euclidean geometry modulo a common offset, not an extra physical dimension.
 
 ## Game-Specific UIs
 
-Each of the 30 standalone browser games has its **own HTML/Canvas-based UI** independent of the core engine UI:
+The [game portfolio](../games.md) has game-owned HTML panels and Canvas renderers, with shared input/camera/lifecycle/HUD helpers in [`games/4d_generic/`](../../games/4d_generic/). It is inaccurate to describe every game as having no shared code or to promise a uniform control scheme.
 
-- Games use HTML5 Canvas for rendering (no WebGL dependency)
-- Each game includes its own control panel, score display, and status indicators
-- UI components are defined in `games/<name>/js/<name>_renderer.js`
-- No shared UI framework across games — each is self-contained
-
-See [Games Overview](../games.md) for the full portfolio.
+[`4d_minecraft/index.html`](../../games/4d_minecraft/index.html), for example, provides a Canvas, sidebar analysis and inventory/crafting panels, two crafting buttons and a New World button. Its renderer paints projected square markers, not a complete tetrahedral-face mesh. Game-specific panels are not native engine UI features.
 
 ## Cross-References
 
-- [Controls & Navigation](../game_design/controls_and_navigation.md) — keyboard/mouse bindings
-- [Games Portfolio](../games.md) — game-specific UI implementations
+- [Canonical quadrays](../quadray_coordinates.md) · [Glossary](../reference/glossary.md)
+- [Controls and navigation](../game_design/controls_and_navigation.md) · [Games portfolio](../games.md)
+- [Documentation index](../README.md)

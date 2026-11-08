@@ -1,147 +1,56 @@
-# Testing Guide
+# Native, portfolio, and real-browser verification commands
 
-This guide covers the testing infrastructure for QuadCraft across both the C++ engine and the 30 standalone browser games. For the authoritative, structurally current per-game test inventory and runner internals, see [games/doc/testing_guide.md](../../games/doc/testing_guide.md) — this page gives a high-level summary and defers to that document rather than maintaining an independent table.
+[Development index](README.md) · [Setup](setup_guide.md) · [Portfolio](../games.md)
 
-## Test Architecture Overview
+These are commands to run, not a saved passing receipt. Native compilation, logic tests, structural validation and browser interaction exercise different boundaries; none substitutes for all the others.
 
-```mermaid
-flowchart TD
-    subgraph "C++ Engine Tests"
-        CTest["CMake/ctest"]
-        UnitTests["Unit Tests"]
-        IntegrationTests["Integration Tests"]
-        CTest --> UnitTests
-        CTest --> IntegrationTests
-    end
+## Native coordinate and world tests
 
-    subgraph "Browser Game Tests (JS)"
-        PyLauncher["run_games.py --test"]
-        NodeRunner["Node.js test runner"]
-        PyLauncher --> NodeRunner
-        NodeRunner --> TestFiles["34 test files\n~1,700 assertions (varies slightly per run)"]
-    end
+From the repository root:
+
+```sh
+cmake -S . -B build-core -DQUADCRAFT_BUILD_GAME=OFF -DBUILD_TESTING=ON
+cmake --build build-core
+(cd build-core && ctest --output-on-failure)
+(cd build-core && ctest -R quadray_test --output-on-failure)
 ```
 
-## Browser Game Tests
+[`CMakeLists.txt`](../../CMakeLists.txt) registers `quadray_test` and `world_chunk_test`. Names are lowercase and regex filters are case-sensitive. The coordinate suite covers embedding/normalization/distance; [`world_chunk_test.cpp`](../../tests/world_chunk_test.cpp) covers Cartesian chunk keys, negative floor behavior and local/world conversion. These tests do not create a GL context or verify block picking and render output.
 
-### Overview
+For a machine with graphical dependencies, `./build.sh --no-run --test` builds in `build/`, explicitly enables tests and rejects an empty CTest inventory. Manual `ctest` alone can report no tests if the directory/configuration is wrong; ensure the inventory is nonempty. For the actual window/rendering, follow [native setup](setup_guide.md) and exercise the executable in a graphical session.
 
-All 30 games include Node.js-runnable test files in their `tests/` directory (one `test_all.js`-style entry point per game; 34 per-game test files total, verified via `find . -path '*/tests/test_*.js' | wc -l` under `games/`). These test quadray coordinate math, game logic, and (where applicable) IVM/Synergetics constants.
+## Portfolio logic and structural QA
 
-> **Last verified run (2026-10-25)**: `python3 games/run_games.py --test` reports 1,782 passed, 0 failed — including 4D Catan's 56 assertions (the earlier `ResourceType` re-declaration crash is fixed) — and `python3 games/run_games.py --validate` passes 30/30. See [games/doc/testing_guide.md](../../games/doc/testing_guide.md) for the per-game inventory; re-run the command for current numbers.
-
-For the per-game test-file names, assertion counts, and coverage table, see the "Current Test Inventory" and "Test Coverage by Game" sections of [games/doc/testing_guide.md](../../games/doc/testing_guide.md), which tracks the game/test structure more closely than the table this guide previously carried. Both guides can still drift from the live test run — re-run `python3 games/run_games.py --test` for current pass/fail counts rather than trusting either document's numbers verbatim.
-
-### Running Tests
-
-```bash
-# Run ALL game tests via Python launcher
-python3 games/run_games.py --test
-
-# Run tests for specific games
-python3 games/run_games.py --test --game chess doom
-
-# Run a single test file directly
+```sh
+python3.13 games/run_games.py --test
+python3.13 games/run_games.py --test --game chess doom
+python3.13 games/run_games.py --validate
 node games/4d_chess/tests/test_chess.js
-
-# Run Synergetics validation suite
 node games/4d_generic/tests/test_synergetics.js
 ```
 
-### Test File Structure
+[`testing.py`](../../games/src/qa/testing.py) discovers per-game `tests/test_*.js`. An unfiltered run also recursively discovers shared JavaScript and Python suites under `games/tests/` and `games/4d_generic/tests/`; selecting only some games omits shared discovery. Node nonzero exits, missing game suites and files without executed-check evidence fail. Python suites run with the launcher's own interpreter. `lib_*.js` helper files are not standalone test entries.
 
-Each test file follows this pattern:
+`--validate` inspects catalog/file/module structure; it is not a game simulation or browser render. The registry lives in [`games/src/core/registry.py`](../../games/src/core/registry.py), not in the launcher file. Do not infer complete gameplay coverage from catalog validation or use frozen assertion counts as current results.
 
-```javascript
-// Lightweight test framework (no external dependencies)
-let passed = 0, failed = 0;
+## Real Chromium input and rendering gate
 
-function assert(condition, message) {
-    if (condition) { passed++; }
-    else { failed++; console.error(`FAIL: ${message}`); }
-}
+The browser package is independent of ordinary `--test` discovery. From `games/tests/browser/`:
 
-function assertApprox(actual, expected, tolerance, message) {
-    assert(Math.abs(actual - expected) <= tolerance, message);
-}
-
-// Tests
-assert(someCondition, 'Description of what is tested');
-
-// Summary
-console.log(`${passed} passed, ${failed} failed`);
-process.exit(failed > 0 ? 1 : 0);
+```sh
+npm ci --ignore-scripts --no-audit --no-fund
+npx --no-install playwright install --with-deps chromium
+PYTHON=python3.13 npm test
 ```
 
-### Writing New Tests
+The gate owns a loopback HTTP server and isolated Chromium contexts for all catalog games. It exercises actual input/state/render transitions with controlled clock/randomness, records screenshots/logs/results in an external temporary directory, and fails on browser/resource errors. Pointer capture is a real browser capability: denial is reported, and capture-only branches must not be described as exercised when unavailable. See the [browser gate README](../../games/tests/browser/README.md) for scenarios and diagnostics controls.
 
-1. Create `tests/test_<game>.js` in the game's directory
-2. Use the lightweight assert pattern (no npm dependencies)
-3. Ensure tests are runnable via `node tests/test_<game>.js`
-4. Return exit code 1 on failure, 0 on success
-5. Test both coordinate math and game-specific logic
+## Behavioral regression design
 
-## C++ Engine Tests
+Use actual consumers and deterministic input where the API offers it. Useful boundaries include gauge-equivalent physical distances, intentionally independent raw aliases, fixed elapsed-seconds trajectories, reset/pause/input ownership, conservation with masked graph edges and click selection matching paint order.
 
-### Build Configuration
+For shared JavaScript, `Quadray.fromCartesian(x,y,z)` takes three numbers; C++ takes `Vector3`. Compare Cartesian round trips with a declared numeric tolerance, not coefficient equality for noncanonical representatives. Raw board labels must not be round-tripped through a physical embedding to recover identity.
 
-Testing is enabled in the CMake build by default (no option needed):
+Use `GridUtils.createSeededRng(seed)` only with consumers that accept an injected stream/seed; not every game is seed-configurable. SimAnt and Asteroids own seeded streams, whereas Doom map generation still calls `Math.random`. Browser clock/random control does not establish a universal replay/save format.
 
-```bash
-./build.sh --no-run --test   # build + ctest (used by CI)
-# or manually:
-cmake -S . -B build
-cmake --build build
-ctest --test-dir build
-```
-
-### Running C++ Tests
-
-```bash
-# From the build directory
-ctest                     # Run all tests
-ctest -V                  # Verbose output
-ctest -R Quadray          # Filter by name pattern
-ctest --output-on-failure # Show output only for failures
-```
-
-### Test Categories
-
-| Category | Tests | Coverage Area |
-| -------- | ----- | ------------- |
-| Coordinate | Quadray ↔ Cartesian roundtrip, normalization, tetrahedral basis angles, distance, S3 constant | `src/core/coordinate/` (`tests/quadray_test.cpp`) |
-
-World and Entity test categories are aspirational; only the Coordinate suite exists today.
-
-## Common Test Patterns
-
-### Quadray Round-Trip Verification
-
-Every test suite should verify that conversion is lossless:
-
-```javascript
-// Cartesian → Quadray → Cartesian should be identity
-const original = { x: 1.0, y: 2.0, z: 3.0 };
-const quadray = Quadray.fromCartesian(original);
-const restored = quadray.toCartesian();
-assertApprox(restored.x, original.x, 1e-6, 'X round-trip');
-assertApprox(restored.y, original.y, 1e-6, 'Y round-trip');
-assertApprox(restored.z, original.z, 1e-6, 'Z round-trip');
-```
-
-### Synergetics Constant Validation
-
-```javascript
-// Verify IVM volume ratios
-assert(IVM.VOLUME_RATIOS.TETRAHEDRON === 1, 'Tetra = 1');
-assert(IVM.VOLUME_RATIOS.CUBE === 3, 'Cube = 3');
-assert(IVM.VOLUME_RATIOS.OCTAHEDRON === 4, 'Octa = 4');
-assertApprox(IVM.S3, Math.sqrt(9/8), 1e-10, 'S3 constant');
-```
-
-## Cross-References
-
-- [Games Overview](../games.md) — game portfolio and launch instructions
-- [IVM & Synergetics](../mathematics/ivm_synergetics.md) — volume ratios validated by tests
-- [Setup Guide](setup_guide.md) — development environment setup for C++ testing
-- [JavaScript Implementation](javascript_implementation.md) — JS codebase architecture
+The [portfolio testing guide](../../games/doc/testing_guide.md) describes runner organization. Report the actual commands, environment and outputs from a run; do not convert source inspection or old dated receipts into a new green claim.

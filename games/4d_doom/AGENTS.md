@@ -1,37 +1,25 @@
-# 4D Doom Agent Guidelines (AGENTS.md)
+# 4D Doom maintenance — Raw-label dungeon traversal with an AB-slice raycaster
 
-## Shared Modules
+Read the [game guide](README.md), [repository instructions](../../AGENTS.md) and [portfolio contracts](../../docs/games.md) before changing behavior. This folder is a browser game, not the native QuadCraft runtime.
 
-> Doom uses ES-module `import/export` syntax. `js/quadray.js` bridges to the
-> canonical `../4d_generic/quadray.js`; it is not a separate math implementation.
+## Source ownership
 
-## Architecture
+- [index.html](index.html) is authoritative for script order, page controls and construction.
+- [js/README.md](js/README.md) maps `DoomMap`, `DoomRenderer` and `DoomGame` to their actual files.
+- [tests/README.md](tests/README.md) records the actual source paths and historical browser-runner limitations.
 
-- **Synergetics FPS Engine**: DDA raycaster on IVM (Isotropic Vector Matrix) grid
-- **World Model**: Sparse Map storage at integer Quadray coordinates (IVM vertices)
-- **Geometry**: Fuller's Synergetics — tetravolumes, T:O:C=1:4:20 polyhedra ratios
-- **Coordinates**: Quadray (a,b,c,d) — tetrahedral 4D, not Cartesian
+## Preserve game-specific invariants
 
-## Module Map
+Keep raw occupancy distinct from physical distance and AB-slice view distance. Preserve closed-boundary/tie semantics in firstObstruction/traceShot and consume elapsed input time exactly once. The ESM Quadray adapter must reuse the canonical shared class.
 
-- `doom_config.js` — IVM constants, 8 directions, cell types (TETRA_WALL, OCTA_WALL)
-- `doom_board.js` — Sparse IVM grid, `getCell/setCell`, `getSlice(c,d)`, `cellParity`
-- `doom_entities.js` — `Player`, `Enemy` utilizing purely native `Quadray.distance()`
-- `doom_physics.js` — Grid-label DDA and line-of-sight routines
-- `doom_renderer.js` — Distance-based 4D dynamic lighting projection |
-- `doom_hud_synergetics.js` — `SynergeticsHUD` class (panel, compass, position, grid)
-- `doom_synergetics.js` — `computeAllAnalysis`, geometric identity verification
-- `doom_game.js` — `DoomGame` controller integrating all modules
+Doom has its own fixed 60 Hz accumulator, not BaseGame/GameLoop. `advanceFrame(elapsedMs)` takes milliseconds, caps each interval at 250 ms and retains fractional ticks. `settleTime(now)` consumes old-input time before live input changes. Movement, weapon cooldowns and enemy logic are per simulation tick; FX receive milliseconds.
 
-## Key Patterns
+## Supported scope
 
-1. **Raw-label adjacency**: 8 signed coordinate steps; distinct from the 12 FCC/IVM neighbor permutations
-2. **Cell classification**: `(a+b+c+d) % 2` selects the game's tetra/octa label
-3. **Tetravolume**: Per-cell = (1/√2)³ × S3 ≈ 0.375 tetravolumes
-4. **Analysis Caching**: `markDirty()` invalidates, recompute only when needed (not per-frame)
-5. **Slice Projection**: `getSlice(c,d)` returns 2D array for the DDA in (A,B) plane
+The wall renderer is an AB DDA through `getSlice(c,d)`, not a simultaneous four-axis physical raycaster. `firstObstruction` traverses a closed raw four-index segment; `traceShot` casts an AB raw ray with physical enemy radius. Pointer-lock rejection is surfaced by the controller; keyboard turning remains available. There is no shared P-pause lifecycle here.
 
-## Testing
+Do not infer inherited APIs from scripts merely being loaded. Keep raw storage, normalized physical points, graph edges and display geometry separate. Link shared math rather than copying a conflicting distance formula or fabricated local `quadray.js` API.
 
-- Node: `node games/4d_doom/tests/test_doom.js` from repository root
-- Browser: serve `games/` (or the repository root) and open `tests/test_doom.html`; the shared classic script must load before its module bridge
+## Verification expectations
+
+From the QuadCraft root, use `python3.13 games/run_games.py --test --game doom` for the registered suites. Also validate the portfolio with `python3.13 games/run_games.py --validate` and inspect the served page for console errors, real controls, camera/zoom and reset behavior. Follow the [repository testing guide](../../docs/development/testing_guide.md); Node logic results alone do not establish browser correctness. Report only checks actually run, without permanent passing-count claims.

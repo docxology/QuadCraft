@@ -1,57 +1,53 @@
-# 4D Quadray Life
+# 4D Life — Raw four-label toroidal cellular automaton
 
-A standalone implementation of Life using **Quadray coordinates** and the **Isotropic Vector Matrix (IVM)** tetrahedral geometry.
+A cellular automaton on a raw four-index torus, projected with Quadray geometry for visualization.
 
-![4D Life](https://img.shields.io/badge/4D-Life-blue?style=for-the-badge)
+“4D” is the portfolio name. Physical Quadray projection has rank three; raw board labels may deliberately carry additional game state. See the [portfolio coordinate/time contract](../../docs/games.md).
 
 ## Quick Start
 
-### Option 1: Run Script (Recommended)
+From the QuadCraft repository root, with Python 3.13 and a modern browser:
 
 ```bash
-# From the repository root:
-./games/run.sh life
+python3.13 games/run_games.py --game life
 ```
-This starts a local server on port 8103 and opens the browser.
 
-### Option 2: Manual Server
-
-```bash
-cd games/4d_life
-python3 -m http.server 8103
-open http://localhost:8103
-```
+Serve the parent `games/` tree, not this game directory alone: [index.html](index.html) loads sibling `../4d_generic/` assets. No JavaScript bundling step is needed. The static launcher is not a multiplayer backend.
 
 ## Game Mechanics
 
-- **4D Geometry**: Board coordinates (a, b, c, d) map to tetrahedral space.
-- **Shared library**: Uses the common `4d_generic/` module library (quadray math, camera, rendering, input, HUD). Open `index.html` to play — no build step or install required, but the `../4d_generic/*.js` scripts must stay alongside `games/4d_life/`.
-- **Tests**: Unit tests in `tests/` ensure logic correctness.
+Live cells are raw-key strings in a Set. `countNeighbors` enumerates all 80 nonzero offsets in `{−1,0,1}^4`, wrapping each coefficient. A live cell survives with 4–8 neighbors; an empty cell is born with exactly 5. The shared twelve-neighbor helper is available for readouts but is not the automaton’s update neighborhood.
+
+### Clock and lifecycle
+
+The shared loop has a 500 ms update tick. Inside `update()`, `performance.now()` gates at most one generation by the separate `speed` millisecond threshold (initially 200). Thus the displayed speed is not a guaranteed generation interval; this is not fixed-dt continuous integration.
 
 ## Key Controls
 
-- **Click/Tap**: Select/Interact
-- **Drag**: Rotate 3D View
-- **Scroll**: Zoom
+Space/P toggles the loop; S advances one generation even while paused; Up/Down decrease/increase the speed threshold by 50 ms (minimum 50). R reseeds. The page buttons expose play/pause, single-step and reseed. Shift+drag rotates; the wheel zooms.
 
 ## Architecture
 
-```
-games/4d_life/
-├── index.html           # Entry point (loads ../4d_generic/*.js, see below)
-├── js/
-│   ├── life_board.js    # Game State & Logic
-│   ├── life_renderer.js # Canvas Visualization
-│   └── life_game.js     # Controller
-└── tests/
-    └── test_life.js     # Node.js Unit Tests
+- [Model](js/life_board.js): `LifeBoard` owns game state and rules.
+- [Renderer](js/life_renderer.js): `LifeRenderer` — Depth-projected live cells, glow, hover geometric readouts and generation/population HUD.
+- [Controller](js/life_game.js): `LifeGame` wires input and lifecycle.
+- [Module guide](js/README.md) describes additional helpers and load boundaries.
 
-../4d_generic/            # Shared library (12 modules) this game depends on:
-                           # quadray.js, camera.js, projection.js, zoom.js,
-                           # synergetics.js, game_loop.js, input_controller.js,
-                           # grid_utils.js, base_board.js, base_renderer.js,
-                           # base_game.js, hud.js, score_manager.js
+Raw common-offset aliases remain distinct automaton cells even when they project to the same physical point. Named patterns are seed shapes, not verified oscillators/gliders under these nonstandard B5/S4–8 rules. This is not ordinary Conway B3/S23 or a twelve-neighbor FCC automaton.
+
+## Testing
+
+From the repository root:
+
+```bash
+python3.13 games/run_games.py --test --game life
 ```
 
----
-*Part of the [QuadCraft](../../) project.*
+[Tests and limitations](tests/README.md) distinguish logic checks from actual browser interaction. No saved count or production-readiness claim replaces current results.
+
+## Documentation
+
+- [Maintenance instructions](AGENTS.md)
+- [Shared modules](../4d_generic/README.md)
+- [Game index](../GAMES_INDEX.md)
+- [QuadCraft](../../README.md)

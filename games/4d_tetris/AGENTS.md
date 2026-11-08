@@ -1,80 +1,15 @@
-# 4D Tetris — Agent Instructions
+# 4D Tetris — Model and runtime maintenance
 
-## Project Overview
+Read the [game guide](README.md), [module ownership](js/README.md), [test scope](tests/README.md) and [portfolio contracts](../../docs/games.md) before changing behavior.
 
-Falling tetrominoes on a 4D IVM grid with Quadray rotations. Standalone browser application built on Quadray coordinates.
+## Preserve the implemented boundary
 
-## Quick Commands
+Preserve raw occupancy, rectangular bounds, B/C/D permutation and full-slice clearing. Do not replace these with inherited canonical neighbors or assume every callback consumes dt.
 
-```bash
-# Run tests (18 tests)
-node tests/test_tetris.js
+The controller loop interval is 16 ms, but gravity is separately scheduled by `performance.now()` against the board millisecond `tickInterval`. It executes at most one gravity call per eligible update, resets the gravity clock on unpause and spawns a piece on init/reset. This is not elapsed-seconds gravity integration.
 
-# Open in browser
-open index.html
+[index.html](index.html) instantiates `TetrisGame` after the actual shared imports and local board/renderer/controller scripts. Inheritance or an imported helper is not evidence that this game uses every shared system. Keep rules in `TetrisBoard`, projected drawing in `TetrisRenderer` and browser input/lifecycle in `TetrisGame`.
 
-# Start local server
-python3 -m http.server 8112
-```
+## Evidence and commands
 
-## Shared Modules
-
-Imported via `<script>` tags in `index.html` from `../4d_generic/`:
-`quadray.js`, `camera.js`, `projection.js`, `zoom.js`, `synergetics.js`
-
-## Module Dependency Order
-
-Load in this order to avoid reference errors:
-
-```text
-1. tetris_board.js     # Board/world state (needs Quadray)
-2. tetris_renderer.js  # Canvas rendering (needs Quadray, Board)
-3. tetris_game.js      # Controller (needs all above)
-```
-
-## File Inventory
-
-### JavaScript Modules (`js/`)
-
-| File | Key Exports | Purpose |
-|------|-------------|---------|
-| `tetris_board.js` | `TetrisBoard` | 4D grid state with falling piece tracking and layer detection |
-| `tetris_renderer.js` | `TetrisRenderer` | IVM grid projection with falling piece preview and ghost piece |
-| `tetris_game.js` | `TetrisGame` | Game loop, input handling, piece spawning, and scoring |
-
-### Tests (`tests/`)
-
-| File | Tests | Coverage |
-|------|-------|----------|
-| `test_tetris.js` | 18 | Board creation, cell operations, reset |
-| `test.html` | — | Browser test runner |
-
-## Game Rules Summary
-
-- Tetrominoes fall on a 4D Quadray grid
-- Rotate pieces using tetrahedral symmetry operations
-- Complete a full layer to clear it
-- Game over when pieces stack to the top
-- Score increases with multi-layer clears
-
-## Code Standards
-
-- **Language**: ES6+ JavaScript (classes, const/let, arrow functions)
-- **Comments**: JSDoc for public functions
-- **Indentation**: 4 spaces
-- **Export Pattern**: Browser + Node.js dual support
-
-```javascript
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { ClassName };
-}
-```
-
-## Verification Checklist
-
-- [ ] All tests pass: `node tests/test_tetris.js`
-- [ ] Browser loads: `open index.html`
-- [ ] Game plays (basic interaction)
-- [ ] Shift+drag rotates view
-- [ ] Reset button works
-- [ ] Console shows no errors
+Run commands from the QuadCraft repository root; launch with `python3.13 games/run_games.py --game tetris`. See [tests/README.md](tests/README.md) for the Node and harness commands. Report exercised checks, not saved counts, production-readiness or inferred canvas coverage. Review the actual controls in the game guide rather than copying another game's bindings.

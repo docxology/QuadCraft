@@ -1,53 +1,40 @@
-# Development Documentation
+# Development guides by runtime and implementation boundary
 
-Technical implementation guides for QuadCraft developers.
+[Documentation index](../README.md) · [Architecture overview](../architecture.md) · [Portfolio contracts](../games.md)
 
-## Contents
+## Start and verify
 
-### Core Systems
+- [Setup: native build or portfolio HTTP serving](setup_guide.md)
+- [Tests: native, Node/Python, structure, and real Chromium](testing_guide.md)
+- [Runtime ownership and data flow](architecture.md)
+- [Actual C++ interfaces and JavaScript differences](api_reference.md)
 
-| Document | Description |
-| --- | --- |
-| [architecture.md](architecture.md) | System architecture overview |
-| [chunk_system.md](chunk_system.md) | Chunk-based world management |
-| [entity_system.md](entity_system.md) | Entity component system |
-| [physics_system.md](physics_system.md) | Physics and collision |
+These pages describe the development checkout. Commands are instructions, not saved passing results. Historical HTML/JSP experiments are separate from the thirty-game portfolio and from the C++17 executable.
 
-### JavaScript Implementation
+## Native implementation and bounded designs
 
-| Document | Description |
-| --- | --- |
-| [javascript_implementation.md](javascript_implementation.md) | Browser JS implementation guide |
-| [javascript_performance_optimization.md](javascript_performance_optimization.md) | Performance tuning |
-| [realtime_code_evaluation.md](realtime_code_evaluation.md) | Dynamic code execution |
+| Guide | What it documents |
+|---|---|
+| [Chunk storage](chunk_system.md) | Cartesian chunk keys, local quadrays, generation/dirty mesh lifecycle and numeric limits |
+| [Entities](entity_system.md) | Direct native ownership, real JS helpers and conceptual entity design questions |
+| [Physics](physics_system.md) | Native picking/motion limits and specialized browser-game kernels; no general native physics engine |
+| [Source customization](modding_guide.md) | Real material/terrain/game edits, not a plugin SDK |
+| [Visible assets](asset_creation_guide.md) | Vertex colors and source-owned browser resources; no texture/model import pipeline |
 
-### Advanced Features
+## Historical browser geometry experiments
 
-| Document | Description |
-| --- | --- |
-| [cone_plane_intersection_rendering.md](cone_plane_intersection_rendering.md) | Advanced sphere rendering |
-| [ccp_ball_grid_system.md](ccp_ball_grid_system.md) | Close-Centered Packing |
-| [paintbrush_system.md](paintbrush_system.md) | Pattern painting tools |
+| Guide | Concrete topic |
+|---|---|
+| [JavaScript runtime map](javascript_implementation.md) | Inline, old snapshot, modular experiment and portfolio boundaries |
+| [CCP columns](ccp_ball_grid_system.md) | Range storage, Var-tree migration, surface extraction and cache limitations |
+| [Sphere silhouettes](cone_plane_intersection_rendering.md) | Cone-plane conic output, fallback behavior and known visual limitation |
+| [Brush composition](paintbrush_system.md) | Masks, offset Minkowski sums and incomplete non-ball removal |
+| [Quaternion camera](quaternion_camera_system.md) | `[x,y,z,w]` arrays, free functions and movement/time ownership |
+| [Gamepad polling](gamepad_integration_guide.md) | First-slot controller layout and real capability limits |
+| [Live evaluation](realtime_code_evaluation.md) | Trusted direct eval, not sandboxed code execution |
+| [Performance investigation](javascript_performance_optimization.md) | Source-visible costs and semantics-preserving profiling, not invented benchmark claims |
+| [JSP synchronization](multiplayer_system.md) | Actual sparse Var merge and server timestamps; no production multiplayer promise |
 
-### Input & Controls
+## Shared contracts
 
-| Document | Description |
-| --- | --- |
-| [gamepad_integration_guide.md](gamepad_integration_guide.md) | Controller support |
-| [quaternion_camera_system.md](quaternion_camera_system.md) | Camera controls |
-
-### Multiplayer & Modding
-
-| Document | Description |
-| --- | --- |
-| [multiplayer_system.md](multiplayer_system.md) | Multiplayer architecture |
-| [modding_guide.md](modding_guide.md) | Creating mods |
-| [asset_creation_guide.md](asset_creation_guide.md) | Asset creation guide |
-| [api_reference.md](api_reference.md) | API reference |
-
-### Setup & Testing
-
-| Document | Description |
-| --- | --- |
-| [setup_guide.md](setup_guide.md) | Development environment setup |
-| [testing_guide.md](testing_guide.md) | Test infrastructure (C++ engine & JS games) |
+[Portfolio documentation](../games.md) is the canonical local reference for raw labels versus physical quadrays, twelve-neighbor versus eight-neighbor graphs, fixed seconds, seeded streams and conservative transport. [Coordinate documentation](../quadray_coordinates.md) describes the embedding. Conceptual design sections identify unresolved decisions explicitly; they are not APIs to copy into a program.

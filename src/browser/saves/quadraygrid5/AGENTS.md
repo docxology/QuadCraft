@@ -1,5 +1,5 @@
-# quadraygrid5/ — Agent Notes
+# QuadrayGrid5 archived browser snapshots maintenance
 
-JSON save files from the QuadrayGrid5 version of the browser app. Same naming
-pattern and handling rules as `../quadraygrid4/` (see its AGENTS.md). User data —
-do not edit or rename.
+Treat snapshots as user data: do not edit, rename or delete them. Record producer/version when interpreting a scenario and keep observed load results separate from filename-based inference.
+
+Read the adjacent [directory guide](README.md) before changing this area. Report source inspection separately from executed runtime checks.

@@ -1,28 +1,5 @@
-# Save Files - AI Agent Guidelines
+# Browser snapshot formats and compatibility limits maintenance
 
-## Purpose
+Preserve user data unchanged. Document schema/type and exact producing HTML when adding examples; never promise migration or edit archives to make a loader appear compatible.
 
-This directory stores game state snapshots for testing, debugging, and user saves.
-
-## Guidelines
-
-### Do NOT
-
-- Commit large save files to git
-- Modify saves directly (use application)
-- Delete saves without understanding purpose
-
-### Do
-
-- Use descriptive names for test saves
-- Clean up obsolete debug saves
-- Maintain format compatibility
-
-## Format Changes
-
-If changing save format:
-
-1. Increment version number
-2. Provide migration for old saves
-3. Test loading old saves
-4. Document changes
+Read the adjacent [directory guide](README.md) before changing this area. Report source inspection separately from executed runtime checks.

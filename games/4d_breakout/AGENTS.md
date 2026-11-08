@@ -1,79 +1,25 @@
-# 4D Breakout — Agent Instructions
+# 4D Breakout maintenance — Logical-step ball motion and three-axis paddle control
 
-## Project Overview
+Read the [game guide](README.md), [repository instructions](../../AGENTS.md) and [portfolio contracts](../../docs/games.md) before changing behavior. This folder is a browser game, not the native QuadCraft runtime.
 
-Brick-breaking with Quadray ball physics in 4D. Standalone browser application built on Quadray coordinates.
+## Source ownership
 
-## Quick Commands
+- [index.html](index.html) is authoritative for script order, page controls and construction.
+- [js/README.md](js/README.md) maps `BreakoutBoard`, `BreakoutRenderer` and `BreakoutGame` to their actual files.
+- [tests/README.md](tests/README.md) records the actual source paths and historical browser-runner limitations.
 
-```bash
-# Run tests (20 tests)
-node tests/test_breakout.js
+## Preserve game-specific invariants
 
-# Open in browser
-open index.html
+Do not add a second seconds multiplier to per-step motion or describe rounded raw brick contact as physical collision. Keep score/life synchronization between board and controller.
 
-# Start local server
-python3 -m http.server 8115
-```
+The controller polls held paddle keys and calls `board.step()` every 20 ms. Ball velocity and the 0.5 paddle increment are per logical step; the callback ignores dt rather than integrating physical units per second.
 
-## Shared Modules
+## Supported scope
 
-Imported via `<script>` tags in `index.html` from `../4d_generic/`:
-`quadray.js`, `camera.js`, `projection.js`, `zoom.js`, `synergetics.js`
+The collision model is rounded-cell/raw-component arcade logic, not the Asteroids swept-collision model or a general physics engine. Clearing bricks rebuilds the next level rather than ending a finite campaign.
 
-## Module Dependency Order
+Do not infer inherited APIs from scripts merely being loaded. Keep raw storage, normalized physical points, graph edges and display geometry separate. Link shared math rather than copying a conflicting distance formula or fabricated local `quadray.js` API.
 
-Load in this order to avoid reference errors:
+## Verification expectations
 
-```text
-1. breakout_board.js     # Board/world state (needs Quadray)
-2. breakout_renderer.js  # Canvas rendering (needs Quadray, Board)
-3. breakout_game.js      # Controller (needs all above)
-```
-
-## File Inventory
-
-### JavaScript Modules (`js/`)
-
-| File | Key Exports | Purpose |
-|------|-------------|---------|
-| `breakout_board.js` | `BreakoutBoard` | Brick grid, ball physics, and paddle state |
-| `breakout_renderer.js` | `BreakoutRenderer` | Projected bricks with depth coloring, ball trail, and paddle |
-| `breakout_game.js` | `BreakoutGame` | Level progression, lives, and game loop |
-
-### Tests (`tests/`)
-
-| File | Tests | Coverage |
-|------|-------|----------|
-| `test_breakout.js` | 20 | Board creation, cell operations, reset |
-| `test.html` | — | Browser test runner |
-
-## Game Rules Summary
-
-- Ball bounces off paddle and destroys bricks
-- Bricks arranged in 4D tetrahedral layers
-- Different brick types require multiple hits
-- Clear all bricks to advance to next level
-
-## Code Standards
-
-- **Language**: ES6+ JavaScript (classes, const/let, arrow functions)
-- **Comments**: JSDoc for public functions
-- **Indentation**: 4 spaces
-- **Export Pattern**: Browser + Node.js dual support
-
-```javascript
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { ClassName };
-}
-```
-
-## Verification Checklist
-
-- [ ] All tests pass: `node tests/test_breakout.js`
-- [ ] Browser loads: `open index.html`
-- [ ] Game plays (basic interaction)
-- [ ] Shift+drag rotates view
-- [ ] Reset button works
-- [ ] Console shows no errors
+From the QuadCraft root, use `python3.13 games/run_games.py --test --game breakout` for the registered suites. Also validate the portfolio with `python3.13 games/run_games.py --validate` and inspect the served page for console errors, real controls, camera/zoom and reset behavior. Follow the [repository testing guide](../../docs/development/testing_guide.md); Node logic results alone do not establish browser correctness. Report only checks actually run, without permanent passing-count claims.

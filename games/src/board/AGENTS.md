@@ -1,23 +1,5 @@
-# Board — Analysis, Cataloging & Migration
+# Maintaining board source-analysis tools
 
-## Overview
+Inspect `audit.py`, `catalog.py`, `migrate.py` and real board consumers. Read [Python interfaces](../../doc/python_infrastructure.md). BoardAudit/Catalog use explicit games_dir overrides to avoid flawed config defaults; each scans one matching board, and regex results are heuristics.
 
-Board subpackage for analyzing, cataloging, and migrating game board classes.
-
-## Modules
-
-| Module | Export | Description |
-|--------|--------|-------------|
-| `audit.py` | `BoardAudit` | Detect BaseBoard migration status per game |
-| `catalog.py` | `BoardCatalog` | Catalog board classes, patterns, shared methods |
-| `migrate.py` | `migrate_board()` | Conservative migration to `extends BaseBoard` |
-
-## Usage
-
-```bash
-# Migration report
-python3 -c "from games.src.board import BoardAudit; print(BoardAudit().migration_report())"
-
-# Full catalog
-python3 -c "from games.src.board import BoardCatalog; print(BoardCatalog().summary_report())"
-```
+Local overrides and raw-key storage can be intentional. Do not mechanically delete them based on a migration report. `migrate_board(board_path,dry_run)` adds require/extends/super text; it does not prove constructor, reset or rule compatibility. Its module CLI anchors games under src and is not a safe portfolio-wide apply command. Any source migration requires separate authorization and real behavior review, not documentation-pass execution.

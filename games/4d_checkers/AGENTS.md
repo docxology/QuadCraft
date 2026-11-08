@@ -1,119 +1,25 @@
-# 4D Quadray Checkers - Agent Instructions
+# 4D Checkers maintenance — Canonical-position jumps and promotion
 
-## Project Overview
+Read the [game guide](README.md), [repository instructions](../../AGENTS.md) and [portfolio contracts](../../docs/games.md) before changing behavior. This folder is a browser game, not the native QuadCraft runtime.
 
-4D Checkers game using Quadray coordinates. Standalone browser application with 11 passing tests.
+## Source ownership
 
-## Quick Commands
+- [index.html](index.html) is authoritative for script order, page controls and construction.
+- [js/README.md](js/README.md) maps `CheckersBoard`, `CheckersRenderer` and `CheckersGame` to their actual files.
+- [tests/README.md](tests/README.md) records the actual source paths and historical browser-runner limitations.
 
-```bash
-# Run all tests (11 tests, 100% pass)
-node tests/test_checkers.js
+## Preserve game-specific invariants
 
-# Open in browser
-open index.html
+Use canonical piece keys consistently; bounds and promotion operate on normalized positions. Do not silently import mandatory-capture/multi-jump rules from standard checkers.
 
-# Start local server
-python3 -m http.server 8080
-```
+Piece moves are discrete actions; `update()` performs no simulation work. A shared render loop handles display and camera state, not automatic turns.
 
-## Key Directories
+## Supported scope
 
-| Directory | Files | Purpose |
-|-----------|-------|---------|
-| `js/` | 3 modules | Core JavaScript (Quadray, board, renderer, game) |
-| `tests/` | 2 files | Test suite (11 tests + browser runner) |
+Canonical `position.toKey()` merges common-offset aliases; this is not 256 physically distinct slots. Generated simple moves and single jumps do not implement mandatory captures or chained multi-jumps. The initial even-sum arrangement is not a separate general parity-validation API.
 
-## Shared Modules
+Do not infer inherited APIs from scripts merely being loaded. Keep raw storage, normalized physical points, graph edges and display geometry separate. Link shared math rather than copying a conflicting distance formula or fabricated local `quadray.js` API.
 
-Imported via `<script>` tags in `index.html` from `../4d_generic/`:
-`quadray.js`, `camera.js`, `projection.js`, `zoom.js`, `synergetics.js`
+## Verification expectations
 
-## Module Dependency Order
-
-Load in this order to avoid reference errors:
-
-```text
-1. checkers_board.js     # Board logic (needs Quadray)
-2. checkers_renderer.js  # Canvas rendering (needs Quadray, Board, Game)
-3. checkers_game.js      # Controller (needs all above)
-```
-
-## File Inventory
-
-### JavaScript Modules (`js/`)
-
-| File | Lines | Key Exports |
-|------|-------|-------------|
-| `checkers_board.js` | 397 | `CheckersBoard`, `CheckersPiece`, `PlayerColor`, `PieceType` |
-| `checkers_renderer.js` | 317 | `Renderer` class with grid, pieces, HUD |
-| `checkers_game.js` | 292 | `CheckersGame` controller with win detection |
-
-### Tests (`tests/`)
-
-| File | Tests | Coverage |
-|------|-------|----------|
-| `test_checkers.js` | 11 | Setup, moves, capture, promotion |
-| `test.html` | — | Browser test runner |
-
-## Code Standards
-
-- **Language**: ES6+ JavaScript (classes, const/let, arrow functions)
-- **Comments**: JSDoc for public functions
-- **Indentation**: 4 spaces
-- **Export Pattern**: Browser + Node.js dual support
-
-```javascript
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { ClassName };
-}
-```
-
-## Key Classes
-
-| Class | Location | Purpose |
-|-------|----------|---------|
-| `CheckersPiece` | `checkers_board.js` | Piece with color, type, position |
-| `CheckersBoard` | `checkers_board.js` | Board state, move generation, captures |
-| `Renderer` | `checkers_renderer.js` | Canvas projection & drawing |
-| `CheckersGame` | `checkers_game.js` | Turn management, win detection, input |
-
-## Game Rules Summary
-
-- Board: 4×4×4×4 Quadray grid
-- Move: Diagonal (change 2 coords by ±1)
-- Red advances by increasing coordinate sum
-- Black advances by decreasing coordinate sum
-- Capture: Jump over adjacent enemy
-- Promotion: Red at Sum ≥ 8, Black at Sum ≤ 0
-- Win: Opponent has no pieces or no legal moves
-
-## Common Tasks
-
-### Adding a Test
-
-```javascript
-// In test_checkers.js, add to runTests():
-function testNewFeature() {
-    const board = new CheckersBoard(4);
-    // setup
-    assert(condition, "Description");
-}
-```
-
-### Modifying Movement Rules
-
-Edit `getValidMoves()` and `tryAddMove()` in `checkers_board.js`. The direction vectors are defined in the `axes` array.
-
-### Changing Promotion Rules
-
-Edit `checkPromotion()` in `checkers_board.js`. Currently uses sum-based thresholds.
-
-## Verification Checklist
-
-- [ ] All 11 tests pass: `node tests/test_checkers.js`
-- [ ] Browser loads: `open index.html`
-- [ ] Game plays (select, move, capture)
-- [ ] Shift+drag rotates view
-- [ ] Reset button works
-- [ ] Console shows no errors
+From the QuadCraft root, use `python3.13 games/run_games.py --test --game checkers` for the registered suites. Also validate the portfolio with `python3.13 games/run_games.py --validate` and inspect the served page for console errors, real controls, camera/zoom and reset behavior. Follow the [repository testing guide](../../docs/development/testing_guide.md); Node logic results alone do not establish browser correctness. Report only checks actually run, without permanent passing-count claims.

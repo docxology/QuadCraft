@@ -1,61 +1,7 @@
-# QuadCraft Web Application
+# QuadCraft JSP endpoint and deployment contents
 
-The deployed QuadCraft web application for Tomcat.
+[QuadCraftAjax.jsp](QuadCraftAjax.jsp) reads the request body and emits JSON. Implemented sparse action names are `writeSparse`, `readSparse` and `readWriteSparse`; `readAll/writeAll` address separate legacy memory state. GET `?action=load&name=...` and POST `{action:"save",name,data}` recipes are not implemented.
 
-## Files
+For exact fields, timestamp merge/cursor semantics and security constraints see [the server protocol](../../../README.md). `index.html_goesHere.txt` is only a placement note. Serving a browser client also requires its actual script dependencies and correct endpoint/origin wiring; this webapp is not a packaged complete browser distribution.
 
-| File | Purpose |
-|------|---------|
-| `QuadCraftAjax.jsp` | AJAX endpoint for save/load |
-| `index.html_goesHere.txt` | Instructions for index file |
-| `WEB-INF/` | Java classes and configuration |
-
-## QuadCraftAjax.jsp
-
-Server-side endpoint handling:
-
-### Save Operation (POST)
-
-```javascript
-// Client request
-fetch('/QuadCraft/QuadCraftAjax.jsp', {
-  method: 'POST',
-  body: JSON.stringify({
-    action: 'save',
-    name: 'savename',
-    data: gameState
-  })
-});
-
-// Server response
-{ success: true }
-```
-
-### Load Operation (GET)
-
-```javascript
-// Client request
-fetch('/QuadCraft/QuadCraftAjax.jsp?action=load&name=savename');
-
-// Server response
-{ data: {...gameState...} }
-```
-
-## WEB-INF Structure
-
-```
-WEB-INF/
-└── classes/
-    └── immutable/
-        └── occamsjsonds/
-            ├── JsonDS.java     # JSON handling
-            ├── JsonDS.class
-            ├── TestJsonDS.java # Tests
-            └── TestJsonDS.class
-```
-
-## Setup
-
-1. Copy index.html from browser version
-2. Update AJAX URLs to point to this server
-3. Deploy to Tomcat
+[WEB-INF](WEB-INF/README.md) holds Java dependency sources/bytecode. State is static JVM memory, not files or a catalog of named saves. Native/portfolio clients are not integrated here.

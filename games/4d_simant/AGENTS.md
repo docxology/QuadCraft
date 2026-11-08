@@ -1,64 +1,15 @@
-# 4D SimAnt — Agent Reference
+# 4D SimAnt — Model and runtime maintenance
 
-## Quick Commands
+Read the [game guide](README.md), [module ownership](js/README.md), [test scope](tests/README.md) and [portfolio contracts](../../docs/games.md) before changing behavior.
 
-```bash
-python3 ../../run_games.py --game simant
-node tests/test_comprehensive.js  # Integration assertions; summary counts executed checks
-node tests/test_simant.js         # Actual-board excavation and delivery scenarios
-node tests/test_graph_transport.js # Transport, replay and lifecycle scenarios
-```
+## Preserve the implemented boundary
 
-## Directory
+Never replace the eight-neighbor terrain graph with `GridUtils.neighbors`. Keep per-ant live-validated home routes, conservative transport, explicit decay/source accounting and cosmetic RNG separate.
 
-```
-js/
-  simant_board.js     — SimAntBoard: 4D grid, pheromones (6ch), ants, tunnels, food regen
-  simant_ai.js        — RedColonyAI (4-phase), YellowAssistAI
-  simant_combat.js    — CombatSystem: morale, terrain, danger pheromone, stats
-  simant_pheromone_viz.js — PheromoneVisualizer: gradient colors, glow, danger channel
-  simant_renderer.js  — SimAntRenderer: raw graph, minimap, particles, sprites, tooltips
-  simant_game.js      — SimAntGame: speed controls, win conditions, assist toggle
-tests/
-  test_comprehensive.js — Board, colony, combat and field integration assertions
-  test_simant.js       — Actual-board excavation, detour homing and caste permissions
-  test_graph_transport.js — Conservative fields, raw topology, replay and lifecycle
-  test.html            — Browser test runner
-index.html             — Premium UI with glassmorphic panels
-```
+One `board.update()` advances a logical tick. Controller speed intervals are 300/150/50 ms; transport occurs every ten ticks and explicit evaporation every five. Reset reconstructs the board-owned RNG from the retained seed.
 
-## Module Dependencies
+[index.html](index.html) instantiates `SimAntGame` after the actual shared imports and local board/renderer/controller scripts. Inheritance or an imported helper is not evidence that this game uses every shared system. Keep rules in `SimAntBoard`, projected drawing in `SimAntRenderer` and browser input/lifecycle in `SimAntGame`.
 
-```
-Quadray → GridUtils → SYNERGETICS → BaseBoard, ConservativeGraphField → SimAntBoard
-BaseRenderer → SimAntRenderer
-BaseGame → SimAntGame
-CombatSystem, RedColonyAI, YellowAssistAI, PheromoneVisualizer
-```
+## Evidence and commands
 
-## Key Constants
-
-| Constant | Value | Purpose |
-|----------|-------|---------|
-| PHERO_CHANNELS | 6 | YFood, YHome, RFood, RHome, YDanger, RDanger |
-| MAX_ANTS_PER_FACTION | 60 | Population cap |
-| CASTE_{QUEEN,WORKER,SOLDIER,SCOUT} | 0–3 | Ant castes |
-| FACTION_{YELLOW,RED} | 0–1 | Colony factions |
-
-## Key Mechanics
-
-- **6-channel pheromones** with conservative raw eight-neighbor transport every 10 ticks and explicit 0.98 evaporation every 5 ticks; empty and food sites permeable
-- **Population cap**: 60 ants per faction
-- **Food regeneration**: Every 200 ticks, 2–3 new food clusters
-- **Queen auto-spawn**: Workers hatched when food > 15
-- **Colony health**: Composite of queen HP, population, food, combat K/D
-- **Win condition**: Game won when enemy queen dies
-- **Tunnel tracking**: Set-based connectivity for the -3 tunnel-defense damage reduction (home-nest proximity, not tunnel occupancy, drives the +5 home bonus)
-- **4 ant castes**: Queen (200 HP), Soldier (50 HP), Worker (20 HP), Scout (15 HP)
-
-## Verification
-
-- [ ] CLI entries report executed numeric pass/fail counts with no failures
-- [ ] Browser test entry reports the actual-board excavation and homing scenarios
-- [ ] Browser test: game loads, ants move, combat occurs
-- [ ] Verify Math: all 8 geometric identities pass
+Run commands from the QuadCraft repository root; launch with `python3.13 games/run_games.py --game simant`. See [tests/README.md](tests/README.md) for the Node and harness commands. Report exercised checks, not saved counts, production-readiness or inferred canvas coverage. Review the actual controls in the game guide rather than copying another game's bindings.

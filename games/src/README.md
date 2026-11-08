@@ -1,17 +1,16 @@
-# Src Module
+# Python infrastructure for browser-game tooling
 
-## Purpose
+This package provides the launcher/server, registry, QA, generators and source-analysis helpers, plus floating-point coordinate utilities. It is not the JavaScript simulation runtime or native C++ engine.
 
-Core Python infrastructure for the QuadCraft game engine and launcher.
+| Package | Purpose |
+|---|---|
+| [core](core/README.md) | Registry, config constants and default paths |
+| [server](server/README.md) | Threaded static loopback HTTP serving |
+| [qa](qa/README.md) | Subprocess logic suites and structural text checks |
+| [scaffold](scaffold/README.md) | Starter-file generation, with documented integration limits |
+| [analytics](analytics/README.md) | File/text completeness metrics, not runtime health |
+| [shared](shared/README.md) | JavaScript metadata/dependency ordering, not executable game code |
+| [board](board/README.md) | Heuristic board catalog/audit and textual migration |
+| [space](space/README.md) | Floating-point quadray/projection/grid/reference math |
 
-## Contents
-
-| Subpackage | Purpose |
-|------------|---------|
-| `analytics/` | Suite health scoring and metrics |
-| `board/` | Board analysis, cataloging, and BaseBoard migration |
-| `scaffold/` | New game directory generation |
-| `shared/` | JS module registry with dependency ordering |
-| `space/` | Quadray / IVM / XYZ math (Python port of JS modules) |
-
-See [AGENTS.md](AGENTS.md) for detailed file inventory and usage instructions.
+Run the CLI from the QuadCraft repository root with `python3.13 games/run_games.py --list`. Library imports use `games.src.<package>` from that root. Read [Python interfaces](../doc/python_infrastructure.md), especially the [default-path limitation](../doc/configuration.md), before interpreting a library scan. The CLI derives its correct root independently.

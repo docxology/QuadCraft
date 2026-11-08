@@ -1,5 +1,5 @@
-# immutable/ — Agent Notes
+# Immutable Java package namespace for JSP JSON helpers maintenance
 
-Package root for the immutable datastore classes: only `occamsjsonds/`
-(OccamsJSONDS, source + compiled). Name is the Java package path — moving these
-files breaks the package declaration.
+Preserve package declarations and directory layout. Keep third-party notices intact and document application integration in parent guides rather than rewriting upstream source commentary.
+
+Read the adjacent [directory guide](README.md) before changing this area. Report source inspection separately from executed runtime checks.

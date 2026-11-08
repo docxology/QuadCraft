@@ -1,71 +1,16 @@
-# Coordinate Systems
+# Native quadray gauge, embedding and distance
 
-This directory contains the mathematical foundation for QuadCraft's tetrahedral coordinate system.
+[Quadray.h](Quadray.h) defines `QuadCraft::Quadray` with public float `a,b,c,d`. `normalized()` subtracts the minimum; common offsets represent one physical point, not a constant-sum constraint or a fourth Euclidean dimension.
 
-## Files
-
-| File | Purpose |
-|------|---------|
-| `Quadray.h` | Four-dimensional quadray coordinate system |
-| `Vector3.h` | Standard 3D Cartesian vector and Vector4 for frustum |
-
-## Quadray Coordinate System
-
-Quadray coordinates use four values `(a, b, c, d)` to represent points in 3D space:
-
-### Basis Vectors
-
-The four basis vectors extend from the center of a regular tetrahedron to its vertices:
-
-- **A-axis**: Direction (1, 1, 1) normalized
-- **B-axis**: Direction (-1, -1, 1) normalized
-- **C-axis**: Direction (-1, 1, -1) normalized
-- **D-axis**: Direction (1, -1, -1) normalized
-
-### Key Properties
-
-1. **Constraint**: `a + b + c + d = constant` for all points in same 3D hyperplane
-2. **Non-negative**: Normalized quadrays have `a, b, c, d ≥ 0`
-3. **Redundancy**: 4 coordinates for 3D space allows natural tetrahedral operations
-
-### Conversion Formulas
-
-**Cartesian to Quadray:**
-
-```cpp
-const float scale = 1.0f / ROOT2;
-float a = scale * (max(0, x) + max(0, y) + max(0, z));
-float b = scale * (max(0, -x) + max(0, -y) + max(0, z));
-float c = scale * (max(0, -x) + max(0, y) + max(0, -z));
-float d = scale * (max(0, x) + max(0, -y) + max(0, -z));
+```text
+(x,y,z) = (a-b-c+d, a-b+c-d, a+b-c-d) / sqrt(2)
 ```
 
-**Quadray to Cartesian:**
+A coefficient-unit basis vector has length `sqrt(3/2)`, not one. This is the scale-one Python suite embedding with Y/Z swapped and divided by `sqrt(2)`: orientation reverses and squared lengths halve.
+
+`toCartesian()` returns `Vector3`; `fromCartesian(const Vector3&)` chooses a zero-minimum representative. `length()`, `magnitude()` and both static/instance `distance` measure Cartesian Euclidean length. Float round trips have roundoff, and raw labels are not uniquely invertible. Addition normalizes; `operator*(float)` preserves raw scaled coefficients. `Vector3.h` also defines `Vector4` for frustum planes. `S3` is `sqrt(9/8)`, not `sqrt(3)`.
 
 ```cpp
-const float scale = 1.0f / ROOT2;
-float x = scale * (a - b - c + d);
-float y = scale * (a - b + c - d);
-float z = scale * (a + b - c - d);
-```
-
-## Vector3
-
-Standard 3D vector with:
-
-- Component access (x, y, z)
-- Arithmetic operators (+, -, *, /)
-- Dot product, cross product
-- Length, normalization
-
-## Usage
-
-```cpp
-#include "Quadray.h"
-#include "Vector3.h"
-
-Vector3 cartesian(1.0f, 2.0f, 3.0f);
-Quadray quad = Quadray::fromCartesian(cartesian);
-Vector3 back = quad.toCartesian();
-// back ≈ cartesian (within floating-point precision)
+QuadCraft::Quadray q = QuadCraft::Quadray::fromCartesian(QuadCraft::Vector3(1, 2, 3));
+QuadCraft::Vector3 xyz = q.toCartesian();
 ```

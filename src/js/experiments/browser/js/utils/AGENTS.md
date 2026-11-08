@@ -1,48 +1,5 @@
-# Utility Modules - AI Agent Guidelines
+# Experiment constants, units and configuration namespaces maintenance
 
-## constants.js
+Keep constants scoped to this prototype. Do not copy portfolio configuration or assume every consumer uses the same namespace form. Document units at actual consumers and preserve S3 as sqrt(9/8).
 
-Central location for all configuration values.
-
-### Guidelines
-
-#### Adding Constants
-
-- Use UPPER_SNAKE_CASE for constants
-- Group related constants together
-- Document units and ranges
-- Consider making configurable via UI
-
-#### Modifying Constants
-
-- Test impact on gameplay
-- Check all usages
-- Consider backward compatibility for saves
-
-### Categories
-
-**Mathematical** - Do not change without understanding all uses
-
-- ROOT2, S3 are fundamental
-
-**Game Config** - Tunable for gameplay feel
-
-- Speeds, sizes, distances
-
-**UI Config** - Safe to adjust for layout
-
-- Panel dimensions, colors
-
-**Colors** - Visual preferences
-
-- Ensure contrast and accessibility
-
-## Best Practices
-
-```javascript
-// Good: Named exports with documentation
-export const CAMERA_SPEED = 0.5;  // units per second
-
-// Avoid: Magic numbers in code
-// Use constants instead
-```
+Read the adjacent [directory guide](README.md) before changing this area. Report source inspection separately from executed runtime checks.

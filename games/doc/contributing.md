@@ -1,264 +1,34 @@
-# Contributing a New Game
+# Adding or changing a browser portfolio game
 
-> **Note on 4D Geometry & Nomenclature**: "4D" in QuadCraft strictly means **Synergetics** geometry (Quadray tetrahedral coordinates on an IVM; 12 neighbors = permutations of `(0, 1, 1, 2)`). Canonical statement: [GAMES_INDEX.md](../GAMES_INDEX.md#note-on-4d-geometry--nomenclature).
+Work from the QuadCraft repository root with Python 3.13 and Node.js available. Browser verification additionally needs the directory-local Playwright/Chromium dependencies. Read the target game's instructions, [layout](game_template.md), [shared APIs](shared_modules_reference.md) and [canonical contracts](../../docs/games.md) first.
 
-> End-to-end guide for adding a new 4D game to the QuadCraft portfolio.
+## Implement the actual game boundary
 
----
+For a new game, use [GameScaffold](scaffold_guide.md) only with its documented path override and integration limitations understood, or create the standard directory manually. The generator is not a finished game. Implement real state transitions, drawing, input, reset and terminal behavior. Choose raw-slot versus canonical-point storage explicitly and define each metric/adjacency. Do not assume twelve-neighbor geometry applies to all game rules.
 
-## Prerequisites
+If using BaseGame, compose real board/renderer objects and override its actual hooks. Shared loop callbacks receive fixed seconds while tick intervals are milliseconds. Discrete boards can own logical ticks. Random streams and reset semantics are game-specific; there is no universal seeded replay API. Input must not apply retroactively to accumulated elapsed time.
 
-- Node.js (for running tests)
-- Python 3.10+ (for infrastructure tooling)
-- Basic understanding of Quadray coordinates — see [space_math_reference.md](space_math_reference.md)
+## Register and integrate
 
----
+1. Add `GAMES[key] = {"dir": "4d_<key>", "name": display_name, "port_offset": offset}` in `games/src/core/registry.py`, choosing a unique offset after inspecting the actual maximum (current offsets 0–29).
+2. Update the [inventory](../GAMES_INDEX.md), player/scoped guides and any explicit JSON selection that should include the game. A manifest does not register it.
+3. Review shell integration: `run.sh` has its own key list, while `regenerate_scripts.py` generates per-game wrappers from the registry. Do not assume regenerating those wrappers updates the master list.
+4. Add/maintain actual Node rule-transition tests and a real browser input/state/rendering scenario in the appropriate browser scenario group. The browser harness currently expects thirty unique games; a genuine catalog addition must update that explicit gate consistently.
+5. Keep `4d_generic/` imports and dependency order correct; deploy/serve the parent `games/` directory.
 
-## Step-by-Step Checklist
+## Verification layers
 
-### 1. Scaffold the Game
+These commands are guidance for an authorized verification pass, not evidence they have been run by a documentation editor:
 
-```python
-from games.src.scaffold import GameScaffold
-
-scaffold = GameScaffold(
-    "my_game",           # Registry key (snake_case)
-    "4D My Game",        # Display name
-    grid_size=8,         # Grid dimension (adjust for your game)
-    tick_rate=16,         # Updates per second
-)
-path = scaffold.create()
-print(f"✅ Created: {path}")
+```sh
+python3.13 games/run_games.py --validate
+python3.13 games/run_games.py --test --game chess
+python3.13 games/run_games.py --test
+python3.13 games/run_games.py --game chess
 ```
 
-This generates the complete directory structure:
+Replace `chess` with an actual registered key under review. [Testing](testing_guide.md) explains recursive shared discovery, subprocess failure semantics and the independent [Chromium gate](../tests/browser/README.md). Verify legal/blocked/terminal/reset transitions and rendered input alignment, not merely symbol existence, default fields or a saved pass count. Do not claim browser correctness from Node canvas doubles or text validation.
 
-```text
-games/4d_my_game/
-├── index.html
-├── AGENTS.md
-├── manifest.json
-├── js/
-│   ├── my_game_board.js
-│   ├── my_game_renderer.js
-│   └── my_game_game.js
-└── tests/
-    └── test_my_game.js
-```
+## Documentation handoff
 
-> See [scaffold_guide.md](scaffold_guide.md) for full scaffold options.
-
----
-
-### 2. Register in the Game Registry
-
-Add an entry to `src/core/registry.py`:
-
-```python
-GAMES = {
-    # ... existing games ...
-    "my_game": {"dir": "4d_my_game", "name": "4D My Game", "port_offset": 22},
-}
-```
-
-**Rules:**
-
-- `port_offset` must be unique (next available = current max + 1)
-- `dir` must match the directory name
-- Key must be the snake_case game identifier
-
----
-
-### 3. Implement Game Logic
-
-Edit the three core JS files:
-
-| File | What to Implement |
-|------|-------------------|
-| `js/my_game_board.js` | Game state: grid, pieces, rules, win condition |
-| `js/my_game_renderer.js` | Canvas rendering: draw board, pieces, effects |
-| `js/my_game_game.js` | Controller: input bindings, update loop, UI |
-
-#### Board (`my_game_board.js`)
-
-```javascript
-class MyGameBoard {
-    constructor(size) {
-        this.size = size;
-        this.grid = {};  // Quadray key → cell state
-        this.reset();
-    }
-
-    reset() { /* Initialize grid */ }
-    getCell(a, b, c, d) { return this.grid[`${a},${b},${c},${d}`]; }
-    setCell(a, b, c, d, val) { this.grid[`${a},${b},${c},${d}`] = val; }
-}
-```
-
-#### Renderer (`my_game_renderer.js`)
-
-```javascript
-class MyGameRenderer extends BaseRenderer {
-    drawBoard(board, camera, zoom) {
-        this.clear();
-        this.drawAxes(camera, zoom);
-        // Draw game-specific elements using projectQuadray()
-    }
-}
-```
-
-#### Game Controller (`my_game_game.js`)
-
-```javascript
-class MyGameGame extends BaseGame {
-    init() {
-        this.board = new MyGameBoard(this.options.gridSize || 8);
-        this.renderer = new MyGameRenderer(this.canvas);
-        this.input.bind('Space', () => this.doAction());
-    }
-
-    update(dt) { /* Game logic per tick */ }
-    render() { this.renderer.drawBoard(this.board, this.camera, this.zoom); }
-}
-```
-
-> See [game_template.md](game_template.md) for file structure details and [shared_modules_reference.md](shared_modules_reference.md) for the shared API.
-
----
-
-### 4. Write Tests
-
-Edit `tests/test_my_game.js`:
-
-```javascript
-const path = require('path');
-let passed = 0, failed = 0;
-
-function assert(cond, msg) {
-    if (cond) { console.log(`  ✅ ${msg}`); passed++; }
-    else { console.log(`  ❌ ${msg}`); failed++; }
-}
-
-console.log('\n🧪 My Game Tests\n');
-
-// Test board initialization
-// Test game rules
-// Test win/loss conditions
-// Test edge cases
-
-console.log(`\n=== Results: ${passed} passed, ${failed} failed ===`);
-process.exit(failed > 0 ? 1 : 0);
-```
-
-> See [testing_guide.md](testing_guide.md) for the standardized output format.
-
----
-
-### 5. Validate Structure
-
-```bash
-python3 run_games.py --validate
-```
-
-All checks must pass:
-
-- ✅ Directory exists
-- ✅ `index.html` present with shared imports
-- ✅ `AGENTS.md` present
-- ✅ Board file is not a scaffold stub
-- ✅ No local `quadray.js` copy
-
----
-
-### 7. Run Tests
-
-```bash
-# Game-specific tests
-python3 run_games.py --test --game my_game
-
-# Full suite (verify nothing broke)
-python3 run_games.py --test
-```
-
----
-
-### 8. Test in Browser
-
-```bash
-python3 run_games.py --game my_game
-# Opens http://127.0.0.1:8122/4d_my_game/index.html
-```
-
-Verify:
-
-- [ ] No console errors
-- [ ] Canvas renders with Quadray axes
-- [ ] Keyboard/mouse interaction works
-- [ ] HUD displays correctly
-
----
-
-### 9. Update Portfolio Index
-
-Add a row to `GAMES_INDEX.md`:
-
-```markdown
-| 23 | 🎮 **4D My Game** | [`4d_my_game/`](../src/scaffold/) | ✅ Complete | N | Key mechanic description |
-```
-
-Also update the game count in:
-
-- `GAMES_INDEX.md` total line
-- `README.md` total line
-
----
-
-### 10. Update Config
-
-Add to `games_config.json`:
-
-```json
-{
-    "games": [
-        "chess", "checkers", ..., "my_game"
-    ]
-}
-```
-
----
-
-## Summary Checklist
-
-```text
-[ ] 1. Scaffold game           — GameScaffold("my_game", "4D My Game").create()
-[ ] 2. Register in registry    — Add to GAMES dict in src/core/registry.py
-[ ] 3. Implement game logic    — js/my_game_{board,renderer,game}.js
-[ ] 4. Write tests             — tests/test_my_game.js
-[ ] 5. Validate structure      — python3 run_games.py --validate
-[ ] 6. Run tests               — python3 run_games.py --test --game my_game
-[ ] 7. Test in browser         — python3 run_games.py --game my_game
-[ ] 8. Update GAMES_INDEX.md   — Add portfolio row
-[ ] 9. Update config           — Add to games_config.json
-```
-
----
-
-## Documentation Cross-References
-
-| Topic | Document |
-|-------|----------|
-| System architecture | [architecture.md](architecture.md) |
-| Shared JS modules API | [shared_modules_reference.md](shared_modules_reference.md) |
-| Python infrastructure | [python_infrastructure.md](python_infrastructure.md) |
-| Scaffold details | [scaffold_guide.md](scaffold_guide.md) |
-| Analytics & health | [analytics_reporting.md](analytics_reporting.md) |
-| Quadray math | [space_math_reference.md](space_math_reference.md) |
-| File structure | [game_template.md](game_template.md) |
-| Testing | [testing_guide.md](testing_guide.md) |
-| Scripts | [scripts_reference.md](scripts_reference.md) |
-| Configuration | [configuration.md](configuration.md) |
-| Launch & operations | [launch_operations.md](launch_operations.md) |
-
----
-
-*Part of the [QuadCraft](../../) project — Exploring 4D tetrahedral geometry through interactive applications.*
+Use informative topic titles and canonical links; preserve filenames. Describe actual controls, units, raw identity, implemented rules and meaningful limitations. Do not invent APIs, publish subjective completeness percentages, copy stale test totals, or overwrite handcrafted game notes with a generic generator. Report only exercised verification with checkout/date and diagnostic paths. [Maintenance scripts](scripts_reference.md) documents which utilities write files and why some legacy generators are unsafe as a blanket refresh.

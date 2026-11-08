@@ -1,80 +1,25 @@
-# 4D Frogger — Agent Instructions
+# 4D Frogger maintenance — Event-driven hops and logical-step lane hazards
 
-## Project Overview
+Read the [game guide](README.md), [repository instructions](../../AGENTS.md) and [portfolio contracts](../../docs/games.md) before changing behavior. This folder is a browser game, not the native QuadCraft runtime.
 
-Lane-crossing obstacle avoidance in 4D Quadray space. Standalone browser application built on Quadray coordinates.
+## Source ownership
 
-## Quick Commands
+- [index.html](index.html) is authoritative for script order, page controls and construction.
+- [js/README.md](js/README.md) maps `FroggerBoard`, `FroggerRenderer` and `FroggerGame` to their actual files.
+- [tests/README.md](tests/README.md) records the actual source paths and historical browser-runner limitations.
 
-```bash
-# Run tests (23 tests)
-node tests/test_frogger.js
+## Preserve game-specific invariants
 
-# Open in browser
-open index.html
+Preserve raw wrapped B/C/D state and bounded A progress. Keep timer/speed units per board step, and do not invent four-goal home slots or pause-gated hop ownership.
 
-# Start local server
-python3 -m http.server 8118
-```
+The shared loop calls one `board.step()` every 200 ms. `timeLeft` counts logical ticks, not seconds; obstacle speed is per step. Hop input is event-driven rather than a held-key continuous integrator.
 
-## Shared Modules
+## Supported scope
 
-Imported via `<script>` tags in `index.html` from `../4d_generic/`:
-`quadray.js`, `camera.js`, `projection.js`, `zoom.js`, `synergetics.js`
+Hop callbacks guard game-over but not pause, so loop pause alone does not block hops. Collision is raw-coordinate arcade logic rather than physical sphere distance. Shared geometric readouts do not change the lane topology.
 
-## Module Dependency Order
+Do not infer inherited APIs from scripts merely being loaded. Keep raw storage, normalized physical points, graph edges and display geometry separate. Link shared math rather than copying a conflicting distance formula or fabricated local `quadray.js` API.
 
-Load in this order to avoid reference errors:
+## Verification expectations
 
-```text
-1. frogger_board.js     # Board/world state (needs Quadray)
-2. frogger_renderer.js  # Canvas rendering (needs Quadray, Board)
-3. frogger_game.js      # Controller (needs all above)
-```
-
-## File Inventory
-
-### JavaScript Modules (`js/`)
-
-| File | Key Exports | Purpose |
-|------|-------------|---------|
-| `frogger_board.js` | `FroggerBoard` | Lane obstacle positions, frog state, home position tracking |
-| `frogger_renderer.js` | `FroggerRenderer` | Scrolling lanes with depth projection, frog and obstacle sprites |
-| `frogger_game.js` | `FroggerGame` | Hop-based movement, collision detection, timer, and scoring |
-
-### Tests (`tests/`)
-
-| File | Tests | Coverage |
-|------|-------|----------|
-| `test_frogger.js` | 23 | Board creation, cell operations, reset |
-| `test.html` | — | Browser test runner |
-
-## Game Rules Summary
-
-- Navigate frog across lanes of moving obstacles
-- Obstacles move along IVM axis paths at varying speeds
-- Land on safe platforms (tetrahedral vertices)
-- Fill all 4 home positions to clear a level
-- Timer adds urgency to each crossing attempt
-
-## Code Standards
-
-- **Language**: ES6+ JavaScript (classes, const/let, arrow functions)
-- **Comments**: JSDoc for public functions
-- **Indentation**: 4 spaces
-- **Export Pattern**: Browser + Node.js dual support
-
-```javascript
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { ClassName };
-}
-```
-
-## Verification Checklist
-
-- [ ] All tests pass: `node tests/test_frogger.js`
-- [ ] Browser loads: `open index.html`
-- [ ] Game plays (basic interaction)
-- [ ] Shift+drag rotates view
-- [ ] Reset button works
-- [ ] Console shows no errors
+From the QuadCraft root, use `python3.13 games/run_games.py --test --game frogger` for the registered suites. Also validate the portfolio with `python3.13 games/run_games.py --validate` and inspect the served page for console errors, real controls, camera/zoom and reset behavior. Follow the [repository testing guide](../../docs/development/testing_guide.md); Node logic results alone do not establish browser correctness. Report only checks actually run, without permanent passing-count claims.

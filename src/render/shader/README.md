@@ -1,74 +1,7 @@
-# Shader System
+# Native Shader compilation and actual uniform setters
 
-This directory contains OpenGL shader management.
+[Shader.h](Shader.h) provides a default constructor, `loadFromSource(vertexSource,fragmentSource)` and `loadFromFile(vertexPath,fragmentPath)`, both returning bool. A two-filename constructor is not implemented.
 
-## Files
+`use() const` binds the program. Setters are `setBool`, `setInt`, `setFloat`, `setVec3` (Vector3 or three floats) and `setMat4(const std::string&,const float*)`; there is no generic Matrix4 or setVec2/setVec4 interface. `isInitialized()` reports a nonzero program ID; compile/link diagnostics come from Shader.cpp.
 
-| File | Purpose |
-|------|---------|
-| `Shader.h` | Shader class definition |
-| `Shader.cpp` | Shader implementation |
-
-## Shader Class
-
-Manages OpenGL shader programs:
-
-### Creation
-
-```cpp
-Shader shader("vertex.glsl", "fragment.glsl");
-// Compiles, links, validates
-```
-
-### Usage
-
-```cpp
-shader.use();
-shader.setMat4("view", viewMatrix);
-shader.setMat4("projection", projMatrix);
-shader.setVec3("lightPos", lightPosition);
-// Draw calls...
-```
-
-### Uniform Types
-
-```cpp
-void setBool(const std::string& name, bool value);
-void setInt(const std::string& name, int value);
-void setFloat(const std::string& name, float value);
-void setVec3(const std::string& name, const Vector3& value);
-void setMat4(const std::string& name, const Matrix4& value);
-```
-
-## Shader Programs
-
-### Main Shader
-
-- Vertex: Transform positions, pass attributes
-- Fragment: Lighting, color output
-
-### Wireframe Shader
-
-- Simplified for debug visualization
-- Single color output
-
-### Overlay Shader
-
-- For UI elements and quadray visualization
-- Screen-space coordinates
-
-## GLSL Version
-
-OpenGL 3.3 shaders:
-
-```glsl
-#version 330 core
-```
-
-## Error Handling
-
-Compilation and linking errors are:
-
-- Logged to console
-- Include shader source line numbers
-- Fatal in debug, fallback in release
+The current Game loads embedded GLSL, not loose `.glsl` files. Inspect [Game.cpp](../../game/Game.cpp) for active attribute locations and uniform names (`model`, `view`, `projection`); arbitrary lighting uniforms in examples do not define an application contract. Resource cleanup requires the OpenGL context lifecycle.

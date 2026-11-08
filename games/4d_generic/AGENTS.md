@@ -1,75 +1,20 @@
-# 4D Generic — Shared Module Library
+# Shared portfolio module maintenance — source contracts and consumer ownership
 
-## Project Overview
+Read the [library map](README.md), [repository instructions](../../AGENTS.md) and [portfolio contracts](../../docs/games.md). This is shared browser/Node helper code, not a playable game, the native runtime or proof that every consumer uses every subsystem.
 
-`4d_generic/` is the **shared foundation** for all QuadCraft games. It contains the canonical copies of `quadray.js`, `camera.js`, `projection.js`, `zoom.js`, and `synergetics.js`. All 4D games import these via `<script src="../4d_generic/...">` tags — no game has its own copy.
+## Preserve boundaries
 
-> **Not a playable game** — this is a library and reference implementation.
+- Follow each HTML entrypoint for classic-script dependency order. Doom imports ES modules and adapts the canonical Quadray class; do not invent local math copies or convert every script to one module style.
+- Distinguish raw `GridUtils.key`/`generateGrid` state from normalized/rounded `Quadray.toKey` and canonical graph traversal. Audit callers before changing either identity contract.
+- Shared physical XYZ is rank three, scale `1/sqrt(2)` with Y/Z swapped relative to scale-one Python. Preserve floating-point distance/offset invariance and scalar shared inverse arguments.
+- `BaseGame` invokes `_setupGameInput` during construction and expects `{text,color}` from `_getHUDState`. A base class is not an automatic implementation of world physics, saved games or networking.
+- `GameLoop.tickRate` is milliseconds; update dt is fixed seconds. Logical-tick consumers may ignore dt. Stop/pause do not automatically detach keys, reject commands or cancel game-owned timers.
+- `TurnManager` wraps moves with player/turn metadata. Undoing its history is not sufficient to undo board state; persistence code must match the actual record schema.
+- `ScoreManager` takes `storageKey` and maximizes high scores. Do not promise unsupported generic `key` or low-score mode options.
+- Graph transport must retain equal/opposite edge flux and mask semantics; do not call it symmetric-normalized heat or remove masked field mass.
 
-## Quick Commands
+## Change and verification routing
 
-```bash
-# Run shared module tests
-node games/4d_generic/tests/test_quadray.js
-node games/4d_generic/tests/test_synergetics.js
+Use [source/API links](README.md) instead of maintaining duplicate method inventories here. Preserve browser globals and CommonJS exports only where the actual file exposes them; DOM/Canvas modules are not pure math.
 
-# Run all shared tests (from games/)
-node tests/test_all_shared.js
-```
-
-## Shared Modules
-
-| Module | Key Exports | Purpose |
-|--------|-------------|--------|
-| `quadray.js` | `Quadray` class, `BASIS`, `distance`, `fromCartesian` | 4D tetrahedral coordinate math |
-| `camera.js` | `CameraController` class | Drag-to-rotate camera (shift-drag or left-drag modes) |
-| `projection.js` | `projectQuadray()`, `drawQuadrayAxes()` | 3D→2D perspective projection |
-| `zoom.js` | `setupZoom()` | Mouse-wheel zoom with min/max clamping |
-| `synergetics.js` | `SYNERGETICS`, `angleBetweenQuadrays`, `verifyGeometricIdentities` | Fuller's volume ratios and IVM geometry |
-| `base_game.js` | `BaseGame` class | Common game lifecycle (init, start, pause, reset) |
-| `base_renderer.js` | `BaseRenderer` class | Common rendering (canvas setup, projection, axes drawing) |
-| `game_loop.js` | `GameLoop` class | RequestAnimationFrame loop with delta tracking |
-| `grid_utils.js` | `GridUtils` | IVM neighbor lookup, distance calc, depth sorting |
-| `hud.js` | `HUD` class | On-canvas HUD rendering (status, controls, geometry) |
-| `input_controller.js` | `InputController` class | Keyboard/mouse event multiplexer |
-| `score_manager.js` | `ScoreManager` class | Win/loss/score tracking with persistence |
-| `base_board.js` | `BaseBoard` class | Common board logic (grid, distances, integrity, metadata) |
-| `entity_system.js` | `QuadrayEntity`, `EntityManager` | Entity position/velocity, collision, batch updates |
-| `turn_manager.js` | `TurnManager` class | Player rotation, move history, undo/redo |
-| `pathfinding.js` | `QuadrayPathfinder` | BFS, A*, flood fill, line-of-sight on IVM grids |
-| `hud-style.css` | — | Shared CSS for HUD panels, controls, and overlays |
-
-## How Games Import
-
-```html
-<script src="../4d_generic/quadray.js"></script>
-<script src="../4d_generic/camera.js"></script>
-<script src="../4d_generic/projection.js"></script>
-<script src="../4d_generic/zoom.js"></script>
-<script src="../4d_generic/synergetics.js"></script>
-```
-
-> **ES-module bridge:** `4d_doom/js/quadray.js` adapts the same canonical class; its browser entrypoint preloads the shared classic script, while Node uses CommonJS loading.
-
-## Tests
-
-| File | Assertions | Coverage |
-|------|-----------|----------|
-| `tests/test_quadray.js` | 16 | Constructor, clone, normalize, round-trip, distance, basis |
-| `tests/test_synergetics.js` | 27 | Volume ratios, tetrahedral angle, geometric identities |
-
-## Code Standards
-
-- **Language**: ES6+ JavaScript
-- **Purity**: Zero dependencies. Pure math logic.
-- **Dual export**: Browser globals + `module.exports` for Node.js testing
-- **Testing**: Rigorous validation of geometric identities
-
-## Key Constants (Synergetics)
-
-| Constant | Value | Description |
-|----------|-------|-------------|
-| `S3` | `√(9/8) ≈ 1.06066` | XYZ→Synergetics volume conversion |
-| `TETRA_VOL` | 1 | Unit volume |
-| `OCTA_VOL` | 4 | Relative to unit tetrahedron |
-| `CUBO_VOL` | 20 | Cuboctahedron volume |
+[Local tests](tests/README.md) cover Quadray and synergetics helpers; broader `games/tests/` suites cover other shared behaviors. Changes need focused consumer regressions and the [repository’s integrated testing/browser gates](../../docs/development/testing_guide.md). A helper-only check cannot establish an actual controller, Canvas, network or resource lifecycle. Report commands and observed results, not permanent test/coverage counts.

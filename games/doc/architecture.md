@@ -1,205 +1,29 @@
-# Games Architecture
+# Browser games, shared helpers and Python tooling
 
-> **Note on 4D Geometry & Nomenclature**: "4D" in QuadCraft strictly means **Synergetics** geometry (Quadray tetrahedral coordinates on an IVM; 12 neighbors = permutations of `(0, 1, 1, 2)`). Canonical statement: [GAMES_INDEX.md](../GAMES_INDEX.md#note-on-4d-geometry--nomenclature).
+## Three separate responsibilities
 
-> System architecture for the QuadCraft 30-game portfolio built on Quadray tetrahedral coordinates.
+| Area | Executed where | Responsibility |
+|---|---|---|
+| `4d_<key>/index.html` and `js/` | Browser | Game-specific state, rules, rendering and input |
+| `4d_generic/` | Browser; selected CommonJS exports in Node | Reusable math, projection, boards, input, clocks and optional game patterns |
+| `src/` and `run_games.py` | Python | Registry, static HTTP launch, QA, generation and analysis |
 
----
+Python does not run each browser game's simulation. Its `space/` package is a related floating-point implementation, not a universal parity layer. The native C++ prototype and historical `src/browser/`, modular `src/js/` and JSP server experiments are separate systems; see [repository architecture](../../docs/architecture.md).
 
-## Three-Layer Model
+## Launch and verification flow
 
-```mermaid
-graph TD
-    subgraph "Layer 3 — Per-Game"
-        G1["4d_chess/"]
-        G2["4d_doom/"]
-        G3["4d_snake/"]
-        GN["4d_*/  (30 games)"]
-    end
+`run_games.py` resolves its own `games/` directory, selects keys from `src/core/registry.py`, and creates one `GameServer` per selected game. Each threaded server binds loopback, serves that same games root and prints a `/4d_<key>/index.html` URL. Shared files load from `/4d_generic/`. There is no multiplayer or persistence backend in this static server.
 
-    subgraph "Layer 2 — Python Infrastructure"
-        CFG["core/config.py"]
-        REG["core/registry.py"]
-        LAUNCH["server/launcher.py"]
-        TEST["qa/testing.py"]
-        VAL["qa/validation.py"]
-        SCAFF["scaffold/"]
-        ANA["analytics/"]
-        SHARED["shared/"]
-        SPACE["space/"]
-    end
+`--validate` performs text/file checks. `--test` launches Node suites and Python unittest files; full runs recursively include shared tests. The [Chromium gate](../tests/browser/README.md) is independent and executes real rendered input scenarios for all catalog games.
 
-    subgraph "Layer 1 — Shared JS Foundation"
-        QR["quadray.js"]
-        CAM["camera.js"]
-        PROJ["projection.js"]
-        ZOOM["zoom.js"]
-        SYN["synergetics.js"]
-        BG["base_game.js"]
-        BR["base_renderer.js"]
-        GL["game_loop.js"]
-        IC["input_controller.js"]
-        GU["grid_utils.js"]
-        HUD["hud.js"]
-        SM["score_manager.js"]
-        CSS["hud-style.css"]
-    end
+## Composition, not universal inheritance
 
-    G1 & G2 & G3 & GN -->|"<script src='../4d_generic/...'>"|  QR & CAM & PROJ & BG
-    REG --> LAUNCH & TEST & VAL
-    CFG --> REG & VAL & ANA & SHARED
-    SCAFF -->|generates| GN
-    ANA -->|scans| GN
-    SPACE -.->|"Python port of"| QR & SYN & GU
-```
+Classic-script games load dependencies before consumers. Doom preloads shared geometry and runs its own ES modules. Importing a helper does not establish that the game calls it, extends it, or uses its clock/graph/storage rules. Inspect the specific board and controller.
 
-| Layer | Location | Language | Purpose |
-|-------|----------|----------|---------|
-| **1 — Shared Foundation** | `4d_generic/` | JavaScript | Quadray math, rendering, input, game engine base classes |
-| **2 — Infrastructure** | `src/` | Python | Registry, launch, test, validate, scaffold, analytics, math |
-| **3 — Per-Game** | `4d_*/` | HTML + JS | Standalone game directories with game-specific logic |
+Shared `BaseGame` composes a supplied board and renderer. Its render callback synchronizes camera rotation and calls `renderer.render()`. `BaseBoard` supplies a raw-keyed Map, not every game's state representation. Scaffold output instead creates standalone classes and an array grid.
 
----
+[Portfolio contracts](../../docs/games.md) own physical versus raw coordinates and clocks. For example, Minecraft's board exposes simulation methods, but its default controller update refreshes analysis rather than advancing board physics/time.
 
-## Directory Map
+## Focused references
 
-```text
-games/
-├── run_games.py                 # Master CLI entry point
-├── run.sh                       # Shell wrapper → delegates to run_games.py
-├── games_config.json            # JSON config for batch launches
-├── README.md / AGENTS.md        # Human + agent documentation
-├── GAMES_INDEX.md               # Canonical game portfolio index
-│
-├── src/                         # Layer 2 — Python infrastructure
-│   ├── __init__.py              # Unified public API (54 exports)
-│   ├── core/                    # Core configuration and registry
-│   │   ├── config.py            # Shared constants (ports, paths, lists)
-│   │   └── registry.py          # GAMES dict + load_config() + get_port()
-│   ├── server/                  # HTTP serving
-│   │   └── launcher.py          # GameServer (HTTP + browser open)
-│   ├── qa/                      # Quality Assurance tools
-│   │   ├── testing.py           # Node.js + Python test runner
-│   │   └── validation.py        # Structural audit engine
-│   ├── scaffold/                # GameScaffold (new game generator)
-│   ├── analytics/               # GameAnalytics + health scoring
-│   ├── shared/                  # ModuleRegistry + JSModule metadata
-│   ├── board/                   # BoardAudit + BoardCatalog (migration tracking, board inventory)
-│   └── space/                   # Quadray / IVM / XYZ / geometry
-│
-├── 4d_generic/                  # Layer 1 — Shared JS modules (17 files: 12 core + 4 optional + 1 CSS)
-│   ├── quadray.js               # Quadray coordinate class
-│   ├── camera.js                # CameraController (drag rotation)
-│   ├── projection.js            # projectQuadray() + drawQuadrayAxes()
-│   ├── zoom.js                  # setupZoom() mouse wheel
-│   ├── synergetics.js           # IVM constants + verification
-│   ├── base_game.js             # BaseGame lifecycle controller
-│   ├── base_renderer.js         # BaseRenderer with projection
-│   ├── game_loop.js             # GameLoop (rAF + delta)
-│   ├── input_controller.js      # InputController (keyboard/mouse)
-│   ├── grid_utils.js            # GridUtils (IVM grid operations)
-│   ├── hud.js                   # HUD overlay manager
-│   ├── score_manager.js         # ScoreManager (localStorage)
-│   ├── base_board.js            # (optional) BaseBoard class
-│   ├── entity_system.js         # (optional) Entity system
-│   ├── turn_manager.js          # (optional) Turn-based game manager
-│   ├── pathfinding.js           # (optional) Pathfinding helpers
-│   └── hud-style.css            # Shared HUD stylesheet
-│
-├── 4d_<game>/                   # Layer 3 — Per-game (×30)
-│   ├── index.html               # Entry point (imports generic modules)
-│   ├── AGENTS.md                # Game-specific agent instructions
-│   ├── js/                      # Game-specific JS modules
-│   │   ├── <game>_board.js      # Board / world state
-│   │   ├── <game>_renderer.js   # Rendering logic
-│   │   └── <game>_game.js       # Controller + UI
-│   └── tests/                   # Per-game unit tests
-│       └── test_<game>.js       # Node.js test file
-│
-├── scripts/                     # Maintenance automation
-├── tests/                       # Python infra tests (3 .py files) + tests/shared/ (13 JS files) + tests/space/ (1 .py file)
-└── doc/                         # ← This documentation hub
-```
-
----
-
-## Data Flow Pipelines
-
-### Launch Pipeline
-
-```mermaid
-sequenceDiagram
-    participant CLI as run_games.py
-    participant REG as registry.py
-    participant SRV as GameServer
-    participant Browser
-
-    CLI->>REG: Look up game keys in GAMES dict
-    CLI->>SRV: GameServer(key, base_port, games_dir)
-    SRV->>SRV: Serve games/ root via TCPServer
-    SRV->>Browser: Open http://127.0.0.1:{port}/{dir}/index.html
-    Browser->>SRV: Request ../4d_generic/*.js (shared modules)
-```
-
-### Test Pipeline
-
-```mermaid
-sequenceDiagram
-    participant CLI as run_games.py --test
-    participant TEST as qa/testing.py
-    participant Node as Node.js
-    participant Py as Python unittest
-
-    CLI->>TEST: run_tests(games_dir, keys)
-    TEST->>Node: Shared tests (games/tests/*.js)
-    TEST->>Node: Generic tests (4d_generic/tests/*.js)
-    TEST->>Py: Infrastructure tests (tests/*.py)
-    loop Per game
-        TEST->>Node: 4d_<game>/tests/test_*.js
-    end
-    TEST-->>CLI: passed/failed/skipped counts
-```
-
-### Validate Pipeline
-
-```mermaid
-sequenceDiagram
-    participant CLI as run_games.py --validate
-    participant VAL as qa/validation.py
-
-    CLI->>VAL: audit_all(games_dir)
-    VAL->>VAL: check_shared_dir() — verify 4d_generic/ modules
-    loop Per game
-        VAL->>VAL: validate_game() — files, imports, scaffolds
-    end
-    VAL-->>CLI: pass/fail per game
-```
-
----
-
-## JS ↔ Python Parity
-
-| Domain | JavaScript (`4d_generic/`) | Python (`src/space/`) |
-|--------|---------------------------|----------------------|
-| Coordinates | `quadray.js` → `Quadray` class | `space/quadrays.py` → `Quadray` class |
-| Constants | `synergetics.js` → IVM volumes | `space/ivm.py` → `IVM`, `SYNERGETICS` |
-| Projection | `projection.js` → `projectQuadray()` | `space/xyz.py` → `project_quadray()` |
-| Grid ops | `grid_utils.js` → `GridUtils` | `space/geometry.py` → `generate_grid()`, `neighbors()` |
-| Verification | `synergetics.js` → `verifyGeometricIdentities()` | `space/geometry.py` → `verify_geometric_identities()` |
-
----
-
-## Key Design Principles
-
-| Principle | Implementation |
-|-----------|---------------|
-| **Standalone games** | Each `4d_<game>/` folder is self-contained; copy one folder to fork |
-| **Zero build step** | Open `index.html` directly; no bundler, no transpiler |
-| **Shared foundation** | Common math/rendering via `<script src="../4d_generic/">` tags |
-| **Single source of truth** | `quadray.js` is THE Quadray implementation; games don't copy it |
-| **Registry-driven** | `GAMES` dict in `registry.py` drives launch, test, validate, analytics |
-| **ES-module bridge** | Doom uses `import/export`, but its bridge resolves the same shared `Quadray` class in browser and Node runtimes |
-
----
-
-*See also: [shared_modules_reference.md](shared_modules_reference.md) · [python_infrastructure.md](python_infrastructure.md) · [game_template.md](game_template.md)*
+[Shared browser APIs](shared_modules_reference.md) · [Python interfaces](python_infrastructure.md) · [Launch operations](launch_operations.md) · [Testing](testing_guide.md) · [New-game layout](game_template.md)

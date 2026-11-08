@@ -1,54 +1,9 @@
-# Server Infrastructure
+# Experimental JSP Var-tree synchronization protocol
 
-This directory contains server-side components for QuadCraft multiplayer and persistence.
+[QuadCraftAjax.jsp](tomcat/webapps/QuadCraft/QuadCraftAjax.jsp) is a JSON-body endpoint for browser Var-tree experiments. It is not the portfolio HTTP launcher, a native server or a durable save database.
 
-## Directory Structure
+The implemented action switch handles `help`, `ok`, legacy `readAll/writeAll`, and `writeSparse/readSparse/readWriteSparse`. `sparseVSync` still returns a placeholder comment and is not the operational sparse protocol. There are no `action:save/name/data` or GET query-string load/list-save APIs.
 
-```text
-server/
-└── tomcat/
-    └── webapps/
-        └── QuadCraft/       # QuadCraft webapp
-            ├── QuadCraftAjax.jsp
-            └── WEB-INF/
-                └── classes/  # Java classes
-```
+Sparse writes pass `root`; reads require `game`, `room` and numeric `peer.main.tNetFrom`. `readWriteSparse` performs both. Responses use action `writeSparse`, the selected room under `root`, and peer cursor bounds. The server merges each Var by strictly newer `.t`, keeping existing values on ties, and stamps server-only `.tNet` for accepted changes. Reads use inclusive `.tNet` thresholds; the browser advances with the next representable value after `tNetTo`. This is not Var.js logical-j conflict resolution.
 
-## Overview
-
-The server enables:
-
-- Save/load synchronization between browser clients
-- Shared game state for multiplayer
-- Persistent storage for game worlds
-
-## Technology Stack
-
-- **Apache Tomcat** - Java servlet container
-- **JSP** - Java Server Pages for AJAX endpoints
-- **Java** - Backend logic and data handling
-
-## Deployment
-
-1. Install Apache Tomcat
-2. Copy `webapps/QuadCraft` to Tomcat's webapps directory
-3. Start Tomcat server
-4. Access at `http://localhost:8080/QuadCraft/`
-
-## Features
-
-### AJAX Endpoints
-
-`QuadCraftAjax.jsp` provides:
-
-- Save game state
-- Load game state
-- List available saves
-
-### Cross-Browser Sync
-
-Multiple browser instances can:
-
-- Save to shared server storage
-- Load saves from other clients
-- Enable basic multiplayer
+State lives in static process memory (`V` and a separate legacy `wholeState`), with no disk persistence, authentication, authorization or authoritative simulation. Restart/redeployment can lose it. Do not expose this experiment as a production service. Java/JSP dependencies are bundled under WEB-INF/classes; preserve their attribution. Deployment needs an external Java/Tomcat installation and compatible bytecode; no minimum-version compatibility was exercised here. The webapp's `index.html_goesHere.txt` is a placement note, not a shipped browser entry page.

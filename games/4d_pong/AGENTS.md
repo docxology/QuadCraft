@@ -1,80 +1,15 @@
-# 4D Pong — Agent Instructions
+# 4D Pong — Model and runtime maintenance
 
-## Project Overview
+Read the [game guide](README.md), [module ownership](js/README.md), [test scope](tests/README.md) and [portfolio contracts](../../docs/games.md) before changing behavior.
 
-Paddle-ball game on a 4D hyper-rectangular court with positions labeled using Quadray coordinate names. Standalone browser application built on Quadray coordinates.
+## Preserve the implemented boundary
 
-## Quick Commands
+Keep per-tick ball/paddle increments distinct from seconds-based timers. Do not identify the independent court axes with four independent physical Quadray axes.
 
-```bash
-# Run tests (52 assertions)
-node tests/test_pong.js
+The controller runs at a 16 ms loop interval, polls paddle motion, calls AI in one-player mode and calls `board.step(dt)` with seconds. Serve/power timers and paddle-velocity estimates use dt, but ball displacement and paddle/AI movement are per-step increments, not velocity-times-dt integration.
 
-# Open in browser
-open index.html
+[index.html](index.html) instantiates `PongGame` after the actual shared imports and local board/renderer/controller scripts. Inheritance or an imported helper is not evidence that this game uses every shared system. Keep rules in `PongBoard`, projected drawing in `PongRenderer` and browser input/lifecycle in `PongGame`.
 
-# Start local server
-python3 -m http.server 8114
-```
+## Evidence and commands
 
-## Shared Modules
-
-Imported via `<script>` tags in `index.html` from `../4d_generic/`:
-`quadray.js`, `camera.js`, `projection.js`, `zoom.js`, `synergetics.js`
-
-## Module Dependency Order
-
-Load in this order to avoid reference errors:
-
-```text
-1. pong_board.js     # Board/world state (needs Quadray)
-2. pong_renderer.js  # Canvas rendering (needs Quadray, Board)
-3. pong_game.js      # Controller (needs all above)
-```
-
-## File Inventory
-
-### JavaScript Modules (`js/`)
-
-| File | Key Exports | Purpose |
-|------|-------------|---------|
-| `pong_board.js` | `PongBoard` | Ball position/velocity and paddle states in Quadray coordinates |
-| `pong_renderer.js` | `PongRenderer` | Projected ball, paddles, score display, and boundary walls |
-| `pong_game.js` | `PongGame` | Physics update loop, AI opponent, input handling, and scoring |
-
-### Tests (`tests/`)
-
-| File | Tests | Coverage |
-|------|-------|----------|
-| `test_pong.js` | 52 | Board creation, wall bounce, paddle hit, power-ups, AI difficulty, 2P mode, longest rally, metadata, synergetics constants |
-| `test.html` | — | Browser test runner |
-
-## Game Rules Summary
-
-- Ball bounces in 4D Quadray space
-- Two paddles positioned at opposing b/c/d-aligned court faces
-- Ball reflects off paddles and boundaries
-- Score when opponent misses the ball
-- First to 11 points wins
-
-## Code Standards
-
-- **Language**: ES6+ JavaScript (classes, const/let, arrow functions)
-- **Comments**: JSDoc for public functions
-- **Indentation**: 4 spaces
-- **Export Pattern**: Browser + Node.js dual support
-
-```javascript
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { ClassName };
-}
-```
-
-## Verification Checklist
-
-- [ ] All tests pass: `node tests/test_pong.js`
-- [ ] Browser loads: `open index.html`
-- [ ] Game plays (basic interaction)
-- [ ] Shift+drag rotates view
-- [ ] Reset button works
-- [ ] Console shows no errors
+Run commands from the QuadCraft repository root; launch with `python3.13 games/run_games.py --game pong`. See [tests/README.md](tests/README.md) for the Node and harness commands. Report exercised checks, not saved counts, production-readiness or inferred canvas coverage. Review the actual controls in the game guide rather than copying another game's bindings.

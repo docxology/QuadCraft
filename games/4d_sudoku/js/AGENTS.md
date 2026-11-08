@@ -1,5 +1,9 @@
-# js/ — Agent Notes
+# 4D Sudoku JavaScript — Change boundaries
 
-Game logic modules for the 4d_sudoku browser game (plain JS, no build step).
-Loaded by `../index.html` via `<script>` tags; shared geometry imports come from
-`../../4d_generic/`. Tests for these modules live in `../tests/`.
+Follow [module ownership and projection](README.md) and the real [HTML imports](../index.html). Shared code is in `../../4d_generic/`; do not introduce a second local coordinate implementation.
+
+Preserve canonical grid membership and the same adjacency in generator, conflicts and win checks. Do not advertise classic Sudoku constraints, unique solutions or model-level numeric validation beyond the implemented checks.
+
+Clicks/number-key events edit values. The inherited update hook is empty. R clears non-givens while preserving the puzzle; N constructs another `SudokuBoard(4)` and reconnects the renderer.
+
+Update the [game guide](../README.md) when bindings or lifecycle change. [Local tests](../tests/README.md) describe actual evidence; importing shared geometry, routing or entity code does not establish its use by this game.

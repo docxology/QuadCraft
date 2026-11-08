@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+### Accurate gameplay, geometry and deployment documentation
+
+- Audit repository documentation and internal native, browser, shared infrastructure and every game-folder guide against actual entrypoints and models; replace copied boilerplate with source-specific module purposes.
+- Replace fictional APIs and causal diagrams with current interfaces; distinguish the thirty-game portfolio from native, monolithic browser and server experiments.
+- Document raw occupancy versus physical points, parity labels versus real meshes, embedding orientation/units, loop/time/RNG ownership and per-game controls.
+- Distinguish ideal regular tetrahedra from the native prototype's actual vertex offsets, and board-callable Minecraft updates from the default loop's inactive physics/time paths.
+- Separate implemented features, historical manuscripts and unmeasured proposals; repair modular navigation and cross-suite references. Runtime behavior and immutable v0.5.0 release assets are unchanged by this documentation pass.
+
 ## v0.5.0 — 2026-11-07
 
 ### Simulation and gameplay geometry

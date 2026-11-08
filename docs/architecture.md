@@ -1,130 +1,33 @@
-# QuadCraft Architecture
+# QuadCraft architecture: three runtime families
 
-## Overview
+[Documentation index](README.md) · [Implementation detail](development/architecture.md) · [Games portfolio](games.md)
 
-QuadCraft is structured as a modular, component-based game engine focused on tetrahedral voxel rendering and manipulation. The architecture is designed to separate core systems from rendering and game-specific logic, providing a clean and extensible codebase.
+## Native tetrahedral prototype
 
-> [!NOTE]
-> For the **detailed technical architecture** with class diagrams, sequence diagrams, and full system specifications, see [development/architecture.md](development/architecture.md) (846 lines).
+The C++17 executable starts at [`src/main.cpp`](../src/main.cpp). [`Game`](../src/game/Game.cpp) owns a GLFW/OpenGL window, `World`, `Camera`, `Input` and `ChunkMesher`. This is a small synchronous prototype, not a general component-based engine.
 
-## System Architecture Diagram
-
-```mermaid
-flowchart LR
-    Core["Core\n- Coordinate System\n- World Management\n- Chunk System\n- Block System"]
-    Rendering["Rendering\n- Mesh Generation\n- Shader System\n- Rendering Pipeline\n- Texture Management"]
-    Game["Game\n- Input Handling\n- Game Logic\n- User Interface\n- Game Loop"]
-    Browser["Browser Games\n- 30 Standalone Apps\n- HTML5 Canvas\n- Quadray.js"]
-    
-    Core <--> Rendering
-    Rendering <--> Game
-    Core -.->|"shared math"| Browser
+```text
+GLFW input → Input / Camera → World / TetraChunk
+                                  ↓
+                         TerrainGenerator
+                                  ↓
+                            ChunkMesher → Mesh / Shader → OpenGL
 ```
 
-## Core Components
+`World` keys chunks by Cartesian integer triples. Blocks within each chunk use local quadrays. Mesh vertices are offset into world Cartesian space. [Chunk storage](development/chunk_system.md) and the [actual C++ interfaces](development/api_reference.md) explain the distinction.
 
-The core components handle the fundamental data structures and algorithms that drive the tetrahedral voxel system:
+The renderer emits tetrahedral faces with vertex colors, not marching-tetrahedra isosurfaces or imported texture/model assets. Camera motion is drone-like; native rigid-body collision and gravity are not implemented. Input block picking is sampled ray marching against stored keys, not exact tetrahedron intersection.
 
-### Coordinate System
+## Historical browser geometry experiments
 
-- **Vector3**: Traditional 3D vector for Cartesian coordinates
-- **Quadray**: Four-dimensional coordinate system for tetrahedral space
-- **Conversion utilities**: Functions to convert between coordinate systems
-- **IVM constants**: Synergetics volume ratios and the S3 constant (√(9/8))
+[`src/browser/index.html`](../src/browser/index.html) and [`src/js/experiments/`](../src/js/experiments/) contain Canvas-based geometry experiments. Brushes, compressed CCP ball columns, quaternion arrays and cone-plane ellipse rendering belong to particular HTML snapshots, not a cross-runtime SDK. The newer browser page uses a `V`/`Var` tree and polls a JSP endpoint for experimental state merging.
 
-### World Management
+Read [JavaScript runtime map](development/javascript_implementation.md) before reusing a snippet, and [networking limits](development/multiplayer_system.md) before interpreting synchronization as multiplayer support.
 
-- **World**: Manages the entire game world, including chunks and block access
-- **TetraChunk**: Manages a section of the world with tetrahedral elements
-- **TerrainGenerator**: Procedurally generates terrain using noise functions
+## Thirty browser games
 
-### Block System
+The [`games/src/core/registry.py`](../games/src/core/registry.py) catalog names the portfolio. Each game has its own board/controller/Canvas renderer and imports helpers from `games/4d_generic/`; Doom uses ES modules. Shared files must remain beside game directories when serving or copying them.
 
-- **Block**: Defines block types and their properties
-- **BlockRegistry**: Manages all available block types
-- **TetrahedralElement**: Represents a single tetrahedral voxel with position and type
+The Python launcher is a static HTTP server launcher, not a gameplay backend. Portfolio rules may retain independent raw four-index slots even when quadray projection maps two slots to the same physical point. Physical quadrays themselves describe three dimensions modulo a common offset, not four independent Euclidean axes.
 
-## Rendering Components
-
-The rendering components handle the visual representation of the tetrahedral world:
-
-### Mesh Generation
-
-- **Mesh**: Represents a renderable 3D mesh with vertices and indices
-- **ChunkMesher**: Converts tetrahedral elements into renderable meshes
-- **Marching Tetrahedrons**: Algorithm for generating smooth surfaces from tetrahedral data
-
-### Shader System
-
-- **Shader**: Manages OpenGL shader programs
-- **Shader pipeline**: Handles lighting, texturing, and special effects
-
-## Game Components
-
-The game components handle user interaction and game logic:
-
-### Input Handling
-
-- **Input**: Processes keyboard and mouse input
-- **Camera**: Manages the player's view of the world
-- **Ray Casting**: Determines which block the player is looking at
-
-### Game Logic
-
-- **Game**: Manages the overall game state and main loop
-- **Update cycle**: Updates the world, handles input, and triggers rendering
-
-## Browser Games Layer
-
-The 30 standalone browser games share the Quadray coordinate math but are otherwise independent:
-
-- Each game is a **self-contained HTML5 application** in `games/<name>/`
-- All games load the single shared `games/4d_generic/quadray.js` module — there are no per-game copies
-- Games use HTML5 Canvas for rendering (no WebGL dependency)
-- See [games.md](games.md) for the full portfolio
-
-## Data Flow
-
-### Block Placement/Removal Flow
-
-1. Player input is captured in the `Input` class
-2. A ray is cast from the camera in the direction the player is looking
-3. The first non-air block hit by the ray is identified
-4. The block is removed (left click) or a new block is placed adjacent to it (right click)
-5. The affected chunk is marked as "dirty"
-6. In the next update cycle, the dirty chunk's mesh is regenerated
-7. The updated mesh is rendered in the next frame
-
-### Terrain Generation Flow
-
-1. When a new chunk is requested, the `World` creates a `TetraChunk` instance
-2. The `TerrainGenerator` is called to fill the chunk with tetrahedral elements
-3. Noise functions are used to determine the terrain height and features
-4. Tetrahedral elements are created based on the noise values
-5. The chunk is marked as generated
-6. The chunk is also marked as dirty to trigger mesh generation
-7. The `ChunkMesher` creates a renderable mesh from the tetrahedral elements
-8. The mesh is stored and rendered by the rendering system
-
-## Memory Management
-
-- **Chunk Loading/Unloading**: Chunks are loaded around the player and unloaded when too far away
-- **Mesh Caching**: Generated meshes are cached to avoid unnecessary regeneration
-- **Sparse Storage**: Only non-air elements are stored to save memory
-
-## Performance Optimizations
-
-- **Dirty Flag System**: Only regenerate meshes for chunks that have changed
-- **Chunk Border Handling**: Special handling for elements at chunk boundaries
-- **View Frustum Culling**: Only render chunks that are visible to the camera
-- **Level of Detail**: Reduce mesh complexity for distant chunks
-
-## Extensibility
-
-The architecture is designed to be extensible in several ways:
-
-- **Block Types**: New block types can be added to the `BlockRegistry`
-- **Terrain Features**: The `TerrainGenerator` can be extended with new terrain features
-- **Rendering Effects**: The shader system can be enhanced with new visual effects
-- **Game Mechanics**: The modular design allows new game mechanics to be added without major refactoring
-- **New Games**: The standalone game architecture allows adding new 4D games without touching the core engine
+See [games and simulation contracts](games.md) for fixed time, RNG and graph semantics; [setup](development/setup_guide.md) and [verification commands](development/testing_guide.md) for the independent native, Node/Python and real-Chromium checks.

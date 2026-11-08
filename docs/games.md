@@ -1,126 +1,88 @@
-# Games Portfolio
+# Thirty browser games: launch, shared modules, and simulation contracts
 
-Overview documentation for the 30 standalone 4D browser games built on the QuadCraft Quadray coordinate system.
+[Documentation index](README.md) · [Portfolio index](../games/GAMES_INDEX.md) · [Verification](development/testing_guide.md)
 
-> [!TIP]
-> For launch scripts, per-game file structure, and the Python launcher, see [games/README.md](../games/README.md). For the canonical game index with metadata, see [games/GAMES_INDEX.md](../games/GAMES_INDEX.md).
+## Portfolio summary
 
-## Portfolio Summary
+The catalog in [`games/src/core/registry.py`](../games/src/core/registry.py) defines thirty browser applications. They use game-specific Canvas renderers/controllers and shared JavaScript, not native C++ bindings or the historical JSP game-state service.
 
-All 30 games are **standalone browser applications** — zero build step, zero server requirement. Each game runs from a single `index.html` file in `games/<name>/`.
+| Group | Catalog keys |
+|---|---|
+| Board and tabletop | `chess`, `checkers`, `reversi`, `backgammon`, `catan`, `mahjong`, `connect_four`, `go`, `hex` |
+| Arcade/action | `asteroids`, `doom`, `tower_defense`, `tetris`, `snake`, `pong`, `breakout`, `pacman`, `space_invaders`, `frogger`, `bomberman` |
+| Sandbox/simulation | `life`, `simant`, `minecraft` |
+| Puzzles/adventure | `minesweeper`, `sokoban`, `2048`, `rogue`, `memory`, `sudoku`, `lights_out` |
 
-**Total: 30 games** — see [games/GAMES_INDEX.md](../games/GAMES_INDEX.md) for the full genre-grouped list of all 30 games with per-game test counts, completion percentages, and key mechanics.
+“4D” in game names often refers to raw four-index rules. The physical quadray embedding has rank three. The catalog is not a claim of production completeness, identical rules or feature parity across games.
 
-## Quick Start
+## Quick start
 
-```bash
-# Open any game directly (no server needed for basic play)
-open games/4d_chess/index.html
+From the repository root:
 
-# Or use the shell wrapper from the repository root
-./games/run.sh chess    # Opens on port 8100
-
-# Or use the Python launcher for multiple games
-python3 games/run_games.py --game chess doom life
-python3 games/run_games.py --all                  # All 30 simultaneously
-python3 games/run_games.py --test                 # Run all unit tests
+```sh
+python3.13 games/run_games.py --list
+python3.13 games/run_games.py --game chess doom life
+python3.13 games/run_games.py --game doom --no-browser
+python3.13 games/run_games.py --all --base-port 9000
 ```
 
-## Standalone Architecture
+The launcher starts static HTTP servers at base port plus each registry offset and stops them on Ctrl+C. `./games/run.sh chess` is a convenience wrapper that chooses its own available Python interpreter. No npm build is required for ordinary play.
 
-Each game follows an identical self-contained structure:
+Serve the full `games/` hierarchy, preserving `4d_generic/` beside the game directories. A game folder alone is not self-contained. Use HTTP rather than promising `file://` support for all games: Doom loads ES modules. These HTTP servers do not provide gameplay synchronization or multiplayer.
 
-```text
-games/<game_name>/
-├── index.html              # Entry point — open in browser; loads ../4d_generic/quadray.js
-├── js/
-│   ├── <game>_board.js     # Board / world state
-│   ├── <game>_renderer.js  # Canvas rendering
-│   └── <game>_game.js      # Controller + UI logic
-└── tests/
-    └── test_<game>.js      # Node.js unit tests
-```
+## Standalone architecture
 
-### Why Standalone?
+Typical source organization is `games/4d_<key>/index.html`, `js/<key>_board.js`, `js/<key>_renderer.js`, `js/<key>_game.js` and `tests/test_<key>.js`. Games may have additional geometry, UI, storage or analysis modules; Doom has its own ES-module layout and math bridge.
 
-- **Zero build step** — open `index.html` and play
-- **Independent versioning** — each game can be tagged/released separately
-- **Easy forking** — copy one folder to start a new game
-- **No coupling** — updating Chess never breaks Checkers
-- **Portable** — deploy to any static host (GitHub Pages, S3, Netlify)
+[`games/4d_generic/quadray.js`](../games/4d_generic/quadray.js) implements the shared physical embedding. [`synergetics.js`](../games/4d_generic/synergetics.js) owns associated constants/helpers. Camera, projection, input, game-loop and HUD helpers are shared; base-board/entity/turn/pathfinding helpers are optional and not every controller subclasses `BaseGame`.
 
-### Shared Math Foundation
+Shared modules are real coupling: changing them can affect many games. C++ `Quadray::fromCartesian(Vector3)` and shared JS `Quadray.fromCartesian(x,y,z)` express the same native/shared embedding but are not identical language APIs. Historical HTML experiments define separate local helpers.
 
-All 30 games import the single canonical **`games/4d_generic/quadray.js`** module (loaded via `<script src="../4d_generic/quadray.js">` in each game's `index.html`) implementing:
+## Raw labels and physical graphs
 
-- Quadray coordinate class with `(a, b, c, d)` components
-- Cartesian ↔ Quadray conversion (same formulas as `src/core/coordinate/Quadray.h`)
-- Zero-minimum normalization
-- Distance calculations
-- IVM volume ratios and Synergetics constants
+[`GridUtils`](../games/4d_generic/grid_utils.js) deliberately exposes two spaces:
 
-There is a single source of truth — updating `games/4d_generic/quadray.js` updates the math for every game with no per-game copies to keep in sync. (4D Doom uses ES Modules and imports through a thin `js/quadray.js` bridge file that re-exports from the shared module — see `games/4d_doom/js/quadray.js`.)
+| Operation | Contract |
+|---|---|
+| `generateGrid(size)` / `key(a,b,c,d)` | Raw `size^4` labels / raw string key, with no gauge reduction |
+| `generateCanonicalGrid(size)` | Unique zero-minimum integer labels, `size^4 - (size-1)^4` for positive integer size |
+| `neighbors(a,b,c,d)` | Twelve permutations of `(0,1,1,2)` added then zero-minimum normalized; physical neighbors independent of input gauge |
+| `boundedNeighbors(...,size)` | Those canonical physical neighbors filtered to coefficient bounds |
+| `manhattan` / `euclidean` | Raw four-coefficient metrics, not embedded Cartesian metrics |
+| `Quadray.distance` | Physical Cartesian distance in the native/shared scale |
+
+Canonical twelve-neighbor steps preserve coefficient-sum modulo four, so retaining all canonical integer labels retains four graph sublattices, not one connected FCC contact graph. A coefficient-unit basis vector has physical length `sqrt(3/2)`; the twelve contact steps have length 2 in this embedding. `Quadray.toIVM` snaps normalized components with `Math.round`; it is not an XYZ-nearest-lattice search.
+
+Do not normalize every board key indiscriminately. [`BaseBoard`](../games/4d_generic/base_board.js) and [`ConnectFourBoard`](../games/4d_connect_four/js/connect_four_board.js) keep raw alias slots independent. [`RogueBoard`](../games/4d_rogue/js/rogue_board.js) instead enumerates canonical cells for physical-neighbor navigation. [`SimAntBoard`](../games/4d_simant/js/simant_board.js) uses an eight-neighbor **raw ±unit-component graph**, not the twelve physical CCP neighbors. A geometric round trip cannot recover a raw alias's identity.
+
+## Time and random-state ownership
+
+[`GameLoop`](../games/4d_generic/game_loop.js) accepts `tickRate` in **milliseconds**, accumulates display elapsed milliseconds (capped at 250 per frame), and invokes `update(tickRate / 1000)` in fixed **seconds**. Its render argument is an accumulator fraction, not elapsed seconds. [`BaseGame`](../games/4d_generic/base_game.js) forwards update seconds; its default tick rate is 16 ms. Individual games may use logical ticks or specialized loops instead of continuously integrating dt.
+
+Doom's [`DoomGame`](../games/4d_doom/js/doom_game.js) has a separate 60 Hz accumulator and settles elapsed time under the old input state before applying live input changes. SimAnt's board `update()` advances one logical tick; transport/evaporation cadence is expressed in those ticks. Native `Game::run()` and historical browser experiments have different variable-delta loops; their timing contracts do not transfer automatically.
+
+`GridUtils.createSeededRng(seed)` creates an independent Mulberry32 stream with a modulo-2^32 seed. `shuffle(array,rngFn)` accepts an optional stream, but `randomCoord(size)` uses global `Math.random`. Asteroids/SimAnt accept board seeds; Rogue optionally accepts one. Doom generation still calls `Math.random`. A fixed seed only reproduces consumers that actually own/use that stream; there is no universal replay, seeded reset or save-state guarantee for all thirty games.
+
+## Conservative transport is not symmetric-normalized heat
+
+[`ConservativeGraphField`](../games/4d_generic/graph_field.js) takes `(size, edges)` and `step(values, alpha, out=null, active=null)`. It removes duplicate/self edges and applies synchronous flux `alpha/maxDegree * (value[v]-value[u])` with equal-and-opposite updates. `alpha` is a dimensionless mixing fraction in `[0,1]`, not seconds or a material diffusion constant. Output must not alias input. An inactive mask removes incident edges but retains the site's stored value.
+
+Transport conserves the uniform-site sum up to floating-point arithmetic; it is not degree-normalized or symmetric-normalized heat. SimAnt runs masked transport every ten logical ticks with mixing 0.8 and separately applies 2% evaporation every five ticks. Its source/saturation/evaporation/Float32-rounding accounting is separate from the conservative kernel.
 
 ## Testing
 
-All games include Node.js-runnable unit tests:
-
-```bash
-# Run all tests via Python launcher
-python3 games/run_games.py --test
-
-# Run tests for specific games
-python3 games/run_games.py --test --game chess doom
-
-# Run a single game's suite directly (test_<key>.js is the runnable entry
-# point per game; lib_*.js files are shared helper modules, not standalone tests)
-node games/4d_chess/tests/test_chess.js
+```sh
+python3.13 games/run_games.py --test
+python3.13 games/run_games.py --test --game chess doom
+python3.13 games/run_games.py --validate
 ```
 
-Test coverage includes:
+The unfiltered logic run includes nested shared JavaScript/Python tests; structural validation is not a browser gameplay test. The separate [Chromium gate](../games/tests/browser/README.md) exercises actual inputs/state/rendering for all catalog games and records real pointer-capture availability. See [testing guide](development/testing_guide.md) for commands and coverage boundaries rather than a frozen assertion total.
 
-- Quadray coordinate math (conversion, normalization, distance)
-- Game-specific logic (legal moves, win conditions, scoring)
-- IVM/Synergetics constants (volume ratios, basis vector lengths)
+## Adding a new game
 
-## Relationship to Core QuadCraft
+Use the existing [scaffold guide](../games/doc/scaffold_guide.md) and [game template](../games/doc/game_template.md). Implement actual board/render/input behavior, register metadata in `games/src/core/registry.py`, preserve shared script ordering, and add behavioral tests and real-browser coverage. A generated folder is not a completed game. Update the [portfolio index](../games/GAMES_INDEX.md) rather than duplicating per-game inventories throughout the docs.
 
-The browser games share the **mathematical foundation** with the C++ engine but are otherwise independent:
+## Relationship to core QuadCraft
 
-```mermaid
-flowchart TD
-    subgraph "Core Engine (C++)"
-        Quadray_h["src/core/coordinate/Quadray.h"]
-        TetraChunk["src/core/world/TetraChunk.h"]
-        Renderer["src/render/"]
-    end
-
-    subgraph "Browser Games (JS)"
-        quadray_js["games/4d_generic/quadray.js"]
-        game_board["*_board.js"]
-        game_renderer["*_renderer.js"]
-    end
-
-    Quadray_h -.->|"same math"| quadray_js
-    quadray_js --> game_board
-    game_board --> game_renderer
-```
-
-## Adding a New Game
-
-1. Create `games/<name>/` following the standalone structure
-2. Load `../4d_generic/quadray.js` via `<script>` tag in `index.html` (do not copy it)
-3. Implement `<name>_board.js`, `<name>_renderer.js`, `<name>_game.js`
-4. Add tests in `tests/`
-5. Add entry to `GAMES` registry in `run_games.py`
-6. Create `run_<name>.sh` script
-7. Update this doc and [docs/README.md](README.md) with the new game
-
-## Cross-References
-
-- [Quadray Coordinates (Implementation)](quadray_coordinates.md) — coordinate math used by all games
-- [Quadray Coordinates (Mathematics)](mathematics/quadray_coordinates.md) — detailed mathematical treatment
-- [IVM & Synergetics](mathematics/ivm_synergetics.md) — volume ratios used by Doom, Tower Defense, and others
-- [Testing Guide](development/testing_guide.md) — full testing infrastructure
-- [games/README.md](../games/README.md) — launch scripts and port assignments
-- [games/GAMES_INDEX.md](../games/GAMES_INDEX.md) — canonical portfolio index
+The native prototype, browser geometry experiments and portfolio share mathematical interests but no unified world/entity/save/network runtime. Start with [architecture boundaries](architecture.md), [coordinate contracts](quadray_coordinates.md) and the selected game's own documentation before transferring assumptions between them.

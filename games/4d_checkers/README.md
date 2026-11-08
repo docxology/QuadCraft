@@ -1,101 +1,53 @@
-# 4D Quadray Checkers
+# 4D Checkers — Canonical-position jumps and promotion
 
-A 4D checkers game using [Quadray coordinates](https://en.wikipedia.org/wiki/Quadray_coordinates) — tetrahedral basis vectors in four-dimensional space.
+A local two-player checker variant with seven pieces per side and normalized Quadray position identity.
 
-## Play
+“4D” is the portfolio name. Physical Quadray projection has rank three; raw board labels may deliberately carry additional game state. See the [portfolio coordinate/time contract](../../docs/games.md).
 
-Open `index.html` in any modern browser. No build step or server required.
+## Quick Start
 
-```bash
-open index.html
-# or
-python3 -m http.server 8080
-# then visit http://localhost:8080/games/4d_checkers/
-```
-
-## How It Works
-
-### Board Topology
-
-The board is a **4×4×4×4 grid** in Quadray space. Each position has coordinates `(a, b, c, d)` where each component ranges from 0 to 3.
-
-- **Red** starts at Sum 0 and Sum 2 positions (near origin).
-- **Black** starts at Sum 8 and Sum 6 positions (far side).
-
-### Movement
-
-Pieces move **diagonally** — changing exactly **two** Quadray coordinates by ±1 per step. This gives 6 possible directions, analogous to diagonal movement in standard checkers.
-
-- **Red** moves to increase coordinate sum (away from origin).
-- **Black** moves to decrease coordinate sum (toward origin).
-- **Kings** can move in both directions.
-
-### Capture
-
-Jump over an adjacent enemy piece to an empty square beyond it, removing the captured piece — standard checkers jump mechanics extended to 4D.
-
-### Promotion
-
-- **Red** promotes to King when reaching Sum ≥ 8.
-- **Black** promotes to King when reaching Sum ≤ 0.
-
-## File Structure
-
-```text
-4d_checkers/
-├── index.html              # Game entry point (premium dark UI)
-├── js/
-│   ├── checkers_board.js   # Board logic, pieces, move generation
-│   ├── checkers_game.js    # Game controller & interaction
-│   └── checkers_renderer.js# Canvas 3D rendering & HUD
-│   (quadray.js is loaded from ../4d_generic/quadray.js — shared 4D
-│   tetrahedral coordinate module, not a local file)
-├── tests/
-│   ├── test_checkers.js    # Node.js unit tests (11 tests)
-│   └── test.html           # Browser test runner
-├── README.md               # ← You are here
-└── AGENTS.md               # Agent coding instructions
-```
-
-## Tests
+From the QuadCraft repository root, with Python 3.13 and a modern browser:
 
 ```bash
-# Run all tests
-node tests/test_checkers.js
-
-# Expected output:
-# ✅ PASSED: Board should have pieces
-# ✅ PASSED: Should have Red pieces
-# ✅ PASSED: Origin should have Red piece
-# ✅ PASSED: Piece at origin should have moves
-# ✅ PASSED: Should serve move to (1,1,0,0)
-# ✅ PASSED: Should have a capture move
-# ✅ PASSED: Capture target should be (2,2,0,0)
-# ✅ PASSED: Start should be empty
-# ✅ PASSED: Target should be occupied
-# ✅ PASSED: Captured piece should be gone
-# ✅ PASSED: Piece should promote to King at Sum >= 8
-# All tests completed!
+python3.13 games/run_games.py --game checkers
 ```
 
-Or open `tests/test.html` in a browser for in-browser verification.
+Serve the parent `games/` tree, not this game directory alone: [index.html](index.html) loads sibling `../4d_generic/` assets. No JavaScript bundling step is needed. The static launcher is not a multiplayer backend.
 
-## Controls
+## Game Mechanics
 
-| Action | Input |
-|--------|-------|
-| Select piece | Click on your piece |
-| Move | Click a green indicator |
-| Capture | Click a red-haloed indicator |
-| Rotate view | Shift + drag |
-| New game | Click "↻ New Game" button |
+Initial Red pieces occupy low coordinate sums and Black pieces high sums. Men add one of the six positive two-axis pairs for Red and subtract it for Black; kings can do both. Moves normalize through Quadray arithmetic, bounds use normalized components in `[0,size)`, and captures jump one enemy. Promotion uses normalized sum ≥8 for Red or ≤0 for Black.
 
-## Technical Details
+### Clock and lifecycle
 
-- **Rendering**: HTML5 Canvas with perspective projection
-- **Coordinate System**: Quadray (a, b, c, d) with zero-minimum normalization
-- **Module Pattern**: Browser globals + CommonJS dual export
+Piece moves are discrete actions; `update()` performs no simulation work. A shared render loop handles display and camera state, not automatic turns.
 
----
+## Key Controls
 
-*Part of the [QuadCraft](../../) project — Exploring 4D tetrahedral geometry through interactive applications.*
+Click an own piece, then a displayed destination; left-drag rotates the view and the wheel zooms. M chooses a random move, N starts a new game, R resets and P pauses the loop.
+
+## Architecture
+
+- [Model](js/checkers_board.js): `CheckersBoard` owns game state and rules.
+- [Renderer](js/checkers_renderer.js): `CheckersRenderer` — Projected grid/pieces, selected destinations and move indicators, with separate piece and move-target hit tests.
+- [Controller](js/checkers_game.js): `CheckersGame` wires input and lifecycle.
+- [Module guide](js/README.md) describes additional helpers and load boundaries.
+
+Canonical `position.toKey()` merges common-offset aliases; this is not 256 physically distinct slots. Generated simple moves and single jumps do not implement mandatory captures or chained multi-jumps. The initial even-sum arrangement is not a separate general parity-validation API.
+
+## Testing
+
+From the repository root:
+
+```bash
+python3.13 games/run_games.py --test --game checkers
+```
+
+[Tests and limitations](tests/README.md) distinguish logic checks from actual browser interaction. No saved count or production-readiness claim replaces current results.
+
+## Documentation
+
+- [Maintenance instructions](AGENTS.md)
+- [Shared modules](../4d_generic/README.md)
+- [Game index](../GAMES_INDEX.md)
+- [QuadCraft](../../README.md)

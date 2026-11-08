@@ -1,44 +1,5 @@
-# Entity System - AI Agent Guidelines
+# Native Euler camera and frustum interface maintenance
 
-## Current State
+Keep cached Cartesian/quadray position and frustum updates coherent. Inspect Game/Input callers before changing view matrix storage or movement units. Do not document a Matrix4 return type, an ECS, quaternion rotation or terrain collision as implemented native behavior.
 
-The entity system currently contains only the Camera. Future expansion may include:
-
-- Player entity
-- NPCs
-- Physics objects
-
-## Camera Modification Guidelines
-
-### Orientation
-
-- Use quaternions for smooth rotation (see `docs/development/quaternion_camera_system.md`)
-- Avoid gimbal lock in pitch constraints
-- Consider controller support for rotation
-
-### Position
-
-- Position updates should respect world boundaries
-- Coordinate with chunk loading system
-- Smooth movement with delta time
-
-### View Matrix
-
-- Follow OpenGL conventions (right-handed)
-- Update projection for aspect ratio changes
-- Frustum planes for culling
-
-## Adding New Entities
-
-If adding new entity types:
-
-1. Consider common base class/interface
-2. Implement position in both Cartesian and Quadray
-3. Add serialization for save/load
-4. Integrate with physics if needed
-
-## Performance Notes
-
-- Camera position drives chunk loading
-- Update view matrix only when changed
-- Cache frustum planes between frames
+Read the adjacent [directory guide](README.md) before changing this area. Report source inspection separately from executed runtime checks.

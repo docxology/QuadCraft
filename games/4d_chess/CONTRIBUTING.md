@@ -1,213 +1,32 @@
-# Contributing to 4D Quadray Chess
+# Contributing to Quadray Chess — rule changes, real consumers and documentation
 
-Thank you for your interest in contributing! This guide explains how to get started.
-
----
+Read [game maintenance instructions](AGENTS.md), [architecture](docs/architecture.md) and the [repository contribution/development guidance](../../AGENTS.md) first. The browser game, shared library and native runtime have different ownership and verification routes.
 
 ## Development Setup
 
-### Prerequisites
-
-- Modern web browser (Chrome, Firefox, Safari, or Edge)
-- Node.js (for running tests via CLI)
-- Text editor or IDE
-
-### Quick Start
+A modern browser serves the game; Node.js runs logic tests and Python 3.13 runs the repository launcher/QA. From the QuadCraft checkout root:
 
 ```bash
-# Clone the repository
-git clone https://github.com/docxology/QuadCraft.git
-cd QuadCraft/4d_chess
-
-# Open in browser
-open index.html
-
-# Run tests
-cd tests && node test_chess.js
+python3.13 games/run_games.py --game chess
+node games/4d_chess/tests/test_chess.js
 ```
 
----
+Keep the parent `games/` directory as the HTTP root so `../4d_generic/` assets resolve. There is no package/bundler build step for this page; external fonts are presentation resources, not a universal zero-dependency guarantee.
 
-## Project Structure
+## Source boundaries
 
-```text
-4d_chess/
-├── js/           # JavaScript modules
-├── docs/         # Documentation
-├── tests/        # Test suite
-├── index.html    # Main game page
-└── README.md     # Project overview
-```
-
----
-
-## Code Standards
-
-### JavaScript Style
-
-- Use ES6+ features (classes, const/let, arrow functions)
-- JSDoc comments for public functions
-- 4-space indentation
-- Descriptive variable names
-
-### Example
-
-```javascript
-/**
- * Calculate distance between two Quadrays.
- * @param {Quadray} q1 - First position
- * @param {Quadray} q2 - Second position
- * @returns {number} Euclidean distance
- */
-static distance(q1, q2) {
-    const diff = q1.subtract(q2);
-    return diff.length();
-}
-```
-
-### Module Export Pattern
-
-All modules support browser and Node.js:
-
-```javascript
-// At end of module
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { ClassName };
-}
-```
-
----
+- Change piece destinations in [chess_pieces.js](js/chess_pieces.js), maintaining explicit directed semantics and source-backed [movement documentation](docs/piece-movement.md).
+- Change canonical occupancy/bounds in [chess_board.js](js/chess_board.js), auditing `position.toKey()` callers rather than normalizing unrelated raw-label games.
+- Change selection/turns/timers in [chess_game.js](js/chess_game.js); shared BaseGame calls the input hook during construction, before later subclass fields exist.
+- Keep Canvas/picking in the overview/FPV renderers, and page controls/script order in `index.html`.
+- Storage/history changes must use real TurnManager-wrapped records and getter-only controller state. The current legacy helper mismatch is described in [API/notation](docs/notation.md); tests with writable flat helper objects do not prove a browser round-trip.
 
 ## Testing
 
-### Running Tests
+Follow [test scope](tests/README.md) and the [repository testing guide](../../docs/development/testing_guide.md). Use genuine behavior regressions for uncertain movement, capture, geometry, timer ownership or resource/state transitions; avoid source-text, wording, fixed-count or existence-only tests. Maintain output and failure exits recognized by the launcher.
 
-```bash
-# CLI (Node.js)
-cd tests && node test_chess.js
-
-# Browser
-open tests/test.html
-```
-
-### Adding Tests
-
-1. Open `tests/test_chess.js`
-2. Find or create appropriate `describe` block
-3. Add `it` test case
-
-```javascript
-test.describe('Your Module', () => {
-    test.it('should do something', () => {
-        const result = yourFunction();
-        test.assertEqual(result, expected, 'Description');
-    });
-});
-```
-
-### Test Assertions
-
-- `test.assertEqual(actual, expected, message)`
-- `test.assertTrue(condition, message)`
-- `test.assertFalse(condition, message)`
-- `test.assertApprox(actual, expected, tolerance, message)`
-
----
-
-## Making Changes
-
-### 1. Create a Branch
-
-```bash
-git checkout -b feature/your-feature-name
-```
-
-### 2. Make Changes
-
-- Edit code
-- Add tests
-- Update documentation
-
-### 3. Test Your Changes
-
-```bash
-cd tests && node test_chess.js
-# Ensure all tests pass
-```
-
-### 4. Commit
-
-```bash
-git add -A
-git commit -m "Add: feature description"
-```
-
-### 5. Push and Create PR
-
-```bash
-git push origin feature/your-feature-name
-# Create pull request on GitHub
-```
-
----
-
-## Adding New Features
-
-### New Piece Type
-
-1. Edit `js/chess_pieces.js`
-2. Create class extending `Piece`
-3. Implement `getValidMoves(board)`
-4. Add to `PieceType` enum
-5. Update `createPiece()` factory
-6. Add tests in `test_chess.js`
-
-### New Analysis Metric
-
-1. Edit `js/chess_analysis.js`
-2. Add function following existing pattern
-3. Add to exports
-4. Add tests
-
-### New UI Feature
-
-1. Add HTML in `index.html`
-2. Add CSS styles
-3. Add handler in `chess_game.js`
-4. Connect via event listener
-
----
+Before a behavioral change is accepted, run the affected Node/shared suites, portfolio validation and actual browser checks for loading, selection, movement, camera/zoom, pause/reset, console errors and any affected persistence/timer path. The historical HTML test runner is stale; do not present it as passing equivalent coverage. Record only executed commands/results.
 
 ## Documentation
 
-### Updating Docs
-
-- Keep `docs/api-reference.md` in sync with code
-- Update `docs/architecture.md` for structural changes
-- Update `README.md` for user-facing changes
-
-### Documentation Format
-
-- Use Markdown
-- Include code examples
-- Add tables for structured data
-
----
-
-## Code of Conduct
-
-- Be respectful and inclusive
-- Focus on constructive feedback
-- Help others learn
-
----
-
-## Questions?
-
-Open an issue on GitHub for:
-
-- Bug reports
-- Feature requests
-- General questions
-
-Thank you for contributing!
+Use [the docs index](docs/README.md) and scoped instructions. Preserve filenames, repair relative/heading links and update source-backed examples. Separate pseudo-legal generated moves from full chess legality, position heuristics from validated strategy, exposed legacy UI from reliable behavior, and physical rank-three geometry from raw label counts. Do not maintain saved green badges or measured-quality claims without current evidence.

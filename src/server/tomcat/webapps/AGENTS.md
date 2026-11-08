@@ -1,5 +1,5 @@
-# webapps/ — Agent Notes
+# Tomcat webapp context inventory maintenance
 
-Standard Tomcat webapps directory; single webapp `QuadCraft/` (README already
-documents the contract). Deploy target for the Java-backed serving path — the
-main browser game in `src/browser/` does not need Tomcat.
+Preserve the application context/package paths. Do not conflate static browser serving with JSP deployment or claim a running service from directory presence.
+
+Read the adjacent [directory guide](README.md) before changing this area. Report source inspection separately from executed runtime checks.

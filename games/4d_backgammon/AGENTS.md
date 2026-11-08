@@ -1,71 +1,25 @@
-# 4D Backgammon - Agent Instructions
+# 4D Backgammon maintenance — Dice-driven race on a projected 24-point track
 
-## Project Overview
+Read the [game guide](README.md), [repository instructions](../../AGENTS.md) and [portfolio contracts](../../docs/games.md) before changing behavior. This folder is a browser game, not the native QuadCraft runtime.
 
-4D Backgammon reimagines the classic board game on a 4D spiral track. The "board" is a linear path of 24 points coiled through 4D space. Players move checkers based on dice rolls, bearing off at the end. **Production-ready** with 8 passing tests.
+## Source ownership
 
-## Quick Commands
+- [index.html](index.html) is authoritative for script order, page controls and construction.
+- [js/README.md](js/README.md) maps `BackgammonBoard`, `BackgammonRenderer` and `BackgammonGame` to their actual files.
+- [tests/README.md](tests/README.md) records the actual source paths and historical browser-runner limitations.
 
-```bash
-# Run all tests (8 tests, 100% pass)
-node tests/test_backgammon.js
+## Preserve game-specific invariants
 
-# Open in browser
-open games/4d_backgammon/index.html
+Keep point indices, bar/off sentinels and dice consumption distinct from projected coordinates. Audit the first-valid-move click policy separately from board move generation.
 
-# Start local server (Port 8106)
-./games/run.sh backgammon
-```
+Turns change through board actions, not elapsed-time integration. The shared loop provides camera/HUD rendering; it does not roll dice or advance pieces automatically.
 
-## Key Directories
+## Supported scope
 
-| Directory | Files | Purpose |
-|-----------|-------|---------|
-| `js/` | 3 modules | Core logic (Quadray, Board, Renderer, Game) |
-| `tests/` | 1 file | Test suite (8 tests) |
+Board-level bar/bearing-off support is broader than the point-click UI: the renderer hit test selects numbered track points. Do not describe this as a complete standard Backgammon interface or an automatic opponent.
 
-## Shared Modules
+Do not infer inherited APIs from scripts merely being loaded. Keep raw storage, normalized physical points, graph edges and display geometry separate. Link shared math rather than copying a conflicting distance formula or fabricated local `quadray.js` API.
 
-Imported via `<script>` tags in `index.html` from `../4d_generic/`:
-`quadray.js`, `camera.js`, `projection.js`, `zoom.js`, `synergetics.js`
+## Verification expectations
 
-## Module Dependency Order
-
-Load in this order:
-
-```
-1. backgammon_board.js   # Game state, points, moves
-2. backgammon_renderer.js# Canvas rendering of spiral
-3. backgammon_game.js    # Controller, Dice logic
-```
-
-## File Inventory
-
-### JavaScript Modules (`js/`)
-
-| File | Key Exports |
-|------|-------------|
-| `backgammon_board.js` | `Board`, `Point` (0-23, bar, off) |
-| `backgammon_renderer.js` | `Renderer` |
-| `backgammon_game.js` | `Game`, `Dice` |
-
-### Tests (`tests/`)
-
-| File | Tests | Coverage |
-|------|-------|----------|
-| `test_backgammon.js` | 8 | Valid moves, hitting blots, bearing off, winning |
-
-## Key Concepts
-
-### The 4D Spiral
-
-Unlike 2D Backgammon, the track isn't U-shaped. It's a spiral in XYZW space. However, topologically, it functions identically to the 1D track of standard Backgammon (Points 1-24). The 4D visualization adds spatial context but preserves the classic rules.
-
-## Verification Checklist
-
-- [ ] All tests pass: `node tests/test_backgammon.js`
-- [ ] Browser loads without errors
-- [ ] Dice roll works
-- [ ] Valid moves highlighted
-- [ ] Checkers move from point to point
-- [ ] Bearing off logic works
+From the QuadCraft root, use `python3.13 games/run_games.py --test --game backgammon` for the registered suites. Also validate the portfolio with `python3.13 games/run_games.py --validate` and inspect the served page for console errors, real controls, camera/zoom and reset behavior. Follow the [repository testing guide](../../docs/development/testing_guide.md); Node logic results alone do not establish browser correctness. Report only checks actually run, without permanent passing-count claims.

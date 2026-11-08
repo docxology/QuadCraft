@@ -1,231 +1,70 @@
-# API Reference
+# Quadray Chess API reference — current signatures and ownership
 
-Complete documentation for all 4D Quadray Chess classes and methods.
-
----
+This is a selected interface map for the development checkout, not a second source implementation. [Architecture](architecture.md) defines browser load order; [module sources](../js/README.md) remain authoritative.
 
 ## Quadray Class
 
-**File**: `js/quadray.js`
+Source: [shared quadray.js](../../4d_generic/quadray.js).
 
-4D tetrahedral coordinate representation.
+- `new Quadray(a=0,b=0,c=0,d=0)` stores coefficients without constructor normalization.
+- `normalized()`, `clone()`, `add(other)`, `subtract(other)`, `scale(scalar)` return Quadrays; add/subtract normalize, scale does not.
+- `toCartesian()` returns `{x,y,z}`; `Quadray.fromCartesian(x,y,z)` takes three numbers.
+- `length()`, `distanceTo(other)` and `Quadray.distance(q1,q2)` use the physical rank-three metric.
+- `equals(other,epsilon=0.0001)` compares normalized coefficients; `toKey()` normalizes and integer-rounds components.
+- `Quadray.A/B/C/D`, `BASIS`, `ORIGIN` are class properties, not separately exported `BASIS`/`distance` functions.
 
-### Constructor
-
-```javascript
-new Quadray(a = 0, b = 0, c = 0, d = 0)
-```
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| a | number | First component |
-| b | number | Second component |
-| c | number | Third component |
-| d | number | Fourth component |
-
-### Instance Methods
-
-| Method | Returns | Description |
-|--------|---------|-------------|
-| `clone()` | Quadray | Create a copy |
-| `normalized()` | Quadray | Zero-minimum normalization |
-| `toCartesian()` | {x, y, z} | Convert to 3D coordinates |
-| `length()` | number | Vector magnitude |
-| `add(other)` | Quadray | Add two Quadrays |
-| `subtract(other)` | Quadray | Subtract Quadrays |
-| `scale(scalar)` | Quadray | Multiply by scalar |
-| `distanceTo(other)` | number | Distance to another Quadray |
-| `equals(other, epsilon)` | boolean | Check equality |
-| `toString()` | string | Human-readable format |
-| `toKey()` | string | Hash key for Maps |
-
-### Static Methods
-
-| Method | Returns | Description |
-|--------|---------|-------------|
-| `Quadray.fromCartesian(x, y, z)` | Quadray | Create from 3D coords |
-| `Quadray.distance(q1, q2)` | number | Distance between two |
-
-### Static Properties
-
-| Property | Value | Description |
-|----------|-------|-------------|
-| `Quadray.ORIGIN` | (0,0,0,0) | Origin point |
-| `Quadray.A` | (1,0,0,0) | +a basis vector |
-| `Quadray.B` | (0,1,0,0) | +b basis vector |
-| `Quadray.C` | (0,0,1,0) | +c basis vector |
-| `Quadray.D` | (0,0,0,1) | +d basis vector |
-| `Quadray.BASIS` | Array | All 4 basis vectors |
-
----
+[Mathematics and units](quadray-math.md) distinguish these methods from raw grid keys and graph adjacency.
 
 ## Piece Classes
 
-**File**: `js/chess_pieces.js`
+Source: [chess_pieces.js](../js/chess_pieces.js).
 
-### Base Class: Piece
+`Piece(type,color,position)` carries `type`, `color`, `position` and `hasMoved`. Subclasses `King`, `Queen`, `Rook`, `Bishop`, `Knight`, `Pawn` take `(color,position)` and implement `getValidMoves(board)`. `getSymbol()` returns the display glyph. `createPiece(type,color,position)` selects a subclass and throws for an unknown type. `PieceType` and `PlayerColor` supply string enums.
 
-| Property | Type | Description |
-|----------|------|-------------|
-| `type` | string | PieceType enum value |
-| `color` | string | PlayerColor enum value |
-| `position` | Quadray | Current position |
-| `hasMoved` | boolean | Has piece moved |
-
-| Method | Returns | Description |
-|--------|---------|-------------|
-| `getValidMoves(board)` | Quadray[] | All valid destinations |
-| `getSymbol()` | string | Unicode symbol |
-
-### Piece Subclasses
-
-| Class | Symbol (W/B) | Movement |
-|-------|--------------|----------|
-| King | ♔/♚ | 1 step in any basis direction |
-| Queen | ♕/♛ | Rook + Bishop combined |
-| Rook | ♖/♜ | Any distance along single axis |
-| Bishop | ♗/♝ | Diagonal (2 axes change) |
-| Knight | ♘/♞ | L-shape: +2 one axis, +1 another |
-| Pawn | ♙/♟ | Forward along primary axis |
-
-### Factory Function
-
-```javascript
-createPiece(type, color, position)
-```
-
----
+Generated moves are pseudo-legal, not self-check-filtered. See [movement](piece-movement.md).
 
 ## Board Class
 
-**File**: `js/chess_board.js`
+Source: [chess_board.js](../js/chess_board.js).
 
-### Constructor
+`new Board(size=4)` extends shared BaseBoard. `pieces` aliases its Map; `maxDistance=size*2`; `capturedPieces` groups captures by capturing color. `BOARD_CONFIG` declares twelve pieces per side/twenty-four total for the prescribed setup, not a test count.
 
-```javascript
-new Board(size = 4)
-```
-
-### Properties
-
-| Property | Type | Description |
-|----------|------|-------------|
-| `size` | number | Board dimension |
-| `pieces` | Map | Position key → Piece |
-| `capturedPieces` | object | Captured by color |
-
-### Methods
-
-| Method | Returns | Description |
-|--------|---------|-------------|
-| `setupInitialPosition()` | void | Reset to starting position |
-| `placePiece(piece)` | void | Add piece to board |
-| `getPieceAt(position)` | Piece\|null | Get piece at position |
-| `isValidPosition(position)` | boolean | Check if in bounds |
-| `hasOwnPiece(position, color)` | boolean | Own piece at position? |
-| `hasEnemyPiece(position, color)` | boolean | Enemy at position? |
-| `movePiece(from, to)` | Piece\|null | Move and return captured |
-| `getPiecesByColor(color)` | Piece[] | All pieces of color |
-| `getKing(color)` | Piece\|null | Find King |
-| `isInCheck(color)` | boolean | Is King threatened? |
-| `getAllPositions()` | Quadray[] | All valid board positions |
-| `validateBoard()` | object | Validate piece counts/positions |
-
-### Board Configuration
-
-```javascript
-BOARD_CONFIG = {
-    TOTAL_PIECES_PER_SIDE: 12,
-    TOTAL_PIECES: 24
-}
-```
-
----
+| Interface | Behavior |
+| --- | --- |
+| `setupInitialPosition()`, `reset()` | Prescribed setup and state reset |
+| `placePiece(piece)`, `getPieceAt(position)` | Canonical/rounded `position.toKey()` occupancy |
+| `isValidPosition(position)` | Normalized components between 0 and `size`, inclusive |
+| `validateBoard()` | Returns `{valid,errors}` for its implemented consistency checks, not a full rules proof |
+| `hasOwnPiece(position,color)`, `hasEnemyPiece(position,color)` | Occupancy/color queries |
+| `movePiece(from,to)` | Mutates occupancy, marks moved and returns captured piece or null; not a legality/turn validator |
+| `getPiecesByColor(color)`, `getKing(color)` | Piece selection |
+| `isInCheck(color)` | Opposing generated-move reachability of the king |
+| `getAllPositions()`, `getMetadata()` | Canonical display positions and state/readouts |
 
 ## Game Class
 
-**File**: `js/chess_game.js`
+Source: [chess_game.js](../js/chess_game.js).
 
-### Constructor
+`new Game(canvas,hudElement)` extends BaseGame and owns `board`, `renderer`, `turnManager`, selection, score state, optional `fpvRenderer` and an autoplay interval. `currentPlayer`/`moveHistory` are getter-only manager views.
 
-```javascript
-new Game(canvas)
-```
-
-### Properties
-
-| Property | Type | Description |
-|----------|------|-------------|
-| `board` | Board | Game board |
-| `renderer` | Renderer | Visual renderer |
-| `currentPlayer` | string | WHITE or BLACK |
-| `selectedPiece` | Piece\|null | Currently selected |
-| `gameOver` | boolean | Game ended? |
-| `moveHistory` | Array | All moves made |
-
-### Methods
-
-| Method | Returns | Description |
-|--------|---------|-------------|
-| `selectPiece(piece)` | void | Select and show moves |
-| `deselectPiece()` | void | Clear selection |
-| `makeMove(from, to)` | void | Execute move |
-| `selectMoveByNumber(num)` | void | Pick move 1-9 |
-| `randomMove()` | void | Make random valid move |
-| `resetGame()` | void | Reset to initial state |
-| `toJSON()` | object | Serialize game state |
-| `fromJSON(data)` | void | Restore game state |
-| `exportGame()` | void | Download save file |
-| `importGame()` | void | Load save file |
-
----
+- `init()` attaches input, starts the loop and initializes the optional page FPV canvas.
+- `selectPiece(piece)`, `deselectPiece()`, `handleClick(position)`, `selectMoveByNumber(num)` manage generated move choices.
+- `makeMove(from,to)` applies the board mutation, records/advances the turn and checks terminal conditions; callers must supply an appropriate move.
+- `hasLegalMoves(color)` counts generated destinations despite its name; it does not filter self-check.
+- `randomMove()` returns whether it made a move. `toggleAutoPlay()` owns a browser interval, not a search AI.
+- `reset()`/`resetGame()` clear autoplay and reset board/turn/selection. Shared `togglePause()` does not globally freeze command handlers/autoplay.
+- `toJSON()`, `fromJSON(data)`, `exportGame()`, `importGame()` expose legacy storage paths with the mismatch below; their presence is not a working save-restore guarantee.
 
 ## Renderer Class
 
-**File**: `js/chess_renderer.js`
-
-Handles 3D visualization on HTML5 Canvas.
-
-### Key Methods
-
-| Method | Description |
-|--------|-------------|
-| `project(q)` | Convert Quadray to 2D screen coords |
-| `render(currentPlayer)` | Main render loop |
-| `getPositionAtScreen(x, y)` | Find position at pixel |
-
----
+[Renderer(canvas,board)](../js/chess_renderer.js) extends BaseRenderer and provides `render()` and `getPositionAtScreen(screenX,screenY)` plus chess-specific grid/piece/move/math drawing. [FPVRenderer(canvas,board)](../js/chess_fpv_renderer.js) is separate; `setPiece(piece)`, `setValidMoves(moves)` and `render()` control its selected-piece view.
 
 ## Analysis Module
 
-**File**: `js/chess_analysis.js`
-
-Geometric analysis and metrics.
-
-| Function | Returns | Description |
-|----------|---------|-------------|
-| `calculateCenterControl(board, color)` | number | Center position control (0-100) |
-| `calculateMobilityScore(board, color)` | number | Total available moves |
-| `calculatePieceSpread(board, color)` | number | Positional distribution |
-| `calculateMaterialScore(board, color)` | number | Sum of piece values |
-| `getPositionMetrics(game)` | object | All metrics combined |
-| `createMoveLog(game)` | object | Detailed move history |
-| `logGameMetrics(game)` | object | Console-formatted metrics |
-| `getDistanceStats(game)` | object | Move distance statistics |
-| `angleBetweenQuadrays(q1, q2)` | number | Angle between two Quadrays (degrees) |
-| `verifyRoundTrip(q)` | object | Test Quadray→Cartesian→Quadray accuracy |
-| `verifyGeometricIdentities()` | object | Comprehensive IVM geometry verification |
-
----
+[chess_analysis.js](../js/chess_analysis.js) exports `calculateCenterControl(board,color)`, `calculateMobilityScore(board,color)`, `calculatePieceSpread(board,color)`, `calculateMaterialScore(board,color)`, `getPositionMetrics(game)`, `createMoveLog(game)`, `logGameMetrics(game)` and `getDistanceStats(game)`, along with local geometry-check helpers. [Metric definitions](chess-theory.md) explain their limited meaning. Move-log/distance-history functions expect flat records and are not adapted to the controller’s wrapped history.
 
 ## Storage Module
 
-**File**: `js/chess_storage.js`
+[chess_storage.js](../js/chess_storage.js) exports `exportGameState(game)`, `importGameState(data,game)`, `downloadJSON(data,filename)`, `handleFileUpload(file,callback)` and `generateSaveFilename()`. Browser file I/O needs Blob/URL/FileReader/DOM APIs.
 
-Save/load functionality.
-
-| Function | Description |
-|----------|-------------|
-| `exportGameState(game)` | Serialize to JSON |
-| `importGameState(json, game)` | Restore from JSON |
-| `downloadJSON(data, filename)` | Trigger file download |
+Export maps flat `move.from/to/captured`; real TurnManager history instead wraps the move under `entry.move`. Import assigns `game.currentPlayer` and `game.moveHistory`, but the real controller exposes getter-only properties. It also does not rebuild all serialized fields. Helper-object tests do not establish a live-controller round-trip. See [record compatibility](notation.md) before using these interfaces for persistence.

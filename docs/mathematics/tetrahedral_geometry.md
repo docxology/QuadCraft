@@ -1,292 +1,97 @@
-# Tetrahedral Geometry in QuadCraft
+# Tetrahedral Geometry: Ideal Solids, Native Meshes, and Game Markers
 
-## Introduction
-
-Tetrahedral geometry forms the foundation of QuadCraft's world. Unlike traditional voxel games that use cubic elements, QuadCraft builds its world from tetrahedra - three-dimensional shapes with four triangular faces. This document explains the mathematical properties of tetrahedra and their implementation in QuadCraft.
+This page separates geometric facts from QuadCraft's actual element representation. The [coordinate contract](../quadray_coordinates.md) fixes the rank-three embedding and units. [Mathematics index](README.md) · [IVM topology and volumes](ivm_synergetics.md) · [Block models](../game_design/block_system.md).
 
 ## Basic Properties of a Tetrahedron
 
-A tetrahedron is a polyhedron with four triangular faces, six edges, and four vertices.
+A nondegenerate tetrahedron has four vertices, six edges and four triangular faces. For vertices $v_0,v_1,v_2,v_3$ in Cartesian coordinates,
 
-```mermaid
-graph TD
-    subgraph "Tetrahedron Components"
-        V["4 Vertices"]
-        E["6 Edges"]
-        F["4 Triangular Faces"]
-        V --- E
-        E --- F
-    end
-```
+$$V=\frac{|\det(v_1-v_0,v_2-v_0,v_3-v_0)|}{6}.$$
+
+The uniform solid tetrahedron's mass centroid equals its vertex mean. That equality does not extend to an arbitrary multi-cell object or polyhedron: averaging mesh vertices is generally not a volume-weighted mass centroid.
 
 ### Regular Tetrahedron
 
-A regular tetrahedron has equilateral triangular faces and equal dihedral angles.
+A regular tetrahedron has six equal edges. With edge $\ell$:
 
-```mermaid
-graph TD
-    A((A)) --- B((B))
-    A --- C((C))
-    A --- D((D))
-    B --- C
-    B --- D
-    C --- D
-    
-    style A fill:#ff9,stroke:#333,stroke-width:2px
-    style B fill:#ff9,stroke:#333,stroke-width:2px
-    style C fill:#ff9,stroke:#333,stroke-width:2px
-    style D fill:#ff9,stroke:#333,stroke-width:2px
-```
+- Volume $V=\ell^3/(6\sqrt2)$.
+- Surface area $A=\sqrt3\ell^2$.
+- Interior dihedral angle $\arccos(1/3)\approx70.53^\circ$.
+- Angle between center-to-vertex rays $\arccos(-1/3)\approx109.47^\circ$.
 
-### Mathematical Properties
-
-- **Volume**: For a regular tetrahedron with edge length a, the volume is:
-  V = (a³)/(6√2) ≈ 0.1179a³
-
-- **Surface Area**: For a regular tetrahedron with edge length a, the surface area is:
-  A = √3 × a² ≈ 1.732a²
-
-- **Dihedral Angle**: The angle between any two faces is approximately 70.53°
+These angles refer to different objects. A triangle's internal $60^\circ$ angle is not a universal tetrahedral face slope relative to the game's vertical axis.
 
 ## Tetrahedral Grid System
 
-QuadCraft uses a tetrahedral grid system to position blocks. This grid is based on a space-filling arrangement of tetrahedra.
-
-```mermaid
-graph TD
-    subgraph "Space-Filling Arrangement"
-        T1["Tetrahedron 1"]
-        T2["Tetrahedron 2"]
-        T3["Tetrahedron 3"]
-        T4["Tetrahedron 4"]
-        T5["Tetrahedron 5"]
-        T6["Tetrahedron 6"]
-        
-        T1 --- T2
-        T1 --- T3
-        T1 --- T4
-        T2 --- T5
-        T3 --- T5
-        T4 --- T6
-        T5 --- T6
-    end
-```
-
 ### Space-Filling Properties
 
-The regular tetrahedral grid is not space-filling on its own. To fill space completely, QuadCraft uses a combination of tetrahedra in a repeating pattern:
+Regular tetrahedra alone do not tile Euclidean 3D space. Regular tetrahedra together with octahedra form the tetrahedral-octahedral honeycomb. A cube can also be subdivided into tetrahedra, but those tetrahedra are not all congruent regular tetrahedra. Either construction needs explicit vertices, cells and shared faces; four-component point labels alone provide none of those incidences.
 
-```mermaid
-graph TD
-    subgraph "Space-Filling Pattern"
-        A["Type A Tetrahedron"]
-        B["Type B Tetrahedron"]
-        A -->|Repeating Pattern| B
-        B -->|Repeating Pattern| A
-    end
-```
+The [IVM contact graph](ivm_synergetics.md#connection-to-quadcraft), native element-neighbor heuristic and game raw-slot grid are not interchangeable honeycomb definitions.
 
 ## Implementation in QuadCraft
 
 ### Tetrahedral Element Class
 
-The `TetrahedralElement` class represents a single tetrahedral building block:
+Native [TetrahedralElement](../../src/core/world/TetrahedralElement.h) contains a normalized `Quadray position` and `Block::BlockID blockId`. It exposes solidity/transparency queries and vertex/face arrays. It does **not** contain the orientation field or `containsPoint` method shown in earlier versions of this document.
 
-```cpp
-class TetrahedralElement {
-public:
-    // Constants
-    static const float sqrt2 = 1.414213562f; // √2
-    
-    // Position in quadray coordinates
-    Quadray position;
-    
-    // Block type
-    uint8_t blockType;
-    
-    // Orientation (0-23)
-    uint8_t orientation;
-    
-    // Constructor
-    TetrahedralElement(const Quadray& pos, uint8_t type, uint8_t orient = 0);
-    
-    // Get vertices in Cartesian coordinates
-    std::array<Vector3, 4> getVertices() const;
-    
-    // Check if point is inside this tetrahedron
-    bool containsPoint(const Vector3& point) const;
-};
-```
+For anchor $c=E(\text{position})$ and hardcoded size $s=0.5$, `getVertices()` returns $c$ plus
+
+$$
+(0,s,0),\quad (2s/3,-s/3,0),\quad
+(-s/3,-s/3,\sqrt2s/3),\quad(-s/3,-s/3,-\sqrt2s/3).
+$$
+
+These offsets have mean zero, but **are not regular**, despite the source comment: at $s=0.5$, squared edge lengths $|v_0-v_1|^2=5/9$ and $|v_2-v_3|^2=2/9$ differ. Ideal regular-tetrahedron edge/area formulas therefore must not be presented as measurements of this native mesh. The fixed shape is also not a retained copy of the five corner-index tetrahedra sampled by [TerrainGenerator](../../src/core/world/TerrainGenerator.h), which stores only their anchors and block IDs. This representation does not establish a gap-free, nonoverlapping cube subdivision or regular honeycomb.
 
 ### Tetrahedral Mesh Generation
 
-Converting tetrahedral elements into renderable meshes involves triangulating their surfaces:
-
-```mermaid
-graph TD
-    Elements["Tetrahedral Elements"] --> ExtractFaces["Extract Visible Faces"]
-    ExtractFaces --> Triangulate["Triangulate Faces"]
-    Triangulate --> GenMesh["Generate Mesh Data"]
-    GenMesh --> Render["Render Mesh"]
-```
+[ChunkMesher](../../src/render/mesh/ChunkMesher.cpp) obtains the four native vertices, insets them slightly toward their vertex mean and adds the Cartesian chunk origin. For each candidate exposed face it emits a triangle, calculates an outward normal and applies block/face colors. Current texture coordinates are unused zeros. Its neighbor query renders a face when the candidate neighbor is air or transparent; that lookup is not proof of exact face-sharing topology.
 
 ### Vertex Positions
 
-For a regular tetrahedron centered at origin using alternate vertices of a
-cube with edge length 2 (coordinates ±1 on each axis), the vertices in
-Cartesian coordinates are:
+For comparison, the **ideal** coefficient-endpoint tetrahedron uses
 
-```mermaid
-graph LR
-    subgraph "Vertex Positions"
-        V1["V1: (1, 1, 1)"]
-        V2["V2: (1, -1, -1)"]
-        V3["V3: (-1, 1, -1)"]
-        V4["V4: (-1, -1, 1)"]
-    end
-```
+$$(1,1,1)/\sqrt2,\ (-1,-1,1)/\sqrt2,\ (-1,1,-1)/\sqrt2,\ (1,-1,-1)/\sqrt2.$$
 
-The tetrahedron's own edge length is the enclosing cube's **face
-diagonal**, not the cube's edge: |V1 − V2| = √(0² + 2² + 2²) = √8 = **2√2**,
-not 2. (This is a different, larger tetrahedron than the one used to define
-the Quadray basis vectors in
-[Quadray Coordinates (Mathematics)](quadray_coordinates.md), which scales
-those same four sign-patterns by 1/√2 to get an edge length of exactly 2.)
+It has edge 2 and Euclidean volume $2\sqrt2/3$. Omitting $1/\sqrt2$ produces edge $2\sqrt2$ and volume $8/3$, the suite scale-one convention. Neither vertex list is the fixed-offset native element above.
 
 ## Navigation in Tetrahedral Space
 
 ### Adjacency and Connectivity
 
-Tetrahedra connect to each other through their triangular faces:
-
-```mermaid
-graph TD
-    T1["Tetrahedron 1"] -->|Face A| T2["Tetrahedron 2"]
-    T1 -->|Face B| T3["Tetrahedron 3"]
-    T1 -->|Face C| T4["Tetrahedron 4"]
-    T1 -->|Face D| T5["Tetrahedron 5"]
-```
+A tetrahedron has four faces, but this does not prove that any four stored neighbors tile around it. Native [TetraChunk.getNeighbors](../../src/core/world/TetraChunk.cpp) computes candidate centers as $2f-c$ for face centroid $f$ and anchor $c$. This is a central reflection through the face centroid, not generally reflection through the face plane. It is used as a storage/visibility heuristic, not a validated volumetric adjacency structure.
 
 ### Raycasting
 
-Raycasting in tetrahedral space involves checking for ray-triangle intersections:
+Native [Input.castRayFromCamera](../../src/game/Input.h) marches samples along a Cartesian camera ray and queries `World.getBlock` with continuously converted quadrays. It does not intersect each tetrahedral face or compute barycentric containment. Sampling exact-ish float keys also must not be described as a complete solid collision detector.
 
-```mermaid
-sequenceDiagram
-    participant Ray
-    participant Tetrahedron
-    participant Face
-    
-    Ray->>Tetrahedron: Check intersection
-    Tetrahedron->>Face: Test each face
-    Face-->>Tetrahedron: Face hit + distance
-    Tetrahedron-->>Ray: Closest hit face
-```
-
-## Tetrahedral Coordinates vs. Cubic Voxels
-
-The tetrahedral approach offers several advantages and challenges compared to cubic voxels:
-
-```mermaid
-graph TD
-    subgraph "Comparison"
-        A["Tetrahedral System"]
-        B["Cubic Voxel System"]
-        
-        A -->|Advantages| A1["Better approximation of diagonal surfaces"]
-        A -->|Advantages| A2["More efficient representation of certain structures"]
-        A -->|Advantages| A3["Natural representation of crystalline structures"]
-        
-        A -->|Challenges| C1["More complex navigation"]
-        A -->|Challenges| C2["Higher computational complexity"]
-        A -->|Challenges| C3["Less intuitive for players familiar with cubic voxels"]
-        
-        B -->|Advantages| B1["Simpler implementation"]
-        B -->|Advantages| B2["More intuitive for most players"]
-        B -->|Advantages| B3["Efficient storage and rendering"]
-        
-        B -->|Challenges| D1["Stair-stepping on diagonal surfaces"]
-        B -->|Challenges| D2["Higher memory usage for certain structures"]
-    end
-```
-
-## Special Geometric Structures
-
-### Tetrahedral-Octahedral Honeycomb
-
-A recurring structure in tetrahedral space is the tetrahedral-octahedral honeycomb:
-
-```mermaid
-graph TD
-    subgraph "Tetrahedral-Octahedral Honeycomb"
-        T["Tetrahedron"] --- O["Octahedron"]
-        O --- T2["Tetrahedron"]
-        T --- T3["Tetrahedron"]
-        O --- O2["Octahedron"]
-    end
-```
-
-This arrangement fills space efficiently and forms naturally in the tetrahedral grid system.
-
-### Compound Structures
-
-Complex structures can be built from tetrahedral elements:
-
-```mermaid
-graph TD
-    subgraph "Compound Structures"
-        P["Pyramid"] --- Prism["Triangular Prism"]
-        Prism --- Dodec["Dodecahedron"]
-        P --- Icosa["Icosahedron"]
-    end
-```
+In [MinecraftRenderer](../../games/4d_minecraft/js/minecraft_renderer.js), blocks are screen-aligned filled squares centered at projected anchors. Picking checks these square bounds in reverse paint order. It is neither a native tetrahedral mesh nor a ray-triangle intersection.
 
 ## Collision Detection
 
-Collision detection in tetrahedral space requires specialized algorithms:
-
-```mermaid
-graph TD
-    Start["Player Position"] --> Convert["Convert to Tetrahedral Space"]
-    Convert --> Query["Query Surrounding Tetrahedra"]
-    Query --> Test["Test for Collisions"]
-    Test --> Resolve["Resolve Collisions"]
-    Resolve --> Response["Apply Response"]
-```
-
 ### Barycentric Coordinates
 
-Barycentric coordinates provide a coordinate system relative to the vertices of a simplex (in this case, a tetrahedron). For a tetrahedron with vertices $\mathbf{v}_1, \mathbf{v}_2, \mathbf{v}_3, \mathbf{v}_4$, any point $\mathbf{p}$ can be uniquely expressed as:
+The following is mathematics available for a future solid-containment implementation, **not a currently exposed native method**. For an affinely independent tetrahedron, solve
 
-$$ \mathbf{p} = \lambda_1 \mathbf{v}_1 + \lambda_2 \mathbf{v}_2 + \lambda_3 \mathbf{v}_3 + \lambda_4 \mathbf{v}_4 $$
+$$
+p=v_0+u(v_1-v_0)+v(v_2-v_0)+w(v_3-v_0).
+$$
 
-Subject to the constraint:
-$$ \sum_{i=1}^{4} \lambda_i = 1 $$
+Its barycentric weights are $(1-u-v-w,u,v,w)$, whose sum is one. The point lies in the closed tetrahedron iff all weights are nonnegative. Degenerate tetrahedra require separate handling; floating-point predicates require a declared tolerance.
 
 #### Point Containment
 
-A point $\mathbf{p}$ lies inside the tetrahedron if and only if all barycentric coordinates are non-negative:
-$$ 0 \le \lambda_i \le 1 \quad \forall i \in \{1, 2, 3, 4\} $$
+The sum-one constraint belongs to barycentric weights relative to these four **vertices**. It is not a constant-sum constraint on free quadray coordinates relative to tetrahedral **directions**. Confusing these makes translated or gauge-shifted physical points appear invalid.
 
 #### Calculation via Volume Ratios
 
-Geometric computation often uses volume ratios (Cramer's rule application):
-$$ \lambda_i = \frac{\text{Vol}(\mathbf{p}, \mathbf{v}_{j}, \mathbf{v}_{k}, \mathbf{v}_{l})}{\text{Vol}(\mathbf{v}_i, \mathbf{v}_{j}, \mathbf{v}_{k}, \mathbf{v}_{l})} $$
-Where $\text{Vol}(A,B,C,D)$ is the signed volume of the tetrahedron formed by those points. Use the scalar triple product for efficient calculation.
+Each barycentric weight is a signed determinant ratio formed by replacing that vertex with $p$, preserving vertex order. Taking absolute volumes before solving loses the outside-point sign information. This method requires nonzero denominator volume.
 
-```mermaid
-graph LR
-    subgraph "Barycentric Logic"
-        P["Point P"] --> Calc["Calculate λ₁, λ₂, λ₃, λ₄"]
-        Calc --> CheckSum["Check Σλ = 1 (Implicit)"]
-        Calc --> CheckPos["Check λᵢ ≥ 0"]
-        CheckPos -->|True| Inside["Inside Tetrahedron"]
-        CheckPos -->|False| Outside["Outside Tetrahedron"]
-    end
-```
+## Tetrahedral Coordinates vs. Cubic Voxels
 
-## Conclusion
+Triangular faces may offer useful oblique surfaces, but efficiency, walkability, rendering cost and approximation quality depend on the actual tiling, sampling, mesh and task. They are not guaranteed advantages of quadray coefficients. Likewise, square screen markers do not establish cubic solid occupancy, and cell parity labels do not establish tetrahedral/octahedral boundaries.
 
-The tetrahedral geometry in QuadCraft provides a unique foundation for a voxel game. While more complex than traditional cubic voxels, tetrahedra offer interesting geometric properties and allow for more natural representation of certain structures.
+## Special Geometric Structures
 
-The mathematical foundation of the tetrahedral system, combined with the Quadray coordinate system, creates a coherent and elegant framework for the game's world.
+The tetrahedral-octahedral honeycomb and octet truss are geometric references. Geodesic domes, arches and structural stability need explicit construction/material assumptions; see [bounded building exercises](../game_design/advanced_building_techniques.md). QuadCraft does not derive a structural solver or non-Euclidean geometry merely by using oblique coordinates.

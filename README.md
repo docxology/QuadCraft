@@ -1,262 +1,129 @@
 # QuadCraft
 
-A tetrahedral-based voxel game using quadray coordinates, inspired by Minecraft.
+Tetrahedral voxel and geometry experiments plus thirty browser games using quadray ideas.
 
 ## Status & Verification (agents: start here)
 
-- **What this is:** an experimental tetrahedral voxel game (C++/OpenGL native, JS browser experiments) plus a 30-game 4D browser portfolio under `games/`.
-- **Gameplay verification:** `games/run_games.py --test` exercises all registered games and nested shared JavaScript/Python suites; `--validate` checks all 30 catalog entries. Run with Python 3.13. The command, not a saved check count, is authoritative. CI (`.github/workflows/games-tests.yml`) runs both on every push/PR to main.
-- **Backlog / what to do next:** [TODO.md](TODO.md) (single canonical backlog).
-- **Documentation hub:** [docs/README.md](docs/README.md). Games portfolio details: [games/GAMES_INDEX.md](games/GAMES_INDEX.md).
-- **Native verification:** the graphics-free CMake configuration (`-DQUADCRAFT_BUILD_GAME=OFF`) built successfully and passed both CTest targets. The normal graphical configuration could not complete locally because GLEW was missing. The game requires OpenGL, GLEW, GLFW3, CMake >= 3.16 and C++17; plain `./build.sh` also needs a display.
+This development checkout contains three distinct runtime families:
+
+| Runtime | What is implemented | Start here |
+|---|---|---|
+| Native C++17 | GLFW/OpenGL tetrahedral world prototype, generated chunks, colored faces, drone camera and sampled block interaction | [Native setup](docs/development/setup_guide.md) |
+| Historical browser/server experiments | Canvas geometry, brushes, CCP ball columns, quaternion camera and experimental Var-tree/JSP synchronization | [JavaScript runtime map](docs/development/javascript_implementation.md) |
+| Browser-game portfolio | Thirty game-specific boards/controllers/renderers sharing JavaScript helpers | [Games and contracts](docs/games.md), [catalog](games/GAMES_INDEX.md) |
+
+These are not one production engine. Native ECS/rigid-body physics, plugin/mod loading, imported asset packs and authenticated authoritative multiplayer are not shipped systems. Historical design prose is not a usable SDK. [Architecture](docs/architecture.md) identifies actual ownership and boundaries.
+
+Verification commands are documented in the [testing guide](docs/development/testing_guide.md). No frozen test/assertion total is a current status receipt. [TODO.md](TODO.md) retains dated maintenance history; [CHANGELOG.md](CHANGELOG.md) records changes. This README describes the checkout, not a change to an immutable published release.
 
 ## Synergetics suite
 
-QuadCraft is the interactive application layer alongside
-[QuadMath](https://github.com/docxology/QuadMath) (specification, exact math and
-lattice algorithms) and [symergetics](https://github.com/docxology/symergetics)
-(rational geometry, transformations and research workflows).
+QuadCraft is the interactive application member alongside
+[QuadMath](https://github.com/docxology/QuadMath) (specification, exact mathematics and lattice algorithms) and
+[symergetics](https://github.com/docxology/symergetics) (rational geometry, transformations and research workflows).
 The [suite guide](https://github.com/docxology/symergetics/blob/main/docs/synergetics-suite.md)
-documents the Y/Z exchange and scale difference between their Cartesian
-embeddings, plus an executable Python/JavaScript/C++ interoperability example.
-
-Release details: [CHANGELOG.md](CHANGELOG.md). The
-[real Chromium gate](games/tests/browser/README.md) checks all 30 catalog games
-with actual input/state/rendering and records real mouse-capture availability.
-The methods suite adds fixed-seconds simulation, chronological swept Asteroids
-collisions, wall-ordered Doom shots and input-time ownership, reversible
-SimAnt excavation/homing with conservative pheromone transport, and picking
-that follows actual Minecraft/Mahjong paint order. Native CI retains separate
-Debug/Release graphics-free configurations.
+documents the Y/Z exchange and scale difference between their Cartesian embeddings and an interoperability example. The projects share mathematical contracts, not a production cross-language game runtime.
 
 ## Overview
 
-QuadCraft is an experimental voxel game that uses tetrahedral elements (instead of cubes) and quadray coordinates. This unique approach allows for more natural representation of slopes, curves, and complex structures that are difficult to achieve with traditional cubic voxels.
+Physical quadrays use four coefficients for a **three-dimensional** point modulo a common additive offset. Raw four-index game slots may intentionally remain independent even when their projections coincide. A game's “4D” name does not imply four independent physical Euclidean axes.
 
-### Key Features
+The native prototype explores tetrahedral block geometry and multioctave procedural material selection. Its terrain noise is a deterministic sum of sine waves, not a seeded Perlin/simplex implementation. Its mesher emits tetrahedral faces, not a marching-tetrahedra isosurface.
 
-- **Tetrahedral Voxels**: Blocks are tetrahedra instead of cubes, allowing for more complex and natural shapes
-- **Quadray Coordinate System**: Based on tetrahedral geometry rather than cubic geometry
-- **Procedural Terrain**: Generated using fractal noise functions adapted for tetrahedral space
-- **Interactive Building**: Place and remove tetrahedral blocks
-- **Enhanced Terrain Features**: Mountains, caves, ore veins, and water bodies
-- **Quadray Visualization**: Toggle overlay to visualize the four-dimensional quadray coordinate system
-- **Wireframe Mode**: Enable wireframe rendering to better understand tetrahedral shapes
+![Historical quadray grid experiment](src/js/experiments/QuadrayGrid_2025-5-26-307pET.png)
 
-### Subprojects
-
-| Project | Description | Status |
-|---------|-------------|--------|
-| 🎮 [Games Portfolio](games/GAMES_INDEX.md) | 30 standalone 4D browser games (chess, minecraft, doom, and more) using Quadray coordinates | ✅ Complete |
-| 🌍 QuadCraft Core | Tetrahedral voxel engine | 🚧 In Progress |
-
-### Pic
-
-![Quadray grid experiment](https://raw.githubusercontent.com/docxology/QuadCraft/refs/heads/main/src/js/experiments/QuadrayGrid_2025-5-26-307pET.png)
-Those experiments are in `src/js/experiments/QuadrayGrid2.html`
-
-## Technical Description
-
-QuadCraft demonstrates several advanced technical concepts:
-
-1. **Quadray Coordinates**: A four-value coordinate system based on tetrahedral geometry
-2. **Tetrahedral Mesh Generation**: Using modified marching tetrahedrons algorithm
-3. **Chunk Management**: Tetrahedral chunks for efficient memory utilization
-4. **Ray Casting**: For block selection and placement
-5. **Fractal Terrain Generation**: Multi-octave noise for natural-looking landscapes
+This image belongs to the historical HTML geometry experiments, not a screenshot of every game or the native renderer.
 
 ## Building and Running
 
-### Prerequisites
+### Native graphical build
 
-You'll need the following libraries installed:
+Requirements: C++17 compiler, CMake 3.16+, OpenGL, GLEW and GLFW3. Running needs a graphical session and an OpenGL 3.3 core context. From the repository root:
 
-- OpenGL
-- GLEW
-- GLFW3
-- CMake (3.16 or higher)
-- C++17 compatible compiler
+```sh
+cmake -S . -B build -DQUADCRAFT_BUILD_GAME=ON -DCMAKE_BUILD_TYPE=Debug
+cmake --build build
+./build/bin/QuadCraft
+```
+
+Multi-configuration generators require the matching configuration option/path. `./build.sh` wraps the default build and launches; `./build.sh --no-run --test` builds and runs a nonempty native CTest inventory without launching. The wrapper preserves cached CMake options. See [platform/dependency details](docs/development/setup_guide.md).
 
 ### Headless core build
 
-Coordinate and world tests do not require OpenGL, GLEW, GLFW or a display:
+Coordinate/world tests do not require OpenGL libraries or a display:
 
-```bash
-cmake -S . -B build-core -DQUADCRAFT_BUILD_GAME=OFF
+```sh
+cmake -S . -B build-core -DQUADCRAFT_BUILD_GAME=OFF -DBUILD_TESTING=ON
 cmake --build build-core
-ctest --test-dir build-core --output-on-failure
+(cd build-core && ctest --output-on-failure)
 ```
 
-The normal game build remains enabled by default. `BUILD_TESTING=OFF` disables
-the test targets independently.
+`QUADCRAFT_BUILD_GAME` defaults ON; `BUILD_TESTING` is independently controlled. A graphics-free pass does not establish native render/input correctness.
 
-### Build Instructions
+### Browser portfolio
 
-#### Linux
+No bundling is needed for ordinary play. Use Python 3.13 explicitly for these launcher/QA examples (the launcher syntax minimum is Python 3.10):
 
-```bash
-# Install dependencies (Ubuntu/Debian)
-sudo apt-get install build-essential cmake libglew-dev libglfw3-dev
-
-# Clone the repository
-git clone https://github.com/docxology/QuadCraft.git
-cd QuadCraft
-
-# Build and run using the script
-chmod +x build.sh
-./build.sh
+```sh
+python3.13 games/run_games.py --list
+python3.13 games/run_games.py --game chess doom life
+python3.13 games/run_games.py --all --no-browser
+python3.13 games/run_games.py --test
+python3.13 games/run_games.py --validate
 ```
 
-### Troubleshooting
+The launcher serves static HTTP on base port 8100 plus each catalog offset. Preserve the sibling `games/4d_generic/` directory; copying a game folder alone loses shared dependencies. HTTP is the portable recipe, especially for Doom's ES modules. These servers do not provide multiplayer. The shell convenience wrapper `./games/run.sh chess` chooses its own available interpreter.
 
-#### GL/GLEW Errors
+### Real Chromium gate
 
-If you encounter errors related to GL/GLEW headers, ensure that your includes in source files are in the correct order. GLEW headers should be included before other OpenGL-related headers.
+The separate [browser gate](games/tests/browser/README.md) exercises actual game input/state/rendering and records screenshots/logs and real pointer-capture availability. Run from `games/tests/browser/`:
 
-#### Missing Libraries
+```sh
+npm ci --ignore-scripts --no-audit --no-fund
+npx --no-install playwright install --with-deps chromium
+PYTHON=python3.13 npm test
+```
 
-If CMake can't find the required libraries, make sure they are properly installed. You might need to install development versions of the libraries.
+Ordinary `run_games.py --test` runs Node/Python logic suites, not this Chromium package. Structural validation, logic tests and real-browser checks have different coverage.
 
 ## Controls
 
-### Movement Controls (Drone-like)
+The following refer to native [`Input.h`](src/game/Input.h), not the historical browser experiment or every portfolio game:
 
-- **Arrow Keys**: Fly in the corresponding direction (always active)
-- **Page Up/Down**: Move vertically up/down (always active)
-- **W, A, S, D**: Alternative movement keys (only when mouse is captured)
-- **Space**: Alternative up movement (only when mouse is captured)
-- **Left Shift**: Alternative down movement (only when mouse is captured)
+- Arrow keys: drone-like forward/back/left/right; Page Up/Down: vertical motion, with or without mouse capture.
+- WASD and Space: captured-mouse movement/up. Shift/Control modify movement speed; do not assume Shift is a working down binding (Page Down is).
+- Mouse look requires capture; wheel adjusts camera zoom.
+- Left click captures the cursor when free; when captured, left/right block actions remove/place stone if the sampled ray finds a stored block.
+- Tab toggles capture. Escape releases capture when captured and requests exit when free.
+- F1 toggles wireframe; F2 toggles the coordinate overlay; F4 toggles diagnostic distance reporting.
 
-### Camera Controls
-
-- **Mouse**: Look around (only when mouse is captured)
-- **Mouse Wheel**: Zoom in/out
-
-### Block Interaction
-
-- **Left Mouse Button**: Remove block (or capture mouse if not captured)
-- **Right Mouse Button**: Place block
-
-### Interface Controls
-
-- **Tab**: Toggle mouse capture mode
-- **Escape**: Release mouse if captured, or exit game if mouse is free
-- **F1**: Toggle wireframe mode
-- **F2**: Toggle quadray coordinate overlay
-
-**Mouse Interaction**:
-
-- Click in the window to capture the mouse and enable full camera control
-- Press Escape or Tab to release the mouse and regain normal cursor control
-- When the mouse is free, you can still use arrow keys and Page Up/Down for drone-like movement
-
-**Flying Tips**:
-
-- Use arrow keys for precise drone-like movement
-- Combine with Page Up/Down for full 3D navigation
-- The camera will always point in the direction you're looking
+Block picking uses sampled world-key queries rather than exact face intersection; visible-face selection is not guaranteed. Native movement has no terrain collision/gravity solver. For browser controls, use the selected game's own page and [portfolio documentation](docs/games.md).
 
 ## Architecture
 
-The project is structured as follows:
-
-```mermaid
-flowchart LR
-    Core["Core\n- Coordinate System\n- World Management\n- Chunk System\n- Block System"]
-    Rendering["Rendering\n- Mesh Generation\n- Shader System\n- Rendering Pipeline\n- Texture Management"]
-    Game["Game\n- Input Handling\n- Game Logic\n- User Interface\n- Game Loop"]
-    
-    Core <--> Rendering
-    Rendering <--> Game
-```
-
-Folder structure:
-
 ```text
-QuadCraft/
-├── src/                         # QuadCraft (IVM Minecraft) source code
-│   ├── core/                    # Core engine components
-│   │   ├── coordinate/          # Quadray coordinate systems
-│   │   ├── world/               # World generation
-│   │   └── entity/              # Entity management
-│   ├── render/                  # Rendering pipeline
-│   │   ├── mesh/                # Tetrahedral mesh generation
-│   │   ├── shader/              # Shader programs
-│   ├── browser/                 # Browser-based experiments
-│   ├── js/                      # JavaScript experiments
-│   ├── server/                  # Server components
-│   ├── game/                    # Game-specific logic
-│   └── main.cpp                 # C++ entry point
-├── docs/                        # Overall project documentation
-│   ├── architecture.md          # System architecture
-│   ├── quadray_coordinates.md   # Quadray math reference
-│   ├── development/             # Development guides
-│   ├── game_design/             # Game design documents
-│   ├── mathematics/             # Mathematical foundations
-│   └── reference/               # Reference materials
-└── games/                       # Games portfolio (30 standalone 4D browser games)
-    ├── run_games.py             # Python launcher (--game, --all, --test, --validate)
-    ├── GAMES_INDEX.md           # Canonical per-game index and test counts
-    ├── 4d_generic/              # Shared JS modules (quadray.js, camera.js, ...)
-    └── 4d_<game>/               # One dir per game (e.g. 4d_chess/, 4d_doom/)
+src/core/       native coordinates, world/chunks/materials, camera
+src/game/       native lifecycle, GLFW input and embedded shader sources
+src/render/     native face meshing, GL meshes and shader utilities
+src/browser/   geometry experiments, including newer Var-tree page
+src/js/        historical HTML and modular JavaScript experiments
+src/server/    experimental Tomcat/JSP state merge
+games/         thirty browser games, shared JS and Python launcher/QA
+docs/          implementation guides, mathematics and explicit design context
 ```
+
+The native world uses Cartesian integer chunk keys, local quadray element keys and world-space mesh vertices. [Chunk lifecycle](docs/development/chunk_system.md) explains creation/generation, dirty flags and numeric limits. The browser portfolio has its own board identity and time ownership.
 
 ## Implementation Details
 
-### Quadray Coordinate System
+Use the [actual C++ API reference](docs/development/api_reference.md) instead of copying historical class diagrams. [Portfolio contracts](docs/games.md) cover raw versus physical cells, twelve-contact versus raw eight-neighbor graphs, fixed update seconds, seeded streams and conservative transport. Conservative graph mixing is not symmetric-normalized heat.
 
-The quadray coordinate system uses four basis vectors extending from the center of a tetrahedron to its vertices. This provides a more natural way to represent tetrahedral geometry than traditional Cartesian coordinates.
-
-Conversion formulas between quadray and Cartesian coordinates:
-
-```cpp
-// Convert from Cartesian to quadray coordinates
-static Quadray fromCartesian(const Vector3& v) {
-    const float scale = 1.0f / ROOT2;
-    
-    float a = scale * (std::max(0.0f, v.x) + std::max(0.0f, v.y) + std::max(0.0f, v.z));
-    float b = scale * (std::max(0.0f, -v.x) + std::max(0.0f, -v.y) + std::max(0.0f, v.z));
-    float c = scale * (std::max(0.0f, -v.x) + std::max(0.0f, v.y) + std::max(0.0f, -v.z));
-    float d = scale * (std::max(0.0f, v.x) + std::max(0.0f, -v.y) + std::max(0.0f, -v.z));
-    
-    return Quadray(a, b, c, d).normalized();
-}
-
-// Convert from quadray to Cartesian coordinates
-Vector3 toCartesian() const {
-    const float scale = 1.0f / ROOT2;
-    float x = scale * (a - b - c + d);
-    float y = scale * (a - b + c - d);
-    float z = scale * (a + b - c - d);
-    return Vector3(x, y, z);
-}
-```
-
-### Tetrahedral Voxels
-
-Unlike Minecraft's cubic voxels, QuadCraft uses tetrahedral voxels which allow for more accurate representation of arbitrary geometry, better approximation of curved surfaces, and more natural representation of certain crystalline patterns. Each cube is divided into 5 tetrahedra for more precise terrain representation.
-
-### Quadray Coordinate Visualization
-
-The F2 key toggles a visualization overlay that displays the four basis vectors of the quadray coordinate system:
-
-- A axis (red): Direction of (1,0,0,0) in quadray coordinates
-- B axis (green): Direction of (0,1,0,0) in quadray coordinates
-- C axis (blue): Direction of (0,0,1,0) in quadray coordinates
-- D axis (yellow): Direction of (0,0,0,1) in quadray coordinates
-
-This helps in understanding the four-dimensional nature of the quadray coordinate system.
-
-### Terrain Generation
-
-Terrain is generated using a multi-octave fractal noise function that works with tetrahedral geometry, creating landscapes with natural mountains, caves, and water features. The fractal nature provides detail at multiple scales, creating more realistic-looking terrain.
+The [documentation hub](docs/README.md) and [development index](docs/development/README.md) route to focused topics. [Source customization](docs/development/modding_guide.md) describes real extension points without inventing an installed mod SDK. [JSP synchronization](docs/development/multiplayer_system.md) describes its limited experiment, not a production service.
 
 ## License
 
-This project is licensed under the Apache 2.0 License - see the LICENSE file for details.
+Apache 2.0; see [LICENSE](LICENSE).
 
 ## Acknowledgments
 
-- Based on research from "Mutable Game Environments Built on a Tetrahedral Mesh"
-- Inspired by Minecraft and other voxel-based games
-- Quadray coordinate system based on work by R. Buckminster Fuller and Kirby Urner
+Inspired by Minecraft, tetrahedral-mesh game research, and quadray/Synergetics work associated with R. Buckminster Fuller and Kirby Urner. Mathematical inspiration does not imply validation of every experimental geometry or gameplay claim.

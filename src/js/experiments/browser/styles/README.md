@@ -1,56 +1,5 @@
-# Styles
+# Prototype panel layout and Canvas styling
 
-CSS styling for the modular browser version.
+[main.css](main.css) styles `#app`, `.panel`, `#game-panel`, `#analysis-panel`, `.game-canvas`, control sections and related inputs/buttons. The current file uses literal dark colors and flex sizing, not the fictional `--bg-primary/--accent-color` variable API previously shown here.
 
-## Files
-
-| File | Purpose |
-|------|---------|
-| `main.css` | Complete styling for the application |
-
-## main.css
-
-Comprehensive styling including:
-
-### Layout
-
-- Three-panel layout (controls, analysis, game)
-- Responsive sizing
-- Panel headers and sections
-
-### Components
-
-- Button styles
-- Input fields and sliders
-- Canvas containers
-- Collapsible sections
-
-### Theme
-
-- Dark mode color scheme
-- Consistent color palette
-- Proper contrast for readability
-
-### Responsive
-
-- Flexbox-based layout
-- Panel resizing support
-- Mobile considerations
-
-## Usage
-
-```html
-<link rel="stylesheet" href="styles/main.css">
-```
-
-## CSS Variables
-
-```css
-:root {
-  --bg-primary: #1a1a2e;
-  --bg-secondary: #16213e;
-  --text-primary: #eee;
-  --accent-color: #4a90d9;
-  /* ... etc */
-}
-```
+A host document can link `styles/main.css`, but that does not supply missing split-script DOM/startup wiring. This stylesheet is separate from styles embedded in the standalone HTML and current monolithic browser page. Contrast, mobile support and responsive usability require visual review; no accessibility compliance is asserted.

@@ -1,589 +1,122 @@
 # QuadCraft User Interface
 
-This document describes the user interface (UI) elements and design philosophy of QuadCraft, focusing on how the unique tetrahedral world is made accessible and intuitive for players.
-
-## Design Philosophy
-
-The QuadCraft UI is designed with these core principles:
-
-```mermaid
-graph TD
-    subgraph "UI Design Principles"
-        Minimalist["Minimalist Design"]
-        Informative["Informative Feedback"]
-        Intuitive["Intuitive Controls"]
-        Geometric["Geometric Aesthetics"]
-        Consistent["Consistent Visualization"]
-    end
-```
-
-1. **Minimalist Design**: Reduce clutter to keep focus on the tetrahedral world
-2. **Informative Feedback**: Provide clear visual cues for position and orientation in tetrahedral space
-3. **Intuitive Controls**: Ensure controls follow expected conventions despite the unusual space
-4. **Geometric Aesthetics**: Use design elements that complement the tetrahedral theme
-5. **Consistent Visualization**: Maintain consistent color schemes and representation of coordinates
+QuadCraft has several distinct interfaces, not one shared desktop-style UI. This page describes source-defined controls in the development checkout; it is not a record of a browser or native runtime test. Coordinate interpretation follows the [canonical quadray contract](../quadray_coordinates.md).
 
 ## UI Components Overview
 
-QuadCraft's UI is composed of several key components:
+| Surface | Entry point | Implemented structure |
+| --- | --- | --- |
+| Browser painting experiment | [`src/browser/index.html`](../../src/browser/index.html) | HTML controls above a Canvas 2D viewport; camera, paintbrush, persistence and debugging controls |
+| Standalone analysis experiment | [`QuadCraft_Complete_Standalone.html`](../../src/js/experiments/browser/QuadCraft_Complete_Standalone.html) | Control and analysis panels plus a Canvas viewport; its own embedded controller |
+| Native experiment | [`Game.cpp`](../../src/game/Game.cpp), [`Input.h`](../../src/game/Input.h) | OpenGL world, optional basis lines, window-title performance report and console diagnostics |
+| Game portfolio | [`games/`](../../games/), [portfolio index](../games.md) | Game-specific HTML and Canvas interfaces with reusable modules under `games/4d_generic/` |
 
-```mermaid
-graph TD
-    subgraph "UI Components"
-        HUD["Heads-Up Display"]
-        Menus["Game Menus"]
-        Overlays["Information Overlays"]
-        Controls["Control Indicators"]
-        BlockSelection["Block Selection Interface"]
-    end
-    
-    HUD --> Crosshair["Crosshair"]
-    HUD --> CoordinateDisplay["Coordinate Display"]
-    HUD --> StatusIndicators["Status Indicators"]
-    
-    Menus --> MainMenu["Main Menu"]
-    Menus --> PauseMenu["Pause Menu"]
-    Menus --> Settings["Settings Menu"]
-    
-    Overlays --> DebugInfo["Debug Information"]
-    Overlays --> QuadrayVisualizer["Quadray Visualizer"]
-    Overlays --> TetrahedralGrid["Tetrahedral Grid Overlay"]
-    
-    Controls --> KeyBindings["Key Binding Indicators"]
-    Controls --> MouseControls["Mouse Control Hints"]
-    
-    BlockSelection --> Palette["Block Palette"]
-    BlockSelection --> Properties["Block Properties"]
-```
+Do not transfer shortcuts or mouse-button meanings between these surfaces.
 
 ## Heads-Up Display (HUD)
 
-The HUD provides essential real-time information without obscuring gameplay.
-
-```mermaid
-graph TD
-    subgraph "Heads-Up Display"
-        Crosshair["Central Crosshair"]
-        CoordinateDisplay["Coordinate Display"]
-        BlockInfo["Selected Block Info"]
-        ModeModeIndicator["Game Mode Indicator"]
-        DebugOverlay["Debug Information (toggleable)"]
-    end
-```
-
 ### Crosshair
 
-The crosshair is a minimalist geometric design that indicates the center of the screen and target for block interactions:
-
-- Small tetrahedron shape that changes color when pointing at a block
-- Expands slightly when hovering over interactable blocks
-- Color changes indicate different interaction modes (place, remove, select)
+The native render path draws chunk meshes and an optional coordinate-axis overlay; it does not implement the previously described animated tetrahedral targeting reticle. The painting experiment uses a selected grid position and paintbrush operations rather than a universal first-person hotbar/crosshair UI.
 
 ### Coordinate Display
 
-The coordinate display shows the player's current position in both coordinate systems:
+In `src/browser/index.html`, `display_camQuadLabel` enables labels containing `selq`, Cartesian `camPos`, quaternion `camQ`, and the first gamepad record. This is a diagnostic label, not a Cartesian/quadray format switch or a cell-transition animation.
 
-```mermaid
-sequenceDiagram
-    participant Player
-    participant CoordinateSystem
-    participant Display
-    
-    Player->>CoordinateSystem: Move in world
-    CoordinateSystem->>CoordinateSystem: Convert position
-    CoordinateSystem->>Display: Update Cartesian coordinates
-    CoordinateSystem->>Display: Update Quadray coordinates
-    Display->>Player: Show formatted coordinates
-```
-
-The coordinate display features:
-- Toggle between Cartesian (x,y,z) and Quadray (a,b,c,d) formats
-- Color-coded values corresponding to tetrahedral axes
-- Small indicator showing orientation in tetrahedral space
-- Animated transitions when crossing between tetrahedral cells
+Four quadray coefficients represent a **three-dimensional** point modulo a common additive offset. They are not distances from four vertices, nor four independent Euclidean axes. A raw game label can retain identity even when another label projects to the same physical position; see the [glossary](../reference/glossary.md#raw-game-label).
 
 ## Menus
 
-The menu system provides access to game settings and options.
-
-```mermaid
-graph TD
-    subgraph "Menu System"
-        MainMenu["Main Menu"]
-        PauseMenu["Pause Menu"]
-        SettingsMenu["Settings Menu"]
-        HelpMenu["Help Menu"]
-    end
-    
-    MainMenu --> NewGame["New Game"]
-    MainMenu --> LoadGame["Load Game"]
-    MainMenu --> Settings["Settings"]
-    MainMenu --> Quit["Quit"]
-    
-    PauseMenu --> Resume["Resume"]
-    PauseMenu --> Settings["Settings"]
-    PauseMenu --> Help["Help"]
-    PauseMenu --> MainMenu["Main Menu"]
-    
-    SettingsMenu --> Graphics["Graphics Settings"]
-    SettingsMenu --> Controls["Control Settings"]
-    SettingsMenu --> Audio["Audio Settings"]
-    SettingsMenu --> UI["UI Settings"]
-    
-    HelpMenu --> Controls["Control Guide"]
-    HelpMenu --> Coordinates["Coordinate Tutorial"]
-    HelpMenu --> Building["Building Guide"]
-```
-
 ### Main Menu
 
-The main menu features:
-- A 3D background showing rotating tetrahedral structures
-- Geometric, minimalist button design
-- Color scheme based on the four tetrahedral axes
-- Quick access to settings and game modes
+The painting page exposes controls directly in a top panel. `displayTopStuff` and Escape hide/show that panel and resize the canvas. This is not a main-menu/world-selection system.
 
 ### Pause Menu
 
-The pause menu maintains the game world in the background with a subtle blur effect and features:
-- Transparent overlay with clear options
-- Quick resume button
-- Access to settings and help
-- Option to save and exit
+There is no common pause menu across implementations. Games using [`BaseGame`](../../games/4d_generic/base_game.js) bind lowercase `p` to pause and display a HUD message. Native Escape is an exit/release-cursor branch, **not** pause: while captured it requests release, otherwise it requests window close. Because it is polled while held, do not rely on Escape as a persistent menu or pause state.
 
 ### Settings Menu
 
-The settings menu is organized into categories with visual indicators for each setting:
-- Graphics: Resolution, quality, render distance, FOV
-- Controls: Mouse sensitivity, key bindings, movement speed
-- Audio: Volume levels, sound effects, music
-- UI: HUD opacity, size, coordinate display format, colorblind modes
+The painting page has individual checkboxes and numeric inputs, not a categorized graphics/audio/accessibility settings dialog. Its quaternion-camera checkbox changes how camera controls behave; the `offsetX`, `offsetY`, `zoom`, `angleX`, and `angleY` fields describe the older camera path.
 
 ## Block Selection Interface
 
-The block selection interface allows players to choose and manipulate tetrahedral blocks.
+### Browser painting experiment
 
-```mermaid
-graph TD
-    subgraph "Block Selection UI"
-        Palette["Block Palette"]
-        Categories["Block Categories"]
-        Preview["3D Block Preview"]
-        Properties["Block Properties"]
-    end
-    
-    Palette --> BlockGrid["Grid of Available Blocks"]
-    Palette --> Search["Search Function"]
-    Palette --> Favorites["Favorites Section"]
-    
-    Categories --> Basic["Basic Blocks"]
-    Categories --> Functional["Functional Blocks"]
-    Categories --> Decorative["Decorative Blocks"]
-    Categories --> Special["Special Blocks"]
-    
-    Preview --> Rotation["Rotation Controls"]
-    Preview --> Variants["Variant Selection"]
-    
-    Properties --> Material["Material Properties"]
-    Properties --> Behavior["Behavior Settings"]
-    Properties --> Appearance["Appearance Options"]
-```
+The top panel contains a multi-select paintbrush list, shape toggles, direction buttons, grid-dot toggle, code textarea, save/load controls, and diagnostic checkboxes. Its event handlers define:
 
-Key features of the block selection interface:
-- Radial quick-select menu accessible with a hotkey
-- Scrollable grid of block types organized by category
-- 3D preview of selected block that can be rotated
-- Search function for quickly finding specific blocks
-- Favorite blocks section for frequently used items
+| Input | Source-defined action |
+| --- | --- |
+| Left drag | Camera lateral/vertical movement in quaternion mode; pan in legacy mode |
+| Right drag | Camera rotation |
+| Both mouse buttons dragged vertically | Forward/backward camera movement |
+| Wheel | Forward/backward in quaternion mode; zoom in legacy mode |
+| Arrow keys | Lateral/vertical camera movement |
+| Control / Insert | Forward / backward camera movement |
+| Backtick / `1` | Unpaint / paint with current brush |
+| `2` | Shoot a rolling ball |
+| `q w e r t y`, `a s d f g h` | Twelve source-defined grid-direction commands |
+| `z`, `x`, `c`, Space | Toggle Z tetrahedron, octahedron, C tetrahedron, or all three |
+| Shift | Toggle grid dots |
+| Escape | Hide/show top controls |
+
+Gamepad handling polls the first device: left stick moves laterally/vertically, right stick rotates, triggers move forward/backward, LB/RB unpaint/paint, and A shoots a ball. These are hard-coded mappings, not a rebinding UI. Keyboard handling exempts the code textarea, not every editable input.
+
+The page offers cookie quick-save slots, file controls, and Tomcat-related buttons. Their presence does not establish a deployed server or production multiplayer service. The code-execution button evaluates JavaScript in the page; use only trusted code.
+
+### Standalone analysis experiment
+
+The [standalone HTML](../../src/js/experiments/browser/QuadCraft_Complete_Standalone.html) has its own controls: **left drag rotates**, **right drag pans**, and the wheel zooms. Direction and shape buttons, camera numeric fields, quick-save/file controls and coordinate logging/analysis panels are defined in that file. These mouse bindings differ from the painting page. The separate [`gameController.js`](../../src/js/experiments/browser/js/core/gameController.js) belongs to the modular experiment and must not be assumed to control every HTML entry point.
+
+### Native experiment
+
+[`Input.h`](../../src/game/Input.h) installs GLFW callbacks and per-frame polling:
+
+- The cursor starts uncaptured; a left click captures it without removing a block. Captured mouse motion controls view direction.
+- Arrow keys move forward/back/left/right; Page Up/Page Down move vertically even without capture. Captured WASD and Space add forward/back/left/right and upward movement.
+- Captured left/right clicks request block removal/stone placement using the camera ray-march result. Wheel input changes camera zoom, not an inventory slot.
+- F1 toggles wireframe; F2 toggles the coordinate overlay. The overlay consists of four colored world-space lines placed in front of the camera, not a labeled screen-corner compass.
+- Tab capture and F4 console distance-report toggles are present in polling branches, but the key callback also writes their shared key-state array. This source interaction prevents documenting them as runtime-proven reliable one-shot toggles.
+- Shift/Control modify speed. Do not advertise Shift as working downward movement: its captured downward branch also requires `!shift`, conflicting with its own modifier state.
+
+[`Game::reportFrameTime`](../../src/game/Game.cpp) writes FPS and rendered-chunk count into the window title. Position/distance diagnostics in `Input.h` use standard output, not an on-screen F3/F4 coordinate panel. No native inventory-selection hotbar is wired in these paths.
 
 ## Information Overlays
 
-QuadCraft includes several toggleable information overlays to help players understand tetrahedral space.
-
-```mermaid
-graph TD
-    subgraph "Information Overlays"
-        QuadrayVisualizer["Quadray Coordinate Visualizer"]
-        DebugInfo["Debug Information"]
-        TetrahedralGrid["Tetrahedral Grid Overlay"]
-        BlockHighlight["Block Highlight System"]
-        MiniMap["Minimap"]
-    end
-    
-    QuadrayVisualizer --> AxisDisplay["Colored Axis Display"]
-    QuadrayVisualizer --> PositionMarker["Current Position Marker"]
-    
-    DebugInfo --> Performance["Performance Stats"]
-    DebugInfo --> TetraInfo["Tetrahedron Data"]
-    DebugInfo --> RaycastInfo["Raycast Information"]
-    
-    TetrahedralGrid --> CellOutlines["Cell Outlines"]
-    TetrahedralGrid --> PlaneIndicators["Plane Indicators"]
-    TetrahedralGrid --> AxisMarkers["Axis Markers"]
-    
-    BlockHighlight --> SelectionOutline["Selection Outline"]
-    BlockHighlight --> PlacementPreview["Placement Preview"]
-    
-    MiniMap --> LocalMap["Local Tetrahedral Map"]
-    MiniMap --> PlayerIndicator["Player Position and Orientation"]
-```
-
 ### Quadray Coordinate Visualizer
 
-This overlay helps players understand the quadray coordinate system:
-
-```mermaid
-sequenceDiagram
-    participant Player
-    participant Visualizer
-    participant World
-    
-    Player->>Visualizer: Toggle visualizer
-    Visualizer->>World: Get current position
-    World->>Visualizer: Return position in both coordinate systems
-    Visualizer->>Visualizer: Generate visualization
-    Visualizer->>Player: Display color-coded axes
-    Visualizer->>Player: Show position in quadray space
-    Player->>Player: Move in world
-    Visualizer->>Visualizer: Update in real-time
-```
-
-Features of the quadray visualizer:
-- Four color-coded axes representing the a, b, c, and d directions
-- Current position displayed as a point in the tetrahedral space
-- Animated transitions when moving between tetrahedra
-- Reference grid showing the tetrahedral cell structure
-- Toggle between different visualization modes
+Native F2 draws four basis-direction lines colored red, green, blue and yellow. The sandbox game also draws projected basis arrows. Neither implies four physical dimensions or a complete navigation assistant.
 
 ### Debug Information Overlay
 
-The debug overlay provides technical information for development and advanced users:
-
-- FPS counter and performance metrics
-- Current chunk information
-- Memory usage statistics
-- Raycast hit information
-- Detailed position and orientation data
-- Tetrahedral cell ID and properties
+Diagnostics are surface-specific: browser labels and checkboxes, native console output/window title, and game-specific Canvas/HTML statistics. There is no common memory/network profiler overlay.
 
 ### Tetrahedral Grid Overlay
 
-This overlay visualizes the underlying tetrahedral grid structure:
+Grid dots and rendered geometric faces in the browser experiment are not a universal cell-boundary visualization. Projected point markers, game connectivity, native tetrahedral meshes and occupied voxel boundaries are different objects; see [model and voxel boundaries](../reference/glossary.md#model-and-voxel-boundaries).
 
-- Wireframe outline of tetrahedral cells
-- Highlighting of the current cell containing the player
-- Color-coded faces indicating adjacency
-- Distance markers for scale reference
-- Coordinate system annotations
+## Game-Specific UIs
 
-## Control Indicators
+[`4d_minecraft/index.html`](../../games/4d_minecraft/index.html) is a concrete example: a 740×560 canvas beside wrapping sidebar panels for block/world information, inventory/crafting, analysis, formulas and controls. It includes Craft Planks, Craft Glass, Verify Math and New World buttons. The HTML animation loop also writes the lower status line, so it can overwrite the shared pause text.
 
-QuadCraft provides visual indications of available controls contextually:
+Actual controller bindings in [`minecraft_game.js`](../../games/4d_minecraft/js/minecraft_game.js) select block IDs 1–9 with `1`–`9` and ID 10 with `0`; the page's “1–8” hint is incomplete. Ordinary left click places along +C above a hit block; Alt+click removes; Shift+drag rotates; wheel zooms; lowercase `n` creates a world, `r` resets, and `p` pauses via `BaseGame`.
 
-```mermaid
-graph TD
-    subgraph "Control Indicators"
-        KeyBindings["Key Binding Display"]
-        ContextControls["Contextual Control Hints"]
-        MouseIndicators["Mouse Action Indicators"]
-        GamepadOverlay["Gamepad Button Overlay"]
-    end
-    
-    KeyBindings --> Movement["Movement Controls"]
-    KeyBindings --> Interaction["Interaction Controls"]
-    KeyBindings --> Interface["Interface Controls"]
-    
-    ContextControls --> CurrentMode["Current Mode Controls"]
-    ContextControls --> AvailableActions["Available Actions"]
-    
-    MouseIndicators --> LeftClick["Left Click Function"]
-    MouseIndicators --> RightClick["Right Click Function"]
-    MouseIndicators --> Scroll["Scroll Function"]
-    
-    GamepadOverlay --> ButtonMap["Button Mapping"]
-    GamepadOverlay --> TriggerActions["Trigger Actions"]
-```
-
-Features of the control indicators:
-- Subtle key hints that appear when new actions become available
-- Transparent overlay showing current control scheme
-- Context-sensitive prompts based on what the player is looking at
-- Animated tutorials for complex interactions
-- Ability to toggle different control visualizations on/off
+[`minecraft_renderer.js`](../../games/4d_minecraft/js/minecraft_renderer.js) paints depth-sorted square markers, picks their screen-space faces, displays a raw-label hover tooltip, and draws analysis text. This is not a tetrahedral-face mesh editor. The board has callable time/physics methods, but `MinecraftGame.update()` refreshes analysis rather than advancing those methods; a displayed time value does not establish an automatically advancing day/night simulation.
 
 ## Accessibility Features
 
-QuadCraft includes several UI features to improve accessibility:
+HTML buttons, labels and text are present, but these sources do not establish suite-wide screen-reader coverage, colorblind modes, text-scale settings, full keyboard navigation or remapping. Canvas-only content requires separate accessibility work; dark colors alone do not establish accessible contrast.
 
-```mermaid
-graph TD
-    subgraph "Accessibility Features"
-        ColorblindModes["Colorblind Modes"]
-        TextScaling["Text Scaling Options"]
-        HighContrast["High Contrast Mode"]
-        CustomControls["Control Customization"]
-        AudioCues["Audio Cues"]
-    end
-    
-    ColorblindModes --> Protanopia["Protanopia Mode"]
-    ColorblindModes --> Deuteranopia["Deuteranopia Mode"]
-    ColorblindModes --> Tritanopia["Tritanopia Mode"]
-    
-    TextScaling --> FontSize["Font Size Options"]
-    TextScaling --> UIScaling["UI Element Scaling"]
-    
-    HighContrast --> BlockOutlines["Enhanced Block Outlines"]
-    HighContrast --> TextContrast["Improved Text Contrast"]
-    
-    CustomControls --> KeyRemapping["Key Remapping"]
-    CustomControls --> MouseSensitivity["Mouse Sensitivity"]
-    
-    AudioCues --> DirectionalAudio["Directional Audio Cues"]
-    AudioCues --> InteractionSounds["Interaction Sound Feedback"]
-```
+## Design Philosophy
 
-Key accessibility features:
-- Multiple colorblind modes with adjusted color schemes
-- Scalable UI elements and text
-- High contrast mode for improved visibility
-- Customizable controls and sensitivity settings
-- Audio cues for important events and directional information
-- Screen reader support for menus and important notifications
-
-## Tutorial UI
-
-QuadCraft features a comprehensive tutorial system to help players understand tetrahedral space:
-
-```mermaid
-sequenceDiagram
-    participant Player
-    participant TutorialSystem
-    participant World
-    participant UI
-    
-    Player->>TutorialSystem: Start tutorial
-    TutorialSystem->>UI: Display initial instructions
-    TutorialSystem->>World: Set up tutorial environment
-    TutorialSystem->>UI: Highlight relevant controls
-    Player->>World: Follow tutorial step
-    World->>TutorialSystem: Report step completion
-    TutorialSystem->>UI: Show next instruction
-    TutorialSystem->>UI: Progress indicator update
-    Player->>TutorialSystem: Complete tutorial
-    TutorialSystem->>UI: Show completion message
-    TutorialSystem->>Player: Award tutorial completion
-```
-
-Tutorial UI elements include:
-- Step-by-step instruction panels
-- Interactive 3D demonstrations
-- Highlighted control indicators
-- Progress tracker
-- Visual guides for movement and building
-- Skippable sections for experienced players
-- Quick reference guide accessible from the pause menu
-
-## Coordinate System UI
-
-A special UI system is dedicated to helping players understand and navigate using the quadray coordinate system:
-
-```mermaid
-graph TD
-    subgraph "Coordinate System UI"
-        PositionDisplay["Position Display"]
-        DirectionIndicator["Direction Indicator"]
-        CoordinateConverter["Coordinate Converter"]
-        NavigationAssist["Navigation Assistant"]
-    end
-    
-    PositionDisplay --> CartesianDisplay["Cartesian (x,y,z)"]
-    PositionDisplay --> QuadrayDisplay["Quadray (a,b,c,d)"]
-    
-    DirectionIndicator --> Compass["Tetrahedral Compass"]
-    DirectionIndicator --> AxisViewer["Axis Viewer"]
-    
-    CoordinateConverter --> Calculator["Coordinate Calculator"]
-    CoordinateConverter --> Visualizer["Conversion Visualizer"]
-    
-    NavigationAssist --> PathfindingHints["Pathfinding Hints"]
-    NavigationAssist --> MovementGuides["Movement Guides"]
-```
-
-Key features of the coordinate system UI:
-- Toggle between Cartesian and Quadray coordinate display
-- Color-coded coordinate values for easy reference
-- 3D compass showing orientation in tetrahedral space
-- Interactive coordinate converter for learning
-- Visual indicators showing how movement affects coordinates
-- Pathfinding assistance for navigating in tetrahedral space
-
-## Building Interface
-
-The building interface helps players construct and manipulate tetrahedral structures:
-
-```mermaid
-graph TD
-    subgraph "Building Interface"
-        BuildControls["Building Controls"]
-        SelectionTools["Selection Tools"]
-        BlockManipulation["Block Manipulation"]
-        Templates["Templates System"]
-    end
-    
-    BuildControls --> PlacementMode["Placement Mode"]
-    BuildControls --> RemovalMode["Removal Mode"]
-    BuildControls --> EditMode["Edit Mode"]
-    
-    SelectionTools --> SingleSelect["Single Block Selection"]
-    SelectionTools --> AreaSelect["Area Selection"]
-    SelectionTools --> PatternSelect["Pattern Selection"]
-    
-    BlockManipulation --> Rotate["Rotation Controls"]
-    BlockManipulation --> Scale["Scaling Controls"]
-    BlockManipulation --> Copy["Copy/Paste"]
-    
-    Templates --> SaveTemplate["Save Template"]
-    Templates --> LoadTemplate["Load Template"]
-    Templates --> ShareTemplate["Share Template"]
-```
-
-Building interface features:
-- Mode selector for different building operations
-- Grid snap controls and alignment guides
-- Block rotation and orientation tools
-- Selection tools for manipulating multiple blocks
-- Template system for saving and loading structures
-- Undo/redo functionality
-- Mirror and symmetry tools
-
-## UI Customization
-
-QuadCraft allows players to customize their UI experience:
-
-```mermaid
-graph TD
-    subgraph "UI Customization"
-        Layout["Layout Options"]
-        Appearance["Appearance Settings"]
-        Information["Information Display"]
-        Performance["Performance Options"]
-    end
-    
-    Layout --> ElementPositioning["Element Positioning"]
-    Layout --> HUDConfiguration["HUD Configuration"]
-    Layout --> ScreenRegions["Screen Region Assignment"]
-    
-    Appearance --> ColorThemes["Color Themes"]
-    Appearance --> Opacity["Element Opacity"]
-    Appearance --> Scale["UI Scaling"]
-    
-    Information --> DetailLevel["Information Detail Level"]
-    Information --> UpdateFrequency["Update Frequency"]
-    Information --> PriorityInfo["Priority Information"]
-    
-    Performance --> MinimalistMode["Minimalist Mode"]
-    Performance --> AnimationToggle["UI Animation Toggle"]
-    Performance --> LowImpactMode["Low Impact Mode"]
-```
-
-UI customization options:
-- Repositionable HUD elements
-- Multiple color themes with custom color options
-- Opacity and scale controls for all UI elements
-- Information detail level settings
-- Performance-focused minimalist modes
-- Saved UI profiles for different play styles
+Keep instructions next to the relevant entry point, distinguish camera controls from board commands, and describe the actual selectable geometry. These are design recommendations, not claims of a shared theme/component framework.
 
 ## Technical Implementation
 
-The UI system in QuadCraft is implemented using a modular architecture:
+There is no `UIManager`/`UIElement` hierarchy documented as a current API here. Portfolio games reuse [`BaseGame`](../../games/4d_generic/base_game.js), [`InputController`](../../games/4d_generic/input_controller.js), and [`HUD`](../../games/4d_generic/hud.js). `HUD` writes text and color to a supplied DOM element; it is not a window, layout, animation or localization system.
 
-```mermaid
-classDiagram
-    class UIManager {
-        +static UIManager* instance
-        +initialize()
-        +render()
-        +update(float deltaTime)
-        +showElement(UIElementType type)
-        +hideElement(UIElementType type)
-        +registerElement(UIElement* element)
-        +unregisterElement(UIElement* element)
-    }
-    
-    class UIElement {
-        +Vector2 position
-        +Vector2 size
-        +bool visible
-        +float opacity
-        +render()
-        +update(float deltaTime)
-        +handleInput(InputEvent event)
-        +setPosition(Vector2 position)
-        +setSize(Vector2 size)
-        +setVisible(bool visible)
-        +setOpacity(float opacity)
-    }
-    
-    class HUDElement {
-        +bool isHUD
-        +RenderPriority priority
-        +AnchorPoint anchor
-        +render()
-        +update(float deltaTime)
-    }
-    
-    class MenuElement {
-        +MenuType parentMenu
-        +bool isInteractive
-        +handleClick(Vector2 mousePos)
-        +handleHover(Vector2 mousePos)
-        +setInteractive(bool interactive)
-    }
-    
-    class TextElement {
-        +std::string text
-        +Font* font
-        +float fontSize
-        +Color textColor
-        +TextAlignment alignment
-        +render()
-        +setText(std::string text)
-        +setFont(Font* font)
-        +setFontSize(float size)
-        +setTextColor(Color color)
-        +setAlignment(TextAlignment alignment)
-    }
-    
-    class ImageElement {
-        +Texture* texture
-        +Color tintColor
-        +bool preserveAspect
-        +render()
-        +setTexture(Texture* texture)
-        +setTintColor(Color color)
-        +setPreserveAspect(bool preserve)
-    }
-    
-    class Button {
-        +std::string label
-        +Callback onClick
-        +ButtonState state
-        +render()
-        +update(float deltaTime)
-        +handleClick(Vector2 mousePos)
-        +setOnClickCallback(Callback callback)
-        +setLabel(std::string label)
-    }
-    
-    UIElement <|-- HUDElement
-    UIElement <|-- MenuElement
-    UIElement <|-- TextElement
-    UIElement <|-- ImageElement
-    MenuElement <|-- Button
-    UIManager --> UIElement
-```
+## Related Documentation
 
-## Conclusion
-
-The QuadCraft user interface is designed to bridge the gap between intuitive controls and the complex tetrahedral environment. Through careful design choices, informative visualizations, and customizable elements, the UI helps players navigate, build, and understand the unique spatial properties of the tetrahedral world while maintaining an immersive gameplay experience. 
+- [UI index](README.md) · [Implementation and bounded design discussion](interface_design.md)
+- [Coordinate contract](../quadray_coordinates.md) · [Glossary](../reference/glossary.md)
+- [Controls and navigation](../game_design/controls_and_navigation.md) · [Documentation index](../README.md)

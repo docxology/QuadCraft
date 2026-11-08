@@ -1,41 +1,7 @@
-# {name}
+# Maintaining GameScaffold templates
 
-## 🤖 Game Overview
+This is the Python generator package, not a game; template placeholders are not its own entrypoints. Read [scaffold guide](../../doc/scaffold_guide.md) and the actual string generators in `__init__.py`.
 
-**{name}** is a 4D browser game built on the QuadCraft engine. It runs in the browser using [Quadray coordinates](../../../docs/mathematics/quadray_coordinates.md) for 4D spatial logic.
+Keep generated HTML/script order, constructor signatures, projection options, clock units and exports aligned with real shared APIs. Optional imports do not imply inheritance/adoption. `create` writes multiple files and can overwrite generated files; do not run it against existing user content without authorization. `validate` checks presence only.
 
-## 📂 Architecture
-
-- **Entry Point**: `index.html` (Loads shared modules + game scripts)
-- **Logic**: `{dir}/js/{key}_board.js` (State management)
-- **Rendering**: `{dir}/js/{key}_renderer.js` (Canvas drawing)
-- **Control**: `{dir}/js/{key}_game.js` (Input & Game Loop)
-
-> **Note**: Legacy games (Wave 1) might use `board.js`, `renderer.js`, `game.js`.
-
-## 🛠️ Development
-
-### Shared Modules
-
-This game imports core libraries from `../4d_generic/`:
-
-- `quadray.js`: Vector math
-- `camera.js`: 4D Camera controller
-- `projection.js`: 4D-to-2D projection
-- `input_controller.js`: Keyboard/Mouse handling
-
-### Running Locally
-
-Use the Python launcher to ensure correct module loading (do not just open HTML file if checking headers/imports):
-
-```bash
-python3 ../../run_games.py --game {key}
-```
-
-### 🧪 Testing
-
-Run unit tests for this game:
-
-```bash
-python3 ../../run_games.py --test --game {key}
-```
+Document current default-path, projection, camera-sync and local-server limitations honestly until a separately authorized source fix lands. Generated board step/default assertions are not implemented rules or completion evidence. Registry, ports, browser scenarios and meaningful game docs need explicit integration.

@@ -1,43 +1,5 @@
-# Styles - AI Agent Guidelines
+# Prototype panel layout and Canvas styling maintenance
 
-## Overview
+Match existing selectors and literal theme conventions. Coordinate DOM ID/class changes with the actual host; do not claim stylesheet loading makes the split prototype runnable. Keep screenshots and browser/viewport observations dated.
 
-CSS styling for the modular browser version.
-
-## Guidelines
-
-### Adding Styles
-
-- Use CSS variables for colors
-- Follow existing naming conventions
-- Ensure dark mode compatibility
-- Test responsiveness
-
-### Modifying Styles
-
-- Check impact on all panels
-- Verify readability
-- Test in multiple browsers
-- Consider accessibility
-
-## Best Practices
-
-```css
-/* Use CSS variables */
-color: var(--text-primary);
-
-/* Use semantic class names */
-.game-controls-panel { }
-
-/* Group related styles */
-/* -- Buttons -- */
-.btn { }
-.btn-primary { }
-```
-
-## Testing
-
-- Check all three panels
-- Verify in different viewport sizes
-- Test color contrast
-- Verify hover/active states
+Read the adjacent [directory guide](README.md) before changing this area. Report source inspection separately from executed runtime checks.

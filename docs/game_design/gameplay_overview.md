@@ -1,368 +1,77 @@
-# QuadCraft Gameplay Overview
+# QuadCraft Gameplay: Separate Prototypes, Shared Geometry, and Design Goals
+
+QuadCraft contains several implementations, not one engine with every feature listed in historical design notes. This page describes development-checkout behavior from source; it is not an interactive-play or performance-validation report.
+
+[Design index](README.md) · [Coordinate contract](../quadray_coordinates.md) · [Controls](controls_and_navigation.md) · [Blocks](block_system.md) · [Generation](world_generation.md) · [UI](../ui/user_interface.md).
 
 ## Core Concept
 
-QuadCraft is a voxel-based game that reimagines the traditional cubic voxel paradigm by using tetrahedral elements as its fundamental building blocks. This unique approach creates distinct gameplay experiences centered around exploration, building, and navigation in a tetrahedral world.
+The common theme is exploring tetrahedral geometry through four-coefficient labels. Physical quadrays are rank-three Euclidean positions modulo a common offset. Portfolio games can additionally assign rules to distinct raw four-index slots, even when two slots have the same physical projection. The `4D` names do not mean that a four-axis Euclidean world is being rendered without loss.
 
-```mermaid
-graph TD
-    CoreMechanics["Core Mechanics"] --> Exploration["Exploration"]
-    CoreMechanics --> Building["Building"]
-    CoreMechanics --> Navigation["Navigation"]
-    CoreMechanics --> Interaction["Block Interaction"]
-```
+## Implementations and Player Experience
 
-## Design Philosophy
-
-QuadCraft's design philosophy revolves around several key principles:
-
-```mermaid
-graph TD
-    subgraph "Design Pillars"
-        Mathematical["Mathematical Elegance"]
-        Intuitive["Intuitive Controls"]
-        Novel["Novel Experience"]
-        Educational["Educational Value"]
-    end
-```
-
-1. **Mathematical Elegance**: Showcase the beauty of tetrahedral geometry and coordinate systems
-2. **Intuitive Controls**: Despite the complexity of tetrahedral space, maintain intuitive player controls
-3. **Novel Experience**: Provide a genuinely different experience from cubic voxel games
-4. **Educational Value**: Help players understand non-Cartesian coordinate systems and tetrahedral geometry
-
-## Game Modes
-
-QuadCraft offers different game modes to accommodate various player interests:
-
-```mermaid
-graph TD
-    subgraph "Game Modes"
-        Creative["Creative Mode"]
-        Exploration["Exploration Mode"]
-        Challenge["Challenge Mode"]
-        Educational["Educational Mode"]
-    end
-    
-    Creative --> FreeBuilding["Free Building"]
-    Creative --> UnlimitedResources["Unlimited Resources"]
-    
-    Exploration --> WorldGeneration["Procedural World"]
-    Exploration --> Discovery["Resource Discovery"]
-    
-    Challenge --> Objectives["Building Objectives"]
-    Challenge --> Puzzles["Spatial Puzzles"]
-    
-    Educational --> Tutorials["Coordinate Tutorials"]
-    Educational --> GeometryLessons["Geometry Lessons"]
-```
-
-### Creative Mode
-
-Creative mode focuses on free building and experimentation with tetrahedral structures. Players have:
-- Unlimited resources
-- Flight capabilities with both quaternion and traditional camera systems
-- No environmental hazards
-- Access to all block types including octahedrons and tetrahedrons
-- Advanced paintbrush system with customizable patterns
-- Real-time JavaScript code evaluation for custom paintbrushes
-- Ability to save and share creations to local storage or files
-- CCP Ball Grid optimization for handling large numbers of balls
-- Cone-Plane Intersection rendering for accurate ball visualization
-
-### Exploration Mode
-
-Exploration mode emphasizes discovery in procedurally generated tetrahedral worlds:
-- Procedurally generated terrain with tetrahedral features
-- Resource gathering
-- Day/night cycle
-- Weather effects
-- Unique biomes with distinctive tetrahedral formations
-
-### Challenge Mode
-
-Challenge mode presents players with specific building and navigation challenges:
-- Timed construction tasks
-- Spatial reasoning puzzles
-- Structure replication challenges
-- Navigation obstacle courses
-
-### Educational Mode
-
-Educational mode provides structured tutorials on tetrahedral geometry and coordinates:
-- Interactive tutorials on quadray coordinates
-- Geometry visualization tools
-- Step-by-step construction guides
-- Mathematical demonstrations and explanations
-
-## Player Experience Flow
-
-The typical player experience follows this progression:
-
-```mermaid
-sequenceDiagram
-    participant Player
-    participant Tutorial
-    participant BasicBuilding
-    participant AdvancedConcepts
-    participant MasterBuilding
-    
-    Player->>Tutorial: Learn basic navigation
-    Tutorial->>Player: Understand coordinate system
-    Player->>BasicBuilding: Simple tetrahedral structures
-    BasicBuilding->>Player: Develop spatial intuition
-    Player->>AdvancedConcepts: Learn complex patterns
-    AdvancedConcepts->>Player: Master tetrahedral space
-    Player->>MasterBuilding: Create complex structures
-```
+| Entrypoint | Implemented interaction model | Boundary |
+| --- | --- | --- |
+| [Native `src/game`](../../src/game/Game.cpp) | Free camera, generated Cartesian chunks, colored tetrahedral element meshes, sampled block lookup/placement | Prototype shapes and storage are not a validated regular honeycomb or complete player physics system |
+| [Monolithic browser experiment](../../src/browser/index.html) | Geometry painting, tetra/octa/ball brushes, camera controls, configurable visualization and experimental state tools | Own global state and controls; not the portfolio's shared game loop |
+| [Modular browser experiment](../../src/js/experiments/browser/js/core/gameController.js) | Separate browser-controller experiment | Its API and state are not the native engine or the monolithic page |
+| [Portfolio games](../../games/GAMES_INDEX.md) | Individual board, arcade, building and strategy rules, with shared helpers | No universal control scheme, voxel engine, save format or physics contract across titles |
 
 ## Core Gameplay Mechanics
 
 ### Navigation
 
-Navigation in QuadCraft occurs in both Cartesian and tetrahedral coordinate systems:
-
-```mermaid
-graph TD
-    Navigation["Navigation System"] --> FirstPerson["First-Person Control"]
-    Navigation --> Cartesian["Cartesian Movement"]
-    Navigation --> TetraSpace["Tetrahedral Awareness"]
-    Navigation --> DualCoordinates["Dual Coordinate Display"]
-    
-    FirstPerson --> WASD["WASD Movement"]
-    FirstPerson --> Mouse["Mouse Look"]
-    FirstPerson --> Jump["Jump/Fly Controls"]
-    
-    TetraSpace --> Collision["Tetrahedral Collision"]
-    TetraSpace --> CoordMovement["Coordinate-Based Movement"]
-    
-    DualCoordinates --> PositionDisplay["Position Overlay"]
-    DualCoordinates --> Navigation["Directional Hints"]
-```
-
-Key navigation features:
-- First-person movement using WASD keys
-- Mouse look controls
-- Arrow key alternative movement
-- Jump and fly capabilities
-- Drone mode with advanced movement options
-- Coordinate system toggle (Cartesian/Quadray)
-- Speed adjustment controls
+Native movement controls a Cartesian camera. The browser painter has its own movement/rotation scheme. Many portfolio games rotate a view of projected game positions instead of moving an embodied first-person player. Use the [entrypoint-specific controls guide](controls_and_navigation.md), not a combined WASD/flight/gamepad table.
 
 ### Block Interaction
 
-The block interaction system allows players to manipulate the tetrahedral world:
+[4D Minecraft](../../games/4d_minecraft/js/minecraft_game.js) is a concrete building example:
 
-```mermaid
-graph TD
-    Interaction["Block Interaction"] --> Selection["Block Selection"]
-    Interaction --> Placement["Block Placement"]
-    Interaction --> Removal["Block Removal"]
-    Interaction --> Modification["Block Modification"]
-    
-    Selection --> Raycasting["Tetrahedral Raycasting"]
-    Selection --> Highlight["Selection Highlight"]
-    
-    Placement --> Adjacency["Adjacency Rules"]
-    Placement --> RotationalOptions["Rotational Options"]
-    
-    Removal --> StructuralIntegrity["Structural Integrity"]
-    Removal --> ResourceCollection["Resource Collection"]
-    
-    Modification --> Properties["Change Properties"]
-    Modification --> Appearance["Change Appearance"]
-```
+1. The renderer picks the last-painted square marker containing the pointer.
+2. Plain left-click attempts placement at the hovered raw label plus `(0,0,1,0)`.
+3. Alt+left-click removes that raw slot and returns its block type to inventory.
+4. Successful placement consumes inventory, increments placement count and adds one score point.
 
-Key interaction features:
-- Left-click to remove blocks
-- Right-click to place blocks
-- Block selection highlighting
-- Block type selection UI
-- Block rotation options
-- Block property modification
+This is not selected-face tetrahedral placement, a physical upward displacement along Cartesian $y$, progressive mining by hardness or an exact 3D raycast. The shared embedding maps `+C` to $(-1,1,-1)/\sqrt2$.
 
 ### Building System
 
-The building system expands on block interaction with additional features:
-
-```mermaid
-graph TD
-    Building["Building System"] --> BlockTypes["Block Types"]
-    Building --> Patterns["Tetrahedral Patterns"]
-    Building --> Templates["Building Templates"]
-    Building --> Tools["Building Tools"]
-    
-    BlockTypes --> Basic["Basic Blocks"]
-    BlockTypes --> Functional["Functional Blocks"]
-    BlockTypes --> Decorative["Decorative Blocks"]
-    
-    Patterns --> Symmetry["Symmetrical Structures"]
-    Patterns --> Tessellation["Tetrahedral Tessellation"]
-    
-    Templates --> Blueprints["Blueprint System"]
-    Templates --> Sharing["Template Sharing"]
-    
-    Tools --> Copy["Copy/Paste"]
-    Tools --> Mirror["Mirror Tool"]
-    Tools --> Fill["Fill Tool"]
-```
-
-Key building features:
-- Multiple block types with different properties
-- Blueprint system for saving and loading structures
-- Advanced building tools (copy/paste, fill, mirror)
-- Pattern recognition and auto-completion
-- Structural integrity system
+[MinecraftBoard](../../games/4d_minecraft/js/minecraft_board.js) stores raw-key blocks, inventory and counters. The ordinary controls select block IDs 1–10 with keys `1`–`9` and `0`. Other prototypes use different block/brush representations. There is no common blueprint, modding, mirror-tool or structure-validation API implied by these names.
 
 ## World System
 
-The world in QuadCraft is built from tetrahedral chunks:
+Native generation samples deterministic sine-based fractal fields in Cartesian chunks; Minecraft initializes a finite layered raw-slot map with random grass/tree placement. These implementations have different boundaries and reproducibility properties. See [generation details](world_generation.md), including why `size=8` is not an enforced immutable world boundary.
 
-```mermaid
-graph TD
-    World["World System"] --> Chunks["Tetrahedral Chunks"]
-    World --> Generation["Procedural Generation"]
-    World --> Biomes["Tetrahedral Biomes"]
-    World --> Features["World Features"]
-    
-    Chunks --> Loading["Chunk Loading"]
-    Chunks --> Rendering["Chunk Rendering"]
-    Chunks --> Storage["Chunk Storage"]
-    
-    Generation --> Terrain["Terrain Generation"]
-    Generation --> Structures["Structure Generation"]
-    
-    Biomes --> Types["Biome Types"]
-    Biomes --> Transitions["Biome Transitions"]
-    
-    Features --> Caves["Tetrahedral Caves"]
-    Features --> Islands["Floating Islands"]
-    Features --> Crystals["Crystal Formations"]
-```
+## Model Methods Versus Active Game Behavior
 
-Key world features:
-- Procedurally generated tetrahedral terrain
-- Unique biomes with tetrahedral characteristics
-- Special tetrahedral formations (crystals, caves)
-- Day/night cycle with lighting effects
-- Weather system influencing world appearance
+Minecraft's board implements:
+
+- `stepPhysics()`: label-based sand/water falling and water spreading.
+- `stepTime()`: increments a scalar day/night counter and sets `lightLevel`.
+- `update()`: invokes those two methods.
+- `craft('planks')` and `craft('glass')`: fixed inventory conversions.
+
+However, [MinecraftGame.update()](../../games/4d_minecraft/js/minecraft_game.js) only refreshes analysis and assigns it to the renderer. It does **not** call the board's `update()`. The default game loop therefore must not be advertised as running falling sand, flowing water or a progressing day/night cycle. The renderer can display sky states if the board's time changes, and a direct board consumer can invoke its update methods. Crafting is integrated separately: the [Minecraft page](../../games/4d_minecraft/index.html) has Craft Planks/Glass buttons that directly call the board recipes, although the controller binds no crafting key.
+
+## Game Modes
+
+Creative, exploration, challenge and educational modes were historical **design categories**, not four implemented selectable modes in a common engine. Minecraft provides a click-driven sandbox with finite inventory and score tracking. Individual portfolio games have their own objectives; these do not constitute a shared survival/progression system.
 
 ## Progression System
 
-QuadCraft features a progression system based on mastery of tetrahedral concepts:
+Minecraft configures `ScoreManager` with a level threshold of 50 placed-block score points and zero lives for its sandbox. That source configuration is not evidence of geometry-mastery achievements, tutorial completion, skill tracking or unlocked building capabilities. Such systems remain design ideas unless a particular game implements them explicitly.
 
-```mermaid
-graph TD
-    Progression["Progression System"] --> Knowledge["Knowledge Acquisition"]
-    Progression --> Skills["Skill Development"]
-    Progression --> Challenges["Challenge Completion"]
-    Progression --> Achievements["Achievement System"]
-    
-    Knowledge --> CoordinateMastery["Coordinate System Mastery"]
-    Knowledge --> GeometryUnderstanding["Tetrahedral Geometry"]
-    
-    Skills --> BuildingTechniques["Building Techniques"]
-    Skills --> NavigationMastery["Navigation Mastery"]
-    
-    Challenges --> BuildingChallenges["Building Challenges"]
-    Challenges --> NavigationObstacles["Navigation Obstacles"]
-    
-    Achievements --> Milestones["Progression Milestones"]
-    Achievements --> Rewards["Unlock Rewards"]
-```
+## Design Philosophy
 
-Key progression features:
-- Tutorial completion tracking
-- Skill-based achievements
-- Challenge completion rewards
-- Building technique mastery tracking
-- Special unlocks for advanced players
-
-## Visual and Audio Design
-
-QuadCraft's presentation reinforces its tetrahedral nature:
-
-```mermaid
-graph TD
-    Presentation["Presentation"] --> Visual["Visual Design"]
-    Presentation --> Audio["Audio Design"]
-    Presentation --> Feedback["Player Feedback"]
-    
-    Visual --> MinimalistStyle["Minimalist Style"]
-    Visual --> ColorCoding["Coordinate Color Coding"]
-    Visual --> EffectSystem["Visual Effects"]
-    
-    Audio --> SpatialAudio["Spatial Audio"]
-    Audio --> TetrahedralSounds["Tetrahedral Sound Design"]
-    Audio --> Ambience["Ambient Soundscape"]
-    
-    Feedback --> VisualCues["Visual Movement Cues"]
-    Feedback --> AudioFeedback["Audio Feedback"]
-    Feedback --> HapticResponse["Haptic Feedback"]
-```
-
-Key presentation features:
-- Clean, minimalist visual style
-- Color-coded coordinate system visuals
-- Spatial audio reflecting tetrahedral space
-- Clear visual feedback for player actions
-- Ambient soundscape evolving with player location
-
-## Educational Elements
-
-QuadCraft emphasizes educational content about tetrahedral geometry:
-
-```mermaid
-graph TD
-    Education["Educational Elements"] --> Tutorials["Interactive Tutorials"]
-    Education --> Visualization["Visualization Tools"]
-    Education --> Concepts["Mathematical Concepts"]
-    Education --> Applications["Real-World Applications"]
-    
-    Tutorials --> BasicNavigation["Basic Navigation"]
-    Tutorials --> CoordinateSystems["Coordinate Systems"]
-    Tutorials --> AdvancedBuilding["Advanced Building"]
-    
-    Visualization --> CoordinateVisualizer["Coordinate Visualizer"]
-    Visualization --> GeometryExplorer["Geometry Explorer"]
-    
-    Concepts --> TetrahedralProperties["Tetrahedral Properties"]
-    Concepts --> NonEuclidean["Non-Euclidean Geometry"]
-    
-    Applications --> Crystallography["Crystallography"]
-    Applications --> Engineering["Engineering Applications"]
-```
-
-Key educational features:
-- Step-by-step tutorials on tetrahedral concepts
-- Interactive visualizations of coordinate systems
-- Explanations of mathematical properties
-- Real-world applications of tetrahedral geometry
+The design goals are mathematical legibility, controllable views and exploration of unfamiliar spatial labels. They are hypotheses about user experience, not measured educational outcomes. An evaluation would need explicit tasks and evidence—for example, whether players distinguish common-offset aliases, understand the four projected directions and predict raw-slot versus physical displacement.
 
 ## Future Gameplay Expansions
 
-Planned features for future QuadCraft versions:
+Structural integrity, integrated ecology, weather, guided coordinate lessons, world-spanning automation and a unified multiplayer game are possible design discussions, not a release commitment or runnable feature list. Each would need a concrete state model and integration design. Browser experiment networking controls alone do not establish a reliable multiplayer contract for the portfolio.
 
-```mermaid
-graph TD
-    Future["Future Features"] --> Multiplayer["Multiplayer Mode"]
-    Future --> Automation["Automation System"]
-    Future --> Physics["Advanced Physics"]
-    Future --> Ecology["Tetrahedral Ecology"]
-    
-    Multiplayer --> Collaborative["Collaborative Building"]
-    Multiplayer --> Challenges["Competitive Challenges"]
-    
-    Automation --> Machines["Tetrahedral Machines"]
-    Automation --> Logic["Tetrahedral Logic Systems"]
-    
-    Physics --> Fluids["Tetrahedral Fluid Dynamics"]
-    Physics --> Gravity["Variable Gravity"]
-    
-    Ecology --> Creatures["Tetrahedral Creatures"]
-    Ecology --> Plants["Geometric Plant Life"]
-```
+## Related Reading
 
-## Conclusion
-
-QuadCraft offers a unique gameplay experience centered around tetrahedral geometry and non-Cartesian coordinate systems. By balancing mathematical complexity with intuitive controls, the game creates an engaging environment for both creative expression and educational exploration. 
+- [Geometry and actual native offsets](../mathematics/tetrahedral_geometry.md)
+- [Volume accounting versus measured solids](../mathematics/ivm_synergetics.md#game-volume-accounting)
+- [Advanced building exercises](advanced_building_techniques.md)
+- [Games overview](../games.md) and [implementation architecture](../architecture.md)

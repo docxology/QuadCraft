@@ -1,6 +1,7 @@
-# tests/ — Agent Notes
+# 4D Tower Defense Tests — Regression maintenance
 
-Node-run unit tests for the 4d_tower_defense game modules (`../js/`). Run from the repo
-root via the game harness: `python3 games/run_games.py --test --game tower_defense`
-(harness and registry game id verified in `games/run_games.py` /
-`games/src/core/registry.py`, 2026-08-29).
+[README.md](README.md) lists the actual Node entrypoints, source-covered behaviors and browser-runner limits. Run documented commands from the QuadCraft repository root, not a guessed launcher-relative working directory.
+
+Keep route generation, physical placement rings and tower-distance exclusion distinct. The four polyhedron TV values are game metadata, not a measured union of tower coverage. Do not claim the launcher kills stale port owners.
+
+Keep regressions tied to observable state transitions and the real board/controller boundary. Numeric pass totals or imported shared helpers are not coverage claims; report command results only when executed. Browser dependency lists and Canvas behavior require separate browser evidence. Read the [game guide](../README.md) before changing scenarios.

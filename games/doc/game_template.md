@@ -1,174 +1,35 @@
-# Game Template — Standard Directory Structure
+# Game directory layout and composition contract
 
-> **Note on 4D Geometry & Nomenclature**: "4D" in QuadCraft strictly means **Synergetics** geometry (Quadray tetrahedral coordinates on an IVM; 12 neighbors = permutations of `(0, 1, 1, 2)`). Canonical statement: [GAMES_INDEX.md](../GAMES_INDEX.md#note-on-4d-geometry--nomenclature).
-
-
-> Canonical structure, naming conventions, and required patterns for every QuadCraft game.
-
----
+Use this as a layout guide, not a claim that every game has identical inheritance or storage. [Canonical portfolio contracts](../../docs/games.md) define physical versus raw coordinates and clocks; [shared APIs](shared_modules_reference.md) define actual signatures.
 
 ## Standard Layout
 
 ```text
-games/4d_<game>/
-├── index.html                    # Entry point — imports shared + game modules
-├── AGENTS.md                     # Game-specific agent instructions
-├── js/
-│   ├── <game>_board.js           # Board / world state logic
-│   ├── <game>_renderer.js        # Canvas rendering
-│   └── <game>_game.js            # Controller + UI (extends BaseGame)
-└── tests/
-    └── test_<game>.js            # Node.js unit tests
+4d_<key>/
+  index.html
+  AGENTS.md
+  js/
+    <key>_board.js
+    <key>_renderer.js
+    <key>_game.js
+  tests/
+    test_<key>.js
 ```
 
-### Optional (Mature Games)
+README, supplementary docs, manifest and additional rule/analysis modules may accompany this layout. A game directory still depends on sibling `4d_generic/`. Serve the full `games/` root. Doom uses an ES-module controller and its shared-Quadray bridge; inspect its actual entrypoint rather than forcing classic-script inheritance.
 
-```text
-├── README.md                     # Player-facing documentation
-├── CONTRIBUTING.md               # Contributor guide
-├── docs/                         # Extended game-specific documentation
-└── js/
-    ├── <game>_ai.js              # AI / bot logic
-    ├── <game>_physics.js         # Physics engine
-    └── <game>_entities.js        # Entity definitions
-```
+## State, rendering and controller responsibilities
 
-> **Example:** `4d_chess/` has 9 JS files, `4d_doom/` has 11 JS files, while Wave 2 games typically have 3.
+- Board: actual rule state, transitions, terminal conditions and reset. Declare whether keys are raw slots or canonical physical points. `BaseBoard` uses a Map, while scaffold output uses an array; do not silently interchange them.
+- Renderer: actual canvas drawing and hit-test coordinates. `BaseRenderer(canvas,board,opts)` offers `_project`, `_clearCanvas`, `_drawAxes` and `render`, not a `drawBoard` contract. Maintain intrinsic/CSS canvas dimensions and camera bounds.
+- Controller: input, update cadence, lifecycle and HUD. `BaseGame(canvas,hudElement,board,renderer,opts)` receives already-created objects; custom hooks are `update(dtSeconds)`, `_setupGameInput()` and `_getHUDState()`. Call `init()` to attach/start. These APIs are optional composition choices, not mandatory superclass requirements.
 
----
+Classic HTML loads shared dependencies before game classes, constructs the actual controller with its real constructor parameters, and invokes its actual initialization. Do not paste placeholders for class names or assume initialization happens in a constructor. Scaffold output and maintained game implementations differ; see [scaffold guide](scaffold_guide.md).
 
-## Required Files
+## Validation Rules and their limits
 
-Enforced by `qa/validation.py` and `REQUIRED_FILES` in `core/config.py`:
+[`qa/validation.py`](../src/qa/validation.py) checks directory/index/js/tests/AGENTS presence, direct `test_*.js`, local `js/quadray.js` prohibition and required classic imports (Doom skips the latter two). It requires some `*_board.js` and flags boards below 200 bytes. It scans matching renderers/controllers for specific scaffold markers. It does **not** prove that all named trio files exist, that classes are exported or inherited, that a board is complete, or that a rendered game works.
 
-| File | Purpose | Validation |
-|------|---------|------------|
-| `index.html` | Browser entry point | Must exist |
-| `js/` directory | Game-specific JavaScript | Must exist |
-| `tests/` directory | Unit tests | Must contain `test_*.js` |
-| `AGENTS.md` | AI agent instructions | Must exist |
-| `run.sh` | Standalone launcher | Not in `REQUIRED_FILES` (`["index.html", "AGENTS.md"]`) and not checked by any validator — recommended, not enforced |
+`REQUIRED_JS_PATTERNS` records a convention, not stronger validation than this implementation performs. `run.sh` is not required by the structural validator. Keep substantive rule-transition checks and real browser scenarios; [testing guide](testing_guide.md) explains both.
 
----
-
-## `index.html` Structure
-
-```html
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>4D <Game> — QuadCraft</title>
-    <link rel="stylesheet" href="../4d_generic/hud-style.css">
-    <style>
-        body { margin: 0; overflow: hidden; background: #0f172a; color: #fff; }
-        canvas { display: block; }
-        .hud { position: absolute; top: 10px; left: 10px; pointer-events: none; }
-    </style>
-</head>
-<body>
-    <canvas id="gameCanvas"></canvas>
-    <div class="hud" id="hud">Score: 0</div>
-
-    <!-- Shared Modules (ORDER MATTERS) -->
-    <script src="../4d_generic/quadray.js"></script>
-    <script src="../4d_generic/camera.js"></script>
-    <script src="../4d_generic/projection.js"></script>
-    <script src="../4d_generic/zoom.js"></script>
-    <script src="../4d_generic/synergetics.js"></script>
-    <script src="../4d_generic/grid_utils.js"></script>
-    <script src="../4d_generic/game_loop.js"></script>
-    <script src="../4d_generic/input_controller.js"></script>
-    <script src="../4d_generic/score_manager.js"></script>
-    <script src="../4d_generic/hud.js"></script>
-    <script src="../4d_generic/base_renderer.js"></script>
-    <script src="../4d_generic/base_game.js"></script>
-
-    <!-- Game-Specific Modules -->
-    <script src="js/<game>_board.js"></script>
-    <script src="js/<game>_renderer.js"></script>
-    <script src="js/<game>_game.js"></script>
-
-    <script>
-        const canvas = document.getElementById('gameCanvas');
-        const game = new <Game>Game(canvas);
-    </script>
-</body>
-</html>
-```
-
-> **Critical:** All shared imports use `../4d_generic/` relative paths. The HTTP server **must** serve the parent `games/` directory as root.
-
----
-
-## JS File Naming Convention
-
-From `REQUIRED_JS_PATTERNS` in `core/config.py`:
-
-| Role | Pattern | Class Name | Responsibility |
-|------|---------|------------|----------------|
-| Board | `{game}_board.js` | `{Game}Board` | State management: grid, pieces, world |
-| Renderer | `{game}_renderer.js` | `{Game}Renderer` | Canvas drawing, extends `BaseRenderer` |
-| Game | `{game}_game.js` | `{Game}Game` | Controller lifecycle, extends `BaseGame` |
-
-**Examples:**
-
-| Game Key | Board | Renderer | Game |
-|----------|-------|----------|------|
-| `snake` | `snake_board.js` → `SnakeBoard` | `snake_renderer.js` → `SnakeRenderer` | `snake_game.js` → `SnakeGame` |
-
-> **Naming reality (as of 2026-09-05, verified by `ls games/*/js/`):** all 30 games
-> follow the `{key}_*` convention — the scaffold and config template
-> (`REQUIRED_JS_PATTERNS` in `games/src/core/config.py`) emit the full
-> `{key}_board.js` / `{key}_renderer.js` / `{key}_game.js` names, and the four
-> former legacy exceptions (`4d_chess` bare names, `4d_tower_defense` `td_*`,
-> `4d_2048` `twenty48_*`, `4d_doom` mixed layout) were renamed to the standard
-> convention on 2026-09-05 (`chess_*`, `tower_defense_*`, `2048_*`, and doom's
-> `doom_map.js`/`doom_render_fps.js`/`doom_main.js` →
-> `doom_board.js`/`doom_renderer.js`/`doom_game.js`). `qa/validation.py` requires
-> the trio (plus `*_board.js` for games with auxiliary modules) with no per-game
-> file-name exceptions.
-
----
-
-## Validation Rules
-
-`qa/validation.py` enforces these rules for each game:
-
-| Rule | Severity | Detail |
-|------|----------|--------|
-| No local `quadray.js` copy | Error | Must use `../4d_generic/quadray.js` |
-| Shared module imports | Error | `index.html` must reference all 12 `SHARED_MODULES` entries (`quadray.js`, `synergetics.js`, `grid_utils.js`, `camera.js`, `projection.js`, `zoom.js`, `base_renderer.js`, `game_loop.js`, `base_game.js`, `score_manager.js`, `input_controller.js`, `hud.js`) |
-| Board file ≥200 bytes | Error | Prevents scaffold stubs passing validation |
-| No `[scaffold]` markers | Error | Renderer and game files must be implemented |
-| No `TODO: Implement` stubs | Error | Scaffold TODOs must be replaced |
-
----
-
-## ES-Module Exception
-
-**4D Doom** uses `import/export` syntax instead of `<script>` tags:
-```javascript
-import { DoomMap } from './doom_board.js';
-```
-
-Games in `ES_MODULE_GAMES = {"doom"}` are exempt from checks 3–4 in validation.
-
----
-
-## Port Assignment
-
-Each game gets a unique port via `base_port + port_offset`:
-
-| Offset | Game | Default Port |
-|--------|------|-------------|
-| 0 | Chess | 8100 |
-| 1 | Checkers | 8101 |
-| ... | ... | ... |
-| 21 | Minesweeper | 8121 |
-
-> Define `port_offset` when adding to `core/registry.py`. See [configuration.md](configuration.md) for port details.
-
----
-
-*See also: [scaffold_guide.md](scaffold_guide.md) · [shared_modules_reference.md](shared_modules_reference.md) · [contributing.md](contributing.md)*
+[Contribution workflow](contributing.md) · [Scaffold generation](scaffold_guide.md) · [Inventory and ports](../GAMES_INDEX.md)

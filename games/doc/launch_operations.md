@@ -1,169 +1,54 @@
-# Launch Operations Manual
+# Serving portfolio games over loopback HTTP
 
-> **Note on 4D Geometry & Nomenclature**: "4D" in QuadCraft strictly means **Synergetics** geometry (Quadray tetrahedral coordinates on an IVM; 12 neighbors = permutations of `(0, 1, 1, 2)`). Canonical statement: [GAMES_INDEX.md](../GAMES_INDEX.md#note-on-4d-geometry--nomenclature).
+All commands below run from the QuadCraft repository root. Use Python 3.13 explicitly for reproducible tooling; the launcher itself accepts Python 3.10+.
 
-> How to launch, configure, and troubleshoot QuadCraft game servers.
-
----
-
-## Quick Reference
-
-```bash
-# Launch all 30 games
-python3 run_games.py --all
-
-# Launch specific game(s)
-python3 run_games.py --game chess
-python3 run_games.py --game chess doom snake
-
-# Launch from config file
-python3 run_games.py --config games_config.json
-
-# List all games with ports
-python3 run_games.py --list
-
-# Run all tests
-python3 run_games.py --test
-
-# Structural validation
-python3 run_games.py --validate
-
-# Shell wrapper equivalents
-./run.sh                           # Launch all games
-./run.sh chess doom                 # Launch specific games
-./run.sh --list                    # List all
-./run.sh --test                    # Run tests
+```sh
+python3.13 games/run_games.py --list
+python3.13 games/run_games.py --game chess doom snake
+python3.13 games/run_games.py --all --no-browser
+python3.13 games/run_games.py --all --base-port 9000
+python3.13 games/run_games.py --config games/games_config.json
 ```
 
----
+## CLI reference
 
-## `run_games.py` CLI Reference
+| Option | Effect |
+|---|---|
+| `--game`, `-g NAME [NAME ...]` | Select registry keys |
+| `--all`, `-a` | Select all thirty keys |
+| `--list`, `-l` | Print names, directories and ports |
+| `--base-port`, `-p N` | Base port, default 8100 |
+| `--no-browser` | Suppress best-effort browser opening unless JSON overrides it |
+| `--config`, `-c FILE` | Load JSON selection, port and browser settings |
+| `--test`, `-t` | Run selected/full logic suites instead of serving |
+| `--validate`, `-v` | Audit all registered directories; not filtered by `--game` |
 
-| Flag | Short | Argument | Description |
-|------|-------|----------|-------------|
-| `--game` | `-g` | `NAME [NAME ...]` | Launch specific game(s) by registry key |
-| `--all` | `-a` | — | Launch all 30 games |
-| `--list` | `-l` | — | List all games with ports |
-| `--test` | `-t` | — | Run unit tests (combine with `--game` to filter) |
-| `--validate` | `-v` | — | Structural validation audit |
-| `--base-port` | `-p` | `N` (default: 8100) | Starting port number |
-| `--no-browser` | — | — | Start servers without opening browser |
-| `--config` | `-c` | `FILE` | Load selections from JSON config |
+See [configuration](configuration.md) for actual mode/JSON precedence. No arguments prints help; it does not launch every game. Default ports are 8100–8129; a base of 9000 gives 9000–9029. Full inventory: [GAMES_INDEX.md](../GAMES_INDEX.md).
 
-### Mode Combinations
+## Document root and server lifecycle
 
-| Command | Effect |
-|---------|--------|
-| `--game chess --test` | Run tests for chess only |
-| `--all --no-browser` | Serve all games, don't open windows |
-| `--all --base-port 9000` | All games on ports 9000–9021 |
-| `--config custom.json` | Load games + port + browser from JSON |
+[`GameServer`](../src/server/launcher.py) takes `(game_key, base_port, games_dir, open_browser=True)`. It serves the parent of the resolved game's directory, so `/4d_chess/index.html` and `/4d_generic/quadray.js` share a root. It never changes process cwd. A threaded loopback HTTP server uses daemon request threads; `start()` returns a boolean and `stop()` shuts down/closes the listener and joins the serving thread. A computed port of zero requests an OS-selected port and publishes the actual port.
 
----
+Ctrl+C or SIGTERM stops the CLI's started servers. A missing directory/index or occupied port makes that game's start fail; the CLI can continue with other successful games. Browser opening is best-effort (`open`, `xdg-open`, or Windows `startfile`); use the printed URL if no window appears. This is local static serving, not authenticated hosting, synchronized multiplayer or a save server.
 
-## `run.sh` Shell Wrapper
+For a single manual listener, still serve the complete games root:
 
-The master `run.sh` delegates to `run_games.py` for most operations:
-
-| Input | Behavior |
-|-------|----------|
-| No args | Launches all games via `run_games.py --all` |
-| `chess doom` | Delegates to `run_games.py --game chess doom` |
-| `--list` | Lists all games |
-| `--test` / `--validate` / `--all` / `--config` | Delegates to `run_games.py` |
-
-### Centralized Launching
-
-All game launching is handled through `run_games.py`, which serves the
-`games/` root directory to correctly resolve `../4d_generic/` imports:
-
-```bash
-python3 run_games.py --game chess          # Default port
-python3 run_games.py --game chess --base-port 9000  # Custom port
+```sh
+python3.13 -m http.server 8080 --bind 127.0.0.1 --directory games
 ```
 
----
+Open `http://127.0.0.1:8080/4d_chess/`. Do not serve only `games/4d_chess/`; sibling imports would 404. Do not rely on `file://` for ES modules.
 
-## Server Architecture
+## Shell wrappers
 
-```mermaid
-sequenceDiagram
-    participant User
-    participant CLI as run_games.py
-    participant GS as GameServer (per game)
-    participant HTTP as TCPServer (thread)
-    participant Browser
+From the repository root, `./games/run.sh chess doom` delegates to the Python launcher. No wrapper arguments launches all games; `--list` uses its own shell list. Leading `--test`, `--validate`, `--all`, or `--config` forwards arguments; arbitrary Python flags are not accepted in every wrapper position. Use the direct Python entrypoint for unambiguous flag combinations/interpreter choice. Generated per-game wrappers and scaffold `run.sh` differ; see [scripts](scripts_reference.md) and [scaffold limitations](scaffold_guide.md).
 
-    User->>CLI: python3 run_games.py --game chess
-    CLI->>GS: GameServer("chess", 8100, games_dir)
-    GS->>HTTP: Serve games/ root on port 8100
-    Note over HTTP: Document root = games/<br/>URL path = /4d_chess/index.html
-    GS->>Browser: open http://127.0.0.1:8100/4d_chess/index.html
-    Browser->>HTTP: GET /4d_generic/quadray.js
-    HTTP-->>Browser: Shared module file
-    User->>CLI: Ctrl+C
-    CLI->>GS: stop() → server.shutdown()
-```
+## Troubleshooting without hiding failures
 
-**Key detail:** The server serves the **parent `games/` directory** as the document root. This ensures that `../4d_generic/` relative paths in `index.html` resolve to `/4d_generic/` on the server.
+- Port unavailable: inspect with `lsof -i :8100`, then choose another base or stop only a process you own.
+- Shared imports 404: inspect server root and the printed `/4d_<key>/` URL.
+- Missing class: inspect script order and browser console/network diagnostics.
+- Empty canvas: inspect projection inputs and camera bounds; successful HTTP alone does not verify rendering.
+- Unknown key: use `--list`, not a display name or directory name.
 
----
-
-## Port Mapping Table
-
-| Key | Game | Port (base=8100) |
-|-----|------|-------------------|
-| chess | 4D Chess | 8100 |
-| checkers | 4D Checkers | 8101 |
-| reversi | 4D Reversi | 8102 |
-| life | 4D Life | 8103 |
-| asteroids | 4D Asteroids | 8104 |
-| simant | 4D SimAnt | 8105 |
-| backgammon | 4D Backgammon | 8106 |
-| minecraft | 4D Minecraft | 8107 |
-| catan | 4D Catan | 8108 |
-| tower_defense | 4D Tower Defense | 8109 |
-| doom | 4D Doom | 8110 |
-| mahjong | 4D Mahjong | 8111 |
-| tetris | 4D Tetris | 8112 |
-| snake | 4D Snake | 8113 |
-| pong | 4D Pong | 8114 |
-| breakout | 4D Breakout | 8115 |
-| pacman | 4D Pac-Man | 8116 |
-| space_invaders | 4D Space Invaders | 8117 |
-| frogger | 4D Frogger | 8118 |
-| bomberman | 4D Bomberman | 8119 |
-| connect_four | 4D Connect Four | 8120 |
-| minesweeper | 4D Minesweeper | 8121 |
-
----
-
-## Troubleshooting
-
-| Symptom | Cause | Fix |
-|---------|-------|-----|
-| `port N unavailable` | Port already in use | Kill process on that port: `lsof -ti:8100 \| xargs kill` |
-| `404 Not Found` for `../4d_generic/` | Server root is too deep | Use `run_games.py` (serves `games/` root), not a manual HTTP server |
-| `Uncaught ReferenceError: Quadray is not defined` | Script load order wrong | Ensure `quadray.js` loads before game scripts in `index.html` |
-| `Class extends value undefined` | Missing shared module import | Check all `<script>` tags are present and correctly ordered |
-| Canvas is black | Renderer/Camera error | Check browser console for errors; verify `projectQuadray` calls |
-| Browser doesn't open | `--no-browser` or browser not found | Manually navigate to the URL printed by the launcher |
-| `❌ Unknown game: xyz` | Game key not in registry | Check `python3 run_games.py --list` for valid keys |
-| All servers start but no games load | Port conflict range | Use `--base-port` with a different range (e.g., 9000) |
-
-### Checking for Port Conflicts
-
-```bash
-# Check if a port is in use
-lsof -i :8100
-
-# Kill process on a specific port
-lsof -ti:8100 | xargs kill -9
-
-# Check all game ports (8100-8121)
-for p in $(seq 8100 8121); do lsof -i :$p 2>/dev/null && echo "Port $p in use"; done
-```
-
----
-
-*See also: [configuration.md](configuration.md) · [python_infrastructure.md](python_infrastructure.md) · [architecture.md](architecture.md)*
+[Testing](testing_guide.md) separates server availability, structural checks, logic and browser interaction evidence.
