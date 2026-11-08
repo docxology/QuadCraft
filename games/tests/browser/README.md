@@ -18,9 +18,10 @@ Doom additionally exercises real late input, release ownership and fresh
 respawn clocks. When native mouse capture succeeds, it checks held plasma
 cadence and a late pistol press without retroactive firing or release duplicates.
 When capture is denied, that capture-only branch is explicitly marked
-unexercised rather than simulated; respawn timing still runs. The stdlib HTTP
-server uses the OS accept-backlog limit for concurrent script loads, with
-resource errors still fatal and no retry fallback.
+unexercised rather than simulated; respawn timing still runs. The HTTP subprocess
+imports the production [`GameHTTPServer` and `QuietHTTPHandler`](../../src/server/launcher.py),
+including the OS listen backlog for concurrent script loads. It does not maintain
+a separate test-only server; resource errors remain fatal with no retry fallback.
 
 The additional scenarios are grouped in `board-scenarios.mjs`, `arcade-scenarios.mjs` and `simulation-scenarios.mjs`; shared clock/input/pixel helpers live in `helpers.mjs`. They cover Chess, Checkers, Reversi, Backgammon, Catan, Mahjong, Asteroids, Bomberman, Pacman, Pong, Breakout, Frogger, 2048, Life, SimAnt, Space Invaders and Tetris. Arcade scenarios exercise live motion, shooting, bomb blasts, pellet/brick scoring, traffic and both Pong paddles. Simulation scenarios exercise 2048 keyboard merges/reset, Life paused single-step redraw and running generations, funded SimAnt purchases/assist/speed/labels, moving/firing Invaders, and Tetris gravity/drop/locking/respawn.
 
@@ -35,3 +36,40 @@ Initial/final screenshots, console logs, server logs, JSON outcomes and failure 
 This package is directory-local and deliberately has no root `type: module` change. The `.mjs` entry point is not named `test_*.js` or `test_*.py`; ordinary portfolio Node/Python QA discovery does not invoke the browser gate.
 
 These are selected real-runtime scenarios, not exhaustive rule coverage or a current green receipt. Browser clocks and helper `advance(page, ms)` durations are milliseconds; application updates retain the seconds/logical-tick contracts documented in the [canonical portfolio contracts](../../../docs/games.md). Shared-helper signatures are documented in the [browser API reference](../../doc/shared_modules_reference.md).
+
+## Selected gameplay capture and composition
+
+The [published gallery](../../../docs/games.md#selected-gameplay-gallery) selects Minecraft (geometry/sandbox), Hex (strategy/picking), Life (cellular automaton) and Tetris (arcade). It reuses this harness, HTTP subprocess and **unchanged existing scenarios/assertions**; there is no second browser orchestrator. The default `npm test` still runs all thirty games. `--gallery` is explicitly a four-game capture consumer, not a full-gate receipt or a prettier replacement for rule checks.
+
+After installing the browser prerequisites above, run from the **repository root**:
+
+```sh
+PYTHON=python3.13 node games/tests/browser/smoke.mjs --gallery
+# Use the unique external diagnostics path printed by that command:
+python3.13 games/tests/browser/compose_gallery.py \
+  --capture /absolute/path/to/quadcraft-browser-XXXXXX/capture.json \
+  --output docs/figures/gameplay
+```
+
+Composition requires Python 3.11+ and Pillow 13.0+ in the chosen Python environment (`python3.13 -m pip install 'Pillow>=13.0'` if needed), matching the suite's current image-toolchain floor. It does not install or invoke another renderer. `PYTHON` selects the harness's stdlib HTTP interpreter, not the compositor environment. Set `BROWSER_DIAGNOSTICS_DIR` to an existing/creatable external parent if desired; repository-local diagnostics remain rejected.
+
+### Capture and publication ownership
+
+- The harness writes the usual initial/final full-page PNGs, console/server logs and `results.json` to a unique external directory. Failures retain screenshots/traces and produce a nonzero exit. Gallery mode additionally writes `<game>-canvas.png` from the actual `game.canvas` element and `capture.json` with selected results, observed state, labels/source paths, browser version, viewport, virtual epoch and controlled random seed.
+- Composition requires a completed successful manifest, the exact selected roster, readable initial/final and canvas PNGs, and consistent recorded dimensions/state. Missing or invalid inputs raise an error before publication; no placeholders are drawn.
+- The dedicated output directory receives `gallery.png`, four unchanged `<game>-canvas.png` originals and `provenance.json`. The overview uses aspect-preserving scaling/letterboxing with **labeled center crops** for Hex, Life and Tetris; crop pixel bounds and SHA-256 hashes are recorded. No game pixels are recolored or painted over. Minecraft retains its full canvas. Full-page initial/final evidence and traces stay external rather than becoming user output or published gameplay art.
+- The final Life view is the scenario's paused reseed, not its earlier evolved fixture. Camera/game state is not rearranged for the gallery; sparse projections and game-specific simulation limits are explained in the captions and [portfolio guide](../../../docs/games.md#selected-gameplay-gallery).
+
+For ordinary play, serve the games through the [launcher](../../../docs/games.md#quick-start); source HTML links are not a promise that every game runs through `file://`. The gallery does not change native GLFW/GLEW/OpenGL requirements or establish a shared native/browser simulation runtime.
+
+## Single-game capture diagnostics
+
+For an explicitly scoped real consumer capture, use a catalog key with the same harness:
+
+```sh
+PYTHON=python3.13 node games/tests/browser/smoke.mjs --capture simant
+```
+
+This runs that game's scenario and all its maintained assertions, not the full gate. Unknown keys fail. Usual external screenshots/logs/results are retained; `capture.json` identifies `single-game-capture` (not accepted by the gallery compositor). Results additionally name `<game>-bitmap-before.png` and `<game>-bitmap-after.png`: actual Canvas bitmap exports surrounding the final full-page screenshot, with raster dimensions and non-background pixel counts. These contain Canvas pixels only, unlike page/element screenshots that can include overlapping DOM panels.
+
+SimAnt's scenario also matches both actual queen sprites at their projected world positions before and after a paused viewport/full-page resize. It requires unchanged logical ticks, ant positions/health/energy/carrying, stored food and score; forwarding counters observe the real RNG streams without changing outcomes and require zero calls. Its entrypoint redraws immediately after changed bitmap dimensions: setting `canvas.width/height` clears Canvas even when the virtual animation clock is frozen. This is a responsive-display lifecycle regression, not a simulation/camera-layout fix; raw terrain and game rules are unchanged.

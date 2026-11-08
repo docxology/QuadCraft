@@ -27,7 +27,7 @@ See [configuration](configuration.md) for actual mode/JSON precedence. No argume
 
 ## Document root and server lifecycle
 
-[`GameServer`](../src/server/launcher.py) takes `(game_key, base_port, games_dir, open_browser=True)`. It serves the parent of the resolved game's directory, so `/4d_chess/index.html` and `/4d_generic/quadray.js` share a root. It never changes process cwd. A threaded loopback HTTP server uses daemon request threads; `start()` returns a boolean and `stop()` shuts down/closes the listener and joins the serving thread. A computed port of zero requests an OS-selected port and publishes the actual port.
+[`GameServer`](../src/server/launcher.py) takes `(game_key, base_port, games_dir, open_browser=True)`. It serves the parent of the resolved game's directory, so `/4d_chess/index.html` and `/4d_generic/quadray.js` share a root. It never changes process cwd. The threaded loopback server uses daemon request threads and the OS listen backlog to accommodate concurrent classic-script loads; this is not a request-retry mechanism. `start()` returns a boolean and `stop()` shuts down/closes the listener and joins the serving thread. A computed port of zero requests an OS-selected port and publishes the actual port.
 
 Ctrl+C or SIGTERM stops the CLI's started servers. A missing directory/index or occupied port makes that game's start fail; the CLI can continue with other successful games. Browser opening is best-effort (`open`, `xdg-open`, or Windows `startfile`); use the printed URL if no window appears. This is local static serving, not authenticated hosting, synchronized multiplayer or a save server.
 

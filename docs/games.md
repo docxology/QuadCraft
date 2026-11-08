@@ -15,6 +15,23 @@ The catalog in [`games/src/core/registry.py`](../games/src/core/registry.py) def
 
 “4D” in game names often refers to raw four-index rules. The physical quadray embedding has rank three. The catalog is not a claim of production completeness, identical rules or feature parity across games.
 
+## Selected gameplay gallery
+
+![Actual Chromium Canvas views of Minecraft block editing, Hex picking after camera rotation, reseeded Life and Tetris locking; detail crops are labeled.](figures/gameplay/gallery.png)
+
+Each view follows an existing real-input scenario, with its assertions unchanged. The overview preserves screenshot colors and aspect ratios; Minecraft shows the full canvas, while Hex, Life and Tetris use labeled center crops to make sparse projected cells/pieces readable. The original PNGs below are uncropped. This is a selected portfolio, not a full-gate passing receipt.
+
+| Game and source | Exercised behavior and final view | Original Canvas capture |
+|---|---|---|
+| [Minecraft](../games/4d_minecraft/index.html) · [controller](../games/4d_minecraft/js/minecraft_game.js) | Alt-click removes one visible block; `3` selects a block type; the existing math-verification panel runs. Browser block projection, not native terrain rendering. | [Full canvas](figures/gameplay/minecraft-canvas.png) |
+| [Hex](../games/4d_hex/index.html) · [board](../games/4d_hex/js/hex_board.js) | Two actual clicks place stones, separated by Shift-drag rotation and wheel zoom; final view has two moves. This board uses canonical quadray cells. | [Full canvas](figures/gameplay/hex-canvas.png) |
+| [Life](../games/4d_life/index.html) · [controller](../games/4d_life/js/life_game.js) | A legal fixture exercises paused birth/death and redraw, then running generations, speed and camera rotation. The **pictured final state is reseeded and paused at generation zero**, not the evolved fixture. | [Full canvas](figures/gameplay/life-canvas.png) |
+| [Tetris](../games/4d_tetris/index.html) · [controller](../games/4d_tetris/js/tetris_game.js) | Left moves, gravity falls, Space locks four cells and spawns another piece; pause/resume is exercised. Final view retains the locked cells and the falling replacement. | [Full canvas](figures/gameplay/tetris-canvas.png) |
+
+The [capture metadata and SHA-256 provenance](figures/gameplay/provenance.json) retain observed counts, source/scenario paths, virtual epoch, random seed, Chromium version, canvas dimensions and overview crop bounds. [Capture/composition instructions](../games/tests/browser/README.md#selected-gameplay-capture-and-composition) explain how to regenerate the image from fresh external diagnostics; [testing guidance](development/testing_guide.md#selected-gallery-artifacts) distinguishes this scoped consumer from the full gate.
+
+These Canvas simulations have game-specific discrete rules. Life is a raw four-index cellular automaton, not a physical growth or diffusion model; Tetris has no rigid-body solver. Physical quadrays have rank three, and independent raw aliases must not be inferred from an image. Milliseconds in the capture clock/controller intervals are not physical model calibration. For exact mathematics and research workflows, see [QuadMath](https://github.com/docxology/QuadMath), [symergetics](https://github.com/docxology/symergetics) and the [suite coordinate-convention guide](https://github.com/docxology/symergetics/blob/main/docs/synergetics-suite.md); these are related projects, not one shared game runtime.
+
 ## Quick start
 
 From the repository root:

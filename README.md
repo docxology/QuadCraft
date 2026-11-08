@@ -30,9 +30,13 @@ Physical quadrays use four coefficients for a **three-dimensional** point modulo
 
 The native prototype explores tetrahedral block geometry and multioctave procedural material selection. Its terrain noise is a deterministic sum of sine waves, not a seeded Perlin/simplex implementation. Its mesher emits tetrahedral faces, not a marching-tetrahedra isosurface.
 
-![Historical quadray grid experiment](src/js/experiments/QuadrayGrid_2025-5-26-307pET.png)
+## Selected gameplay: geometry, strategy, simulation and arcade
 
-This image belongs to the historical HTML geometry experiments, not a screenshot of every game or the native renderer.
+![Four actual Chromium gameplay captures: browser block editing, Hex moves after rotation, a reseeded Life board and Tetris after a hard drop. Sparse views use labeled center-detail crops.](docs/figures/gameplay/gallery.png)
+
+These are exercised **browser Canvas** states, not native OpenGL screenshots or four independent physical dimensions. The [gallery guide](docs/games.md#selected-gameplay-gallery) links each game, source, original uncropped capture and recorded state. [Capture and composition commands](games/tests/browser/README.md#selected-gameplay-capture-and-composition) reuse the real Chromium gate's scenarios; the four-view capture is not the full thirty-game gate. [Provenance](docs/figures/gameplay/provenance.json) records browser/time/random controls, crop bounds and PNG hashes.
+
+The [historical quadray-grid image](src/js/experiments/QuadrayGrid_2025-5-26-307pET.png) belongs to the HTML geometry experiments, a separate runtime.
 
 ## Building and Running
 

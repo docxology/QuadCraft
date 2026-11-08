@@ -11,6 +11,7 @@ import logging
 import os
 import platform
 import subprocess
+import socket
 import threading
 from pathlib import Path
 from typing import Any
@@ -29,10 +30,11 @@ class QuietHTTPHandler(http.server.SimpleHTTPRequestHandler):
 
 
 class GameHTTPServer(http.server.ThreadingHTTPServer):
-    """Handle incomplete/slow requests without blocking serving or shutdown."""
+    """Serve concurrent script loads without blocking on incomplete requests."""
 
     allow_reuse_address = True
     daemon_threads = True
+    request_queue_size = socket.SOMAXCONN
 
 
 # ─────────────────────────────────────────────────────────────────────────────

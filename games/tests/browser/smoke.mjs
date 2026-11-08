@@ -10,6 +10,14 @@ import { advance, key, state, click } from './helpers.mjs';
 import { surfaces as boardSurfaces } from './board-scenarios.mjs';
 import { surfaces as arcadeSurfaces } from './arcade-scenarios.mjs';
 import { surfaces as simulationSurfaces } from './simulation-scenarios.mjs';
+import { galleryViews, captureGalleryView } from './gallery.mjs';
+
+const args = process.argv.slice(2);
+assert(args.length === 0 || (args.length === 1 && args[0] === '--gallery') ||
+    (args.length === 2 && args[0] === '--capture' && args[1].length > 0),
+    'Usage: node smoke.mjs [--gallery | --capture <catalog-key>]');
+const galleryMode = args[0] === '--gallery';
+const captureName = args[0] === '--capture' ? args[1] : undefined;
 
 const gamesRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const repoRoot = resolve(gamesRoot, '..');
@@ -20,25 +28,27 @@ assert(withinRepo !== '' && (withinRepo.startsWith(`..${sep}`) || isAbsolute(wit
 await mkdir(diagnosticsRoot, { recursive: true });
 const diagnostics = await mkdtemp(join(diagnosticsRoot, 'quadcraft-browser-'));
 console.log(`Browser diagnostics: ${diagnostics}`);
+console.log(galleryMode ? 'Mode: selected gallery capture (not the full gate)' :
+    captureName ? `Mode: single capture ${captureName} (not the full gate)` : 'Mode: full thirty-game gate');
 const results = [];
 let server;
 let browser;
 let serverLog = '';
 
 async function startServer() {
-    // Explicit root and the OS listen backlog accommodate parallel script loads.
+    // Exercise the production launcher server, including its real listen backlog.
     // Resource failures still fail the scenario; no navigation/request retries.
     const serve = `
 from functools import partial
-from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer, test
-import socket
+from http.server import test
+from pathlib import Path
 import sys
 
-class BrowserHTTPServer(ThreadingHTTPServer):
-    request_queue_size = socket.SOMAXCONN
+sys.path.insert(0, str(Path(sys.argv[1]).resolve()))
+from src.server.launcher import GameHTTPServer, QuietHTTPHandler
 
-test(HandlerClass=partial(SimpleHTTPRequestHandler, directory=sys.argv[1]),
-     ServerClass=BrowserHTTPServer, bind="127.0.0.1", port=0)
+test(HandlerClass=partial(QuietHTTPHandler, directory=sys.argv[1]),
+     ServerClass=GameHTTPServer, bind="127.0.0.1", port=0)
 `;
     server = spawn(process.env.PYTHON || 'python3', [
         '-I', '-u', '-c', serve, gamesRoot,
@@ -490,6 +500,21 @@ async function doom(page) {
         pointerLockError: capture.error, firing, respawnClock: { young, firstTick } };
 }
 
+async function bitmap(page, filename) {
+    const data = await state(page, () => {
+        const c = game.canvas, pixels = c.getContext('2d').getImageData(0, 0, c.width, c.height).data;
+        let nonBackgroundPixels = 0;
+        for (let i = 0; i < pixels.length; i += 4) {
+            if (pixels[i] !== pixels[0] || pixels[i + 1] !== pixels[1] ||
+                pixels[i + 2] !== pixels[2] || pixels[i + 3] !== pixels[3]) nonBackgroundPixels++;
+        }
+        return { width: c.width, height: c.height, nonBackgroundPixels, png: c.toDataURL('image/png') };
+    });
+    const { png, ...details } = data;
+    await writeFile(join(diagnostics, filename), Buffer.from(png.split(',')[1], 'base64'));
+    return { ...details, screenshot: filename };
+}
+
 const surfaces = [
     ['go', go], ['hex', hex], ['lights_out', lightsOut], ['memory', memory],
     ['rogue', rogue], ['sokoban', sokoban], ['sudoku', sudoku], ['doom', doom],
@@ -501,9 +526,14 @@ const surfaces = [
 try {
     assert.equal(surfaces.length, 30, 'Every catalog game must have a live scenario');
     assert.equal(new Set(surfaces.map(([name]) => name)).size, 30, 'Duplicate scenarios must not hide missing games');
+    const selected = galleryMode
+        ? galleryViews.map(view => surfaces.find(([name]) => name === view.name))
+        : captureName ? surfaces.filter(([name]) => name === captureName) : surfaces;
+    assert(selected.every(Boolean), 'Every gallery selection must have an existing live scenario');
+    assert(selected.length > 0, 'Capture requires an existing catalog key');
     const url = await startServer();
     browser = await chromium.launch({ headless: true }); // Missing runtime is a hard failure, never a skip.
-    for (const [name, exercise] of surfaces) {
+    for (const [name, exercise] of selected) {
         const context = await browser.newContext({ viewport: { width: 1440, height: 1000 }, deviceScaleFactor: 1 });
         const page = await context.newPage();
         page.setDefaultTimeout(10_000);
@@ -544,10 +574,18 @@ try {
             const details = await exercise(page);
             await advance(page);
             assert.deepEqual(errors, [], `${name}: browser runtime/resource errors`);
+            const rendering = captureName
+                ? { beforeScreenshot: await bitmap(page, `${name}-bitmap-before.png`) } : undefined;
             await page.screenshot({ path: join(diagnostics, `${name}.png`), fullPage: true });
+            if (rendering) rendering.afterScreenshot = await bitmap(page, `${name}-bitmap-after.png`);
+            const gallery = galleryMode
+                ? { ...await captureGalleryView(page, name, join(diagnostics, `${name}-canvas.png`)),
+                    canvasScreenshot: `${name}-canvas.png` }
+                : undefined;
             await context.tracing.stop();
             results.push({ name, passed: true, initialScreenshot: `${name}-initial.png`,
-                screenshot: `${name}.png`, ...details });
+                screenshot: `${name}.png`, ...details, ...(gallery ? { gallery } : {}),
+                ...(rendering ? { rendering } : {}) });
             console.log(`PASS ${name}`);
         } catch (error) {
             results.push({ name, passed: false, screenshot: `${name}-failure.png`, trace: `${name}-trace.zip`,
@@ -562,7 +600,7 @@ try {
         }
     }
     assert.equal(results.filter(result => !result.passed).length, 0, 'One or more browser surfaces failed');
-    assert.equal(results.length, 30);
+    assert.equal(results.length, galleryMode ? galleryViews.length : captureName ? 1 : 30);
 } catch (error) {
     await writeFile(join(diagnostics, 'harness-error.txt'), error.stack || String(error));
     console.error(error.stack || error);
@@ -571,4 +609,13 @@ try {
     try { await browser?.close(); } finally { await stopServer(); }
     await writeFile(join(diagnostics, 'server.log'), serverLog);
     await writeFile(join(diagnostics, 'results.json'), JSON.stringify(results, null, 2));
+    if (galleryMode || captureName) {
+        await writeFile(join(diagnostics, 'capture.json'), JSON.stringify({
+            schema: 1, mode: galleryMode ? 'selected-gallery' : 'single-game-capture',
+            complete: process.exitCode !== 1,
+            browserVersion: browser?.version(), seed: '0x51434146',
+            epoch: '2026-01-01T00:00:00Z', viewport: { width: 1440, height: 1000 },
+            selection: galleryMode ? galleryViews.map(view => view.name) : [captureName], results,
+        }, null, 2));
+    }
 }

@@ -103,7 +103,65 @@ async function simant(page) {
     await key(page, 'l');
     assert.equal(await state(page, () => game.renderer.showLabels), !labels);
     assert.notEqual(await canvasPixels(page), rendered, 'Coordinate labels must actually render');
-    return { controls: ['P: pause/resume', 'E: scout', 'A: assist', '3: fast', 'L: labels'], transition: 'resource-funded scout purchase and live colony ticks' };
+    // Resizing clears Canvas even while time is paused. Match the actual
+    // queen sprites at their projected world positions, not a HUD pixel count.
+    await key(page, 'p');
+    const model = () => ({
+        tick: game.board.tick, food: [...game.board.foodStored], score: game.scoring.score,
+        ants: game.board.ants.map(a => ({ a: a.a, b: a.b, c: a.c, d: a.d,
+            energy: a.energy, hp: a.hp, carrying: a.carrying, alive: a.alive })),
+    });
+    const queens = () => game.board.queens.map(queen => {
+        const r = game.renderer, c = game.canvas;
+        const p = r._projectQ(queen.a, queen.b, queen.c, queen.d);
+        const visible = Number.isFinite(p.x) && Number.isFinite(p.y) && p.scale > 0 &&
+            p.x > 0 && p.x < c.width && p.y > 0 && p.y < c.height;
+        if (!visible) return { faction: queen.faction, visible, matchedSpritePixels: 0 };
+        const sprite = r.sprites[queen.faction === 0 ? 'queen_yellow' : 'queen_red'];
+        const color = sprite.getContext('2d').getImageData(sprite.width / 2, sprite.height / 2, 1, 1).data;
+        const radius = Math.ceil(sprite.width * p.scale / 2);
+        const x = Math.max(0, Math.floor(p.x) - radius), y = Math.max(0, Math.floor(p.y) - radius);
+        const width = Math.min(c.width - x, radius * 2), height = Math.min(c.height - y, radius * 2);
+        const pixels = c.getContext('2d').getImageData(x, y, width, height).data;
+        let matchedSpritePixels = 0;
+        for (let i = 0; i < pixels.length; i += 4) {
+            if (pixels[i] === color[0] && pixels[i + 1] === color[1] &&
+                pixels[i + 2] === color[2] && pixels[i + 3] === color[3]) matchedSpritePixels++;
+        }
+        return { faction: queen.faction, visible, matchedSpritePixels };
+    });
+    const beforeResize = await state(page, model);
+    const beforeQueens = await state(page, queens);
+    assert(beforeQueens.every(q => q.visible && q.matchedSpritePixels > 20),
+        'Both colony queen landmarks must be visibly painted before resize');
+    // Observe calls to the real streams without consuming or replacing outcomes.
+    await state(page, () => {
+        const rng = game.board.rng, random = Math.random;
+        let boardCalls = 0, cosmeticCalls = 0;
+        game.board.rng = () => { boardCalls++; return rng(); };
+        Math.random = () => { cosmeticCalls++; return random(); };
+        window.simantResizeRandomProbe = () => {
+            game.board.rng = rng;
+            Math.random = random;
+            return { boardCalls, cosmeticCalls };
+        };
+    });
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.screenshot({ fullPage: true });
+    const randomUsage = await state(page, () => {
+        const usage = window.simantResizeRandomProbe();
+        delete window.simantResizeRandomProbe;
+        return usage;
+    });
+    assert.deepEqual(randomUsage, { boardCalls: 0, cosmeticCalls: 0 }, 'Paused resize must not advance RNG streams');
+    assert.deepEqual(await state(page, model), beforeResize,
+        'Paused resize must preserve colony ticks, positions, health, energy, carrying, food and score');
+    const afterQueens = await state(page, queens);
+    assert(afterQueens.every(q => q.visible && q.matchedSpritePixels > 20),
+        'Paused resize must repaint both projected colony queen landmarks, not just HTML/HUD panels');
+    const scene = { beforeQueens, afterQueens, randomUsage, pausedTick: beforeResize.tick };
+    return { controls: ['P: pause/resume', 'E: scout', 'A: assist', '3: fast', 'L: labels'],
+        transition: 'resource-funded scout purchase, live colony ticks and paused resize repaint', scene };
 }
 
 async function invaders(page) {
