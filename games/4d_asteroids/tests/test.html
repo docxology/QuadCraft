@@ -2,73 +2,30 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>4D Asteroids - Tests</title>
+    <title>4D Asteroids — Physical Regressions</title>
     <style>
         body { font-family: monospace; background: #111; color: #eee; padding: 20px; }
-        .pass { color: #4f4; }
-        .fail { color: #f44; font-weight: bold; }
-        .group { margin-top: 15px; border-bottom: 1px solid #333; padding-bottom: 5px; }
-        h1 { color: #add8e6; }
+        canvas { display: block; max-width: 100%; }
     </style>
 </head>
 <body>
-    <h1>🧪 Unit Tests: 4D Asteroids</h1>
-    <div id="results">Running tests...</div>
-
-    <!-- Core Dependencies -->
-    <script src="../js/quadray.js"></script>
-    
-    <!-- Game Modules (Load order matters) -->
+    <h1>4D Asteroids physical regressions</h1>
+    <div id="results">Running actual kernel and Canvas checks…</div>
+    <div id="hud"></div>
+    <canvas id="gameCanvas" width="800" height="600"></canvas>
+    <script src="../../4d_generic/quadray.js"></script>
+    <script src="../../4d_generic/grid_utils.js"></script>
+    <script src="../../4d_generic/synergetics.js"></script>
+    <script src="../../4d_generic/projection.js"></script>
+    <script src="../../4d_generic/base_board.js"></script>
+    <script src="../../4d_generic/base_renderer.js"></script>
+    <script src="../../4d_generic/game_loop.js"></script>
+    <script src="../../4d_generic/input_controller.js"></script>
+    <script src="../../4d_generic/base_game.js"></script>
+    <script src="../../4d_generic/score_manager.js"></script>
     <script src="../js/asteroids_board.js"></script>
-
-    <!-- Test Runner Helper -->
-    <script>
-        const results = document.getElementById('results');
-        results.innerHTML = ''; // Clear "Running tests..."
-        
-        let passed = 0;
-        let failed = 0;
-
-        // Global assert for browser tests that don't have their own reporting
-        window.assert = function(condition, message) {
-            const div = document.createElement('div');
-            if (condition) {
-                div.className = 'pass';
-                div.textContent = '✅ PASS: ' + message;
-                passed++;
-            } else {
-                div.className = 'fail';
-                div.textContent = '❌ FAIL: ' + message;
-                failed++;
-                console.error('FAIL:', message);
-            }
-            results.appendChild(div);
-            updateSummary();
-        };
-        
-        window.updateSummary = function() {
-            let summary = document.getElementById('summary');
-            if (!summary) {
-                summary = document.createElement('h2');
-                summary.id = 'summary';
-                document.body.prepend(summary);
-            }
-            summary.textContent = `Total: ${passed} Passed, ${failed} Failed`;
-            summary.style.color = failed === 0 ? '#4f4' : '#f44';
-        };
-
-        // Shim Node.js require/module for hybrid scripts
-        window.require = function(module) {
-            // Attempt to return global objects if they exist
-            if (module.includes('quadray')) return { Quadray: window.Quadray };
-            // Return empty object or shim as needed
-            return {};
-        };
-        
-        window.module = { exports: {} };
-    </script>
-    
-    <!-- Test Script -->
-    <script  src="test_asteroids.js"></script>
+    <script src="../js/asteroids_renderer.js"></script>
+    <script src="../js/asteroids_game.js"></script>
+    <script src="test_asteroids.js"></script>
 </body>
 </html>

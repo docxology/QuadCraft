@@ -5,15 +5,21 @@
  * and Geometry verification. Handles input and game loop.
  */
 import { DoomMap } from './doom_board.js';
-import { Player, Enemy, Projectile, Particle, Pickup } from './doom_entities.js';
+import { Player, Enemy, Particle, Pickup } from './doom_entities.js';
 import { Physics } from './doom_physics.js';
+import { Quadray } from './quadray.js';
 import { DoomRenderer } from './doom_renderer.js';
 import { SynergeticsHUD } from './doom_hud_synergetics.js';
 import { SynergeticsFX } from './doom_fx.js';
 import { markDirty } from './doom_synergetics.js';
 import { verifySynergeticsConstants, verifyAllEuler } from './doom_geometry.js';
 import { Logger } from './doom_logger.js';
-import { WEAPONS, ENEMY_STATS, MAP, RENDER } from './doom_config.js';
+import { ENEMY_STATS, MAP, RENDER } from './doom_config.js';
+
+// Gameplay constants are calibrated per 60 Hz tick; display frames only render.
+const SIMULATION_STEP_SECONDS = 1 / 60;
+const SIMULATION_STEP_MS = SIMULATION_STEP_SECONDS * 1000;
+const MAX_FRAME_ELAPSED_MS = 250;
 
 export class DoomGame {
     constructor(canvas) {
@@ -46,13 +52,15 @@ export class DoomGame {
         this.damageFlash = 0;
         this.mouseLookError = null;
         this.mouseLookRequest = null;
-        this.setupInput();
 
         // Game loop
         this.lastTime = performance.now();
+        this.accumulatorSeconds = 0;
+        this.simulationTickCount = 0;
         this.frameCount = 0;
         this.fps = 0;
         this.running = true;
+        this.setupInput();
 
         this.loop();
         Logger.engine('Synergetics Engine v3 initialized — Rip and Tear in IVM space!');
@@ -119,40 +127,63 @@ export class DoomGame {
 
     setupInput() {
         document.addEventListener('keydown', e => {
-            this.keys[e.code] = true;
-            if (e.code === 'Digit1' && this.player.weapons[0]) this.player.weaponIndex = 0;
-            if (e.code === 'Digit2' && this.player.weapons[1]) this.player.weaponIndex = 1;
-            if (e.code === 'Digit3' && this.player.weapons[2]) this.player.weaponIndex = 2;
-            if (e.code === 'KeyR' && !this.player.alive) this.respawn();
-            if (e.code === 'KeyG') {
-                RENDER.IVM_GRID_MODE = (RENDER.IVM_GRID_MODE + 1) % 3;
-                Logger.render(`Grid Mode: ${RENDER.IVM_GRID_MODE}`);
-            }
+            this.handleKey(e.code, true);
             e.preventDefault();
         });
-        document.addEventListener('keyup', e => {
-            this.keys[e.code] = false;
-        });
+        document.addEventListener('keyup', e => this.handleKey(e.code, false));
 
         this.canvas.addEventListener('click', () => {
             if (!document.pointerLockElement) {
                 this.mouseLookRequest = this.requestMouseLook();
-            } else {
-                this.shoot();
             }
         });
 
         document.addEventListener('mousemove', e => {
             if (document.pointerLockElement === this.canvas) {
+                this.settleTime();
                 this.player.angle += e.movementX * 0.003;
             }
         });
 
         document.addEventListener('mousedown', e => {
-            if (document.pointerLockElement === this.canvas) {
-                this.shoot();
+            if (e.button === 0 && document.pointerLockElement === this.canvas) {
+                this.handlePrimaryFire(true);
             }
         });
+        document.addEventListener('mouseup', e => {
+            if (e.button === 0 && this.keys.MouseLeft) this.handlePrimaryFire(false);
+        });
+        window.addEventListener('blur', () => this.clearInput());
+        document.addEventListener('pointerlockchange', () => {
+            if (document.pointerLockElement !== this.canvas) this.clearInput();
+        });
+    }
+
+    /** Settle the old input's lifetime before applying a live command. */
+    handleKey(code, pressed, now = performance.now()) {
+        this.settleTime(now);
+        this.keys[code] = pressed;
+        if (!pressed) return;
+        if (code === 'Digit1' && this.player.weapons[0]) this.player.weaponIndex = 0;
+        if (code === 'Digit2' && this.player.weapons[1]) this.player.weaponIndex = 1;
+        if (code === 'Digit3' && this.player.weapons[2]) this.player.weaponIndex = 2;
+        if (code === 'KeyR' && !this.player.alive) this.respawn(now);
+        if (code === 'KeyG') {
+            RENDER.IVM_GRID_MODE = (RENDER.IVM_GRID_MODE + 1) % 3;
+            Logger.render(`Grid Mode: ${RENDER.IVM_GRID_MODE}`);
+        }
+    }
+
+    handlePrimaryFire(pressed, now = performance.now()) {
+        this.settleTime(now);
+        const wasPressed = this.keys.MouseLeft;
+        this.keys.MouseLeft = pressed;
+        if (pressed && !wasPressed) this.shoot();
+    }
+
+    clearInput(now = performance.now()) {
+        this.settleTime(now);
+        this.keys = {};
     }
 
     async requestMouseLook() {
@@ -172,6 +203,8 @@ export class DoomGame {
         }
     }
 
+    // Timeless weapon action: live commands settle first; automatic fire already
+    // belongs to update() and must never recursively consume wall-clock time.
     shoot() {
         const p = this.player;
         if (!p.alive || p.cooldown > 0) return;
@@ -187,44 +220,30 @@ export class DoomGame {
             const spread = (Math.random() - 0.5) * weapon.spread;
             const angle = p.angle + spread;
 
-            const step = 0.2;
-            for (let dist = 0.5; dist < 20; dist += step) {
-                const ha = p.a + Math.cos(angle) * dist;
-                const hb = p.b + Math.sin(angle) * dist;
-
-                if (this.map.isSolid(ha, hb, p.c, p.d)) {
-                    this.particles.push(new Particle(ha, hb, 'puff', '#aaa'));
-                    break;
+            const hit = this.physics.traceShot(p, angle, this.enemies);
+            if (!hit) continue;
+            const { a: ha, b: hb } = hit.position;
+            const e = hit.enemy;
+            if (!e) {
+                this.particles.push(new Particle(ha, hb, 'puff', '#aaa'));
+                continue;
+            }
+            e.hp -= weapon.damage;
+            e.state = 'pain';
+            e.painTimer = 8;
+            this.particles.push(new Particle(ha, hb, 'blood', '#cc0000'));
+            this.particles.push(new Particle(ha, hb, 'blood', '#880000'));
+            if (e.hp <= 0) {
+                e.alive = false;
+                p.score += ENEMY_STATS[e.type].hp;
+                for (let k = 0; k < 5; k++) {
+                    this.particles.push(new Particle(e.a, e.b, 'blood', '#aa0000'));
                 }
-
-                let hitEnemy = false;
-                for (const e of this.enemies) {
-                    if (!e.alive) continue;
-                    const hitPos = { a: ha, b: hb, c: p.c, d: p.d };
-                    const dist = Quadray.distance(e, hitPos);
-                    if (dist < 0.8) {
-                        e.hp -= weapon.damage;
-                        e.state = 'pain';
-                        e.painTimer = 8;
-                        this.particles.push(new Particle(ha, hb, 'blood', '#cc0000'));
-                        this.particles.push(new Particle(ha, hb, 'blood', '#880000'));
-                        if (e.hp <= 0) {
-                            e.alive = false;
-                            p.score += ENEMY_STATS[e.type].hp;
-                            for (let k = 0; k < 5; k++) {
-                                this.particles.push(new Particle(e.a, e.b, 'blood', '#aa0000'));
-                            }
-                        }
-                        hitEnemy = true;
-                        break;
-                    }
-                }
-                if (hitEnemy) break;
             }
         }
     }
 
-    respawn() {
+    respawn(now = performance.now()) {
         const spawn = this.map.rooms[0];
         this.player = new Player(spawn.a + 0.5, spawn.b + 0.5, spawn.c + 0.5, spawn.d + 0.5);
         this.enemies = [];
@@ -233,10 +252,14 @@ export class DoomGame {
         this.pickups = [];
         this.spawnEnemies();
         this.spawnPickups();
+        this.lastTime = now;
+        this.accumulatorSeconds = 0;
+        this.simulationTickCount = 0;
         markDirty();
     }
 
-    update(dt) {
+    /** Advance exactly one 1/60-second gameplay tick (never a display frame). */
+    update() {
         if (!this.player.alive) return;
 
         const p = this.player;
@@ -298,16 +321,33 @@ export class DoomGame {
         }
 
         // Update Synergetics subsystems (throttled)
-        this.synergeticsHUD.update(this.map, this.frameCount);
-        this.synergeticsFX.update(dt, this.player, this.map);
+        this.synergeticsHUD.update(this.map, this.simulationTickCount);
+        this.synergeticsFX.update(SIMULATION_STEP_MS, this.player, this.map);
+    }
+
+    /** Consume elapsed milliseconds, retaining the fractional tick. */
+    advanceFrame(elapsedMs) {
+        const clampedMs = Math.max(0, Math.min(elapsedMs, MAX_FRAME_ELAPSED_MS));
+        this.accumulatorSeconds += clampedMs / 1000;
+        // Absorb only floating-point roundoff at exact tick boundaries.
+        const ticks = Math.floor((this.accumulatorSeconds + 1e-12) / SIMULATION_STEP_SECONDS);
+        this.accumulatorSeconds = Math.max(0, this.accumulatorSeconds - ticks * SIMULATION_STEP_SECONDS);
+        for (let tick = 0; tick < ticks; tick++) {
+            this.update();
+            this.simulationTickCount++;
+        }
+        return ticks;
+    }
+
+    /** Consume each wall-time interval once, from either a frame or live input. */
+    settleTime(now = performance.now()) {
+        const elapsedMs = now - this.lastTime;
+        this.lastTime = now;
+        return this.advanceFrame(elapsedMs);
     }
 
     loop() {
-        const now = performance.now();
-        const dt = now - this.lastTime;
-        this.lastTime = now;
-
-        this.update(dt);
+        this.settleTime();
 
         // Base render (raycaster + sprites + HUD + minimap)
         this.renderer.render(this);

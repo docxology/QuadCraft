@@ -5,7 +5,7 @@ A tetrahedral-based voxel game using quadray coordinates, inspired by Minecraft.
 ## Status & Verification (agents: start here)
 
 - **What this is:** an experimental tetrahedral voxel game (C++/OpenGL native, JS browser experiments) plus a 30-game 4D browser portfolio under `games/`.
-- **Current verification:** the complete games runner reports 2,395 passing checks and zero failures; structural validation passes all 30 games. Verified with Python 3.13 using `games/run_games.py --test` and `--validate`, including nested shared JavaScript/Python suites. The command, not a saved count, is authoritative. CI (`.github/workflows/games-tests.yml`) runs both on every push/PR to main.
+- **Gameplay verification:** `games/run_games.py --test` exercises all registered games and nested shared JavaScript/Python suites; `--validate` checks all 30 catalog entries. Run with Python 3.13. The command, not a saved check count, is authoritative. CI (`.github/workflows/games-tests.yml`) runs both on every push/PR to main.
 - **Backlog / what to do next:** [TODO.md](TODO.md) (single canonical backlog).
 - **Documentation hub:** [docs/README.md](docs/README.md). Games portfolio details: [games/GAMES_INDEX.md](games/GAMES_INDEX.md).
 - **Native verification:** the graphics-free CMake configuration (`-DQUADCRAFT_BUILD_GAME=OFF`) built successfully and passed both CTest targets. The normal graphical configuration could not complete locally because GLEW was missing. The game requires OpenGL, GLEW, GLFW3, CMake >= 3.16 and C++17; plain `./build.sh` also needs a display.
@@ -23,9 +23,11 @@ embeddings, plus an executable Python/JavaScript/C++ interoperability example.
 Release details: [CHANGELOG.md](CHANGELOG.md). The
 [real Chromium gate](games/tests/browser/README.md) checks all 30 catalog games
 with actual input/state/rendering and records real mouse-capture availability.
-The current minor release repairs 2048 controls/pause, Life camera/paused
-redraw, shared canvas layout, Reversi reset history and Mahjong framing.
-Native CI includes independent Debug/Release graphics-free configurations.
+The methods suite adds fixed-seconds simulation, chronological swept Asteroids
+collisions, wall-ordered Doom shots and input-time ownership, reversible
+SimAnt excavation/homing with conservative pheromone transport, and picking
+that follows actual Minecraft/Mahjong paint order. Native CI retains separate
+Debug/Release graphics-free configurations.
 
 ## Overview
 

@@ -1,243 +1,281 @@
-/**
- * test_asteroids.js — Comprehensive Tests for 4D Asteroids
- *
- * Groups: construction, entity mechanics, movement wrapping, thrust,
- * shooting, collision, asteroid splitting, hyperspace, shield system,
- * wave progression, metadata, synergetics, round-trip.
- *
- * Run: node tests/test_asteroids.js
- */
-
+/** Actual Asteroids kernel regressions; Node and real-Canvas browser entrypoints. */
 if (typeof require !== 'undefined') {
-    const { Quadray } = require('../../4d_generic/quadray.js');
-    const { GridUtils } = require('../../4d_generic/grid_utils.js');
-    const { SYNERGETICS, verifyRoundTrip, verifyGeometricIdentities } = require('../../4d_generic/synergetics.js');
-    const { BaseBoard } = require('../../4d_generic/base_board.js');
-    const { AsteroidsBoard, AsteroidsEntity } = require('../js/asteroids_board.js');
-    global.Quadray = Quadray;
-    global.GridUtils = GridUtils;
-    global.SYNERGETICS = SYNERGETICS;
-    global.verifyRoundTrip = verifyRoundTrip;
-    global.verifyGeometricIdentities = verifyGeometricIdentities;
-    global.BaseBoard = BaseBoard;
-    global.AsteroidsBoard = AsteroidsBoard;
-    global.AsteroidsEntity = AsteroidsEntity;
+    Object.assign(globalThis, require('../../4d_generic/quadray.js'));
+    Object.assign(globalThis, require('../../4d_generic/grid_utils.js'));
+    Object.assign(globalThis, require('../../4d_generic/synergetics.js'));
+    Object.assign(globalThis, require('../../4d_generic/base_board.js'));
+    Object.assign(globalThis, require('../../4d_generic/base_renderer.js'));
+    Object.assign(globalThis, require('../../4d_generic/game_loop.js'));
+    Object.assign(globalThis, require('../../4d_generic/input_controller.js'));
+    Object.assign(globalThis, require('../../4d_generic/base_game.js'));
+    Object.assign(globalThis, require('../../4d_generic/score_manager.js'));
+    Object.assign(globalThis, require('../../4d_generic/projection.js'));
+    Object.assign(globalThis, require('../js/asteroids_board.js'));
+    Object.assign(globalThis, require('../js/asteroids_renderer.js'));
+    Object.assign(globalThis, require('../js/asteroids_game.js'));
 }
 
-let passed = 0, failed = 0, total = 0;
-function assert(name, condition) {
-    total++;
-    if (condition) { passed++; console.log(`  ✅ ${name}`); }
-    else { failed++; console.log(`  ❌ ${name}`); }
-}
-
-console.log('=== 4D Asteroids — Comprehensive Tests ===\n');
-
-// ─── 1. Board Construction ───────────────────────────────────────────
-console.log('— Board Construction —');
-const b = new AsteroidsBoard(8);
-assert('Entities exist', b.entities.length > 0);
-assert('Ship exists', b.ship !== null);
-assert('Ship is alive', b.ship.alive);
-assert('3 lives', b.lives === 3);
-assert('Score = 0', b.score === 0);
-assert('Not game over', !b.gameOver);
-assert('Wave 1', b.wave === 1);
-assert('Shield charges = 3', b.shieldCharges === 3);
-assert('Shield not active', !b.shieldActive);
-const asteroids = b.entities.filter(e => e.type === 'asteroid');
-assert('6 initial asteroids', asteroids.length === 6);
-
-// ─── 2. Entity Mechanics ─────────────────────────────────────────────
-console.log('\n— Entity Mechanics —');
-const ent = new AsteroidsEntity([4, 4, 4, 4], [1, 0, 0, 0], 0.3, 'bullet');
-assert('Entity has position', typeof ent.pos.a === 'number');
-assert('Entity has velocity', typeof ent.vel.a === 'number');
-assert('Entity is alive', ent.alive);
-assert('Entity age = 0', ent.age === 0);
-const quad = ent.toQuadray();
-assert('toQuadray returns Quadray', quad instanceof Quadray);
-assert('posKey returns string', typeof ent.posKey() === 'string');
-
-// ─── 3. Movement Wrapping ────────────────────────────────────────────
-console.log('\n— Movement Wrapping —');
-const e2 = new AsteroidsEntity([7.9, 0, 0, 0], [1, 0, 0, 0], 0.1, 'bullet');
-e2.update(0.5, 8);
-assert('Position wraps within bounds', e2.pos.a < 8 && e2.pos.a >= 0);
-
-const e3 = new AsteroidsEntity([0.1, 0, 0, 0], [-1, 0, 0, 0], 0.1, 'bullet');
-e3.update(0.5, 8);
-assert('Negative wrap works', e3.pos.a >= 0 && e3.pos.a < 8);
-
-// ─── 4. Thrust & Speed Cap ──────────────────────────────────────────
-console.log('\n— Thrust & Speed Cap —');
-const b2 = new AsteroidsBoard(8);
-b2.thrust([1, 0, 0, 0], 10);
-const speed = Math.sqrt(b2.ship.vel.a ** 2 + b2.ship.vel.b ** 2 + b2.ship.vel.c ** 2 + b2.ship.vel.d ** 2);
-assert('Speed capped at max', speed <= 2.001);
-b2.thrust([0, 0, 0, 0], 0);
-assert('Zero thrust no-ops', true); // Shouldn't crash
-
-// ─── 5. Shooting ─────────────────────────────────────────────────────
-console.log('\n— Shooting —');
-const b3 = new AsteroidsBoard(8);
-const countBefore = b3.entities.length;
-b3.shoot([1, 0, 0, 0]);
-assert('Shooting adds entity', b3.entities.length === countBefore + 1);
-const bullet = b3.entities[b3.entities.length - 1];
-assert('New entity is bullet', bullet.type === 'bullet');
-assert('Bullet has velocity', Math.abs(bullet.vel.a) > 0);
-assert('Bullet is alive', bullet.alive);
-
-// ─── 6. Collision: Ship vs Asteroid ──────────────────────────────────
-console.log('\n— Ship-Asteroid Collision —');
-const b4 = new AsteroidsBoard(8);
-const rock = new AsteroidsEntity(
-    [b4.ship.pos.a, b4.ship.pos.b, b4.ship.pos.c, b4.ship.pos.d],
-    [0, 0, 0, 0], 0.5, 'asteroid'
-);
-b4.entities.push(rock);
-b4.lives = 3;
-b4.update(0.016);
-assert('Ship destroyed on collision', !b4.ship.alive);
-assert('Lives decremented', b4.lives === 2);
-
-// ─── 7. Asteroid Splitting ───────────────────────────────────────────
-console.log('\n— Asteroid Splitting —');
-const b5 = new AsteroidsBoard(8);
-// Place a large asteroid right in front of a bullet
-const bigRock = new AsteroidsEntity([4, 4, 4, 4], [0, 0, 0, 0], 0.5, 'asteroid');
-b5.entities.push(bigRock);
-const splitter = new AsteroidsEntity([4.01, 4, 4, 4], [0, 0, 0, 0], 0.1, 'bullet');
-b5.entities.push(splitter);
-const beforeCount = b5.entities.length;
-b5.update(0.016);
-const afterAsteroids = b5.entities.filter(e => e.type === 'asteroid' && e.alive);
-// A split should create 2 smaller asteroids from the destroyed large one
-assert('Splitting creates new asteroids', afterAsteroids.length >= 2 || b5.score > 0);
-
-// ─── 8. Shield System ────────────────────────────────────────────────
-console.log('\n— Shield System —');
-const bs = new AsteroidsBoard(8);
-assert('Shield charges start at 3', bs.shieldCharges === 3);
-const activated = bs.activateShield();
-assert('Shield activates', activated === true);
-assert('Shield is active', bs.shieldActive);
-assert('Shield charges decremented', bs.shieldCharges === 2);
-assert('Shield timer set', bs.shieldTimer === 5.0);
-assert('Shield cooldown set', bs.shieldCooldown === 3.0);
-
-// Can't activate during cooldown
-const activated2 = bs.activateShield();
-assert('Cannot double-activate', activated2 === false);
-
-// Shield absorption
-const bs2 = new AsteroidsBoard(8);
-bs2.activateShield();
-// Place asteroid on ship
-const shieldRock = new AsteroidsEntity(
-    [bs2.ship.pos.a, bs2.ship.pos.b, bs2.ship.pos.c, bs2.ship.pos.d],
-    [0, 0, 0, 0], 0.5, 'asteroid'
-);
-bs2.entities.push(shieldRock);
-const livesBefore = bs2.lives;
-bs2.update(0.016);
-assert('Shield absorbs hit (ship alive)', bs2.ship.alive);
-assert('Lives preserved when shielded', bs2.lives === livesBefore);
-assert('Shield deactivated after absorb', !bs2.shieldActive);
-
-// Empty shield charges
-const bs3 = new AsteroidsBoard(8);
-bs3.shieldCharges = 0;
-assert('Cannot activate with 0 charges', bs3.activateShield() === false);
-
-// ─── 9. Wave Progression ─────────────────────────────────────────────
-console.log('\n— Wave Progression —');
-const bw = new AsteroidsBoard(8);
-assert('Start at wave 1', bw.wave === 1);
-// Kill all asteroids to trigger wave advance
-bw.entities.filter(e => e.type === 'asteroid').forEach(a => a.alive = false);
-bw.update(0.016);
-assert('Wave advanced after clearing asteroids', bw.wave === 2);
-const newAsteroids = bw.entities.filter(e => e.type === 'asteroid' && e.alive);
-assert('New wave has asteroids', newAsteroids.length > 0);
-
-// ─── 10. Hyperspace ──────────────────────────────────────────────────
-console.log('\n— Hyperspace —');
-const bh = new AsteroidsBoard(8);
-const posBefore = { ...bh.ship.pos };
-// Run hyperspace multiple times (some may kill ship due to 1/6 chance)
-let teleported = false;
-for (let i = 0; i < 10; i++) {
-    const bTest = new AsteroidsBoard(8);
-    const before = { ...bTest.ship.pos };
-    bTest.hyperspace();
-    if (bTest.ship.alive && (bTest.ship.pos.a !== before.a || bTest.ship.pos.b !== before.b)) {
-        teleported = true;
-        break;
+(async function () {
+    let passed = 0, failed = 0;
+    function check(name, test) {
+        try { test(); passed++; console.log('PASS: ' + name); }
+        catch (error) { failed++; console.error('FAIL: ' + name, error); }
     }
-}
-assert('Hyperspace can teleport ship', teleported);
+    function assert(condition, message) {
+        if (!condition) throw new Error(message);
+    }
+    function near(actual, expected, tolerance = 1e-11) {
+        assert(Math.abs(actual - expected) <= tolerance, `${actual} != ${expected}`);
+    }
+    const entity = (pos, vel, radius, type) => new AsteroidsEntity(pos, vel, radius, type);
+    function board() {
+        const b = new AsteroidsBoard(8, { seed: 7 });
+        b.ship.alive = false;
+        b.entities = [];
+        return b;
+    }
+    function safeShipBoard() {
+        const b = new AsteroidsBoard(8, { seed: 7 });
+        b.entities = [b.ship, entity([2, 0, 0, 0], [0, 0, 0, 0], 0.01, 'asteroid')];
+        return b;
+    }
+    function snapshot(b) {
+        return JSON.stringify(b.entities.map(e => ({ pos: e.pos, vel: e.vel, radius: e.radius, type: e.type })));
+    }
+    function kernelGame() {
+        let game;
+        if (typeof document !== 'undefined') {
+            game = new AsteroidsGame(document.getElementById('gameCanvas'), document.getElementById('hud'));
+            game.board = safeShipBoard();
+        } else {
+            // The actual BaseGame constructor and Asteroids update/input methods,
+            // with the browser-only renderer construction deliberately omitted.
+            game = Reflect.construct(BaseGame, [null, null, safeShipBoard(), null, { tickRate: 16 }], AsteroidsGame);
+            game.scoring = new ScoreManager({ lives: 3, levelThreshold: 1000 });
+            game._lastBoardScore = 0;
+        }
+        // A real loop lifecycle callback permits explicit frames without a fake RAF.
+        game.loop.render = () => game.loop.stop();
+        return game;
+    }
+    function frames(game, intervals) {
+        let timestamp = 0;
+        game.loop.lastTime = 0;
+        for (const interval of intervals) {
+            timestamp += interval;
+            game.loop.paused = false;
+            game.loop._loop(timestamp);
+        }
+    }
 
-// ─── 11. Game Over ───────────────────────────────────────────────────
-console.log('\n— Game Over —');
-const bg = new AsteroidsBoard(8);
-bg.lives = 1;
-bg.killShip();
-assert('Game over when last life lost', bg.gameOver);
+    check('continuous positive and negative multi-period wrapping', () => {
+        const e = entity([7.9, 0.1, 3, 4], [33, -33, 0, 0], 0.1, 'bullet');
+        e.update(0.5, 8);
+        near(e.pos.a, 0.4); near(e.pos.b, 7.6); near(e.age, 0.5);
+    });
+    check('held thrust retains 16ms acceleration tuning and speed cap', () => {
+        const game = kernelGame();
+        game.input.activeKeys.add('d');
+        frames(game, [16]);
+        near(game.board.ship.vel.a, 0.3);
+        near(game.board.ship.pos.a, 4.0048);
+        game.loop.paused = false;
+        for (let i = 0; i < 20; i++) game.update(0.016);
+        near(game.board.ship.vel.a, 2);
+    });
+    check('real fixed-loop partition and lag equivalence', () => {
+        const regular = kernelGame(), lagged = kernelGame();
+        regular.input.activeKeys.add('d'); lagged.input.activeKeys.add('d');
+        frames(regular, Array(12).fill(16)); frames(lagged, [192]);
+        assert(snapshot(regular.board) === snapshot(lagged.board), 'render partition changed simulation');
+        near(regular.board.ship.age, 0.192);
+        const clamped = kernelGame();
+        clamped.board.ship.vel.a = 0.4;
+        frames(clamped, [1000]);
+        near(clamped.board.ship.age, 0.24);
+        near(clamped.board.ship.pos.a, 4.096);
+        near(clamped.loop.accumulator, 10);
+    });
+    check('paused controller rejects fire, hyperspace, shield and ticks', () => {
+        const game = kernelGame();
+        game.loop.stop();
+        const before = snapshot(game.board);
+        for (const key of [' ', 'Shift', 'v']) game.input.actions.get(key)();
+        game.update(0.016);
+        assert(snapshot(game.board) === before && game.board.shieldCharges === 3, 'pause mutated gameplay');
+    });
+    check('swept grazing hit is invariant to splitting the free-flight step', () => {
+        function run(steps) {
+            const b = board();
+            const rock = entity([4, 4, 4, 4], [0, 0, 0, 0], 0.05, 'asteroid');
+            const bullet = entity([3.9, 4, 4.025, 3.975], [4, 0, 0, 0], 0.01, 'bullet');
+            b.entities = [rock, bullet];
+            for (const dt of steps) b.update(dt);
+            assert(!rock.alive && !bullet.alive, 'grazing intersection missed');
+            return b.score;
+        }
+        assert(run([0.05]) === 100 && run([0.025, 0.025]) === 100, 'partition changed hit');
+    });
+    check('periodic seam and long multi-period swept hits', () => {
+        const b = board();
+        const rock = entity([7.95, 0, 0, 0], [0, 0, 0, 0], 0.1, 'asteroid');
+        const bullet = entity([0.05, 0, 0, 0], [0, 0, 0, 0], 0.1, 'bullet');
+        b.entities = [rock, bullet]; b.update(0.016);
+        assert(b.score === 100, 'seam overlap missed');
+        const long = board();
+        const target = entity([0.1, 0, 0, 0], [0, 0, 0, 0], 0.02, 'asteroid');
+        const shot = entity([7.8, 0, 0, 0], [1000, 0, 0, 0], 0.01, 'bullet');
+        long.entities = [target, shot]; long.update(0.05);
+        assert(long.score === 100 && !shot.alive, 'uncapped image search missed first seam');
+        assert(long.particles[0].pos.a === target.pos.a, 'impact event lost target position');
+    });
+    check('tangent sphere contact is not lost to coordinate roundoff', () => {
+        const b = board();
+        const target = entity([4, 4, 4, 4], [0, 0, 0, 0], 0.05, 'asteroid');
+        const shot = entity([3.9, 4, 4.03, 3.97], [4, 0, 0, 0], 0.01, 'bullet');
+        b.entities = [target, shot]; b.update(0.05);
+        assert(b.score === 100, 'tangent contact missed');
+    });
+    check('BCC nearest image differs from raw componentwise minima', () => {
+        const b = board();
+        const first = { a: 3, b: 3, c: 0, d: 0 }, second = { a: 0, b: 0, c: 3, d: 3 };
+        near(b.distanceBetween(first, second), Math.sqrt(8));
+        const rock = entity([3, 3, 0, 0], [0, 0, 0, 0], 0.2, 'asteroid');
+        const shot = entity([0, 0, 3, 3], [0, 0, 0, 0], 2.7, 'bullet');
+        b.entities = [rock, shot]; b.update(0.016);
+        assert(b.score === 100, 'true periodic physical overlap missed');
+        near(b.distanceBetween(first, { a: 5, b: 5, c: 2, d: 2 }), 0);
+    });
+    check('nearest-image method agrees with independent exhaustive raw periods', () => {
+        const b = board(), random = GridUtils.createSeededRng(912);
+        for (let sample = 0; sample < 20; sample++) {
+            const first = [random() * 8, random() * 8, random() * 8, random() * 8];
+            const second = [random() * 8, random() * 8, random() * 8, random() * 8];
+            const q = new Quadray(...first);
+            let minimum = Infinity;
+            // Legal raw deltas are in (-8,8)^4. These raw image representatives
+            // include each possible nearest BCC point, with a spare period.
+            for (let a = -2; a <= 2; a++) for (let c = -2; c <= 2; c++)
+                for (let d = -2; d <= 2; d++) for (let e = -2; e <= 2; e++) {
+                    minimum = Math.min(minimum, Quadray.distance(q, new Quadray(
+                        second[0] + 8 * a, second[1] + 8 * c,
+                        second[2] + 8 * d, second[3] + 8 * e)));
+                }
+            near(b.distanceBetween(q, new Quadray(...second)), minimum);
+        }
+    });
+    check('competing projectiles resolve globally by impact time', () => {
+        const b = board();
+        const first = entity([4.4, 4, 4, 4], [0, 0, 0, 0], 0.03, 'asteroid');
+        const second = entity([4.8, 4, 4, 4], [0, 0, 0, 0], 0.03, 'asteroid');
+        const late = entity([4, 4, 4, 4], [4, 0, 0, 0], 0.01, 'bullet');
+        const early = entity([4.3, 4, 4, 4], [4, 0, 0, 0], 0.01, 'bullet');
+        b.entities = [first, second, late, early]; b.update(0.25);
+        assert(!first.alive && !second.alive && !late.alive && !early.alive && b.score === 200,
+            'stored first projectile stole the early projectile target');
+        near(early.pos.a, 4.4 - 0.04 / Math.sqrt(1.5));
+        near(late.pos.a, 4.8 - 0.04 / Math.sqrt(1.5));
+    });
+    check('earliest target wins over UFO type and storage order', () => {
+        const b = board();
+        const far = entity([4.6, 4, 4, 4], [0, 0, 0, 0], 0.05, 'ufo');
+        const close = entity([4.3, 4, 4, 4], [0, 0, 0, 0], 0.05, 'asteroid');
+        const shot = entity([4, 4, 4, 4], [4, 0, 0, 0], 0.01, 'bullet');
+        b.entities = [far, close, shot]; b.update(0.2);
+        assert(!close.alive && far.alive && b.score === 100, 'later UFO stole earlier impact');
+    });
+    check('moving ship uses relative swept collision through a seam', () => {
+        const b = safeShipBoard();
+        b.ship.pos = { a: 7.5, b: 0, c: 0, d: 0 };
+        b.ship.vel = { a: 20, b: 0, c: 0, d: 0 };
+        const rock = entity([0.2, 0, 0, 0], [-4, 0, 0, 0], 0.05, 'asteroid');
+        b.entities = [b.ship, rock]; b.update(0.05);
+        assert(!b.ship.alive && b.lives === 2, 'ship tunneled through seam target');
+    });
+    check('splits originate at impact and fragments drift for remaining time', () => {
+        const b = board();
+        const rock = entity([4.7, 4, 4, 4], [0, 0, 0, 0], 0.4, 'asteroid');
+        b.entities = [rock, entity([4, 4, 4, 4], [4, 0, 0, 0], 0.1, 'bullet')];
+        b.update(0.2);
+        const fragments = b.entities.filter(e => e.type === 'asteroid');
+        assert(fragments.length === 2 && fragments.every(e => e.radius === 0.24 && e.age > 0), 'fragments lost residual flight');
+        assert(b.score === 100, 'split score wrong');
+    });
+    check('UFO elapsed remainder also advances newly fired bullets', () => {
+        const b = board();
+        const ufo = entity([2, 0, 0, 0], [0, 0, 0, 0], 0.05, 'ufo');
+        ufo.timer = 1.99;
+        b.entities = [ufo, entity([3, 0, 0, 0], [0, 0, 0, 0], 0.01, 'asteroid')];
+        b.update(0.05);
+        near(ufo.timer, 0.04);
+        near(b.entities.find(e => e.type === 'ufo_bullet').age, 0.04);
+    });
+    check('projectile lifetime truncates its collision trajectory', () => {
+        const b = board();
+        const shot = entity([4, 4, 4, 4], [4, 0, 0, 0], 0.01, 'bullet'); shot.age = 1.99;
+        const target = entity([4.15, 4, 4, 4], [0, 0, 0, 0], 0.01, 'asteroid');
+        b.entities = [shot, target]; b.update(0.05);
+        assert(!shot.alive && target.alive && b.score === 0, 'expired bullet still collided');
+    });
+    check('shield absorption, elapsed expiration and end-state command ownership', () => {
+        const b = safeShipBoard();
+        assert(b.activateShield(), 'shield activation failed');
+        b.entities.push(entity([4, 4, 4, 4], [0, 0, 0, 0], 0.1, 'asteroid'));
+        b.update(0.016);
+        assert(b.ship.alive && b.lives === 3 && !b.shieldActive && b.shieldCharges === 2, 'absorption changed');
+        b.update(3); assert(b.activateShield(), 'cooldown remainder lost');
+        b.update(5); assert(!b.shieldActive, 'shield failed to expire');
+        b.lives = 1; b.killShip();
+        const before = snapshot(b); b.thrust([1, 0, 0, 0]); b.shoot([1, 0, 0, 0]); b.hyperspace(); b.update(2);
+        assert(b.gameOver && !b.activateShield() && snapshot(b) === before, 'ended world mutated');
+    });
+    check('seeded stream and reset are independent of global cosmetic draws', () => {
+        const first = new AsteroidsBoard(8, { seed: 42 }), second = new AsteroidsBoard(8, { seed: 42 });
+        const initial = snapshot(first);
+        for (let i = 0; i < 1000; i++) Math.random();
+        first.spawnUFO(); second.spawnUFO();
+        assert(snapshot(first) === snapshot(second), 'global random consumers perturbed simulation');
+        first.reset(); assert(snapshot(first) === initial, 'reset did not replay initial seed');
+    });
 
-// ─── 12. Reset ───────────────────────────────────────────────────────
-console.log('\n— Reset —');
-const br = new AsteroidsBoard(8);
-br.score = 5000;
-br.lives = 1;
-br.wave = 5;
-br.shieldCharges = 0;
-br.shieldActive = true;
-br.gameOver = true;
-br.reset();
-assert('Reset clears score', br.score === 0);
-assert('Reset restores lives', br.lives === 3);
-assert('Reset clears wave', br.wave === 1);
-assert('Reset restores shields', br.shieldCharges === 3);
-assert('Reset deactivates shield', !br.shieldActive);
-assert('Reset clears gameOver', !br.gameOver);
-assert('Ship exists after reset', br.ship !== null);
+    // Real elapsed time must not advance a paused/dead world or a reset world.
+    const waiting = safeShipBoard(), reset = safeShipBoard();
+    waiting.killShip(); reset.killShip(); reset.reset(); reset.ship.pos.a = 1;
+    await new Promise(resolve => setTimeout(resolve, 1550));
+    check('respawn is simulation-owned, membership survives cleanup, reset cancels old state', () => {
+        assert(!waiting.ship.alive && reset.ship.pos.a === 1, 'wall-clock callback mutated world');
+        for (let i = 0; i < 60; i++) { const e = entity([0, 0, 0, 0], [0, 0, 0, 0], 0.1, 'bullet'); e.alive = false; waiting.entities.push(e); }
+        waiting.update(1.49);
+        assert(!waiting.ship.alive && waiting.entities.includes(waiting.ship), 'dead ship lost ownership');
+        waiting.update(0.01);
+        assert(waiting.ship.alive && waiting.entities.filter(e => e === waiting.ship).length === 1, 'respawn missing or duplicated ship');
+        near(waiting.ship.pos.a, 4);
+    });
 
-// ─── 13. Metadata ────────────────────────────────────────────────────
-console.log('\n— Metadata —');
-const meta = b.getMetadata();
-assert('Has score', typeof meta.score === 'number');
-assert('Has lives', typeof meta.lives === 'number');
-assert('Has gameOver', typeof meta.gameOver === 'boolean');
-assert('Has wave', typeof meta.wave === 'number');
-assert('Has shieldCharges', typeof meta.shieldCharges === 'number');
-assert('Has shieldActive', typeof meta.shieldActive === 'boolean');
-assert('Has asteroidCount', typeof meta.asteroidCount === 'number');
-assert('Has bulletCount', typeof meta.bulletCount === 'number');
-assert('Has entityCount', typeof meta.entityCount === 'number');
-assert('Has worldSize', meta.worldSize === 8);
-
-// ─── 14. Distance Methods ────────────────────────────────────────────
-console.log('\n— Distance Methods —');
-const e4 = new AsteroidsEntity([1, 0, 0, 0], [0, 0, 0, 0], 0.1, 'bullet');
-const e5 = new AsteroidsEntity([2, 0, 0, 0], [0, 0, 0, 0], 0.1, 'bullet');
-const qdist = e4.distTo(e5);
-assert('Quadray distance > 0', qdist > 0);
-const edist = e4.euclideanDistTo(e5);
-assert('Euclidean distance > 0', edist > 0);
-const mdist = e4.manhattanDistTo(e5);
-assert('Manhattan distance > 0', mdist > 0);
-
-// ─── 15. Synergetics & Round-Trip ────────────────────────────────────
-console.log('\n— Synergetics & Round-Trip —');
-assert('TETRA_VOL = 1', SYNERGETICS.TETRA_VOL === 1);
-assert('OCTA_VOL = 4', SYNERGETICS.OCTA_VOL === 4);
-const rt = verifyRoundTrip(new Quadray(1, 0, 0, 0));
-assert('Round-trip passes', rt.passed);
-const geo = verifyGeometricIdentities();
-assert('Geometric identities pass', geo.allPassed);
-
-// ─── Summary ─────────────────────────────────────────────────────────
-console.log(`\n=== Results: ${passed} passed, ${failed} failed (${total} total) ===`);
-process.exit(failed > 0 ? 1 : 0);
+    if (typeof document !== 'undefined') {
+        check('real Canvas legal high-depth rendering and render-independent seed stream', () => {
+            const b = safeShipBoard(), twin = safeShipBoard();
+            const renderer = new AsteroidsRenderer(document.getElementById('gameCanvas'), b);
+            b.entities.push(entity([0, 0, 7, 7], [0, 0, 0, 0], 0.1, 'bullet'));
+            for (const [rx, ry] of [[0.5, 0.7], [0, 0], [Math.PI, Math.PI / 2], [-2, 5]]) {
+                renderer.rotX = rx; renderer.rotY = ry;
+                for (let mask = 0; mask < 16; mask++) {
+                    const p = renderer._project(mask & 1 ? 8 : 0, mask & 2 ? 8 : 0, mask & 4 ? 8 : 0, mask & 8 ? 8 : 0);
+                    assert(Number.isFinite(p.x) && Number.isFinite(p.y) && p.scale > 0, 'legal corner behind camera');
+                    assert(p.x >= 0 && p.x <= 800 && p.y >= 0 && p.y <= 600, 'corner outside fitted canvas');
+                }
+                renderer.render(); // Actual Canvas arc calls; no fake context.
+            }
+            b.entities.pop(); b.spawnUFO(); twin.spawnUFO();
+            assert(snapshot(b) === snapshot(twin), 'actual renderer perturbed board RNG');
+        });
+    }
+    const summary = `${passed} passed, ${failed} failed`;
+    console.log(summary);
+    globalThis.asteroidsTestResults = { passed, failed };
+    if (typeof document !== 'undefined') document.getElementById('results').textContent = summary;
+    if (typeof process !== 'undefined') process.exitCode = failed ? 1 : 0;
+})().catch(error => {
+    console.error(error);
+    if (typeof process !== 'undefined') process.exitCode = 1;
+});

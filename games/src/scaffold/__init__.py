@@ -216,7 +216,7 @@ class {cls} {{
         this._setupInput();
 
         this.loop = new GameLoop({{
-            update: () => this.update(),
+            update: (dtSeconds) => this.update(dtSeconds),
             render: () => {{
                 this.renderer.render();
                 this._updateHUD();
@@ -238,9 +238,9 @@ class {cls} {{
         console.log('[{cls}] Initialized');
     }}
 
-    update() {{
+    update(dtSeconds) {{
         if (this.board.gameOver) return;
-        this.board.step();
+        this.board.step(dtSeconds);
     }}
 
     reset() {{

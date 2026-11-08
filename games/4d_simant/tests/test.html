@@ -16,7 +16,11 @@
     <div id="results">Running tests...</div>
 
     <!-- Core Dependencies -->
-    <script src="../js/quadray.js"></script>
+    <script src="../../4d_generic/quadray.js"></script>
+    <script src="../../4d_generic/grid_utils.js"></script>
+    <script src="../../4d_generic/synergetics.js"></script>
+    <script src="../../4d_generic/base_board.js"></script>
+    <script src="../../4d_generic/graph_field.js"></script>
     
     <!-- Game Modules (Load order matters) -->
     <script src="../js/simant_board.js"></script>
@@ -59,18 +63,10 @@
             summary.style.color = failed === 0 ? '#4f4' : '#f44';
         };
 
-        // Shim Node.js require/module for hybrid scripts
-        window.require = function(module) {
-            // Attempt to return global objects if they exist
-            if (module.includes('quadray')) return { Quadray: window.Quadray };
-            // Return empty object or shim as needed
-            return {};
-        };
-        
-        window.module = { exports: {} };
     </script>
     
     <!-- Test Script -->
     <script  src="test_simant.js"></script>
+    <script>runTests(); updateSummary();</script>
 </body>
 </html>

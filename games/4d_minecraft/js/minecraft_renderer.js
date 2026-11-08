@@ -8,7 +8,7 @@
  * Uses all BaseRenderer methods:
  *   _project(), _drawAxes(), _clearCanvas(), _drawHUD(),
  *   _drawCircle(), _drawDiamond()
- * Plus: GridUtils.depthSort(), GridUtils.parseKey(), Quadray.cellType()
+ * Plus: GridUtils.parseKey(), Quadray.cellType()
  *
  * @module MinecraftRenderer
  */
@@ -132,37 +132,42 @@ class MinecraftRenderer extends BaseRenderer {
     }
 
     /**
-     * Draw all placed blocks with depth sorting.
-     * Uses GridUtils.depthSort() for proper back-to-front order.
+     * Project block faces once in stable back-to-front paint order.
+     * Equal-depth blocks retain board order; their last face paints on top.
      */
-    _drawBlocks() {
-        const ctx = this.ctx;
-        const blocks = this.board.getVisibleBlocks().map(b => {
-            const p = this._projectQ(b.pos);
-            return { ...b, px: p.x, py: p.y, ps: p.scale };
-        }).sort((a, b) => a.ps - b.ps);
+    _projectBlocks() {
+        return this.board.getVisibleBlocks().map(block => {
+            const p = this._projectQ(block.pos);
+            return { block, p, halfSize: 8 * p.scale };
+        }).sort((a, b) => a.p.scale - b.p.scale);
+    }
 
-        for (const b of blocks) {
-            const s = 8 * b.ps;
-            const col = BLOCK_COLORS[b.type];
-            ctx.fillStyle = col;
-            ctx.fillRect(b.px - s, b.py - s, s * 2, s * 2);
-            ctx.strokeStyle = 'rgba(0,0,0,0.3)';
-            ctx.lineWidth = 0.5;
-            ctx.strokeRect(b.px - s, b.py - s, s * 2, s * 2);
-        }
-
-        // Hover detection
-        this.hoveredBlock = null;
-        let closestDist = 20;
-        for (const b of blocks) {
-            const dx = this.mouseX - b.px, dy = this.mouseY - b.py;
-            const dist = Math.sqrt(dx * dx + dy * dy);
-            if (dist < closestDist) {
-                closestDist = dist;
-                this.hoveredBlock = b;
+    /**
+     * Select the last painted square face containing the pointer.
+     * The decorative outline does not enlarge the selectable face.
+     */
+    _pickBlock(blocks, sx, sy) {
+        for (let i = blocks.length - 1; i >= 0; i--) {
+            const { block, p, halfSize } = blocks[i];
+            if (Math.abs(sx - p.x) <= halfSize && Math.abs(sy - p.y) <= halfSize) {
+                return block;
             }
         }
+        return null;
+    }
+
+    /** Draw and hover the same projected block faces in paint order. */
+    _drawBlocks() {
+        const ctx = this.ctx;
+        const blocks = this._projectBlocks();
+        for (const { block, p, halfSize: s } of blocks) {
+            ctx.fillStyle = BLOCK_COLORS[block.type];
+            ctx.fillRect(p.x - s, p.y - s, s * 2, s * 2);
+            ctx.strokeStyle = 'rgba(0,0,0,0.3)';
+            ctx.lineWidth = 0.5;
+            ctx.strokeRect(p.x - s, p.y - s, s * 2, s * 2);
+        }
+        this.hoveredBlock = this._pickBlock(blocks, this.mouseX, this.mouseY);
     }
 
     /**
@@ -256,14 +261,7 @@ class MinecraftRenderer extends BaseRenderer {
      * @returns {Object|null} Block data or null
      */
     hitTest(sx, sy) {
-        const blocks = this.board.getVisibleBlocks();
-        for (const b of blocks) {
-            const p = this._projectQ(b.pos);
-            if (Math.hypot(p.x - sx, p.y - sy) < 10 * p.scale) {
-                return b;
-            }
-        }
-        return null;
+        return this._pickBlock(this._projectBlocks(), sx, sy);
     }
 }
 

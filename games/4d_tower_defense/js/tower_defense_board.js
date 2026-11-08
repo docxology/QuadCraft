@@ -103,22 +103,6 @@ const CREEP_TYPES = {
     boss: { name: 'Boss', speedMul: 0.3, hpMul: 6.0, goldMul: 5.0, color: '#ff4444', symbol: '\u2605' }
 };
 
-/**
- * Create a seeded pseudo-random generator (Mulberry32) — deterministic,
- * fast, and good enough for gameplay-quality randomness. Returns a
- * function with the same signature/range as Math.random() ([0, 1)).
- * @param {number} seed
- * @returns {function(): number}
- */
-function createSeededRng(seed) {
-    let s = seed >>> 0;
-    return function () {
-        s |= 0; s = (s + 0x6D2B79F5) | 0;
-        let t = Math.imul(s ^ (s >>> 15), 1 | s);
-        t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-    };
-}
 
 // ─── Creep ──────────────────────────────────────────────────────────────────
 class TDCreep {
@@ -209,7 +193,7 @@ class TowerDefenseBoard extends BaseBoard {
         // path/wave/enemy generation goes through this._rng() rather than
         // calling Math.random() directly, so a fixed seed reproduces the
         // exact same path and wave composition.
-        this._rng = (options.seed !== undefined) ? createSeededRng(options.seed) : Math.random;
+        this._rng = (options.seed !== undefined) ? GridUtils.createSeededRng(options.seed) : Math.random;
 
         this.grid = new Map();          // GridUtils.key() -> cell data
         this.path = this.generateIVMPath();

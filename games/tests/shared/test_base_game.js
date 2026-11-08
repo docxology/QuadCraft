@@ -1,154 +1,81 @@
-/**
- * test_base_game.js — Tests for BaseGame module
- *
- * Tests: constructor setup, init, togglePause, reset, _getHUDState, _syncCamera.
- * Since BaseGame requires GameLoop and InputController, we mock them.
- * Run: node games/tests/test_base_game.js
- */
-const path = require('path');
+/** Fixed-clock regressions through BaseGame and actual Asteroids free flight. */
+const assert = require('node:assert/strict');
+Object.assign(globalThis, require('../../4d_generic/game_loop.js'));
+Object.assign(globalThis, require('../../4d_generic/input_controller.js'));
+const { BaseGame } = require('../../4d_generic/base_game.js');
+const { AsteroidsBoard, AsteroidsEntity } = require('../../4d_asteroids/js/asteroids_board.js');
+
+class FlightGame extends BaseGame {
+    constructor(tickRate = 16) {
+        const board = new AsteroidsBoard(32, { seed: 17 });
+        board.entities = [board.ship, new AsteroidsEntity([8, 0, 0, 0], [0, 0, 0, 0], 0.01, 'asteroid')];
+        board.ship.vel.a = 1;
+        super(null, null, board, null, { tickRate });
+        // Real lifecycle callback: explicit frames end without enqueueing a RAF.
+        // No canvas, scheduler substitutes, or simulation substitutes are involved.
+        this.loop.render = () => this.loop.stop();
+    }
+    update(dt) { this.board.update(dt); }
+    frame(timestamp) {
+        this.loop.paused = false;
+        this.loop._loop(timestamp);
+    }
+}
 
 let passed = 0, failed = 0;
-function assert(cond, msg) {
-    if (cond) { passed++; console.log(`  ✅ ${msg}`); }
-    else { failed++; console.error(`  ❌ ${msg}`); }
+function check(name, test) {
+    try { test(); passed++; console.log('PASS: ' + name); }
+    catch (error) { failed++; console.error('FAIL: ' + name, error); }
 }
+function near(value, expected) { assert.ok(Math.abs(value - expected) < 1e-11, `${value} != ${expected}`); }
 
-console.log('╔═══════════════════════════════════╗');
-console.log('║   Test: BaseGame Module           ║');
-console.log('╚═══════════════════════════════════╝\n');
+check('BaseGame clock advances physical seconds, not milliseconds', () => {
+    const game = new FlightGame(50);
+    game.frame(125);
+    near(game.board.ship.pos.a, 16.1);
+    near(game.board.ship.age, 0.1);
+    near(game.loop.accumulator, 25);
+});
+check('partitioned frames and catch-up have identical actual trajectories', () => {
+    const regular = new FlightGame(), lagged = new FlightGame();
+    for (let time = 16; time <= 192; time += 16) regular.frame(time);
+    lagged.frame(192);
+    assert.deepEqual(regular.board.ship.pos, lagged.board.ship.pos);
+    near(lagged.board.ship.age, 0.192);
+});
+check('250ms clamp and fractional frame remainder belong to one clock', () => {
+    const game = new FlightGame();
+    game.frame(1000);
+    near(game.board.ship.age, 0.24);
+    near(game.loop.accumulator, 10);
+    game.frame(1006);
+    near(game.board.ship.age, 0.256);
+    near(game.loop.accumulator, 0);
+});
+check('stopped frames cannot advance simulation or consume the remainder', () => {
+    const game = new FlightGame();
+    game.frame(23);
+    const before = { ...game.board.ship.pos };
+    game.loop._loop(5000);
+    assert.deepEqual(game.board.ship.pos, before);
+    near(game.loop.accumulator, 7);
+    assert.equal(game.loop.animationId, null);
+});
+check('stopping from a tick halts catch-up without additional updates', () => {
+    const loop = new GameLoop({ tickRate: 16, update: dt => { elapsed += dt; loop.stop(); } });
+    let elapsed = 0;
+    loop._loop(192);
+    near(elapsed, 0.016);
+    near(loop.accumulator, 176);
+    assert.equal(loop.animationId, null);
+});
+check('actual end-state HUD distinguishes remaining and exhausted lives', () => {
+    const game = new FlightGame();
+    game.board.score = 42;
+    assert.match(game._getHUDState().text, /42/);
+    game.board.lives = 1; game.board.killShip();
+    assert.match(game._getHUDState().text, /GAME OVER/);
+});
 
-// --- Provide global mocks for GameLoop, InputController, etc. ---
-class MockGameLoop {
-    constructor(opts) {
-        this.updateFn = opts.update;
-        this.renderFn = opts.render;
-        this.tickRate = opts.tickRate;
-        this.paused = false;
-        this.running = false;
-    }
-    start() { this.running = true; }
-    stop() { this.running = false; }
-    togglePause() { this.paused = !this.paused; }
-}
-
-class MockInputController {
-    constructor() { this.bindings = []; this.attached = false; this._keys = {}; }
-    bind(keys, fn) { this.bindings.push({ keys, fn }); }
-    attach() { this.attached = true; }
-    detach() { this.attached = false; }
-    isDown(k) { return !!this._keys[k]; }
-}
-
-// Inject globals
-global.GameLoop = MockGameLoop;
-global.InputController = MockInputController;
-
-// Now load BaseGame
-const { BaseGame } = require(path.join(__dirname, '..', '..', '4d_generic', 'base_game.js'));
-
-// --- Mock dependencies ---
-function mockCanvas() {
-    return {
-        width: 400, height: 400,
-        getContext: () => ({
-            fillRect: () => { }, fillText: () => { },
-            fillStyle: '', font: '', textAlign: '',
-            beginPath: () => { }, arc: () => { }, fill: () => { },
-        })
-    };
-}
-
-function mockBoard() {
-    return { gameOver: false, score: 0, reset: function () { this.score = 0; this.gameOver = false; } };
-}
-
-function mockRenderer() {
-    return { rotX: 0, rotY: 0, render: function () { } };
-}
-
-function mockHud() {
-    return { textContent: '', style: { color: '' } };
-}
-
-// 1. Constructor
-console.log('▸ Constructor');
-const canvas = mockCanvas();
-const hud = mockHud();
-const board = mockBoard();
-const renderer = mockRenderer();
-const game = new BaseGame(canvas, hud, board, renderer, { tickRate: 50, name: 'Test' });
-assert(game.board === board, 'stores board');
-assert(game.renderer === renderer, 'stores renderer');
-assert(game.gameName === 'Test', 'stores name');
-assert(game.loop instanceof MockGameLoop, 'creates GameLoop');
-assert(game.input instanceof MockInputController, 'creates InputController');
-assert(game.loop.tickRate === 50, 'passes tickRate');
-
-// 2. init()
-console.log('▸ init()');
-game.init();
-assert(game.input.attached, 'input attached');
-assert(game.loop.running, 'loop started');
-
-// 3. togglePause()
-console.log('▸ togglePause()');
-game.togglePause();
-assert(game.loop.paused === true, 'paused after toggle');
-game.togglePause();
-assert(game.loop.paused === false, 'unpaused after second toggle');
-
-// 4. reset()
-console.log('▸ reset()');
-board.score = 500;
-board.gameOver = true;
-game.reset();
-assert(board.score === 0, 'board reset');
-assert(board.gameOver === false, 'gameOver reset');
-assert(game.loop.running, 'loop restarted');
-
-// 5. _getHUDState() default
-console.log('▸ _getHUDState() default');
-board.gameOver = false;
-board.score = 42;
-const state = game._getHUDState();
-assert(state.text.includes('42'), 'HUD shows score');
-assert(state.color === '#94a3b8', 'playing color');
-
-// 6. _getHUDState() game over
-console.log('▸ _getHUDState() game over');
-board.gameOver = true;
-board.score = 99;
-const goState = game._getHUDState();
-assert(goState.text.includes('GAME OVER'), 'HUD shows GAME OVER');
-assert(goState.color === '#f87171', 'game over red');
-
-// 7. Base input bindings (P and R)
-console.log('▸ Base input bindings');
-const pBind = game.input.bindings.find(b => b.keys.includes('p'));
-assert(pBind !== undefined, 'P key is bound');
-const rBind = game.input.bindings.find(b => b.keys.includes('r'));
-assert(rBind !== undefined, 'R key is bound');
-
-// 8. update() is a no-op in base
-console.log('▸ update() base no-op');
-try { game.update(); passed++; console.log('  ✅ base update does not throw'); }
-catch { failed++; console.error('  ❌ base update threw'); }
-
-// 9. _setupGameInput() is a no-op in base
-console.log('▸ _setupGameInput() base no-op');
-// Already called during construction — no error
-assert(game.input.bindings.length >= 2, 'base bindings exist');
-
-// 10. Camera sync
-console.log('▸ _syncCamera()');
-// Without camera — should not throw
-try { game._syncCamera(); passed++; console.log('  ✅ no camera → no throw'); }
-catch { failed++; console.error('  ❌ no camera threw'); }
-
-// Cleanup globals
-delete global.GameLoop;
-delete global.InputController;
-
-console.log(`\n${'─'.repeat(36)}`);
-console.log(`BaseGame: ${passed} passed, ${failed} failed`);
-process.exit(failed > 0 ? 1 : 0);
+console.log(`${passed} passed, ${failed} failed`);
+process.exitCode = failed ? 1 : 0;

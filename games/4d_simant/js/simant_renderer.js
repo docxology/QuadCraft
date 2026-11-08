@@ -3,7 +3,7 @@
  *
  * Extends BaseRenderer to project Quadray positions to 2D with
  * rich Quadray geometry visualization:
- *   - IVM tetrahedral wireframe showing close-packed sphere topology
+ *   - Quadray display axes for an eight-neighbor raw gameplay graph
  *   - Tunnel corridor rendering between EMPTY cells
  *   - Ant sprites with caste-specific visuals (queen crowns, scout antennae)
  *   - Pheromone trail overlays with gradient colors
@@ -43,7 +43,7 @@ class SimAntRenderer extends BaseRenderer {
         this.showMinimap = true;
         this.showLabels = false; // Coordinate labels off by default (less clutter)
         this.showTunnels = true;
-        this.showIVMGrid = true;
+        this.showGraphAxes = true;
 
         // Minimap
         this.minimapSize = 130;
@@ -56,7 +56,7 @@ class SimAntRenderer extends BaseRenderer {
         this.sprites = {};
         this.initSprites();
 
-        console.log('[SimAntRenderer] Initialized with IVM grid visualization');
+        console.log('[SimAntRenderer] Initialized with raw graph visualization');
     }
 
     /**
@@ -242,12 +242,10 @@ class SimAntRenderer extends BaseRenderer {
     }
 
     /**
-     * Render IVM tetrahedral wireframe — shows the close-packed sphere geometry.
-     * Draws edges between adjacent cells that are both EMPTY (tunnels),
-     * revealing the tetrahedral lattice structure.
+     * Render the four projected raw-coordinate axes (not physical FCC edges).
      */
-    _drawIVMGrid() {
-        if (!this.showIVMGrid) return;
+    _drawGraphAxes() {
+        if (!this.showGraphAxes) return;
         const ctx = this.ctx;
         const board = this.board;
 
@@ -307,7 +305,7 @@ class SimAntRenderer extends BaseRenderer {
 
     /**
      * Render tunnel corridors as connecting lines between EMPTY cells,
-     * showing the IVM lattice structure of the dug network.
+     * showing the reversible eight-neighbor raw graph.
      */
     _drawTunnelNetwork() {
         if (!this.showTunnels) return;
@@ -331,7 +329,7 @@ class SimAntRenderer extends BaseRenderer {
                 if (visited.has(key)) continue;
                 visited.add(key);
 
-                // Check IVM neighbors
+                // Use the same raw neighbors as movement and field transport.
                 const neighbors = board.getNeighborCoords(c.a, c.b, c.c, c.d);
                 for (const n of neighbors) {
                     const ni = board.idx(n.a, n.b, n.c, n.d);
@@ -389,10 +387,10 @@ class SimAntRenderer extends BaseRenderer {
     render() {
         this._clearCanvas();
 
-        // Draw IVM basis vectors — tetrahedral geometry reference
-        this._drawIVMGrid();
+        // Draw projected coordinate basis and raw tunnel connectivity.
+        this._drawGraphAxes();
 
-        // Draw tunnel network — IVM lattice connectivity
+        // Draw tunnel network.
         this._drawTunnelNetwork();
 
         // Draw standard axes
@@ -675,7 +673,7 @@ class SimAntRenderer extends BaseRenderer {
         ctx.globalAlpha = 1.0;
     }
 
-    /** Draw enhanced minimap with IVM-projected overview */
+    /** Draw raw a,b minimap, collapsing the c,d labels. */
     _drawMinimap() {
         const ctx = this.ctx;
         const sz = this.minimapSize;
@@ -709,7 +707,7 @@ class SimAntRenderer extends BaseRenderer {
         ctx.font = '9px Outfit';
         ctx.fillStyle = '#886';
         ctx.textAlign = 'left';
-        ctx.fillText('IVM OVERVIEW', mx + 5, my - 4);
+        ctx.fillText('RAW a,b OVERVIEW', mx + 5, my - 4);
 
         // Draw terrain heatmap (project a,b axes, summing over c,d)
         const terrainMap = new Uint8Array(board.size * board.size); // 0=dirt, 1=tunnel, 2=food
@@ -783,7 +781,8 @@ class SimAntRenderer extends BaseRenderer {
         const lines = [
             `Tick: ${meta.tick} | Y:${meta.yellowAnts} R:${meta.redAnts} ants`,
             `Tunnels: ${meta.tunnelPercent}% | Food: ${meta.foodCells} cells`,
-            `World TV: ${meta.worldTetravolume} | S3: ${this.board.s3Constant.toFixed(4)}`,
+            `Raw graph: 8 neighbors | Field mass: ${meta.field.totals.reduce((s, v) => s + v, 0).toFixed(1)}`,
+            `Mix: 0.8 / 10 ticks | Evaporation: 2% / 5 ticks`,
         ];
         this._drawHUD(lines, { color: 'rgba(148, 163, 184, 0.6)', fontSize: 11 });
     }

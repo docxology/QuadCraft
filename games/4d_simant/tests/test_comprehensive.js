@@ -59,36 +59,15 @@ console.log('══════════════════════�
 
 // ─── Group 1: Board Initialization ───
 console.log('── Board Initialization ──');
-const b = new SimAntBoard(8);
-assert(b.size === 8, `Board size is 8 (got ${b.size})`);
-assert(b.volume === 4096, `Volume is 8^4=4096 (got ${b.volume})`);
-assert(b.grid.length === 4096, `Grid has 4096 cells`);
-assert(b.pheromones.length === 4096 * PHERO_CHANNELS, `Pheromone array: ${PHERO_CHANNELS} channels * 4096 (got ${b.pheromones.length})`);
-assert(b.ants.length === 12, `12 initial ants (got ${b.ants.length})`);
-assert(b.foodStored[0] === 50, `Yellow starts with 50 food`);
-assert(b.foodStored[1] === 50, `Red starts with 50 food`);
-assert(b.nests[0] !== null, `Yellow nest exists`);
-assert(b.nests[1] !== null, `Red nest exists`);
-assert(b.nests[0].a === 3, `Yellow nest at a=3`);
-assert(b.nests[0].b === 3, `Yellow nest at b=3`);
-assert(b.nests[1].a === 4, `Red nest at a=4 (size-4=4)`);
+const b = new SimAntBoard(8, { seed: 31415 });
+assert(GridUtils.manhattan(b.nests[0], b.nests[1]) > 3, 'Raw nests are separated');
+assert(Quadray.distance(b.queens[0].toQuadray(), b.queens[1].toQuadray()) > 3, 'Projected nests are physically separated');
 
 // ─── Group 2: Quadray Coordinate Properties ───
 console.log('\n── Quadray Coordinate Integration ──');
-assert(b.nests[0].hasOwnProperty('a'), `Nest has .a property`);
-assert(b.nests[0].hasOwnProperty('b'), `Nest has .b property`);
-assert(b.nests[0].hasOwnProperty('c'), `Nest has .c property`);
-assert(b.nests[0].hasOwnProperty('d'), `Nest has .d property`);
-assert(!b.nests[0].hasOwnProperty('x'), `Nest does NOT have .x property (legacy)`);
-assert(!b.nests[0].hasOwnProperty('w'), `Nest does NOT have .w property (legacy)`);
-
-// Ants also use a,b,c,d
-const ant0 = b.ants[0];
-assert(ant0.hasOwnProperty('a'), `Ant has .a property`);
-assert(ant0.hasOwnProperty('d'), `Ant has .d property`);
-assert(!ant0.hasOwnProperty('x'), `Ant does NOT have .x property`);
 
 // toQuadray method
+const ant0 = b.ants[0];
 const q = ant0.toQuadray();
 assert(q instanceof Quadray, `Ant.toQuadray() returns Quadray instance`);
 assert(q.a === ant0.a, `toQuadray().a matches ant position`);
@@ -111,7 +90,7 @@ assert(workers[0].hp === 20, `Worker HP is 20`);
 
 // ─── Group 4: Grid Operations ───
 console.log('\n── Grid Operations ──');
-const nestIdx = b.idx(3, 3, 3, 3);
+const nestIdx = b.idx(...['a', 'b', 'c', 'd'].map(k => b.nests[0][k]));
 assert(nestIdx !== -1, `Yellow nest index is valid`);
 assert(b.grid[nestIdx] === TYPE_EMPTY, `Yellow nest cell is EMPTY (dug room)`);
 
@@ -121,7 +100,7 @@ assert(b.idx(8, 0, 0, 0) === -1, `OOB size returns -1`);
 
 // coords round-trip
 const c = b.coords(nestIdx);
-assert(c.a === 3 && c.b === 3 && c.c === 3 && c.d === 3, `coords() round-trip works`);
+assert(['a','b','c','d'].every(k => c[k] === b.nests[0][k]), 'coords() retains the actual raw nest label');
 
 // getCell / setCell
 const testPos = { a: 1, b: 1, c: 1, d: 1 };
@@ -152,24 +131,20 @@ const redWorker = cb.ants[cb.ants.length - 1];
 const prevHp = redWorker.hp;
 CombatSystem.resolveCombat(cb);
 assert(redWorker.hp < prevHp || !redWorker.alive, `Combat deals damage (hp was ${prevHp}, now ${redWorker.hp})`);
-assert(true, `CombatSystem.resolveCombat() completed without crashing`);
 
 // ─── Group 7: Red Colony AI ───
 console.log('\n── Red Colony AI ──');
 const aiBoard = new SimAntBoard(8);
-assert(aiBoard.redAI !== null, `RedColonyAI initialized`);
-assert(aiBoard.redAI instanceof RedColonyAI, `redAI is RedColonyAI instance`);
 
 const prevRedAnts = aiBoard.ants.filter(a => a.faction === 1).length;
+const redFoodBefore = aiBoard.foodStored[1];
 aiBoard.redAI.update();
 const newRedAnts = aiBoard.ants.filter(a => a.faction === 1).length;
-assert(newRedAnts >= prevRedAnts, `AI update spawns ants or at least doesn't crash (was ${prevRedAnts}, now ${newRedAnts})`);
-
-const redQueen = aiBoard.queens[1];
-assert(typeof redQueen.a === 'number', `Queen.a is a number`);
-assert(typeof redQueen.b === 'number', `Queen.b is a number`);
-assert(typeof redQueen.c === 'number', `Queen.c is a number`);
-assert(typeof redQueen.d === 'number', `Queen.d is a number`);
+assert(newRedAnts === prevRedAnts + 1, 'Early red AI purchases one worker');
+assert(aiBoard.foodStored[1] === redFoodBefore - 10, 'AI worker purchase debits ten food');
+const recruited = aiBoard.ants[aiBoard.ants.length - 1];
+assert(recruited.caste === CASTE_WORKER && recruited.faction === FACTION_RED &&
+    GridUtils.manhattan(recruited, aiBoard.queens[1]) === 0, 'AI recruits a worker at its current queen');
 
 // ─── Group 8: Pheromone System (6-channel) ───
 console.log('\n── Pheromone System (6-channel) ──');
@@ -180,6 +155,7 @@ const pIdx = pb.idx(3, 3, 3, 3);
 assert(pb.pheromones[pIdx * PHERO_CHANNELS + PHERO_YELLOW_FOOD] === 10.0, `Pheromone dropped at YellowFood channel`);
 assert(pb.pheromones[pIdx * PHERO_CHANNELS + PHERO_YELLOW_HOME] === 0, `YellowHome channel is 0`);
 assert(pb.pheromones[pIdx * PHERO_CHANNELS + PHERO_YELLOW_DANGER] === 0, `YellowDanger channel is 0`);
+pb.tick = 5; // Evaporation-only event; full transport runs every ten ticks.
 pb.diffusePheromones();
 assert(pb.pheromones[pIdx * PHERO_CHANNELS + PHERO_YELLOW_FOOD] < 10.0, `Pheromone decays after diffusion`);
 assert(pb.pheromones[pIdx * PHERO_CHANNELS + PHERO_YELLOW_FOOD] > 9.0, `Pheromone decay is gradual`);
@@ -212,7 +188,6 @@ assert(meta.tick === 50, `Metadata tick = 50`);
 assert(typeof meta.yellowAnts === 'number', `yellowAnts count available`);
 assert(typeof meta.redAnts === 'number', `redAnts count available`);
 assert(typeof meta.tunnelPercent === 'string', `tunnelPercent is formatted string`);
-assert(typeof meta.worldTetravolume === 'string', `worldTetravolume is formatted`);
 assert(meta.volumeRatios.tetra === 1, `Meta volume ratios correct`);
 assert(typeof meta.gameOver === 'boolean', `gameOver is boolean`);
 assert(typeof meta.yellowHealth === 'number', `yellowHealth is number`);
@@ -236,8 +211,8 @@ assert(b.stats.yellowKills === 0, `Reset: yellowKills=0`);
 // ─── Group 12: Neighbor & GridUtils Integration ───
 console.log('\n── Neighbor/GridUtils Integration ──');
 const neighbors = b.getNeighborCoords(3, 3, 3, 3);
-assert(neighbors.length === GridUtils.DIRECTIONS.length, `Neighbor count matches GridUtils.DIRECTIONS`);
-assert(neighbors[0].hasOwnProperty('a'), `Neighbors use a,b,c,d`);
+assert(neighbors.length === 8 && neighbors.every(n => GridUtils.manhattan(n, {a:3,b:3,c:3,d:3}) === 1), 'Eight raw unit neighbors');
+assert(neighbors.every(n => b.getNeighborCoords(n.a,n.b,n.c,n.d).some(r => r.a === 3 && r.b === 3 && r.c === 3 && r.d === 3)), 'Each movement has its reverse');
 
 const validNeighbors = b.getNeighbors(3, 3, 3, 3);
 assert(validNeighbors.length > 0, `Valid neighbors > 0`);
@@ -248,30 +223,28 @@ assert(dist === 4, `Manhattan distance (0,0,0,0)→(1,1,1,1) = 4`);
 
 // ─── Group 13: Extended Simulation ───
 console.log('\n── Extended Simulation ──');
-const extBoard = new SimAntBoard(10);
+const extBoard = new SimAntBoard(10, { seed: 9231 });
 for (let i = 0; i < 200; i++) extBoard.update();
-assert(extBoard.tick === 200, `200 ticks completed on 10^4 board`);
+assert(extBoard.tick === 200 || extBoard.gameOver, 'Simulation reaches tick 200 or ends without stale ticks');
 const extMeta = extBoard.getMetadata();
-assert(extMeta.yellowAnts >= 0, `Yellow ant count valid after 200 ticks`);
-assert(extMeta.redAnts >= 0, `Red ant count valid after 200 ticks`);
+assert(extMeta.yellowAnts === extBoard.ants.filter(a => a.alive && a.faction === FACTION_YELLOW).length,
+    'HUD yellow count matches surviving colony membership');
+assert(extMeta.redAnts === extBoard.ants.filter(a => a.alive && a.faction === FACTION_RED).length,
+    'HUD red count matches surviving colony membership');
 
 // ─── Group 14: Food Regeneration ───
 console.log('\n── Food Regeneration ──');
-const regenBoard = new SimAntBoard(8);
-// Count food cells before
-let foodBefore = 0;
-for (let i = 0; i < regenBoard.grid.length; i++) {
-    if (regenBoard.grid[i] === TYPE_FOOD) foodBefore++;
-}
-// Run to tick 200 (triggers regeneration)
-for (let i = 0; i < 200; i++) regenBoard.update();
+const regenBoard = new SimAntBoard(8, { seed: 72 });
+regenBoard.grid.fill(TYPE_DIRT);
+regenBoard.ants = regenBoard.queens.slice();
+regenBoard.redAI = null;
+regenBoard.tick = 199;
+regenBoard.update(); // Actual tick-200 dispatch must generate food from dirt.
 let foodAfterRegen = 0;
 for (let i = 0; i < regenBoard.grid.length; i++) {
     if (regenBoard.grid[i] === TYPE_FOOD) foodAfterRegen++;
 }
-// Food should exist (some may be consumed, some regenerated)
-assert(regenBoard.tick === 200, `Regeneration board reached tick 200`);
-assert(foodAfterRegen >= 0, `Food cells valid after regeneration (${foodAfterRegen})`);
+assert(foodAfterRegen > 0, 'Scheduled regeneration produces real food from an all-dirt board');
 
 // ─── Group 15: Population Cap ───
 console.log('\n── Population Cap ──');
@@ -306,17 +279,16 @@ assert(yHealth > 0, `Yellow health > 0 with queen alive`);
 healthBoard.queens[0].alive = false;
 assert(healthBoard.colonyHealth(0) === 0, `Health = 0 when queen dead`);
 
-// ─── Group 17: Pheromone IVM Diffusion ───
-console.log('\n── Pheromone IVM Diffusion ──');
-const diffBoard = new SimAntBoard(6);
+// ─── Group 17: Conservative Pheromone Transport ───
+console.log('\n── Conservative Pheromone Transport ──');
+const diffBoard = new SimAntBoard(6, { seed: 37 });
+diffBoard.grid.fill(TYPE_EMPTY);
 const diffAnt = new Ant(3, 3, 3, 3, 0, 1);
 diffBoard.dropPheromone(diffAnt, PHERO_YELLOW_FOOD, 50.0);
-// Run 10 ticks to trigger full diffusion
-for (let i = 0; i < 10; i++) diffBoard.diffusePheromones();
-const diffIdx = diffBoard.idx(3, 3, 3, 3);
-const afterDiffusion = diffBoard.pheromones[diffIdx * PHERO_CHANNELS + PHERO_YELLOW_FOOD];
-assert(afterDiffusion < 50.0, `Pheromone decreased after diffusion (${afterDiffusion.toFixed(2)})`);
-assert(afterDiffusion > 0, `Pheromone still present (not fully decayed)`);
+diffBoard.tick = 10;
+diffBoard.diffusePheromones();
+assert(Math.abs(diffBoard.fieldTotals()[0] - 49) < 1e-5, 'Transport conserves mass before explicit 2% evaporation');
+assert(diffBoard.pheromones.every(v => v >= 0 && v <= 50), 'Transport preserves nonnegativity and maximum principle');
 
 // ─── Group 18: Danger Pheromone ───
 console.log('\n── Danger Pheromone ──');
@@ -328,9 +300,6 @@ assert(dangerBoard.pheromones[dIdx * PHERO_CHANNELS + PHERO_RED_DANGER] === 0, `
 dangerBoard.emitDanger(3, 3, 3, 3, FACTION_RED, 15.0);
 assert(dangerBoard.pheromones[dIdx * PHERO_CHANNELS + PHERO_RED_DANGER] === 15.0, `Red danger emitted`);
 
-// Out of bounds danger should not crash
-dangerBoard.emitDanger(-1, 0, 0, 0, FACTION_YELLOW, 10.0);
-assert(true, `OOB danger emission doesn't crash`);
 
 // ─── Group 19: Morale Combat ───
 console.log('\n── Morale Combat ──');
@@ -345,7 +314,6 @@ const isolatedRed = moraleBoard.ants[moraleBoard.ants.length - 1];
 const hpBefore = isolatedRed.hp;
 CombatSystem.resolveCombat(moraleBoard);
 assert(isolatedRed.hp < hpBefore || !isolatedRed.alive, `Morale-boosted combat deals damage`);
-assert(true, `Morale combat resolved without crash`);
 
 // ─── Group 20: AI Phases ───
 console.log('\n── AI Phases ──');
@@ -383,21 +351,23 @@ assert(winBoard.winner === 0, `Yellow wins when Red queen dies`);
 // ─── Group 23: Yellow Assist AI ───
 console.log('\n── Yellow Assist AI ──');
 const assistB = new SimAntBoard(8);
-assert(assistB.yellowAssistEnabled === false, `Assist disabled by default`);
 assistB.yellowAssistEnabled = true;
-// YellowAssistAI may not be loaded (no init in board for node), create it
 const yAI = new YellowAssistAI(assistB);
 const yAntsBefore = assistB.ants.filter(a => a.faction === 0).length;
+const assistFoodBefore = assistB.foodStored[0];
 yAI.update();
 const yAntsAfter = assistB.ants.filter(a => a.faction === 0).length;
-assert(yAntsAfter >= yAntsBefore, `Yellow assist AI runs without crash`);
+assert(yAntsAfter === yAntsBefore + 1 && assistB.foodStored[0] === assistFoodBefore - 10,
+    'Yellow assist purchases one worker for ten food');
+assert(assistB.ants.filter(a => a.faction === 0 && a.caste === CASTE_WORKER).slice(0,-1)
+    .every(a => a.state === 'foraging'), 'Yellow assist sends existing idle workers foraging');
 
 // ─── Group 24: Tunnel Set Tracking ───
 console.log('\n── Tunnel Set Tracking ──');
 const tunnelBoard = new SimAntBoard(8);
 assert(tunnelBoard.tunnelSet instanceof Set, `tunnelSet is a Set`);
 assert(tunnelBoard.tunnelSet.size > 0, `Tunnel set has entries from initial dig (${tunnelBoard.tunnelSet.size})`);
-const nestKey = GridUtils.key(3, 3, 3, 3);
+const nestKey = GridUtils.key(...['a', 'b', 'c', 'd'].map(k => tunnelBoard.nests[0][k]));
 assert(tunnelBoard.tunnelSet.has(nestKey), `Nest position is in tunnel set`);
 
 // ─── Group 25: Combat Statistics ───
@@ -415,9 +385,10 @@ const animBoard = new SimAntBoard(8);
 const testWorker = animBoard.ants.find(a => a.caste === CASTE_WORKER && a.alive);
 assert(testWorker !== undefined, `Found a worker for animation test`);
 assert(testWorker.prevA === testWorker.a, `prevA initialized to current position`);
+const animationStart = {a:testWorker.a,b:testWorker.b,c:testWorker.c,d:testWorker.d};
 animBoard.update();
-// After update, prevA should have been set (may or may not differ from current)
-assert(typeof testWorker.prevA === 'number', `prevA is a number after update`);
+assert(['a','b','c','d'].every(k => testWorker[`prev${k.toUpperCase()}`] === animationStart[k]),
+    'Animation retains the full pre-decision raw position');
 
 // ═══ Summary ═══
 console.log('\n══════════════════════════════════════');

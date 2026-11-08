@@ -14,6 +14,14 @@ The lock pins Playwright **1.65.0**, resolved from the [primary npm registry](ht
 
 The original thirteen scenarios remain: Go, Hex, Lights Out, Memory, Rogue, Sokoban, Snake, Sudoku, Doom, Minesweeper, Connect Four, Tower Defense and Minecraft. Snake covers live animation, keyboard turning, pause/resume and camera rotation, catching rendering failures that stop the loop. Connect Four covers queued-AI reset/disable/undo, completed-reply undo, both terminal winners, and independent raw alias slots. Rogue covers multi-hop and blocked FOV, gauge crossing, movement and real lower/uppercase inventory/new-game keys. Doom checks real movement and either actual pointer capture or a visible, truthful denial; its capability outcome is recorded, never silently skipped.
 
+Doom additionally exercises real late input, release ownership and fresh
+respawn clocks. When native mouse capture succeeds, it checks held plasma
+cadence and a late pistol press without retroactive firing or release duplicates.
+When capture is denied, that capture-only branch is explicitly marked
+unexercised rather than simulated; respawn timing still runs. The stdlib HTTP
+server uses the OS accept-backlog limit for concurrent script loads, with
+resource errors still fatal and no retry fallback.
+
 The additional scenarios are grouped in `board-scenarios.mjs`, `arcade-scenarios.mjs` and `simulation-scenarios.mjs`; shared clock/input/pixel helpers live in `helpers.mjs`. They cover Chess, Checkers, Reversi, Backgammon, Catan, Mahjong, Asteroids, Bomberman, Pacman, Pong, Breakout, Frogger, 2048, Life, SimAnt, Space Invaders and Tetris. Arcade scenarios exercise live motion, shooting, bomb blasts, pellet/brick scoring, traffic and both Pong paddles. Simulation scenarios exercise 2048 keyboard merges/reset, Life paused single-step redraw and running generations, funded SimAnt purchases/assist/speed/labels, moving/firing Invaders, and Tetris gravity/drop/locking/respawn.
 
 Board scenarios select and move actual Chess/Checkers pieces, flip Reversi stones after a turn-history reset, roll and spend a Backgammon die, pay Catan resources for a visible settlement, and remove an exposed Mahjong pair after requesting a hint. They check that the canvas remains unstretched, visible and populated with rendered board pixels. Shared flex alignment prevents tall sidebars from stretching the canvas and separating click coordinates from rendered positions.

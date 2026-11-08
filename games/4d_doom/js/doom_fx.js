@@ -28,17 +28,18 @@ export class SynergeticsFX {
         this.screenShake = { x: 0, y: 0, intensity: 0 };
     }
 
-    /** Update animation state each frame */
-    update(dt, player, map) {
-        this.time += dt || 16;
+    /** Update once per fixed gameplay tick; elapsedMs is in milliseconds. */
+    update(elapsedMs, player, map) {
+        const previousTime = this.time;
+        this.time += elapsedMs;
 
         // Jitterbug oscillation (bounces VE ↔ Octa)
         this.jitterbugPhase += this.jitterbugSpeed * this.jitterbugDirection;
         if (this.jitterbugPhase >= 1) { this.jitterbugPhase = 1; this.jitterbugDirection = -1; }
         if (this.jitterbugPhase <= 0) { this.jitterbugPhase = 0; this.jitterbugDirection = 1; }
 
-        // Update frequency data every ~30 frames
-        if (player && map && Math.floor(this.time / 500) !== Math.floor((this.time - 16) / 500)) {
+        // Update frequency data every 500 simulation milliseconds.
+        if (player && map && Math.floor(this.time / 500) !== Math.floor(previousTime / 500)) {
             this.frequencyData = localFrequency(map, player.a, player.b, player.c, player.d);
         }
 

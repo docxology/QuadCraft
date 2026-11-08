@@ -5,7 +5,7 @@
 class GameLoop {
     /**
      * @param {Object} options
-     * @param {Function} options.update - Logic update function (fixed timestep)
+     * @param {Function} options.update - Logic update function, receiving fixed dt in seconds
      * @param {Function} options.render - Rendering function (every frame)
      * @param {number} options.tickRate - Ms per update tick (default 1000/60)
      */
@@ -23,15 +23,14 @@ class GameLoop {
     }
 
     start() {
-        if (this.animationId) return;
+        if (this.animationId !== null) return;
         this.lastTime = performance.now();
-        this.accumulator = 0;
         this.paused = false;
         this.animationId = requestAnimationFrame(this._loop);
     }
 
     stop() {
-        if (this.animationId) {
+        if (this.animationId !== null) {
             cancelAnimationFrame(this.animationId);
             this.animationId = null;
         }
@@ -55,14 +54,14 @@ class GameLoop {
 
         this.accumulator += safeDelta;
 
-        while (this.accumulator >= this.tickRate) {
-            if (this.update) this.update();
+        while (!this.paused && this.accumulator >= this.tickRate) {
             this.accumulator -= this.tickRate;
+            if (this.update) this.update(this.tickRate / 1000);
         }
 
         if (this.render) this.render(this.accumulator / this.tickRate);
 
-        this.animationId = requestAnimationFrame(this._loop);
+        if (!this.paused) this.animationId = requestAnimationFrame(this._loop);
     }
 }
 

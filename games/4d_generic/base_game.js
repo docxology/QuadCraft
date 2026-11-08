@@ -62,7 +62,7 @@ class BaseGame {
 
         // Game Loop
         this.loop = new GameLoop({
-            update: () => this.update(),
+            update: (dt) => this.update(dt),
             render: () => {
                 this._syncCamera();
                 this.renderer.render();
@@ -107,6 +107,7 @@ class BaseGame {
      */
     reset() {
         this.loop.stop();
+        this.loop.accumulator = 0;
         if (typeof this.board.reset === 'function') {
             this.board.reset();
         }
@@ -114,9 +115,9 @@ class BaseGame {
     }
 
     /**
-     * Override: Called every tick. Implement game-specific update logic.
+     * Override: Called every fixed tick with its duration in seconds.
      */
-    update() {
+    update(dt) {
         // Subclass implements
     }
 

@@ -4,8 +4,9 @@
 
 ```bash
 python3 ../../run_games.py --game simant
-node tests/test_comprehensive.js  # 138 tests
-node tests/test_simant.js         # 10 basic tests
+node tests/test_comprehensive.js  # Integration assertions; summary counts executed checks
+node tests/test_simant.js         # Actual-board excavation and delivery scenarios
+node tests/test_graph_transport.js # Transport, replay and lifecycle scenarios
 ```
 
 ## Directory
@@ -16,11 +17,12 @@ js/
   simant_ai.js        — RedColonyAI (4-phase), YellowAssistAI
   simant_combat.js    — CombatSystem: morale, terrain, danger pheromone, stats
   simant_pheromone_viz.js — PheromoneVisualizer: gradient colors, glow, danger channel
-  simant_renderer.js  — SimAntRenderer: IVM grid, minimap, particles, sprites, tooltips
+  simant_renderer.js  — SimAntRenderer: raw graph, minimap, particles, sprites, tooltips
   simant_game.js      — SimAntGame: speed controls, win conditions, assist toggle
 tests/
-  test_comprehensive.js — 138 integration tests (26 groups)
-  test_simant.js       — 10 unit tests
+  test_comprehensive.js — Board, colony, combat and field integration assertions
+  test_simant.js       — Actual-board excavation, detour homing and caste permissions
+  test_graph_transport.js — Conservative fields, raw topology, replay and lifecycle
   test.html            — Browser test runner
 index.html             — Premium UI with glassmorphic panels
 ```
@@ -28,7 +30,7 @@ index.html             — Premium UI with glassmorphic panels
 ## Module Dependencies
 
 ```
-Quadray → GridUtils → SYNERGETICS → BaseBoard → SimAntBoard
+Quadray → GridUtils → SYNERGETICS → BaseBoard, ConservativeGraphField → SimAntBoard
 BaseRenderer → SimAntRenderer
 BaseGame → SimAntGame
 CombatSystem, RedColonyAI, YellowAssistAI, PheromoneVisualizer
@@ -45,7 +47,7 @@ CombatSystem, RedColonyAI, YellowAssistAI, PheromoneVisualizer
 
 ## Key Mechanics
 
-- **6-channel pheromones** with IVM-neighbor diffusion (12-around-one)
+- **6-channel pheromones** with conservative raw eight-neighbor transport every 10 ticks and explicit 0.98 evaporation every 5 ticks; empty and food sites permeable
 - **Population cap**: 60 ants per faction
 - **Food regeneration**: Every 200 ticks, 2–3 new food clusters
 - **Queen auto-spawn**: Workers hatched when food > 15
@@ -56,7 +58,7 @@ CombatSystem, RedColonyAI, YellowAssistAI, PheromoneVisualizer
 
 ## Verification
 
-- [ ] `node tests/test_comprehensive.js` → 138 pass
-- [ ] `node tests/test_simant.js` → 10 pass
+- [ ] CLI entries report executed numeric pass/fail counts with no failures
+- [ ] Browser test entry reports the actual-board excavation and homing scenarios
 - [ ] Browser test: game loads, ants move, combat occurs
 - [ ] Verify Math: all 8 geometric identities pass

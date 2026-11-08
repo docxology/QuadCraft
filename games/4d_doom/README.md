@@ -34,14 +34,54 @@ We utilize a **True 4D DDA Raycaster** tracing rays across 4 intersecting IVM hy
 |-----|--------|
 | WASD | Move/Strafe |
 | Mouse | Look |
-| Click | Shoot |
+| Left mouse button | Press to shoot; hold for automatic weapons (after mouse capture) |
 | Q/E | Keyboard Turn |
 | Z/X | Hyper-Strafe (D-axis) |
 | Space/Shift | Elevate (C-axis) |
 | 1/2/3 | Switch Weapon |
 | R | Respawn (when dead) |
 
+## Simulation and weapon queries
+
+Gameplay advances in fixed **1/60-second ticks**, independently of display
+refresh. `DoomGame.advanceFrame(elapsedMs)` accepts milliseconds, clamps each
+elapsed interval to 250 ms, and retains fractional ticks. Movement, AI, weapon cooldowns,
+particles and FX share those ticks; FX receives an explicit millisecond duration.
+Rendering does not advance the world. Existing tuning is unchanged: forward
+movement is 3.6 raw A/B units per second and the pistol cooldown is 200 ms.
+
+`DoomGame.settleTime(now)` is the single wall-time entry point used by frames and
+live input. It advances the previous input state first, then keyboard, look and
+fire commands take effect. Elapsed time is consumed once, so a shot pressed at
+240 ms after the previous frame is not aged through that preceding interval.
+`shoot()` itself never reads a clock: automatic shots already belong to the
+fixed-tick update. Respawn resets both the accumulator and wall-time baseline;
+the replacement player advances only through time since respawn.
+
+With the canvas captured, primary-button down fires once and enables held fire
+for automatic weapons; up clears the hold without shooting. The subsequent
+`click` only requests capture if needed, never fires a duplicate shot. Losing
+mouse capture or window focus settles then clears all held movement/fire input.
+The first uncaptured click requests mouse look rather than firing.
+
+`Physics.firstObstruction(start, end)` traverses the closed raw four-index segment
+in order and returns `{t, cell, position}` (fractional segment parameter) or
+`null`. LOS and deployed weapon hitscan reuse this traversal. Cells remain
+independent raw labels, including at simultaneous crossings and the map boundary.
+`Physics.traceShot(origin, angle, enemies, maxRawDistance=20)` compares the first
+wall against exact ray intersections with each living enemy's **0.8 Cartesian-unit
+radius**; the earliest intersection wins, with walls winning ties. Its
+`rawDistance` is an A/B ray parameter, not a physical Cartesian distance.
+
+
 ## Testing
 
-Open `tests/test_doom.html` in a browser. **69/69 tests** across 7 sections:
-Config · Quadray · Map · Entities · Physics · Synergetics Analysis · Geometric Identity
+Run `node games/4d_doom/tests/test_doom.js` from the repository root, or open
+`tests/test_doom.html` in a browser. Behavioral regressions cover raw-cell LOS,
+live thin/near/end-boundary weapon shots, enemy hit ordering and physical radius,
+and equivalent simulation state under 60 Hz, 120 Hz and catch-up frame partitions.
+Kernel regressions also exercise the same live-command methods used by listeners:
+late shots, held automatic fire, releases, blur/capture-loss clearing, movement
+press/release ownership and replacement-world movement after late respawn.
+Actual pointer capture and deployed down/hold/up/blur routing require a real
+browser with successful mouse capture; kernel checks do not substitute for that.

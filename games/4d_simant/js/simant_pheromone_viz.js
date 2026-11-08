@@ -28,7 +28,7 @@ if (typeof PHERO_CHANNELS === 'undefined') {
 class PheromoneVisualizer {
     constructor() {
         this.enabled = false;
-        this.minThreshold = 1.0; // Minimum pheromone to render
+        this.minThreshold = 0.01; // Display threshold only; never a simulation sink
         this.showFood = true;
         this.showHome = true;
         this.showDanger = true;
@@ -64,7 +64,7 @@ class PheromoneVisualizer {
                 + board.pheromones[i * PHERO_CHANNELS + PHERO_RED_DANGER];
 
             if (foodVal < this.minThreshold && homeVal < this.minThreshold && dangerVal < this.minThreshold) continue;
-            if (board.grid[i] !== TYPE_EMPTY) continue; // Only render in tunnels
+            if (board.grid[i] !== TYPE_EMPTY && board.grid[i] !== TYPE_FOOD) continue;
 
             const c = board.coords(i);
             const p = projectionFn(c.a, c.b, c.c, c.d);
@@ -153,5 +153,14 @@ class PheromoneVisualizer {
         }
 
         ctx.globalAlpha = 1.0;
+        const totals = board.fieldTotals();
+        ctx.font = '11px sans-serif';
+        ctx.textAlign = 'left';
+        ctx.fillStyle = '#b7f5b7';
+        ctx.fillText(`Food mass ${(totals[0] + totals[2]).toFixed(1)} (green)`, 12, 24);
+        ctx.fillStyle = '#b5b5ff';
+        ctx.fillText(`Home mass ${(totals[1] + totals[3]).toFixed(1)} (blue)`, 12, 40);
+        ctx.fillStyle = '#ffab80';
+        ctx.fillText(`Danger mass ${(totals[4] + totals[5]).toFixed(1)} (orange); per-frame peak normalization`, 12, 56);
     }
 }

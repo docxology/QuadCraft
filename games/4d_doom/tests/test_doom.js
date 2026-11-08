@@ -18,6 +18,9 @@ import { Quadray, ROOT2, S3 } from '../js/quadray.js';
 import { DoomMap } from '../js/doom_board.js';
 import { Player, Enemy, Projectile, Particle, Pickup } from '../js/doom_entities.js';
 import { Physics } from '../js/doom_physics.js';
+import { DoomGame } from '../js/doom_game.js';
+import { SynergeticsHUD } from '../js/doom_hud_synergetics.js';
+import { SynergeticsFX } from '../js/doom_fx.js';
 import {
     extractCells, calculateTetravolume, analyzeIVMGrid, calculateCoordinationNumbers,
     detectSynergeticsPolyhedra, calculateCenterOfMass, angleBetweenQuadrays,
@@ -46,6 +49,227 @@ function assert(condition, msg) {
 }
 
 function approx(a, b, eps = 0.05) { return Math.abs(a - b) < eps; }
+
+// Exercise the real controller kernel without constructing a Canvas renderer,
+// installing DOM input listeners, or starting requestAnimationFrame.
+function gameplayKernel(map, player = new Player(4.5, 4.5, 2.5, 2.5)) {
+    const game = Object.create(DoomGame.prototype);
+    Object.assign(game, {
+        map, player, physics: new Physics(map), enemies: [], projectiles: [],
+        particles: [], pickups: [], keys: {}, damageFlash: 0,
+        lastTime: 0, accumulatorSeconds: 0, simulationTickCount: 0, frameCount: 0,
+        synergeticsHUD: new SynergeticsHUD(), synergeticsFX: new SynergeticsFX()
+    });
+    return game;
+}
+
+function gameplayRegressions() {
+    const map = new DoomMap();
+    map.cells.clear();
+    for (let a = 0; a < map.size; a++)
+        for (let b = 0; b < map.size; b++)
+            map.setCell(a, b, 2, 2, CELL.FLOOR);
+    const shotGame = (a, b, angle, enemies) => {
+        const game = gameplayKernel(map, new Player(a, b, 2.5, 2.5));
+        game.player.angle = angle;
+        game.enemies = enemies;
+        game.shoot();
+        return game;
+    };
+    let target = new Enemy(6, 5.95, 2.5, 2.5);
+    map.setCell(5, 4, 2, 2, CELL.WALL);
+    let game = shotGame(4.5, 4.45, Math.PI / 4, [target]);
+    assert(target.hp === 60 && game.particles.length === 1 &&
+        game.particles[0].type === 'puff', 'Live pistol stops at a briefly crossed thin wall');
+    assert(approx(game.particles[0].a, 5, 1e-12) && game.particles[0].b < 5,
+        'Wall impact is at the first raw-cell boundary, not a sampled point');
+    assert(game.player.ammo.bullets === 49 && game.player.cooldown === 12,
+        'Blocked shot still consumes ammo and starts the calibrated cooldown');
+    game.shoot();
+    assert(game.player.ammo.bullets === 49, 'Cooldown prevents immediate repeat fire');
+
+    target = new Enemy(6, 4.5, 2.5, 2.5);
+    game = shotGame(4.9, 4.5, 0, [target]);
+    assert(target.hp === 60 && approx(game.particles[0].a, 5, 1e-12),
+        'Wall nearer than the former 0.5 raw start offset blocks the live pistol');
+    game = shotGame(5.1, 4.5, 0, [target]);
+    assert(target.hp === 60 && approx(game.particles[0].a, 5.1, 1e-12),
+        'A shot starting in solid raw occupancy is blocked at distance zero');
+    map.setCell(5, 4, 2, 2, CELL.DOOR);
+    game = shotGame(4.9, 4.5, 0, [target]);
+    assert(target.hp === 45 && target.state === 'pain' && target.painTimer === 8,
+        'Passable door retains live damage and pain semantics');
+    map.setCell(5, 4, 2, 2, CELL.FLOOR);
+
+    const far = new Enemy(8, 4.5, 2.5, 2.5);
+    const near = new Enemy(6, 4.5, 2.5, 2.5);
+    near.hp = 15;
+    game = shotGame(4.5, 4.5, 0, [far, near]);
+    assert(far.hp === 60 && !near.alive && game.player.score === ENEMY_STATS.imp.hp,
+        'Earliest physical sphere hit wins over enemy array order and awards kill score');
+    game.player.cooldown = 0;
+    game.shoot();
+    assert(far.hp === 45, 'Subsequent live shot ignores the dead nearer enemy');
+    const alias = new Enemy(11, 9.5, 7.5, 7.5);
+    game = shotGame(4.5, 4.5, 0, [alias]);
+    assert(alias.hp === 45, 'Enemy hit radius uses physical position, not raw CD proximity');
+    const offPlane = new Enemy(6, 4.5, 8.5, 2.5);
+    game = shotGame(4.5, 4.5, 0, [offPlane]);
+    assert(offPlane.hp === 60, 'AB alignment alone cannot hit a physically distant enemy');
+
+    target = new Enemy(25, 4.5, 2.5, 2.5);
+    game = shotGame(4, 4.5, 0, [target]);
+    assert(target.hp === 60 && game.particles.length === 1 &&
+        approx(game.particles[0].a, 24, 1e-12),
+        'Live shot includes the solid outer boundary exactly at its 20-raw-unit endpoint');
+    const endpoint = game.physics.firstObstruction(game.player, { a: 24, b: 4.5, c: 2.5, d: 2.5 });
+    assert(endpoint.t === 1 && endpoint.cell[0] === 24,
+        'Ordered DDA returns the closed endpoint obstruction and raw cell');
+
+    // No random AI wandering is involved: both actual enemies have clear LOS.
+    function timedGame() {
+        const timed = gameplayKernel(map);
+        timed.player.hp = 80;
+        timed.player.cooldown = 12;
+        timed.keys.KeyW = true;
+        timed.enemies = [new Enemy(9, 4.5, 2.5, 2.5), new Enemy(4.8, 4.5, 2.5, 2.5)];
+        timed.pickups = [new Pickup(5, 4.5, 2.5, 2.5, 'health')];
+        return timed;
+    }
+    function worldState(timed) {
+        return JSON.stringify({
+            ticks: timed.simulationTickCount,
+            player: [timed.player.a, timed.player.b, timed.player.hp, timed.player.cooldown,
+                timed.player.bobPhase, timed.player.bobAmount],
+            enemies: timed.enemies.map(e => [e.a, e.b, e.hp, e.state, e.attackCooldown, e.painTimer]),
+            pickups: timed.pickups.length,
+            fx: [timed.synergeticsFX.time, timed.synergeticsFX.jitterbugPhase]
+        });
+    }
+    const partitions = [
+        Array(60).fill(1000 / 60), Array(120).fill(1000 / 120),
+        Array(4).fill(250), [100, 200, 50, 150, 250, 250]
+    ];
+    const worlds = partitions.map(partition => {
+        const timed = timedGame();
+        for (const elapsedMs of partition) timed.advanceFrame(elapsedMs);
+        return timed;
+    });
+    assert(worlds.every(timed => worldState(timed) === worldState(worlds[0])),
+        '60Hz, 120Hz, 250ms catch-up and irregular frames produce identical world/AI/cooldown/FX state');
+    assert(approx(worlds[0].player.a, 8.1, 1e-12) &&
+        worlds[0].simulationTickCount === 60 && worlds[0].pickups.length === 0,
+        'One simulation second retains 3.6 raw movement and actual pickup collection');
+    assert(worlds[0].enemies[0].a < 9 && worlds[0].enemies[1].attackCooldown > 0 &&
+        worlds[0].player.hp < 100, 'Partition comparison exercises real enemy chase and melee damage');
+    const automatic = partitions.map(partition => {
+        const timed = gameplayKernel(map);
+        timed.player.weaponIndex = 2;
+        timed.player.ammo.cells = 50;
+        timed.handlePrimaryFire(true, 0);
+        let now = 0;
+        for (const elapsedMs of partition) timed.settleTime(now += elapsedMs);
+        timed.handlePrimaryFire(false, now);
+        return [timed.player.ammo.cells, timed.player.cooldown];
+    });
+    assert(automatic.every(([ammo, cooldown]) => ammo === 37 && cooldown === 5),
+        'A live press plus held automatic fire produces thirteen shots over one second under every partition');
+    game = gameplayKernel(map);
+    game.keys.KeyW = true;
+    assert(game.advanceFrame(8) === 0 && game.advanceFrame(8) === 0 &&
+        game.advanceFrame(1) === 1 && game.accumulatorSeconds > 0,
+        'Sub-tick display frames retain their elapsed remainder');
+    game = gameplayKernel(map);
+    game.keys.KeyW = true;
+    assert(game.advanceFrame(1000) === 15 && approx(game.player.a, 5.4, 1e-12),
+        'A long display stall clamps elapsed time to 250ms, exactly fifteen ticks');
+    game = gameplayKernel(map);
+    game.player.cooldown = 12;
+    game.advanceFrame(199);
+    assert(game.player.cooldown === 1, 'Pistol cooldown remains active before 200 simulation ms');
+    game.advanceFrame(1);
+    assert(game.player.cooldown === 0, 'Pistol cooldown expires at exactly twelve 60Hz ticks');
+    game.player.alive = false;
+    const deadPosition = game.player.a;
+    game.keys.KeyW = true;
+    game.advanceFrame(250);
+    game.shoot();
+    assert(game.player.a === deadPosition && game.player.ammo.bullets === 50,
+        'Dead-player simulation and shooting retain their existing no-op semantics');
+
+    game = gameplayKernel(map);
+    game.handlePrimaryFire(true, 240);
+    assert(game.player.ammo.bullets === 49 && game.player.cooldown === 12 &&
+        game.player.muzzleFlash === 4,
+        'A late live press settles the previous 240ms before creating the shot');
+    game.settleTime(250);
+    game.handlePrimaryFire(false, 250);
+    assert(game.player.ammo.bullets === 49 && game.player.cooldown === 11 &&
+        game.player.muzzleFlash === 3 && game.simulationTickCount === 15,
+        'The frame after a late shot ages it one tick, and release does not shoot again');
+
+    game = gameplayKernel(map);
+    game.handlePrimaryFire(true, 0);
+    game.handlePrimaryFire(true, 250);
+    assert(game.player.ammo.bullets === 49 && game.player.cooldown === 0,
+        'A repeated down while already held cannot fire a second semiautomatic shot');
+    game.handlePrimaryFire(false, 250);
+    game.handlePrimaryFire(true, 250);
+    assert(game.player.ammo.bullets === 48 && game.player.cooldown === 12,
+        'A released and newly pressed pistol fires once after its cooldown');
+
+    game = gameplayKernel(map);
+    game.player.weaponIndex = 2;
+    game.player.ammo.cells = 50;
+    game.handlePrimaryFire(true, 240);
+    game.settleTime(250);
+    assert(game.player.ammo.cells === 49 && game.player.cooldown === 4,
+        'A late automatic press does not manufacture pre-press catch-up shots');
+    game.handlePrimaryFire(false, 340);
+    assert(game.player.ammo.cells === 48 && !game.keys.MouseLeft,
+        'Release settles the actual held interval, including its due automatic shot');
+    game.settleTime(500);
+    assert(game.player.ammo.cells === 48 && game.player.cooldown === 0,
+        'Automatic fire stops after release through later cooldown boundaries');
+    game.handlePrimaryFire(true, 500);
+    game.handleKey('KeyW', true, 500);
+    game.clearInput(590);
+    const blurredPosition = game.player.a;
+    const blurredAmmo = game.player.ammo.cells;
+    game.settleTime(750);
+    assert(blurredAmmo === 46 && game.player.ammo.cells === blurredAmmo &&
+        approx(blurredPosition, 4.8, 1e-12) && game.player.a === blurredPosition,
+        'The blur/capture-loss command settles held movement/fire and stops both afterward');
+
+    game = gameplayKernel(map);
+    game.handleKey('KeyW', true, 240);
+    game.settleTime(250);
+    assert(approx(game.player.a, 4.56, 1e-12),
+        'A late movement press cannot move through the preceding inactive interval');
+    game.handleKey('KeyW', false, 490);
+    game.settleTime(500);
+    assert(approx(game.player.a, 5.4, 1e-12),
+        'A movement release preserves its held interval without moving afterward');
+
+    // One explicit real room keeps replacement enemies/pickups absent; movement
+    // still runs through DoomMap occupancy and Physics, not a timestamp copy.
+    map.rooms = [{ a: 4, b: 4, c: 2, d: 2 }];
+    game = gameplayKernel(map);
+    game.advanceFrame(8);
+    game.player.alive = false;
+    game.keys.KeyW = true;
+    const deadPlayer = game.player;
+    game.handleKey('KeyR', true, 240);
+    assert(game.player !== deadPlayer && game.player.alive &&
+        game.simulationTickCount === 0 && game.accumulatorSeconds === 0,
+        'Respawn replaces the dead player and discards the prior world tick remainder');
+    game.settleTime(250);
+    assert(game.simulationTickCount === 0 && game.player.a === 4.5,
+        'A frame ten milliseconds after late respawn cannot advance the replacement world');
+    game.settleTime(257);
+    assert(game.simulationTickCount === 1 && approx(game.player.a, 4.56, 1e-12),
+        'Only post-respawn lifetime drives the replacement player through actual map physics');
+}
 
 function renderResults() {
     if (typeof document === 'undefined') return; // Skip in Node.js
@@ -263,11 +487,7 @@ function runTests() {
             !losPhysics.hasLineOfSight(new Quadray(12, 4.5, 2.5, 2.5), boundaryStart),
             'Exact outer map boundary is solid in both directions');
 
-        // Movement
-        const testEnt = { a: map.rooms[0].a, b: map.rooms[0].b, c: map.rooms[0].c, d: map.rooms[0].d };
-        const origA = testEnt.a;
-        physics.moveEntity(testEnt, 0.1, 0);
-        assert(testEnt.a !== origA || true, 'moveEntity attempts to move entity');
+        gameplayRegressions();
 
         // ═════════════════════════════════════════════════════════════════
         // 6. SYNERGETICS ANALYSIS

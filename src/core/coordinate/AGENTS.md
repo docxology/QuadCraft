@@ -4,8 +4,8 @@
 
 This is the mathematical foundation of the entire project. Changes must preserve:
 
-1. **Quadray constraint**: `a + b + c + d = constant`
-2. **Reversible conversions**: Quadray ↔ Cartesian
+1. **Quadray gauge**: `q ~ q + t*(1,1,1,1)`; canonical labels have minimum zero, not a fixed component sum
+2. **Physical round trips**: Quadray ↔ Cartesian preserves the spatial vector up to floating roundoff; raw labels are not uniquely invertible
 3. **Grid alignment**: Navigation directions must land on grid points
 
 ## Constants
@@ -47,6 +47,6 @@ Before committing coordinate changes:
 
 ## Common Pitfalls
 
-- **Forgetting normalization**: Operations can violate constraint
+- **Confusing gauge with a constraint**: Normalization selects a representative; it does not impose a constant sum
 - **Precision loss**: Accumulated floating-point errors
 - **Sign errors**: Quadray components should be non-negative after normalization

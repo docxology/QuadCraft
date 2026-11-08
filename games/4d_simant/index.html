@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>4D SimAnt Professional — QuadCraft</title>
     <meta name="description"
-        content="Ant colony simulation on a 4D Quadray IVM tetrahedral grid with swarm intelligence, pheromone trails, and combat.">
+        content="Ant colony simulation on independent four-index raw cells with reversible eight-neighbor movement, conservative pheromone transport, and combat.">
     <link rel="stylesheet" href="../4d_generic/hud-style.css">
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
@@ -393,7 +393,7 @@
     <header>
         <h1>4D SimAnt</h1>
         <span class="tag-accent">Quadray</span>
-        <span class="tag-dark">IVM Synergetics</span>
+        <span class="tag-dark">Raw 8-neighbor graph</span>
         <span class="sub-header">Professional Edition</span>
     </header>
 
@@ -437,10 +437,13 @@
                     <span class="axis-tag axis-c">c</span>
                     <span class="axis-tag axis-d">d</span>
                 </div>
-                <div class="stat-row"><span class="stat-label">IVM Cells</span> <span id="syVolume"
+                <div class="stat-row"><span class="stat-label">Raw Cells</span> <span id="syVolume"
                         class="yellow">--</span></div>
-                <div class="stat-row"><span class="stat-label">World TV</span> <span id="syTV" class="yellow">--</span>
+                <div class="stat-row"><span class="stat-label">Field mass F/H/D</span> <span id="fieldMass" class="yellow">--</span>
                 </div>
+                <div class="stat-row"><span class="stat-label">Field rates</span> <span class="yellow">mix .8/10t; evap 2%/5t</span></div>
+                <div class="stat-row"><span class="stat-label">Evaporated mass</span> <span id="fieldEvap" class="yellow">--</span></div>
+                <div class="stat-row"><span class="stat-label">Simulation seed</span> <span id="fieldSeed" class="yellow">--</span></div>
                 <div class="stat-row"><span class="stat-label">Tunnels</span> <span id="syFill" class="yellow">--</span>
                 </div>
                 <div class="stat-row"><span class="stat-label">T:O:C Ratio</span> <span id="syRatios"
@@ -519,6 +522,7 @@
     <script src="../4d_generic/game_loop.js"></script>
     <script src="../4d_generic/input_controller.js"></script>
     <script src="../4d_generic/grid_utils.js"></script>
+    <script src="../4d_generic/graph_field.js"></script>
     <script src="../4d_generic/pathfinding.js"></script>
     <script src="../4d_generic/entity_system.js"></script>
     <script src="../4d_generic/base_board.js"></script>
@@ -569,6 +573,10 @@
             if (!game) { requestAnimationFrame(updateHUD); return; }
             const b = game.board;
             const meta = b.getMetadata();
+            const totals = meta.field.totals;
+            document.getElementById('fieldMass').textContent = [totals[0] + totals[2], totals[1] + totals[3], totals[4] + totals[5]].map(v => v.toFixed(1)).join('/');
+            document.getElementById('fieldEvap').textContent = meta.field.evaporationLoss.reduce((sum, v) => sum + v, 0).toFixed(1);
+            document.getElementById('fieldSeed').textContent = meta.seed;
 
             document.getElementById('yFood').innerText = meta.yellowFood;
             document.getElementById('rFood').innerText = meta.redFood;
@@ -619,9 +627,8 @@
             const b = game.board;
             const yAnts = b.ants.filter(a => a.faction === 0 && a.alive);
 
-            // Static IVM info
+            // Raw board counts; the physical embedding is only a display projection.
             document.getElementById('syVolume').textContent = b.size + '⁴ = ' + b.volume;
-            document.getElementById('syTV').textContent = (b.volume * SYNERGETICS.S3).toFixed(0) + ' TV';
             document.getElementById('syS3').textContent = SYNERGETICS.S3.toFixed(4);
 
             // Tunnel fill

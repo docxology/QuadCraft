@@ -26,6 +26,17 @@ class AsteroidsRenderer extends BaseRenderer {
         this.mouseY = 0;
         this._stars = null;
         this._activeParticles = [];
+        // Continuous positions span [0,size]^4, not only integer cell centers.
+        const corners = [];
+        for (let mask = 0; mask < 16; mask++) {
+            corners.push({
+                a: mask & 1 ? board.size : 0,
+                b: mask & 2 ? board.size : 0,
+                c: mask & 4 ? board.size : 0,
+                d: mask & 8 ? board.size : 0,
+            });
+        }
+        this.fitToPoints(corners, 48);
 
         console.log('[AsteroidsRenderer] Initialized with BaseRenderer + full quadray methods');
     }

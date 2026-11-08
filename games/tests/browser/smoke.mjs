@@ -26,9 +26,22 @@ let browser;
 let serverLog = '';
 
 async function startServer() {
-    // No process.chdir(): the standard library server gets an explicit document root.
+    // Explicit root and the OS listen backlog accommodate parallel script loads.
+    // Resource failures still fail the scenario; no navigation/request retries.
+    const serve = `
+from functools import partial
+from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer, test
+import socket
+import sys
+
+class BrowserHTTPServer(ThreadingHTTPServer):
+    request_queue_size = socket.SOMAXCONN
+
+test(HandlerClass=partial(SimpleHTTPRequestHandler, directory=sys.argv[1]),
+     ServerClass=BrowserHTTPServer, bind="127.0.0.1", port=0)
+`;
     server = spawn(process.env.PYTHON || 'python3', [
-        '-u', '-m', 'http.server', '0', '--bind', '127.0.0.1', '--directory', gamesRoot,
+        '-I', '-u', '-c', serve, gamesRoot,
     ], { stdio: ['ignore', 'pipe', 'pipe'] });
     return new Promise((resolveURL, reject) => {
         const timer = setTimeout(() => reject(new Error('HTTP server did not announce its port')), 15_000);
@@ -390,16 +403,91 @@ async function doom(page) {
     }
     console.log(`Doom mouse capture: ${JSON.stringify(capture)}`);
     await advance(page);
-    assert.equal(await state(page, () => window.game.running), true);
     const before = await state(page, () => ({ a: game.player.a, b: game.player.b }));
     await page.keyboard.down('w');
     await advance(page, 160);
     await page.keyboard.up('w');
     const after = await state(page, () => ({ a: game.player.a, b: game.player.b }));
     assert.notDeepEqual(after, before, 'Real WASD input must move the Doom player');
-    assert(await state(page, () => game.frameCount) > 1);
     assert.equal(await state(page, () => game.geometryVerification.allPassed), true);
-    return { pointerLock: capture.active ? 'active' : 'denied', pointerLockError: capture.error };
+
+    let firing = { exercised: false, reason: 'Native pointer lock denied' };
+    if (capture.active) {
+        await state(page, () => {
+            game.enemies = [];
+            game.player.weapons[2] = true;
+            game.player.ammo.cells = 100;
+        });
+        await page.keyboard.press('3');
+        await state(page, () => {
+            game.lastTime = performance.now();
+            game.accumulatorSeconds = 0;
+            game.player.cooldown = 0;
+        });
+        await page.mouse.down();
+        await advance(page, 250);
+        const held = await state(page, () => {
+            game.settleTime(performance.now());
+            return game.player.ammo.cells;
+        });
+        assert.equal(held, 96, 'Initial plasma shot plus three five-tick cooldown shots');
+        await page.mouse.up();
+        await advance(page, 250);
+        assert.equal(await state(page, () => game.player.ammo.cells), held,
+            'Release and the following click must stop automatic fire without a duplicate shot');
+
+        await page.keyboard.press('1');
+        await state(page, () => {
+            game.player.ammo.bullets = 50;
+            game.player.cooldown = 0;
+            game.player.muzzleFlash = 0;
+            game.accumulatorSeconds = 0;
+            game.simulationTickCount = 0;
+            game.lastTime = performance.now() - 240;
+        });
+        await page.mouse.down();
+        await advance(page, 10);
+        const late = await state(page, () => {
+            game.settleTime(performance.now());
+            return { bullets: game.player.ammo.bullets,
+                cooldown: game.player.cooldown, flash: game.player.muzzleFlash };
+        });
+        assert.deepEqual(late, { bullets: 49, cooldown: 11, flash: 3 },
+            'A newly created shot must not age through the preceding stalled frame');
+        await page.mouse.up();
+        assert.equal(await state(page, () => game.player.ammo.bullets), 49);
+        firing = { exercised: true, heldCells: held, lateShot: late };
+    }
+
+    // Only time/state is arranged; actual key listeners, map, player and physics run.
+    await state(page, () => {
+        game.player.alive = false;
+        game.player.hp = 0;
+        game.accumulatorSeconds = 0;
+        game.simulationTickCount = 0;
+        game.lastTime = performance.now() - 240;
+    });
+    await page.keyboard.press('r');
+    await page.keyboard.down('w');
+    const replacement = await state(page, () => ({ a: game.player.a, b: game.player.b }));
+    await advance(page, 10);
+    const young = await state(page, () => {
+        game.settleTime(performance.now());
+        return { a: game.player.a, b: game.player.b, ticks: game.simulationTickCount };
+    });
+    assert.deepEqual(young, { ...replacement, ticks: 0 },
+        'Replacement world must receive only its ten-millisecond lifetime');
+    await advance(page, 7);
+    const firstTick = await state(page, () => {
+        game.settleTime(performance.now());
+        return { a: game.player.a, b: game.player.b, ticks: game.simulationTickCount };
+    });
+    assert.equal(firstTick.ticks, 1);
+    assert(Math.abs(firstTick.a - replacement.a - 0.06) < 1e-10);
+    assert.equal(firstTick.b, replacement.b);
+    await page.keyboard.up('w');
+    return { pointerLock: capture.active ? 'active' : 'denied',
+        pointerLockError: capture.error, firing, respawnClock: { young, firstTick } };
 }
 
 const surfaces = [

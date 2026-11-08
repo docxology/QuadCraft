@@ -175,6 +175,22 @@ class GridUtils {
     }
 
     /**
+     * Create an independent deterministic Mulberry32 stream.
+     * @param {number} seed - Integer seed, interpreted modulo 2^32.
+     * @returns {function(): number} Values in [0, 1).
+     */
+    static createSeededRng(seed) {
+        let state = seed >>> 0;
+        return function () {
+            state |= 0;
+            state = (state + 0x6D2B79F5) | 0;
+            let value = Math.imul(state ^ (state >>> 15), 1 | state);
+            value = (value + Math.imul(value ^ (value >>> 7), 61 | value)) ^ value;
+            return ((value ^ (value >>> 14)) >>> 0) / 4294967296;
+        };
+    }
+
+    /**
      * Shuffle an array in-place (Fisher-Yates).
      * Useful for random mine placement, food spawning, etc.
      * @param {Array} arr
