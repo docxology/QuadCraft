@@ -82,6 +82,8 @@ Defeat the Red Queen → Victory. If your Queen dies → Game Over. Simultaneous
 
 The default board has 12⁴ = 20,736 independent raw labels. Its four-coordinate projection is many-to-one, so raw cell counts must not be interpreted as physical IVM volume. Nests are size-aware, logically distinct, and physically separated in the display embedding.
 
+The responsive canvas repaints immediately after its bitmap dimensions change, even while the colony is paused; resizing does not advance logical ticks. This also preserves the rendered world when a full-page browser capture changes the viewport by a fractional layout pixel. Display resizing does not change raw terrain, coordinates or projection units.
+
 - **Basis vectors**: color-coded **a** (orange), **b** (blue), **c** (green), **d** (pink)
 - **S₃ factor**: shared geometry metadata; it does not turn raw cell totals into physical volume
 - **Volume ratios**: Tetrahedron:Octahedron:Cuboctahedron = 1:4:20
@@ -115,4 +117,4 @@ node tests/test_graph_transport.js
 
 Each Node entry point reports numeric executed pass/fail counts. `test_graph_transport.js` counts named transport, reachability, combat, accounting, live-mask, replay and terminal-state scenarios; `test_simant.js` counts actual-board excavation, detour delivery, live obstruction/reopening and caste-permission scenarios. Open `tests/test.html` for that same foraging/delivery entry point in a browser.
 
-See [test entrypoints and limits](tests/README.md). This documentation audit did not execute suites or browser checks.
+See [test entrypoints and limits](tests/README.md).

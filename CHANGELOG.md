@@ -2,13 +2,21 @@
 
 ## Unreleased
 
+### Captured gameplay and paused-world rendering
+
+- Publish four real exercised Canvas views with preserved originals, labelled detail crops, observed state, controls, limitations and SHA-256 provenance. Distinguish browser gameplay from the experimental native C++/OpenGL renderer.
+- Add explicit selected-gallery/single-capture commands and a bounded Python/Pillow compositor. Failed or incomplete captures do not produce substitute art; the default browser command still requires every one of the thirty games.
+- Fix SimAnt resize clearing the paused world: resize only changed Canvas dimensions and repaint current geometry without advancing the model or either RNG stream.
+- Assert both projected colony queen landmarks remain rendered across paused viewport/full-page resizing, with colony state and randomness unchanged.
+- Use the OS listen backlog in the production loopback server to avoid connection resets during concurrent classic-script startup. Make the Chromium harness import that actual server/handler instead of maintaining a test-only implementation.
+
 ### Accurate gameplay, geometry and deployment documentation
 
 - Audit repository documentation and internal native, browser, shared infrastructure and every game-folder guide against actual entrypoints and models; replace copied boilerplate with source-specific module purposes.
 - Replace fictional APIs and causal diagrams with current interfaces; distinguish the thirty-game portfolio from native, monolithic browser and server experiments.
 - Document raw occupancy versus physical points, parity labels versus real meshes, embedding orientation/units, loop/time/RNG ownership and per-game controls.
 - Distinguish ideal regular tetrahedra from the native prototype's actual vertex offsets, and board-callable Minecraft updates from the default loop's inactive physics/time paths.
-- Separate implemented features, historical manuscripts and unmeasured proposals; repair modular navigation and cross-suite references. Runtime behavior and immutable v0.5.0 release assets are unchanged by this documentation pass.
+- Separate implemented features, historical manuscripts and unmeasured proposals; repair modular navigation and cross-suite references. These documentation changes do not claim additional runtime capabilities; immutable v0.5.0 release assets remain unchanged.
 
 ## v0.5.0 — 2026-11-07
 

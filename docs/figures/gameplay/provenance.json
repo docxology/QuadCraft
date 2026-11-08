@@ -1,0 +1,204 @@
+{
+  "schema": 1,
+  "producer": "games/tests/browser/compose_gallery.py",
+  "captureCommand": "PYTHON=python3.13 node games/tests/browser/smoke.mjs --gallery",
+  "composition": "Original Canvas PNGs copied intact; labeled center crops, aspect-preserving scaling and letterboxing; no gameplay overlays or color changes",
+  "capture": {
+    "schema": 1,
+    "mode": "selected-gallery",
+    "complete": true,
+    "browserVersion": "158.0.8127.18",
+    "seed": "0x51434146",
+    "epoch": "2026-01-01T00:00:00Z",
+    "viewport": {
+      "width": 1440,
+      "height": 1000
+    },
+    "selection": [
+      "minecraft",
+      "hex",
+      "life",
+      "tetris"
+    ],
+    "results": [
+      {
+        "name": "minecraft",
+        "passed": true,
+        "initialScreenshot": "minecraft-initial.png",
+        "screenshot": "minecraft.png",
+        "gallery": {
+          "name": "minecraft",
+          "category": "Geometry / sandbox",
+          "title": "Projected block editing",
+          "action": "Alt-click removes a visible block; 3 selects a block type.",
+          "limit": "Browser Canvas projection, not the native OpenGL world.",
+          "source": "games/4d_minecraft/index.html",
+          "scenario": "games/tests/browser/smoke.mjs",
+          "observed": {
+            "blocks": 1521,
+            "removed": 1,
+            "selectedType": 3
+          },
+          "dimensions": {
+            "width": 740,
+            "height": 560,
+            "displayWidth": 742,
+            "displayHeight": 562
+          },
+          "canvasScreenshot": "minecraft-canvas.png"
+        }
+      },
+      {
+        "name": "hex",
+        "passed": true,
+        "initialScreenshot": "hex-initial.png",
+        "screenshot": "hex.png",
+        "gallery": {
+          "name": "hex",
+          "category": "Strategy / picking",
+          "title": "Moves after camera rotation",
+          "action": "Click, Shift-drag and wheel, then click a second cell.",
+          "limit": "Canonical quadray cells; four coefficients, three physical dimensions.",
+          "source": "games/4d_hex/index.html",
+          "scenario": "games/tests/browser/smoke.mjs",
+          "observed": {
+            "moves": 2,
+            "currentPlayer": "red"
+          },
+          "dimensions": {
+            "width": 800,
+            "height": 600,
+            "displayWidth": 802,
+            "displayHeight": 602
+          },
+          "canvasScreenshot": "hex-canvas.png"
+        }
+      },
+      {
+        "name": "life",
+        "passed": true,
+        "initialScreenshot": "life-initial.png",
+        "screenshot": "life.png",
+        "controls": [
+          "P: pause/resume",
+          "Step: evolve",
+          "ArrowUp: speed",
+          "Shift-drag: rotate",
+          "R: reseed"
+        ],
+        "transition": "birth/death, paused redraw, automatic generations and reseed",
+        "gallery": {
+          "name": "life",
+          "category": "Simulation / cellular automaton",
+          "title": "Birth, death and a reseeded board",
+          "action": "Step evolves; Shift-drag rotates; R reseeds; P pauses.",
+          "limit": "Raw four-index automaton rules, not physical growth or diffusion.",
+          "source": "games/4d_life/index.html",
+          "scenario": "games/tests/browser/simulation-scenarios.mjs",
+          "observed": {
+            "livingCells": 42,
+            "generation": 0,
+            "intervalMs": 150
+          },
+          "dimensions": {
+            "width": 740,
+            "height": 560,
+            "displayWidth": 742,
+            "displayHeight": 562
+          },
+          "canvasScreenshot": "life-canvas.png"
+        }
+      },
+      {
+        "name": "tetris",
+        "passed": true,
+        "initialScreenshot": "tetris-initial.png",
+        "screenshot": "tetris.png",
+        "controls": [
+          "Left: move",
+          "Space: hard drop",
+          "P: pause/resume"
+        ],
+        "transition": "gravity, four locked cells, scoring and respawn",
+        "gallery": {
+          "name": "tetris",
+          "category": "Arcade / falling pieces",
+          "title": "Hard drop, lock and respawn",
+          "action": "Left moves; Space drops; P pauses and resumes gravity.",
+          "limit": "Game-specific discrete board rules, not rigid-body physics.",
+          "source": "games/4d_tetris/index.html",
+          "scenario": "games/tests/browser/simulation-scenarios.mjs",
+          "observed": {
+            "lockedCells": 4,
+            "score": 22,
+            "activePosition": {
+              "a": 11,
+              "b": 2,
+              "c": 1,
+              "d": 1
+            }
+          },
+          "dimensions": {
+            "width": 800,
+            "height": 600,
+            "displayWidth": 802,
+            "displayHeight": 602
+          },
+          "canvasScreenshot": "tetris-canvas.png"
+        }
+      }
+    ]
+  },
+  "published": [
+    {
+      "name": "minecraft",
+      "file": "minecraft-canvas.png",
+      "sha256": "c18ac06c29b2e0b6a098b1433662c0167832e9bf90e981f9514875eb90413153",
+      "overviewCropPixels": [
+        0,
+        0,
+        743,
+        562
+      ]
+    },
+    {
+      "name": "hex",
+      "file": "hex-canvas.png",
+      "sha256": "9d38ea4847251556e3ce151a2ade559f0826d350fe4fa3534de139bf1a8a04d3",
+      "overviewCropPixels": [
+        257,
+        150,
+        545,
+        452
+      ]
+    },
+    {
+      "name": "life",
+      "file": "life-canvas.png",
+      "sha256": "8e7f969c47031de0c068e1b11360f6e9466773b66f042cb40f21823155069f15",
+      "overviewCropPixels": [
+        238,
+        140,
+        505,
+        422
+      ]
+    },
+    {
+      "name": "tetris",
+      "file": "tetris-canvas.png",
+      "sha256": "3961849a2c7f1fdeac6665c4f52db28960d2e7dfeebb3aeb162d4eb1d88821a0",
+      "overviewCropPixels": [
+        257,
+        150,
+        545,
+        452
+      ]
+    }
+  ],
+  "figure": {
+    "file": "gallery.png",
+    "sha256": "ec76b3a46703ca947263427252e05258a5b5fbe506c0310b2526ebed645b2839",
+    "width": 1920,
+    "height": 1870
+  }
+}

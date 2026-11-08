@@ -544,8 +544,17 @@
         let game;
 
         function resize() {
-            canvas.width = canvas.parentElement.clientWidth;
-            canvas.height = canvas.parentElement.clientHeight;
+            const width = canvas.parentElement.clientWidth;
+            const height = canvas.parentElement.clientHeight;
+            if (canvas.width === width && canvas.height === height) return;
+            canvas.width = width;
+            canvas.height = height;
+            // Resizing clears the bitmap. Repaint without advancing the colony,
+            // including when the simulation/virtual animation clock is paused.
+            if (game) {
+                game._syncCamera();
+                game.renderer.render();
+            }
         }
         window.onresize = resize;
         resize();

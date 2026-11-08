@@ -45,6 +45,12 @@ PYTHON=python3.13 npm test
 
 The gate owns a loopback HTTP server and isolated Chromium contexts for all catalog games. It exercises actual input/state/render transitions with controlled clock/randomness, records screenshots/logs/results in an external temporary directory, and fails on browser/resource errors. Pointer capture is a real browser capability: denial is reported, and capture-only branches must not be described as exercised when unavailable. See the [browser gate README](../../games/tests/browser/README.md) for scenarios and diagnostics controls.
 
+### Selected gallery artifacts
+
+The [four-view gameplay gallery](../games.md#selected-gameplay-gallery) is produced by `node games/tests/browser/smoke.mjs --gallery` from the repository root, with the same server, roster, controls, clock/random setup, scenarios and assertions as the full gate. This explicit mode selects Minecraft, Hex, Life and Tetris only; **it is not a substitute for `npm test`**. With no flag, all thirty scenarios and the full-gate count assertions remain required.
+
+Follow the [capture/composition recipe](../../games/tests/browser/README.md#selected-gameplay-capture-and-composition) for prerequisites, external diagnostic ownership and the Python/Pillow producer. Missing runtimes, failed scenarios, absent/invalid screenshots and incomplete manifests fail rather than producing placeholder art. Published originals, observed state, crop bounds and hashes live beside the overview in [`docs/figures/gameplay/`](../figures/gameplay/). A screenshot illustrates the recorded state; it does not prove exhaustive rules, calibrated physics or current CI health.
+
 ## Behavioral regression design
 
 Use actual consumers and deterministic input where the API offers it. Useful boundaries include gauge-equivalent physical distances, intentionally independent raw aliases, fixed elapsed-seconds trajectories, reset/pause/input ownership, conservation with masked graph edges and click selection matching paint order.
