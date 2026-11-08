@@ -39,6 +39,83 @@ if (typeof SYNERGETICS === 'undefined' && typeof require !== 'undefined') {
     globalThis.verifyGeometricIdentities = _s.verifyGeometricIdentities;
 }
 
+// Resolve roundoff at elapsed-time boundaries without dropping timer remainders.
+const ASTEROIDS_TIME_EPSILON = 64 * Number.EPSILON;
+
+// Unscaled Cartesian coordinates: physical squared lengths are half their
+// squared lengths here. Raw size-periods map to size * (x,y,z), where x,y,z
+// are integers of common parity (the BCC lattice), not independent raw minima.
+function asteroidsCartesian(q) {
+    const ab = q.a - q.b;
+    const cd = q.c - q.d;
+    return [ab - cd, ab + cd, (q.a - q.c) + (q.b - q.d)];
+}
+
+function asteroidsPeriodicDistance(first, second, size) {
+    const r = asteroidsCartesian({
+        a: first.a - second.a, b: first.b - second.b,
+        c: first.c - second.c, d: first.d - second.d,
+    });
+    let nearest = Infinity;
+    // Each parity class is an orthogonal grid; its nearest point is obtained
+    // independently per Cartesian axis. Compare both classes.
+    for (let parity = 0; parity < 2; parity++) {
+        const offset = r.map(x => x - size * (parity + 2 * Math.round((x / size - parity) / 2)));
+        nearest = Math.min(nearest, Math.hypot(...offset) / Math.SQRT2);
+    }
+    return nearest;
+}
+
+function asteroidsImpactTime(first, second, duration, size) {
+    const r = asteroidsCartesian({
+        a: first.pos.a - second.pos.a, b: first.pos.b - second.pos.b,
+        c: first.pos.c - second.pos.c, d: first.pos.d - second.pos.d,
+    });
+    const v = asteroidsCartesian({
+        a: first.vel.a - second.vel.a, b: first.vel.b - second.vel.b,
+        c: first.vel.c - second.vel.c, d: first.vel.d - second.vel.d,
+    });
+    const radius = (first.radius + second.radius) * Math.SQRT2;
+    const radiusSquared = radius * radius;
+    const speedSquared = v[0] ** 2 + v[1] ** 2 + v[2] ** 2;
+    // Include floating-point boundary contacts in the candidate box.
+    const padding = r.map((x, i) => 32 * Number.EPSILON * Math.max(1, Math.abs(x), Math.abs(v[i] * duration), radius));
+    const lo = r.map((x, i) => Math.ceil((Math.min(x, x + v[i] * duration) - radius - padding[i]) / size));
+    const hi = r.map((x, i) => Math.floor((Math.max(x, x + v[i] * duration) + radius + padding[i]) / size));
+    let earliest = null;
+    // Only images in the swept segment's radius-expanded AABB can intersect.
+    // Enumerate every such BCC image, including long multi-period trajectories.
+    for (let parity = 0; parity < 2; parity++) {
+        const start = lo.map(x => parity + 2 * Math.ceil((x - parity) / 2));
+        for (let x = start[0]; x <= hi[0]; x += 2) {
+            for (let y = start[1]; y <= hi[1]; y += 2) {
+                for (let z = start[2]; z <= hi[2]; z += 2) {
+                    const c = [r[0] - size * x, r[1] - size * y, r[2] - size * z];
+                    const distanceSquared = c[0] ** 2 + c[1] ** 2 + c[2] ** 2;
+                    if (distanceSquared <= radiusSquared + 32 * Number.EPSILON * Math.max(distanceSquared, radiusSquared)) return 0;
+                    if (speedSquared === 0) continue;
+                    const dot = c[0] * v[0] + c[1] * v[1] + c[2] * v[2];
+                    if (dot >= 0) continue;
+                    const closest = -dot / speedSquared;
+                    const perpendicularSquared = (c[0] + closest * v[0]) ** 2 +
+                        (c[1] + closest * v[1]) ** 2 + (c[2] + closest * v[2]) ** 2;
+                    const gap = radiusSquared - perpendicularSquared;
+                    if (gap < -32 * Number.EPSILON * Math.max(radiusSquared, perpendicularSquared)) continue;
+                    // Stable entering root, avoiding subtraction of two almost
+                    // equal roots when a trajectory starts near the sphere.
+                    const time = (distanceSquared - radiusSquared) /
+                        (-dot + Math.sqrt(speedSquared * Math.max(0, gap)));
+                    if (time <= duration + ASTEROIDS_TIME_EPSILON) {
+                        const impact = Math.min(time, duration);
+                        if (earliest === null || impact < earliest) earliest = impact;
+                    }
+                }
+            }
+        }
+    }
+    return earliest;
+}
+
 /**
  * Entity in 4D Quadray space.
  */
@@ -128,9 +205,12 @@ class AsteroidsBoard extends BaseBoard {
     /**
      * @param {number} size - World hypercube size (0 to size per axis)
      */
-    constructor(size = 8) {
+    constructor(size = 8, options = {}) {
         super(size, { name: 'AsteroidsBoard', verify: false });
         this.size = size;
+        this.seed = (options.seed ?? Math.floor(Math.random() * 0x100000000)) >>> 0;
+        this.rng = GridUtils.createSeededRng(this.seed);
+        this.respawnTimer = null;
         this.entities = [];
         this.particles = []; // Particle system events for the renderer to consume
         this.score = 0;
@@ -139,7 +219,6 @@ class AsteroidsBoard extends BaseBoard {
         this.grid = new Map();  // Optional spatial index for nearby lookups
 
         this.ufoTimer = 0; // Time until next UFO spawn
-        this.nextUfoDelay = 15;
 
         // Shield system
         this.shieldCharges = 3;
@@ -256,9 +335,8 @@ class AsteroidsBoard extends BaseBoard {
 
         let nearestDist = Infinity;
         if (ship && ship.alive && asteroids.length > 0) {
-            const sq = ship.toQuadray();
             for (const a of asteroids) {
-                nearestDist = Math.min(nearestDist, Quadray.distance(sq, a.toQuadray()));
+                nearestDist = Math.min(nearestDist, this.distanceBetween(ship.pos, a.pos));
             }
         }
 
@@ -282,6 +360,11 @@ class AsteroidsBoard extends BaseBoard {
         };
     }
 
+    /** Physical distance on the periodic raw world, including all BCC images. */
+    distanceBetween(first, second) {
+        return asteroidsPeriodicDistance(first, second, this.size);
+    }
+
     spawnShip() {
         const h = this.size / 2;
         this.ship = new AsteroidsEntity([h, h, h, h], [0, 0, 0, 0], 0.3, 'ship');
@@ -290,34 +373,33 @@ class AsteroidsBoard extends BaseBoard {
 
     spawnAsteroids(n) {
         for (let i = 0; i < n; i++) {
-            const r = () => Math.random() * this.size;
-            const v = () => (Math.random() - 0.5) * 1.5;
+            const r = () => this.rng() * this.size;
+            const v = () => (this.rng() - 0.5) * 1.5;
             this.entities.push(new AsteroidsEntity(
                 [r(), r(), r(), r()],
                 [v(), v(), v(), v()],
-                0.4 + Math.random() * 0.3,
+                0.4 + this.rng() * 0.3,
                 'asteroid'
             ));
         }
     }
 
     spawnUFO() {
-        const ufoType = this.score > 3000 ? (Math.random() > 0.5 ? 'small' : 'large') : 'large';
-        const r = () => Math.random() * this.size;
+        const ufoType = this.score > 3000 ? (this.rng() > 0.5 ? 'small' : 'large') : 'large';
+        const r = () => this.rng() * this.size;
 
         // Spawn far from ship
         let pos = [r(), r(), r(), r()];
         if (this.ship && this.ship.alive) {
-            const shipSq = this.ship.toQuadray();
             pos = [r(), r(), r(), r()];
             // Just ensure it's not right on top of the player
-            if (Quadray.distance(shipSq, new Quadray(pos[0], pos[1], pos[2], pos[3])) < 2.0) {
+            if (this.distanceBetween(this.ship.pos, { a: pos[0], b: pos[1], c: pos[2], d: pos[3] }) < 2.0) {
                 pos[0] = (pos[0] + this.size / 2) % this.size;
             }
         }
 
         const speed = ufoType === 'small' ? 1.5 : 0.8;
-        const v = () => (Math.random() - 0.5) * speed;
+        const v = () => (this.rng() - 0.5) * speed;
 
         const ufo = new AsteroidsEntity(pos, [v(), v(), v(), v()], ufoType === 'small' ? 0.3 : 0.5, 'ufo');
         ufo.ufoType = ufoType;
@@ -370,13 +452,13 @@ class AsteroidsBoard extends BaseBoard {
             }
 
             // Add a little inaccuracy
-            dir[0] += (Math.random() - 0.5) * 0.2;
-            dir[1] += (Math.random() - 0.5) * 0.2;
-            dir[2] += (Math.random() - 0.5) * 0.2;
-            dir[3] += (Math.random() - 0.5) * 0.2;
+            dir[0] += (this.rng() - 0.5) * 0.2;
+            dir[1] += (this.rng() - 0.5) * 0.2;
+            dir[2] += (this.rng() - 0.5) * 0.2;
+            dir[3] += (this.rng() - 0.5) * 0.2;
         } else {
             // Random direction
-            dir = [Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5];
+            dir = [this.rng() - 0.5, this.rng() - 0.5, this.rng() - 0.5, this.rng() - 0.5];
         }
 
         const vel = [
@@ -396,7 +478,7 @@ class AsteroidsBoard extends BaseBoard {
     }
 
     thrust(dir, amount = 0.3) {
-        if (!this.ship.alive) return;
+        if (this.gameOver || !this.ship.alive) return;
         this.ship.vel.a += dir[0] * amount;
         this.ship.vel.b += dir[1] * amount;
         this.ship.vel.c += dir[2] * amount;
@@ -424,14 +506,14 @@ class AsteroidsBoard extends BaseBoard {
         this.particles.push({ type: 'hyperspace_out', pos: { ...this.ship.pos } });
 
         // 1 in 6 chance of death
-        if (Math.random() < 1 / 6) {
+        if (this.rng() < 1 / 6) {
             console.log("[AsteroidsBoard] Hyperspace malfunction! Ship destroyed.");
             this.killShip();
             return;
         }
 
         // Teleport to random location
-        const r = () => Math.random() * this.size;
+        const r = () => this.rng() * this.size;
         this.ship.pos = { a: r(), b: r(), c: r(), d: r() };
         this.ship.vel = { a: 0, b: 0, c: 0, d: 0 }; // Stop momentum
 
@@ -440,182 +522,168 @@ class AsteroidsBoard extends BaseBoard {
     }
 
     update(dt) {
-        if (this.gameOver) return;
-
-        // Physics update
-        for (const e of this.entities) {
-            if (e.alive) {
-                e.update(dt, this.size);
-
-                // UFO shooting
-                if (e.type === 'ufo') {
-                    e.timer += dt;
-                    // Large shoots every 2s, Small every 1.5s
-                    const fireRate = e.ufoType === 'large' ? 2.0 : 1.5;
-                    if (e.timer >= fireRate) {
-                        e.timer = 0;
-                        this.ufoShoot(e);
-                    }
-                }
-            }
-        }
-
-        // Bullets expire
-        for (const e of this.entities) {
-            if ((e.type === 'bullet' || e.type === 'ufo_bullet') && e.age > 2) e.alive = false;
-        }
-
-        // UFOs expire after crossing the screen a few times (approx 15 seconds)
-        for (const e of this.entities) {
-            if (e.type === 'ufo' && e.age > 15) e.alive = false;
-        }
-
-        const bullets = this.entities.filter(e => e.type === 'bullet' && e.alive);
-        const ufoBullets = this.entities.filter(e => e.type === 'ufo_bullet' && e.alive);
-        const asteroids = this.entities.filter(e => e.type === 'asteroid' && e.alive);
-        const ufos = this.entities.filter(e => e.type === 'ufo' && e.alive);
-
-        // UFO Spawning Logic
-        this.ufoTimer -= dt;
-        if (this.ufoTimer <= 0 && ufos.length === 0 && this.score > 500) {
-            this.spawnUFO();
-            // Next UFO in 15-30 seconds
-            this.ufoTimer = 15 + Math.random() * 15;
-        }
-
-        // Collision: bullet vs asteroid (using Quadray.distance)
-        // Also check if bullet hits UFO
-        for (const b of bullets) {
-            if (!b.alive) continue;
-
-            // Vs UFO
-            for (const u of ufos) {
-                if (!u.alive) continue;
-                if (b.distTo(u) < u.radius + b.radius) {
-                    b.alive = false;
-                    u.alive = false;
-                    this.score += (u.ufoType === 'small' ? 1000 : 200);
-                    this.particles.push({ type: 'explosion', pos: { ...u.pos }, radius: u.radius, color: '#ff4444' });
-                    break;
-                }
-            }
-            if (!b.alive) continue;
-
-            // Vs Asteroid
-            for (const a of asteroids) {
-                if (!a.alive) continue;
-                if (b.distTo(a) < a.radius + b.radius) {
-                    b.alive = false;
-                    a.alive = false;
-                    this.score += 100;
-
-                    this.particles.push({ type: 'explosion', pos: { ...a.pos }, radius: a.radius, color: '#aa8866' });
-
-                    // Split asteroid
-                    if (a.radius > 0.3) {
-                        for (let i = 0; i < 2; i++) {
-                            const v = () => (Math.random() - 0.5) * 2;
-                            this.entities.push(new AsteroidsEntity(
-                                [a.pos.a, a.pos.b, a.pos.c, a.pos.d],
-                                [v(), v(), v(), v()],
-                                a.radius * 0.6,
-                                'asteroid'
-                            ));
-                        }
-                    }
-                    break; // Bullet hits one asteroid max
-                }
-            }
-        }
-
-        // Update shield
-        if (this.shieldActive) {
-            this.shieldTimer -= dt;
-            if (this.shieldTimer <= 0) {
-                this.shieldActive = false;
-                console.log('[AsteroidsBoard] Shield expired');
-            }
-        }
-        if (this.shieldCooldown > 0) this.shieldCooldown -= dt;
-
-        // Collision: ship vs asteroid, UFO, and UFO bullets
-        if (this.ship.alive) {
-            let hit = false;
-            let hitEntity = null;
-
-            for (const a of asteroids) {
-                if (!a.alive) continue;
-                if (this.ship.distTo(a) < a.radius + this.ship.radius) {
-                    hit = true; hitEntity = a; break;
-                }
-            }
-            if (!hit) {
-                for (const u of ufos) {
-                    if (!u.alive) continue;
-                    if (this.ship.distTo(u) < u.radius + this.ship.radius) {
-                        hit = true; hitEntity = u; break;
-                    }
-                }
-            }
-            if (!hit) {
-                for (const ub of ufoBullets) {
-                    if (!ub.alive) continue;
-                    if (this.ship.distTo(ub) < ub.radius + this.ship.radius) {
-                        hit = true; ub.alive = false; hitEntity = ub; break;
-                    }
-                }
-            }
-
-            if (hit) {
-                if (this.shieldActive) {
-                    // Shield absorbs the hit
-                    this.shieldActive = false;
-                    this.shieldTimer = 0;
-                    this.particles.push({ type: 'explosion', pos: { ...this.ship.pos }, radius: 1.5, color: '#00aaff' });
-                    console.log('[AsteroidsBoard] Shield absorbed hit!');
-                    if (hitEntity && hitEntity.type === 'asteroid') hitEntity.alive = false;
+        if (this.gameOver || dt <= 0) return;
+        let remaining = dt;
+        // Preserve the arcade rule of at most one ship contact response per tick.
+        let shipContactHandled = false;
+        while (remaining > 0 && !this.gameOver) {
+            this._processTimers();
+            const horizon = this._nextTimer(remaining);
+            const collision = this._firstCollision(horizon, shipContactHandled);
+            const elapsed = collision ? collision.time : horizon;
+            this._advance(elapsed);
+            remaining = Math.max(0, remaining - elapsed);
+            if (collision) {
+                if (collision.first.type === 'ship') {
+                    shipContactHandled = true;
+                    this._hitShip(collision.second);
                 } else {
-                    this.killShip();
+                    this._hitTarget(collision.first, collision.second);
                 }
             }
         }
-
-        // Cleanup dead — only filter if list gets too big
-        if (this.entities.length > 50) {
-            this.entities = this.entities.filter(e => e.alive);
-        }
-
-        // Respawn asteroids if cleared — advance wave
-        if (this.entities.filter(e => e.type === 'asteroid' && e.alive).length === 0) {
+        if (this.gameOver) return;
+        this._processTimers();
+        // Keep the dead ship owned by the world until its simulation-time respawn.
+        this.entities = this.entities.filter(e => e.alive || e === this.ship);
+        if (!this.entities.some(e => e.type === 'asteroid' && e.alive)) {
             this.wave++;
-            const count = this.waveBaseAsteroids + Math.floor(this.score / 1000);
-            this.spawnAsteroids(count);
-            console.log(`[AsteroidsBoard] Wave ${this.wave} — ${count} asteroids`);
+            this.spawnAsteroids(this.waveBaseAsteroids + Math.floor(this.score / 1000));
+        }
+    }
+
+    _nextTimer(duration) {
+        let next = duration;
+        if (this.respawnTimer !== null) next = Math.min(next, this.respawnTimer);
+        if (this.shieldActive) next = Math.min(next, this.shieldTimer);
+        const ufos = this.entities.filter(e => e.alive && e.type === 'ufo');
+        if (ufos.length === 0 && this.score > 500) next = Math.min(next, this.ufoTimer);
+        for (const e of this.entities) {
+            if (!e.alive) continue;
+            if (e.type === 'bullet' || e.type === 'ufo_bullet') next = Math.min(next, 2 - e.age);
+            if (e.type === 'ufo') {
+                next = Math.min(next, 15 - e.age, (e.ufoType === 'large' ? 2 : 1.5) - e.timer);
+            }
+        }
+        return Math.max(0, next);
+    }
+
+    _advance(dt) {
+        for (const e of this.entities) {
+            if (!e.alive) continue;
+            e.update(dt, this.size);
+            if (e.type === 'ufo') e.timer += dt;
+        }
+        this.ufoTimer = Math.max(0, this.ufoTimer - dt);
+        if (this.respawnTimer !== null) this.respawnTimer = Math.max(0, this.respawnTimer - dt);
+        if (this.shieldActive) this.shieldTimer = Math.max(0, this.shieldTimer - dt);
+        this.shieldCooldown = Math.max(0, this.shieldCooldown - dt);
+    }
+
+    _processTimers() {
+        if (this.respawnTimer !== null && this.respawnTimer <= ASTEROIDS_TIME_EPSILON) this.respawnShip();
+        if (this.shieldActive && this.shieldTimer <= ASTEROIDS_TIME_EPSILON) this.shieldActive = false;
+        for (const e of this.entities) {
+            if (!e.alive) continue;
+            if (((e.type === 'bullet' || e.type === 'ufo_bullet') && e.age >= 2 - ASTEROIDS_TIME_EPSILON) ||
+                (e.type === 'ufo' && e.age >= 15 - ASTEROIDS_TIME_EPSILON)) {
+                e.alive = false;
+                continue;
+            }
+            if (e.type === 'ufo') {
+                const fireRate = e.ufoType === 'large' ? 2 : 1.5;
+                while (e.timer >= fireRate - ASTEROIDS_TIME_EPSILON) {
+                    e.timer = Math.max(0, e.timer - fireRate);
+                    this.ufoShoot(e);
+                }
+            }
+        }
+        if (this.ufoTimer <= ASTEROIDS_TIME_EPSILON && this.score > 500 &&
+            !this.entities.some(e => e.type === 'ufo' && e.alive)) {
+            this.spawnUFO();
+            this.ufoTimer += 15 + this.rng() * 15;
+        }
+    }
+
+    _firstCollision(duration, shipContactHandled) {
+        let first = null;
+        const consider = (a, b) => {
+            const time = asteroidsImpactTime(a, b, duration, this.size);
+            if (time !== null && (first === null || time < first.time)) first = { first: a, second: b, time };
+        };
+        for (const bullet of this.entities) {
+            if (!bullet.alive || bullet.type !== 'bullet') continue;
+            for (const target of this.entities) {
+                if (target.alive && (target.type === 'asteroid' || target.type === 'ufo')) consider(bullet, target);
+            }
+        }
+        if (this.ship.alive && !shipContactHandled) {
+            for (const target of this.entities) {
+                if (target.alive && (target.type === 'asteroid' || target.type === 'ufo' ||
+                    target.type === 'ufo_bullet')) consider(this.ship, target);
+            }
+        }
+        return first;
+    }
+
+    _hitTarget(bullet, target) {
+        bullet.alive = false;
+        target.alive = false;
+        this.score += target.type === 'ufo' ? (target.ufoType === 'small' ? 1000 : 200) : 100;
+        this.particles.push({
+            type: 'explosion', pos: { ...target.pos }, radius: target.radius,
+            color: target.type === 'ufo' ? '#ff4444' : '#aa8866',
+        });
+        if (target.type === 'asteroid' && target.radius > 0.3) {
+            for (let i = 0; i < 2; i++) {
+                const v = () => (this.rng() - 0.5) * 2;
+                this.entities.push(new AsteroidsEntity(
+                    [target.pos.a, target.pos.b, target.pos.c, target.pos.d],
+                    [v(), v(), v(), v()], target.radius * 0.6, 'asteroid'
+                ));
+            }
+        }
+    }
+
+    _hitShip(target) {
+        if (target.type === 'ufo_bullet') target.alive = false;
+        if (this.shieldActive) {
+            this.shieldActive = false;
+            this.shieldTimer = 0;
+            this.particles.push({ type: 'explosion', pos: { ...this.ship.pos }, radius: 1.5, color: '#00aaff' });
+            if (target.type === 'asteroid') target.alive = false;
+        } else {
+            this.killShip();
         }
     }
 
     killShip() {
+        if (this.gameOver || !this.ship.alive) return;
         this.ship.alive = false;
         this.lives--;
         this.particles.push({ type: 'explosion', pos: { ...this.ship.pos }, radius: 1.0, color: '#00eeff' });
 
         if (this.lives > 0) {
-            setTimeout(() => this.respawnShip(), 1500);
+            this.respawnTimer = 1.5;
         } else {
             this.gameOver = true;
         }
     }
 
     respawnShip() {
+        if (this.gameOver) return;
+        this.respawnTimer = null;
         this.ship.alive = true;
         this.ship.pos = { a: this.size / 2, b: this.size / 2, c: this.size / 2, d: this.size / 2 };
         this.ship.vel = { a: 0, b: 0, c: 0, d: 0 };
+        this.ship.age = 0;
+        if (!this.entities.includes(this.ship)) this.entities.push(this.ship);
         this.particles.push({ type: 'hyperspace_in', pos: { ...this.ship.pos } });
     }
 
     /** Activate shield if charges available. */
     activateShield() {
-        if (this.shieldCharges <= 0 || this.shieldActive || this.shieldCooldown > 0) return false;
+        if (this.gameOver || !this.ship.alive || this.shieldCharges <= 0 || this.shieldActive || this.shieldCooldown > 0) return false;
         this.shieldCharges--;
         this.shieldActive = true;
         this.shieldTimer = 5.0; // 5 seconds
@@ -626,6 +694,8 @@ class AsteroidsBoard extends BaseBoard {
 
     /** Reset board to initial state. */
     reset() {
+        this.rng = GridUtils.createSeededRng(this.seed);
+        this.respawnTimer = null;
         this.entities = [];
         this.particles = [];
         this.score = 0;
@@ -638,7 +708,7 @@ class AsteroidsBoard extends BaseBoard {
         this.shieldTimer = 0;
         this.shieldCooldown = 0;
 
-        this.ufoTimer = 15;
+        this.ufoTimer = 0;
         this.spawnShip();
         this.spawnAsteroids(this.waveBaseAsteroids);
     }

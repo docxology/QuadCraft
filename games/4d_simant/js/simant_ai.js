@@ -85,7 +85,7 @@ class RedColonyAI {
                 board.spawnAnt(queen.a, queen.b, queen.c, queen.d, this.faction, CASTE_WORKER);
             }
 
-            // Position soldiers defensively around nest (IVM perimeter)
+            // Position soldiers defensively around the raw nest graph.
             const nestCoords = board.nests[this.faction];
             if (nestCoords) {
                 for (const s of soldiers) {
@@ -105,7 +105,7 @@ class RedColonyAI {
         }
         // Phase 4 (late): aggressive — produce soldiers and attack
         else {
-            if (food >= 50 && Math.random() < 0.5 && !atCap) {
+            if (food >= 50 && board.rng() < 0.5 && !atCap) {
                 board.foodStored[this.faction] -= 50;
                 board.spawnAnt(queen.a, queen.b, queen.c, queen.d, this.faction, CASTE_SOLDIER);
             }

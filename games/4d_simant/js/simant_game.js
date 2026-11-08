@@ -29,7 +29,7 @@
  *   A           : Toggle auto-assist
  *   M           : Toggle minimap
  *   L           : Toggle coordinate labels
- *   G           : Toggle IVM grid/tunnels
+ *   G           : Toggle raw graph axes/tunnels
  *   1/2/3       : Speed (Slow/Normal/Fast)
  *   Shift+drag  : Rotate camera
  *
@@ -37,8 +37,8 @@
  */
 
 class SimAntGame extends BaseGame {
-    constructor(canvas, hudElement) {
-        const board = new SimAntBoard(12);
+    constructor(canvas, hudElement, options = {}) {
+        const board = new SimAntBoard(12, options);
         const renderer = new SimAntRenderer(canvas, board);
         super(canvas, hudElement, board, renderer, {
             name: 'SimAntGame',
@@ -122,6 +122,7 @@ class SimAntGame extends BaseGame {
      * Runs the simulation step and tracks score.
      */
     update() {
+        if (this.board.gameOver) return;
         this.board.update();
 
         // Track food collection for scoring
@@ -174,6 +175,8 @@ class SimAntGame extends BaseGame {
 
     // UI Commands
     buyUnit(type) {
+        // Tactical purchasing while paused is intentional; ended worlds are immutable.
+        if (this.board.gameOver) return;
         const q = this.board.queens[0]; // 0 = Yellow
         if (!q || !q.alive) {
             console.log("Queen is dead!");
@@ -247,9 +250,9 @@ class SimAntGame extends BaseGame {
     /** Toggle IVM grid and tunnel visualization */
     toggleGrid() {
         if (!this.renderer) return;
-        this.renderer.showIVMGrid = !this.renderer.showIVMGrid;
+        this.renderer.showGraphAxes = !this.renderer.showGraphAxes;
         this.renderer.showTunnels = !this.renderer.showTunnels;
-        console.log(`IVM Grid: ${this.renderer.showIVMGrid ? 'ON' : 'OFF'}`);
+        console.log(`Raw graph: ${this.renderer.showGraphAxes ? 'ON' : 'OFF'}`);
     }
 
     /** Bind mouse move for hover detection in renderer. */
@@ -272,6 +275,7 @@ class SimAntGame extends BaseGame {
         const speedLabel = ` | ⚡${this.currentSpeed.toUpperCase()}`;
 
         if (b.gameOver) {
+            if (b.winner === -1) return { text: `DRAW: both queens defeated | Tick: ${meta.tick} | Press R to restart`, color: '#ffaa44' };
             if (b.winner === 0) {
                 return {
                     text: `🏆 VICTORY! Enemy queen defeated! | Tick: ${meta.tick}${scoreLabel} | Press R to restart`,

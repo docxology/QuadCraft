@@ -55,22 +55,6 @@ const ENEMY_TYPES = {
     dragon: { name: 'Dragon Boss', hp: 50, atk: 8, def: 4, xp: 150, speed: 1, symbol: 'D', color: '#c0392b', chaseRange: 12, boss: true },
 };
 
-/**
- * Create a seeded pseudo-random generator (Mulberry32) — deterministic,
- * fast, and good enough for gameplay-quality randomness. Returns a
- * function with the same signature/range as Math.random() ([0, 1)).
- * @param {number} seed
- * @returns {function(): number}
- */
-function createSeededRng(seed) {
-    let s = seed >>> 0;
-    return function () {
-        s |= 0; s = (s + 0x6D2B79F5) | 0;
-        let t = Math.imul(s ^ (s >>> 15), 1 | s);
-        t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-    };
-}
 
 class RogueBoard extends BaseBoard {
 
@@ -91,7 +75,7 @@ class RogueBoard extends BaseBoard {
         // Seedable RNG — every in-class source of randomness goes through
         // this._rng() rather than calling Math.random() directly, so a
         // fixed seed reproduces the exact same dungeon/enemies/items.
-        this._rng = (options.seed !== undefined) ? createSeededRng(options.seed) : Math.random;
+        this._rng = (options.seed !== undefined) ? GridUtils.createSeededRng(options.seed) : Math.random;
 
         // Player state
         this.player = null;

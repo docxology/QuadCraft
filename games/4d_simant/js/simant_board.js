@@ -1,14 +1,14 @@
 /**
- * simant_board.js — 4D SimAnt Board on IVM Grid
+ * simant_board.js — independent raw four-index cells, reversible eight-neighbor graph
  *
  * Features:
  * - 4D Grid (12^4 = 20,736 cells)
  * - Terrain: DIRT, EMPTY, BEDROCK, FOOD
  * - Pheromones: Float32Array — 6 channels per cell (Food, Home, Danger × 2 factions)
  * - Factions: Yellow (Player) vs Red (AI)
- * - Tunnel network tracking with IVM connectivity
+ * - Tunnel network tracking with raw +/-unit-component connectivity
  * - Food regeneration, population caps, colony health
- * - Real IVM-neighbor pheromone diffusion
+ * - Conservative masked graph transport and explicit pheromone evaporation
  *
  * Deeply integrated with all Quadray/IVM shared modules:
  *   - Quadray: toKey, normalized, add, subtract, equals, distance,
@@ -46,6 +46,9 @@ if (typeof SYNERGETICS === 'undefined' && typeof require !== 'undefined') {
     globalThis.verifyRoundTrip = _s.verifyRoundTrip;
     globalThis.verifyGeometricIdentities = _s.verifyGeometricIdentities;
 }
+if (typeof ConservativeGraphField === 'undefined' && typeof require !== 'undefined') {
+    globalThis.ConservativeGraphField = require('../../4d_generic/graph_field.js').ConservativeGraphField;
+}
 
 // Cell Types
 var TYPE_EMPTY = 0;
@@ -76,7 +79,7 @@ var PHERO_CHANNELS = 6;
 var MAX_ANTS_PER_FACTION = 60;
 
 class Ant {
-    constructor(a, b, c, d, faction, caste) {
+    constructor(a, b, c, d, faction, caste, rng = Math.random) {
         // Position (integer coordinates in Grid)
         this.a = a; this.b = b; this.c = c; this.d = d;
         // Previous position for animation interpolation
@@ -97,7 +100,11 @@ class Ant {
         // AI State
         this.target = null; // { a, b, c, d }
         this.state = 'idle'; // idle, foraging, returning, attacking, scouting
-        this.scoutAngle = Math.random() * Math.PI * 2; // For spiral scout patterns
+        this.scoutAngle = rng() * Math.PI * 2; // For spiral scout patterns
+        this.explored = new Set(); // Raw sites visited, not cached terrain
+        this.homeRoute = []; // Reverse-ordered raw indices; next step is last
+        this.homeGoal = -1;
+        this.homeRetry = 0;
 
         // Combat tracking
         this.kills = 0;
@@ -111,8 +118,11 @@ class Ant {
 }
 
 class SimAntBoard extends BaseBoard {
-    constructor(size = 12) {
+    constructor(size = 12, options = {}) {
         super(size, { name: 'SimAntBoard', verify: false });
+        if (!Number.isInteger(size) || size < 2) throw new RangeError('SimAnt size must be an integer >= 2');
+        this.seed = options.seed === undefined ? Math.floor(Math.random() * 4294967296) : options.seed;
+        this.rng = GridUtils.createSeededRng(this.seed);
         this.size = size;
         this.volume = size ** 4;
 
@@ -121,6 +131,17 @@ class SimAntBoard extends BaseBoard {
 
         // Pheromones: 6 channels per cell [YFood, YHome, RFood, RHome, YDanger, RDanger]
         this.pheromones = new Float32Array(this.volume * PHERO_CHANNELS);
+        // Cache the full raw graph; permeability is refreshed at each transport event.
+        const edges = [];
+        for (let i = 0; i < this.volume; i++) {
+            const q = this.coords(i);
+            for (const j of this.getNeighbors(q.a, q.b, q.c, q.d)) if (i < j) edges.push([i, j]);
+        }
+        this.field = new ConservativeGraphField(this.volume, edges);
+        this._fieldValues = new Float64Array(this.volume);
+        this._fieldNext = new Float64Array(this.volume);
+        this._fieldActive = new Uint8Array(this.volume);
+        this.fieldStats = this._newFieldStats();
 
         this.ants = [];
         this.foodStored = [50, 50]; // [Yellow, Red]
@@ -163,7 +184,7 @@ class SimAntBoard extends BaseBoard {
 
         this.initWorld();
 
-        console.log(`[SimAntBoard] ${size}^4 = ${this.volume} cell IVM grid`);
+        console.log(`[SimAntBoard] ${size}^4 = ${this.volume} raw cells, eight-neighbor graph`);
         console.log(`[SimAntBoard] Cell volume: ${this.cellVolumeUnit}, S3: ${this.s3Constant}`);
         console.log(`[SimAntBoard] Volume ratios T:O:C = ${this.volumeRatios.tetra}:${this.volumeRatios.octa}:${this.volumeRatios.cubo}`);
     }
@@ -257,19 +278,20 @@ class SimAntBoard extends BaseBoard {
         // 1. Fill with Dirt
         this.grid.fill(TYPE_DIRT);
 
-        // 3. Dig Chambers for Colonies
-        // Yellow: Near (3,3,3,3)
-        this.digRoom(3, 3, 3, 3, 2);
-        this.nests[0] = { a: 3, b: 3, c: 3, d: 3 };
-        this.spawnAnt(3, 3, 3, 3, FACTION_YELLOW, CASTE_QUEEN);
-        for (let i = 0; i < 5; i++) this.spawnAnt(3, 3, 3, 3, FACTION_YELLOW, CASTE_WORKER);
-
-        // Red: Near (size-4,...)
-        const f = this.size - 4;
-        this.digRoom(f, f, f, f, 2);
-        this.nests[1] = { a: f, b: f, c: f, d: f };
-        this.spawnAnt(f, f, f, f, FACTION_RED, CASTE_QUEEN);
-        for (let i = 0; i < 5; i++) this.spawnAnt(f, f, f, f, FACTION_RED, CASTE_WORKER);
+        // Size-aware opposite raw corners with non-common-offset separation.
+        // The embedding is for display only: common-offset labels remain distinct cells.
+        const lo = Math.floor((this.size - 1) / 4);
+        const hi = this.size - 1 - lo;
+        this.nests = [
+            { a: lo, b: lo, c: hi, d: lo },
+            { a: hi, b: hi, c: lo, d: hi },
+        ];
+        for (let faction = 0; faction < 2; faction++) {
+            const q = this.nests[faction];
+            this.digRoom(q.a, q.b, q.c, q.d, 2);
+            this.spawnAnt(q.a, q.b, q.c, q.d, faction, CASTE_QUEEN);
+            for (let i = 0; i < 5; i++) this.spawnAnt(q.a, q.b, q.c, q.d, faction, CASTE_WORKER);
+        }
 
         // Initialize Red Colony AI
         if (typeof RedColonyAI !== 'undefined') {
@@ -313,7 +335,7 @@ class SimAntBoard extends BaseBoard {
         if (i === -1) return null; // Invalid
         // Population cap check
         if (caste !== CASTE_QUEEN && this.atPopCap(faction)) return null;
-        const ant = new Ant(a, b, c, d, faction, caste);
+        const ant = new Ant(a, b, c, d, faction, caste, this.rng);
         this.ants.push(ant);
         if (caste === CASTE_QUEEN) this.queens[faction] = ant;
         return ant;
@@ -348,10 +370,10 @@ class SimAntBoard extends BaseBoard {
     scatterFoodClusters(count) {
         for (let c = 0; c < count; c++) {
             // Random center
-            const ca = Math.floor(Math.random() * (this.size - 2)) + 1;
-            const cb = Math.floor(Math.random() * (this.size - 2)) + 1;
-            const cc = Math.floor(Math.random() * (this.size - 2)) + 1;
-            const cd = Math.floor(Math.random() * (this.size - 2)) + 1;
+            const ca = Math.floor(this.rng() * (this.size - 2)) + 1;
+            const cb = Math.floor(this.rng() * (this.size - 2)) + 1;
+            const cc = Math.floor(this.rng() * (this.size - 2)) + 1;
+            const cd = Math.floor(this.rng() * (this.size - 2)) + 1;
 
             if (this.isNestProtected(ca, cb, cc, cd)) continue; // never overwrite a nest
 
@@ -366,7 +388,7 @@ class SimAntBoard extends BaseBoard {
             for (const nc of neighborCoords) {
                 if (this.isNestProtected(nc.a, nc.b, nc.c, nc.d)) continue;
                 const ni = this.idx(nc.a, nc.b, nc.c, nc.d);
-                if (ni !== -1 && Math.random() > 0.5) this.grid[ni] = TYPE_FOOD;
+                if (ni !== -1 && this.rng() > 0.5) this.grid[ni] = TYPE_FOOD;
             }
         }
     }
@@ -374,11 +396,12 @@ class SimAntBoard extends BaseBoard {
     // --- Updates ---
 
     update() {
+        if (this.gameOver) return;
         this.tick++;
 
         // 1. Update Ants
         // Shuffle ants to avoid movement bias
-        this.ants.sort(() => Math.random() - 0.5);
+        GridUtils.shuffle(this.ants, this.rng);
 
         for (const ant of this.ants) {
             this.updateAnt(ant);
@@ -449,26 +472,23 @@ class SimAntBoard extends BaseBoard {
 
     /** Check win/loss conditions */
     _checkEndConditions() {
-        // Yellow queen dead → game over (loss)
-        if (this.queens[0] && !this.queens[0].alive) {
+        if (this.gameOver) return;
+        const yellowDead = this.queens[0] && !this.queens[0].alive;
+        const redDead = this.queens[1] && !this.queens[1].alive;
+        if (yellowDead || redDead) {
             this.gameOver = true;
-            this.winner = 1; // Red wins
-        }
-        // Red queen dead → victory
-        if (this.queens[1] && !this.queens[1].alive) {
-            this.gameOver = true;
-            this.winner = 0; // Yellow wins
+            this.winner = yellowDead && redDead ? -1 : yellowDead ? 1 : 0;
         }
     }
 
     /** Regenerate food clusters in unexplored dirt regions */
     regenerateFood() {
-        const clusterCount = 2 + Math.floor(Math.random() * 2); // 2–3 clusters
+        const clusterCount = 2 + Math.floor(this.rng() * 2); // 2–3 clusters
         for (let c = 0; c < clusterCount; c++) {
-            const ca = Math.floor(Math.random() * (this.size - 2)) + 1;
-            const cb = Math.floor(Math.random() * (this.size - 2)) + 1;
-            const cc = Math.floor(Math.random() * (this.size - 2)) + 1;
-            const cd = Math.floor(Math.random() * (this.size - 2)) + 1;
+            const ca = Math.floor(this.rng() * (this.size - 2)) + 1;
+            const cb = Math.floor(this.rng() * (this.size - 2)) + 1;
+            const cc = Math.floor(this.rng() * (this.size - 2)) + 1;
+            const cd = Math.floor(this.rng() * (this.size - 2)) + 1;
             const i = this.idx(ca, cb, cc, cd);
             if (i !== -1 && this.grid[i] === TYPE_DIRT) {
                 // Create small food cluster in dirt
@@ -476,14 +496,14 @@ class SimAntBoard extends BaseBoard {
                 this.grid[i] = TYPE_FOOD;
                 const neighbors = this.getNeighbors(ca, cb, cc, cd);
                 for (const ni of neighbors) {
-                    if (Math.random() > 0.6) this.grid[ni] = TYPE_FOOD;
+                    if (this.rng() > 0.6) this.grid[ni] = TYPE_FOOD;
                 }
             }
         }
     }
 
     updateAnt(ant) {
-        if (!ant.alive) return;
+        if (this.gameOver || !ant.alive) return;
 
         // Save previous position for animation interpolation
         ant.prevA = ant.a; ant.prevB = ant.b; ant.prevC = ant.c; ant.prevD = ant.d;
@@ -506,6 +526,7 @@ class SimAntBoard extends BaseBoard {
         this.dropPheromone(ant, homeChannel, 2.0);
 
         const i = this.idx(ant.a, ant.b, ant.c, ant.d);
+        ant.explored.add(i);
 
         // Check current cell for food pickup
         if (this.grid[i] === TYPE_FOOD && !ant.carrying) {
@@ -513,26 +534,26 @@ class SimAntBoard extends BaseBoard {
             ant.carrying = 10;
             ant.state = 'returning';
         }
+        this._deliverFood(ant);
 
         // Move
-        const neighbors = this.getNeighborCoords(ant.a, ant.b, ant.c, ant.d);
+        const neighbors = ant.carrying ? [] : this.getNeighborCoords(ant.a, ant.b, ant.c, ant.d);
 
-        let bestMove = null;
+        let bestMove = ant.carrying ? this._homeMove(ant) : null;
         let maxVal = -Infinity;
 
         // Determine pheromone channel to follow
         const foodChannel = ant.faction === FACTION_YELLOW ? PHERO_YELLOW_FOOD : PHERO_RED_FOOD;
         const dangerChannel = ant.faction === FACTION_YELLOW ? PHERO_YELLOW_DANGER : PHERO_RED_DANGER;
-        const pheromoneType = ant.carrying ? homeChannel : foodChannel;
 
         for (const n of neighbors) {
             const ni = this.idx(n.a, n.b, n.c, n.d);
             if (ni === -1) continue;
 
-            let score = Math.random() * 0.5; // Random noise
+            let score = this.rng() * 0.5; // Simulation-owned random noise
 
             // Pheromone attraction
-            const pVal = this.pheromones[ni * PHERO_CHANNELS + pheromoneType];
+            const pVal = this.pheromones[ni * PHERO_CHANNELS + foodChannel];
             score += pVal * 2.0;
 
             // Danger avoidance (workers and scouts avoid, soldiers don't)
@@ -545,7 +566,7 @@ class SimAntBoard extends BaseBoard {
             if (ant.caste === CASTE_SCOUT && ant.state === 'scouting') {
                 const homeSmell = this.pheromones[ni * PHERO_CHANNELS + homeChannel];
                 score -= homeSmell * 0.8; // Explore away from home
-                score += Math.random() * 3.0; // High randomness
+                score += this.rng() * 3.0; // High randomness
             }
 
             // Target-based movement (soldiers directed by AI)
@@ -563,6 +584,7 @@ class SimAntBoard extends BaseBoard {
 
             // Terrain cost
             const cell = this.grid[ni];
+            if (cell === TYPE_BEDROCK) continue;
             if (cell === TYPE_DIRT) {
                 if (ant.caste === CASTE_WORKER || ant.caste === CASTE_SCOUT) {
                     score -= 2.0; // Digging cost
@@ -570,13 +592,17 @@ class SimAntBoard extends BaseBoard {
                     score = -Infinity; // Soldiers can't dig well
                 }
             } else if (cell === TYPE_FOOD) {
-                if (!ant.carrying) score += 100; // Found food!
+                score += 100; // Found food!
             }
 
             // Prefer tunnel network for speed
             const key = GridUtils.key(n.a, n.b, n.c, n.d);
             if (this.tunnelSet.has(key)) {
                 score += 0.3; // Small tunnel preference
+            }
+            if ((ant.caste === CASTE_WORKER || ant.caste === CASTE_SCOUT) && ant.explored.has(ni)) {
+                // Novel ground can beat an empty retreat without removing reverse edges.
+                score -= 3.0;
             }
 
             if (score > maxVal) {
@@ -599,40 +625,96 @@ class SimAntBoard extends BaseBoard {
                 // Move
                 ant.a = bestMove.a; ant.b = bestMove.b; ant.c = bestMove.c; ant.d = bestMove.d;
             }
+            if (ant.carrying && this.idx(ant.a, ant.b, ant.c, ant.d) === ant.homeRoute[ant.homeRoute.length - 1]) {
+                ant.homeRoute.pop();
+            }
 
             // Drop Food pheromone if carrying
             if (ant.carrying) {
                 const fc = ant.faction === FACTION_YELLOW ? PHERO_YELLOW_FOOD : PHERO_RED_FOOD;
                 this.dropPheromone(ant, fc, 5.0);
 
-                // At home? Check dist to Queen
-                const q = this.queens[ant.faction];
-                if (q) {
-                    const distToQueen = GridUtils.manhattan(
-                        { a: ant.a, b: ant.b, c: ant.c, d: ant.d },
-                        { a: q.a, b: q.b, c: q.c, d: q.d }
-                    );
-                    if (distToQueen < 3) {
-                        // Drop food
-                        this.foodStored[ant.faction] += ant.carrying;
-                        if (ant.faction === FACTION_YELLOW) {
-                            this.stats.yellowFoodCollected += ant.carrying;
-                        } else {
-                            this.stats.redFoodCollected += ant.carrying;
-                        }
-                        ant.carrying = 0;
-                        ant.energy = 100; // Refuel
-                        ant.state = 'foraging';
-                    }
-                }
+                this._deliverFood(ant);
             }
         }
+    }
+
+    /** Live terrain permission shared by route planning and next-step validation. */
+    _canEnter(ant, i) {
+        const cell = this.grid[i];
+        return cell === TYPE_EMPTY || cell === TYPE_FOOD ||
+            (cell === TYPE_DIRT && ant.energy > 5 &&
+                (ant.caste === CASTE_WORKER || ant.caste === CASTE_SCOUT));
+    }
+
+    /**
+     * Plan once per return, then consume one reversible raw edge per decision.
+     * BFS stops at the existing delivery radius; Manhattan distance is only
+     * the goal test, never a monotonic movement restriction. No world cache:
+     * a blocked next step or relocated queen invalidates the private route.
+     */
+    _homeMove(ant) {
+        const queen = this.queens[ant.faction];
+        if (!queen || !queen.alive) return null;
+        const goal = this.idx(queen.a, queen.b, queen.c, queen.d);
+        const start = this.idx(ant.a, ant.b, ant.c, ant.d);
+        const next = ant.homeRoute[ant.homeRoute.length - 1];
+        if (ant.homeGoal !== goal || (next !== undefined &&
+            (!this._canEnter(ant, next) || GridUtils.manhattan(ant, this.coords(next)) !== 1))) {
+            ant.homeRoute.length = 0;
+            ant.homeRetry = 0;
+        }
+        ant.homeGoal = goal;
+        if (ant.homeRoute.length) return this.coords(ant.homeRoute[ant.homeRoute.length - 1]);
+        // Unreachable ants retry after eight decisions, not a whole-world BFS
+        // every tick. Reopening terrain is discovered on the next retry.
+        if (ant.homeRetry > 0) {
+            ant.homeRetry--;
+            return null;
+        }
+        const parent = new Int32Array(this.volume).fill(-1);
+        const queue = [start];
+        parent[start] = start;
+        for (let k = 0; k < queue.length; k++) {
+            const i = queue[k];
+            const q = this.coords(i);
+            if (GridUtils.manhattan(q, queen) < 3) {
+                for (let j = i; j !== start; j = parent[j]) ant.homeRoute.push(j);
+                return ant.homeRoute.length ? this.coords(ant.homeRoute[ant.homeRoute.length - 1]) : null;
+            }
+            for (const j of this.getNeighbors(q.a, q.b, q.c, q.d)) {
+                if (parent[j] !== -1 || !this._canEnter(ant, j)) continue;
+                parent[j] = i;
+                queue.push(j);
+            }
+        }
+        ant.homeRetry = 8;
+        return null;
+    }
+    _deliverFood(ant) {
+        const queen = this.queens[ant.faction];
+        if (!ant.carrying || !queen || !queen.alive || GridUtils.manhattan(ant, queen) >= 3) return;
+        this.foodStored[ant.faction] += ant.carrying;
+        const key = ant.faction === FACTION_YELLOW ? 'yellowFoodCollected' : 'redFoodCollected';
+        this.stats[key] += ant.carrying;
+        ant.carrying = 0;
+        ant.energy = 100;
+        ant.state = 'foraging';
+        ant.homeRoute.length = 0;
+        ant.homeGoal = -1;
+        ant.homeRetry = 0;
     }
 
     dropPheromone(ant, typeIdx, amount) {
         const i = this.idx(ant.a, ant.b, ant.c, ant.d);
         if (i !== -1) {
-            this.pheromones[i * PHERO_CHANNELS + typeIdx] = Math.min(100, this.pheromones[i * PHERO_CHANNELS + typeIdx] + amount);
+            const offset = i * PHERO_CHANNELS + typeIdx;
+            const requested = this.pheromones[offset] + amount;
+            const stored = Math.min(100, requested);
+            this.fieldStats.sources[typeIdx] += amount;
+            this.fieldStats.saturationLoss[typeIdx] += requested - stored;
+            this.pheromones[offset] = stored;
+            this.fieldStats.roundingDelta[typeIdx] += this.pheromones[offset] - stored;
         }
     }
 
@@ -641,58 +723,72 @@ class SimAntBoard extends BaseBoard {
         const i = this.idx(a, b, c, d);
         if (i !== -1) {
             const channel = faction === FACTION_YELLOW ? PHERO_YELLOW_DANGER : PHERO_RED_DANGER;
-            this.pheromones[i * PHERO_CHANNELS + channel] = Math.min(100, this.pheromones[i * PHERO_CHANNELS + channel] + amount);
+            this.dropPheromone({ a, b, c, d }, channel, amount);
         }
     }
 
+    /** Per-channel mass accounting; transport itself has no sink. */
+    _newFieldStats() {
+        return {
+            sources: Array(PHERO_CHANNELS).fill(0),
+            saturationLoss: Array(PHERO_CHANNELS).fill(0),
+            evaporationLoss: Array(PHERO_CHANNELS).fill(0),
+            roundingDelta: Array(PHERO_CHANNELS).fill(0),
+            lastBefore: Array(PHERO_CHANNELS).fill(0),
+            lastAfter: Array(PHERO_CHANNELS).fill(0),
+        };
+    }
+
+    fieldTotals() {
+        const totals = Array(PHERO_CHANNELS).fill(0);
+        for (let i = 0; i < this.pheromones.length; i++) totals[i % PHERO_CHANNELS] += this.pheromones[i];
+        return totals;
+    }
+
     diffusePheromones() {
-        // Real IVM-neighbor diffusion every 10 ticks, simple decay otherwise
-        const doFullDiffusion = (this.tick % 10 === 0);
-        const DIFFUSION_COEFF = 0.1;
-
-        if (doFullDiffusion) {
-            // Sample a subset of cells for diffusion to keep performance acceptable
-            const sampleSize = Math.min(500, this.volume);
-            for (let s = 0; s < sampleSize; s++) {
-                const ri = Math.floor(Math.random() * this.volume);
-                if (this.grid[ri] !== TYPE_EMPTY) continue;
-
-                const c = this.coords(ri);
-                const neighborCoords = this.getNeighborCoords(c.a, c.b, c.c, c.d);
-
-                for (let ch = 0; ch < PHERO_CHANNELS; ch++) {
-                    const val = this.pheromones[ri * PHERO_CHANNELS + ch];
-                    if (val < 0.5) continue;
-
-                    // Spread to IVM neighbors
-                    for (const nc of neighborCoords) {
-                        const ni = this.idx(nc.a, nc.b, nc.c, nc.d);
-                        if (ni === -1 || this.grid[ni] !== TYPE_EMPTY) continue;
-                        const nVal = this.pheromones[ni * PHERO_CHANNELS + ch];
-                        if (val > nVal) {
-                            const transfer = (val - nVal) * DIFFUSION_COEFF;
-                            this.pheromones[ni * PHERO_CHANNELS + ch] += transfer;
-                        }
-                    }
-                }
-            }
+        // Food sites are permeable too; dirt/bedrock hold their field without
+        // transporting it. Digging opens incident edges on the next event.
+        const transport = this.tick % 10 === 0;
+        for (let i = 0; i < this.volume; i++) {
+            this._fieldActive[i] = this.grid[i] === TYPE_EMPTY || this.grid[i] === TYPE_FOOD ? 1 : 0;
         }
-
-        // Global decay
-        for (let i = 0; i < this.pheromones.length; i++) {
-            this.pheromones[i] *= 0.98;
-            if (this.pheromones[i] < 0.1) this.pheromones[i] = 0;
+        for (let ch = 0; ch < PHERO_CHANNELS; ch++) {
+            let before = 0, after = 0, evaporated = 0, rounding = 0;
+            for (let i = 0; i < this.volume; i++) {
+                const value = this.pheromones[i * PHERO_CHANNELS + ch];
+                this._fieldValues[i] = value;
+                before += value;
+            }
+            const values = transport
+                ? this.field.step(this._fieldValues, 0.8, this._fieldNext, this._fieldActive)
+                : this._fieldValues;
+            for (let i = 0; i < this.volume; i++) {
+                // Explicit 2% evaporation per five logical ticks, no cutoff.
+                const decayed = values[i] * 0.98;
+                evaporated += values[i] - decayed;
+                const offset = i * PHERO_CHANNELS + ch;
+                this.pheromones[offset] = decayed;
+                after += this.pheromones[offset];
+                rounding += this.pheromones[offset] - decayed;
+            }
+            this.fieldStats.lastBefore[ch] = before;
+            this.fieldStats.lastAfter[ch] = after;
+            this.fieldStats.evaporationLoss[ch] += evaporated;
+            this.fieldStats.roundingDelta[ch] += rounding;
         }
     }
 
     /**
-     * Get neighbor coordinates using GridUtils.DIRECTIONS.
-     * Delegates to GridUtils for consistent IVM direction handling.
+     * Eight reversible raw +/-unit-component neighbors. No gauge reduction:
+     * these are independent gameplay labels, not twelve physical FCC neighbors.
      */
     getNeighborCoords(a, b, c, d) {
-        return GridUtils.DIRECTIONS.map(([da, db, dc, dd]) => ({
-            a: a + da, b: b + db, c: c + dc, d: d + dd
-        }));
+        return [
+            { a: a + 1, b, c, d }, { a: a - 1, b, c, d },
+            { a, b: b + 1, c, d }, { a, b: b - 1, c, d },
+            { a, b, c: c + 1, d }, { a, b, c: c - 1, d },
+            { a, b, c, d: d + 1 }, { a, b, c, d: d - 1 },
+        ];
     }
 
     /**
@@ -752,7 +848,6 @@ class SimAntBoard extends BaseBoard {
             tunnelCells,
             foodCells,
             tunnelPercent: ((tunnelCells / totalCells) * 100).toFixed(1),
-            worldTetravolume: (totalCells * (SYNERGETICS?.S3 ?? 1.0607)).toFixed(0),
             volumeRatios: this.volumeRatios,
             cellVolume: this.cellVolumeUnit,
             s3: this.s3Constant,
@@ -762,11 +857,17 @@ class SimAntBoard extends BaseBoard {
             foodIncome: [...this.stats.foodIncome],
             yellowAssist: this.yellowAssistEnabled,
             popCap: MAX_ANTS_PER_FACTION,
+            topology: 'raw eight-neighbor +/-unit-component graph',
+            seed: this.seed,
+            field: { totals: this.fieldTotals(), ...this.fieldStats, mixing: 0.8, evaporation: 0.02,
+                transportTicks: 10, evaporationTicks: 5 },
         };
     }
 
     /** Reset board to initial state. */
     reset() {
+        this.rng = GridUtils.createSeededRng(this.seed);
+        this.fieldStats = this._newFieldStats();
         this.grid = new Uint8Array(this.volume);
         this.pheromones = new Float32Array(this.volume * PHERO_CHANNELS);
         this.ants = [];

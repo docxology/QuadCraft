@@ -182,13 +182,15 @@ Provides shift-drag rotation for 3D/4D scene navigation.
 
 | Method | Description |
 |--------|-------------|
-| `GridUtils.generateGrid(size)` | All cells in a `size⁴` Quadray grid |
-| `GridUtils.getNeighbors(a,b,c,d)` | 8 face-touching IVM neighbours |
-| `GridUtils.getBoundedNeighbors(a,b,c,d,size)` | In-bounds neighbours only |
-| `GridUtils.inBounds(a,b,c,d,size)` | Bounds check |
-| `GridUtils.distance(q1,q2)` | Native Quadray 4D distance |
+| `GridUtils.generateGrid(size)` | All raw four-index cells in a `size⁴` box |
+| `GridUtils.generateCanonicalGrid(size)` | Distinct minimum-zero representatives |
+| `GridUtils.neighbors(a,b,c,d)` | Twelve canonical physical IVM neighbor moves |
+| `GridUtils.boundedNeighbors(a,b,c,d,size)` | Those canonical neighbors inside the component bounds |
+| `GridUtils.inBounds(a,b,c,d,size)` | Raw component bounds check |
+| `GridUtils.manhattan(p1,p2)` / `.euclidean(p1,p2)` | Raw four-component distances, not quotient spatial metrics |
 | `GridUtils.depthSort(cells, projectFn)` | Painter's algorithm sort |
-| `GridUtils.shuffle(arr)` | Fisher-Yates shuffle |
+| `GridUtils.createSeededRng(seed)` | Independent deterministic 32-bit simulation stream |
+| `GridUtils.shuffle(arr, rngFn)` | In-place Fisher–Yates shuffle; optional injected RNG |
 
 ---
 
@@ -198,9 +200,35 @@ Provides shift-drag rotation for 3D/4D scene navigation.
 
 | Method | Description |
 |--------|-------------|
-| `new GameLoop(updateFn, tickRate)` | Create with update callback and tick rate |
-| `.start()` / `.stop()` / `.pause()` | Lifecycle control |
-| `.isRunning` | Current state |
+| `new GameLoop({update, render, tickRate})` | Fixed updates; `tickRate` is milliseconds per tick |
+| `.start()` / `.stop()` / `.togglePause()` | Lifecycle control |
+| `.paused` / `.animationId` | Current pause and scheduled-frame state |
+
+`update(dtSeconds)` receives the fixed duration in **seconds**; render receives
+the accumulator fraction. A frame contributes at most 250 milliseconds.
+Continuous games integrate the supplied duration; discrete boards may ignore it.
+`BaseGame` and generated scaffold controllers forward that same duration.
+Asteroids owns no second wall clock; Doom uses its equivalent fixed-60-Hz
+controller and settles elapsed time before applying live input.
+
+### `graph_field.js` — ConservativeGraphField
+
+**Category:** simulation · **Dependencies:** none
+
+| API | Contract |
+|---|---|
+| `new ConservativeGraphField(size, edges)` | Fixed undirected uniform-site graph; duplicate/reversed edges collapse and self-loops are ignored |
+| `.step(values, alpha, out=null, active=null)` | Synchronous `I - alpha*L/dMax` mixing, dimensionless `alpha` in `[0,1]`; optional non-aliasing output and active-site mask |
+| `.maxDegree` | Degree bound of the full constructed graph, retained when masking edges |
+
+For finite concentrations within the numeric range, symmetric edge flux
+preserves closed-graph mass and range up to floating roundoff. Masks disable
+incident edges without deleting stored values. The kernel adds no sources,
+evaporation or saturation. SimAnt separately supplies eight reversible raw
+neighbors, terrain permeability, ten-tick mixing and five-tick evaporation.
+Its raw labels must not be canonicalized through `GridUtils.neighbors`.
+The [suite example](https://github.com/docxology/symergetics/blob/main/examples/suite_interoperability.py)
+compares this generic operator with QuadMath on an explicitly exchanged FCC graph.
 
 ---
 
@@ -210,10 +238,10 @@ Provides shift-drag rotation for 3D/4D scene navigation.
 
 | Method | Description |
 |--------|-------------|
-| `new InputController()` | Create and attach keyboard listeners |
-| `.bind(key, callback)` | Event-driven: fire on key press |
-| `.isDown(key)` | Polled: check if key is currently held |
-| `.reset()` | Clear all bindings |
+| `new InputController()` | Create bindings and held-key state; does not attach yet |
+| `.attach()` / `.detach()` | Attach/remove the document keyboard listeners |
+| `.bind(keys, callback, actionName=null)` | Event-driven key or key-array callback |
+| `.isDown(key)` | Polled held-key state |
 
 ---
 
@@ -266,13 +294,13 @@ Provides shift-drag rotation for 3D/4D scene navigation.
 
 | Method | Description |
 |--------|-------------|
-| `new BaseGame(canvas, options)` | Auto-creates GameLoop, InputController, Camera |
-| `.init()` | Override: setup board, bind keys |
-| `.update(dt)` | Override: game logic per tick |
-| `.render()` | Override: draw frame |
-| `.start()` / `.pause()` / `.reset()` | Lifecycle control |
-| `.gameLoop` | Access to underlying GameLoop |
-| `.input` | Access to underlying InputController |
+| `new BaseGame(canvas, hudElement, board, renderer, opts)` | Compose actual board/renderer with loop, input, HUD and optional camera/zoom |
+| `.init()` | Attach input and start the loop |
+| `.update(dtSeconds)` | Override game logic per fixed tick |
+| `._setupGameInput()` / `._getHUDState()` | Override game bindings and HUD state |
+| `.togglePause()` / `.reset()` | Pause or reset board and loop |
+| `.loop` | Underlying `GameLoop`; rendering calls `renderer.render()` |
+| `.input` | Underlying `InputController` |
 
 ---
 

@@ -124,36 +124,101 @@ export class Physics {
     }
 
     /**
-     * Traverse the closed raw-label segment through DoomMap's floor-index cells.
+     * First obstruction on the closed raw-label segment, ordered from start.
+     * Returns {t, cell, position}, with fractional segment parameter t, or null.
      * Gauge-equivalent physical points can occupy different map cells.
-     * At simultaneous crossings, check the exact boundary's floor cell as well
-     * as the cells on either side; never visit arbitrary axis-order neighbors.
+     * At simultaneous crossings, check the boundary's floor cell as well as
+     * either side; never visit arbitrary axis-order neighbors.
      */
-    hasLineOfSight(e1, e2) {
+    firstObstruction(e1, e2) {
         const start = [e1.a, e1.b, e1.c, e1.d];
         const delta = [e2.a - e1.a, e2.b - e1.b, e2.c - e1.c, e2.d - e1.d];
         const cell = start.map(Math.floor);
         const next = new Array(4);
+        const obstruction = t => ({
+            t,
+            cell: [...cell],
+            position: {
+                a: start[0] + delta[0] * t,
+                b: start[1] + delta[1] * t,
+                c: start[2] + delta[2] * t,
+                d: start[3] + delta[3] * t
+            }
+        });
+        let enteredAt = 0;
 
         while (true) {
-            if (this.map.isSolid(...cell)) return false;
+            if (this.map.isSolid(...cell)) return obstruction(enteredAt);
             for (let axis = 0; axis < 4; axis++) {
                 next[axis] = delta[axis] === 0 ? Infinity :
                     (cell[axis] + (delta[axis] > 0 ? 1 : 0) - start[axis]) / delta[axis];
             }
             const t = Math.min(...next);
-            if (t > 1) return true;
+            if (t > 1) return null;
 
             // floor(integer boundary) belongs to the positive-side cell.
             for (let axis = 0; axis < 4; axis++) {
                 if (next[axis] === t && delta[axis] > 0) cell[axis]++;
             }
-            if (this.map.isSolid(...cell)) return false;
-            if (t === 1) return true;
+            if (this.map.isSolid(...cell)) return obstruction(t);
+            if (t === 1) return null;
             for (let axis = 0; axis < 4; axis++) {
                 if (next[axis] === t && delta[axis] < 0) cell[axis]--;
             }
+            enteredAt = t;
         }
+    }
+
+    hasLineOfSight(e1, e2) {
+        return this.firstObstruction(e1, e2) === null;
+    }
+
+    /**
+     * Live AB hitscan: raw ray length/cell occupancy, physical enemy radius.
+     * rawDistance is measured along (cos(angle), sin(angle), 0, 0), not XYZ.
+     * Walls win ties, including the closed end boundary and the starting cell.
+     */
+    traceShot(origin, angle, enemies, maxRawDistance = 20) {
+        const da = Math.cos(angle), db = Math.sin(angle);
+        const end = {
+            a: origin.a + da * maxRawDistance,
+            b: origin.b + db * maxRawDistance,
+            c: origin.c, d: origin.d
+        };
+        const wall = this.firstObstruction(origin, end);
+        let rawDistance = wall ? wall.t * maxRawDistance : maxRawDistance;
+        let enemy = null;
+        const direction = new Quadray(da, db, 0, 0).toCartesian();
+        const speedSquared = direction.x ** 2 + direction.y ** 2 + direction.z ** 2;
+        for (const candidate of enemies) {
+            if (!candidate.alive) continue;
+            const offset = new Quadray(candidate.a - origin.a, candidate.b - origin.b,
+                candidate.c - origin.c, candidate.d - origin.d).toCartesian();
+            const along = offset.x * direction.x + offset.y * direction.y + offset.z * direction.z;
+            const radiusResidual = offset.x ** 2 + offset.y ** 2 + offset.z ** 2 - 0.8 ** 2;
+            const discriminant = along ** 2 - speedSquared * radiusResidual;
+            // A tangent does not enter the existing strict physical hit radius.
+            if (discriminant <= 0) continue;
+            const root = Math.sqrt(discriminant);
+            const exit = (along + root) / speedSquared;
+            const entry = Math.max(0, (along - root) / speedSquared);
+            if (exit <= 0 || entry > maxRawDistance) continue;
+            if (entry < rawDistance || (!wall && !enemy && entry === rawDistance)) {
+                rawDistance = entry;
+                enemy = candidate;
+            }
+        }
+        if (!enemy && !wall) return null;
+        return {
+            enemy,
+            rawDistance,
+            cell: enemy ? null : wall.cell,
+            position: {
+                a: origin.a + da * rawDistance,
+                b: origin.b + db * rawDistance,
+                c: origin.c, d: origin.d
+            }
+        };
     }
 
     /** 

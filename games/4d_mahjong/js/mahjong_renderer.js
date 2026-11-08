@@ -26,6 +26,7 @@ class MahjongRenderer extends BaseRenderer {
         this.mouseX = 0;
         this.mouseY = 0;
         this.isDragging = false;
+        this.hoveredTile = null;
 
         // Store reference for hit-testing from game
         this.hintTiles = [];
@@ -56,18 +57,39 @@ class MahjongRenderer extends BaseRenderer {
     }
 
     /**
+     * Project unmatched faces in stable layer paint order, including ties.
+     * Logical layers, rather than camera depth, remain the drawing policy.
+     */
+    _projectTiles() {
+        return this.board.tiles.filter(tile => !tile.matched)
+            .sort((a, b) => a.layer - b.layer).map(tile => {
+                const p = this._projectQ(tile.toQuadray());
+                return { tile, p, tw: 14 * p.scale, th: 18 * p.scale };
+            });
+    }
+
+    /**
+     * Pick the last painted face, not its decorative shadow or outline.
+     */
+    _pickTile(tiles, mx, my) {
+        for (let i = tiles.length - 1; i >= 0; i--) {
+            const { tile, p, tw, th } = tiles[i];
+            if (Math.abs(mx - p.x) <= tw && Math.abs(my - p.y) <= th) {
+                return tile;
+            }
+        }
+        return null;
+    }
+
+    /**
      * Draw all visible tiles with layer depth sorting.
      * Preserves all original visual effects: shadow, face, selection, hint.
      */
     _drawTiles() {
         const ctx = this.ctx;
         const board = this.board;
-
-        // Sort by layer (back to front)
-        const visible = board.tiles.filter(t => !t.matched).sort((a, b) => a.layer - b.layer);
-        for (const tile of visible) {
-            const p = this._projectQ(tile.toQuadray());
-            const tw = 14 * p.scale, th = 18 * p.scale;
+        const visible = this._projectTiles();
+        for (const { tile, p, tw, th } of visible) {
             const exposed = board.isExposed(tile);
 
             // Shadow
@@ -98,6 +120,7 @@ class MahjongRenderer extends BaseRenderer {
             ctx.textBaseline = 'middle';
             ctx.fillText(`${tile.suit[0].toUpperCase()}${tile.value}`, p.x, p.y);
         }
+        this.hoveredTile = this._pickTile(visible, this.mouseX, this.mouseY);
     }
 
     /**
@@ -105,19 +128,10 @@ class MahjongRenderer extends BaseRenderer {
      */
     _drawHoverTooltip() {
         const ctx = this.ctx;
-        const board = this.board;
-        const visible = board.tiles.filter(t => !t.matched);
-
-        let closestDist = 20, hoveredTile = null;
-        for (const tile of visible) {
-            const p = this._projectQ(tile.toQuadray());
-            const dx = this.mouseX - p.x, dy = this.mouseY - p.y;
-            const dist = Math.sqrt(dx * dx + dy * dy);
-            if (dist < closestDist) { closestDist = dist; hoveredTile = { tile, p }; }
-        }
+        const hoveredTile = this.hoveredTile;
         if (hoveredTile && !this.isDragging) {
-            const ht = hoveredTile, tp = ht.tile.pos;
-            const label = `${ht.tile.suit} ${ht.tile.value} L${ht.tile.layer} Q(${tp.a},${tp.b},${tp.c},${tp.d})`;
+            const tp = hoveredTile.pos;
+            const label = `${hoveredTile.suit} ${hoveredTile.value} L${hoveredTile.layer} Q(${tp.a},${tp.b},${tp.c},${tp.d})`;
             ctx.font = '12px monospace'; ctx.textAlign = 'left'; ctx.textBaseline = 'bottom';
             const tw = ctx.measureText(label).width;
             const tx = this.mouseX + 14, ty = this.mouseY - 10;
@@ -167,20 +181,13 @@ class MahjongRenderer extends BaseRenderer {
 
     /**
      * Hit-test a screen coordinate against visible tiles.
-     * Tests front-to-back (highest layer first) for correct occlusion.
+     * Tests reverse paint order, including equal-layer ties.
      * @param {number} mx - Screen X
      * @param {number} my - Screen Y
      * @returns {MahjongTile|null}
      */
     hitTest(mx, my) {
-        const tiles = this.board.tiles.filter(t => !t.matched).sort((a, b) => b.layer - a.layer);
-        for (const t of tiles) {
-            const p = this._projectQ(t.toQuadray());
-            if (Math.abs(p.x - mx) < 14 * p.scale && Math.abs(p.y - my) < 18 * p.scale) {
-                return t;
-            }
-        }
-        return null;
+        return this._pickTile(this._projectTiles(), mx, my);
     }
 }
 

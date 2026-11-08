@@ -1,5 +1,25 @@
 # Changelog
 
+## v0.5.0 — 2026-11-07
+
+### Simulation and gameplay geometry
+
+- Give shared continuous loops fixed seconds, bounded catch-up and deterministic seeded randomness. Remove Asteroids' second wall clock and retain timer remainder across partitions.
+- Resolve Asteroids' moving-target swept contacts chronologically in the physical metric, with uncapped periodic-image enumeration, lifetime boundaries and fragment remainder.
+- Share ordered raw-grid obstruction traversal between Doom line of sight and hitscan; intersect physical enemy spheres and let walls win ties. Settle elapsed time before input mutation, own held mouse state explicitly and rebase clocks on respawn.
+- Repair SimAnt's reversible raw-axis excavation and distinct nest occupancy. Workers/soldiers use obstacle-aware private delivery routes, replan stale paths and throttle unreachable retries.
+- Add generic conservative undirected graph transport, reused by SimAnt pheromones with separate source, evaporation, cap and Float32-rounding accounting. The raw eight-neighbor terrain graph is not relabeled as the twelve-neighbor FCC graph.
+- Pick Minecraft/Mahjong by actual projected footprints and reverse stable paint order, preserving raw cells and original tile identity.
+
+### Verification and documentation
+
+- Replace shallow reporting/assertions with deterministic consumer-visible collision, time partition, routing, transport and picking regressions; keep the shared scaffold's seconds contract aligned.
+- Extend the real all-game Chromium gate with late-input/respawn timing and held automatic fire when native capture is available. Record real denial and retain keyboard controls otherwise.
+- Give the local stdlib HTTP server an OS-sized accept backlog for concurrent classic-script requests; keep resource failures fatal, without retrying or masking them.
+- Document shared loop/field/RNG APIs, coordinate gauges/units and per-game deployment boundaries. Bump native and directory-local browser package metadata together.
+
+Verification: **2,341 CLI checks, zero failures; all 30 Chromium scenarios passed locally**. Native capture was denied on this macOS run, so its capture-only automatic-fire branch requires the native-capable CI run. Interactive native OpenGL gameplay was not exercised locally.
+
 ## v0.4.0 — 2026-11-07
 
 ### Interactive correctness

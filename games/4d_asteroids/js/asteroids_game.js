@@ -43,9 +43,6 @@ class AsteroidsGame extends BaseGame {
             storageKey: 'asteroids4D_highScore',
         });
 
-        // Physics time tracking
-        this.lastTime = performance.now();
-
         // Track score from board to detect changes
         this._lastBoardScore = 0;
 
@@ -79,7 +76,7 @@ class AsteroidsGame extends BaseGame {
      */
     _setupGameInput() {
         this.input.bind([' '], () => {
-            if (this.board.gameOver || !this.board.ship.alive) return;
+            if (this.loop.paused || this.board.gameOver || !this.board.ship.alive) return;
             const v = this.board.ship.vel;
             const mag = Math.sqrt(v.a * v.a + v.b * v.b + v.c * v.c + v.d * v.d);
             const dir = mag > 0.1
@@ -89,12 +86,12 @@ class AsteroidsGame extends BaseGame {
         });
 
         this.input.bind(['Shift'], () => {
-            if (this.board.gameOver || !this.board.ship.alive) return;
+            if (this.loop.paused || this.board.gameOver || !this.board.ship.alive) return;
             this.board.hyperspace();
         });
 
         this.input.bind(['v'], () => {
-            if (this.board.gameOver || !this.board.ship.alive) return;
+            if (this.loop.paused || this.board.gameOver || !this.board.ship.alive) return;
             this.board.activateShield();
         });
     }
@@ -112,18 +109,18 @@ class AsteroidsGame extends BaseGame {
      * Override BaseGame.update() — poll continuous thrust keys and
      * step the physics simulation.
      */
-    update() {
-        const now = performance.now();
-        const dt = Math.min((now - this.lastTime) / 1000, 0.05);
-        this.lastTime = now;
+    update(dt) {
+        if (this.loop.paused || this.board.gameOver) return;
+        // Original tuning: 0.3 velocity units per 16 ms tick.
+        const acceleration = 0.3 / 0.016;
+        if (this.input.isDown('w')) this.board.thrust([0, 0, 1, 0], acceleration * dt);
+        if (this.input.isDown('s')) this.board.thrust([0, 0, -1, 0], acceleration * dt);
+        if (this.input.isDown('a')) this.board.thrust([-1, 0, 0, 0], acceleration * dt);
+        if (this.input.isDown('d')) this.board.thrust([1, 0, 0, 0], acceleration * dt);
+        if (this.input.isDown('q')) this.board.thrust([0, 1, 0, 0], acceleration * dt);
+        if (this.input.isDown('e')) this.board.thrust([0, 0, 0, 1], acceleration * dt);
 
-        // Poll continuous thrust using InputController.isDown()
-        if (this.input.isDown('w')) this.board.thrust([0, 0, 1, 0]);
-        if (this.input.isDown('s')) this.board.thrust([0, 0, -1, 0]);
-        if (this.input.isDown('a')) this.board.thrust([-1, 0, 0, 0]);
-        if (this.input.isDown('d')) this.board.thrust([1, 0, 0, 0]);
-        if (this.input.isDown('q')) this.board.thrust([0, 1, 0, 0]);
-        if (this.input.isDown('e')) this.board.thrust([0, 0, 0, 1]);
+        this.board.update(dt);
 
         // Sync board score changes to ScoreManager
         const scoreDelta = this.board.score - this._lastBoardScore;
@@ -143,14 +140,12 @@ class AsteroidsGame extends BaseGame {
             }
         }
 
-        this.board.update(dt);
     }
 
     /** Override BaseGame.reset() — also reset scoring. */
     reset() {
         this.scoring.reset();
         this._lastBoardScore = 0;
-        this.lastTime = performance.now();
         super.reset();
     }
 

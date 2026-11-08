@@ -6,21 +6,21 @@ The core engine contains fundamental data structures that all other systems depe
 
 ## Critical Invariants
 
-### Quadray Constraint
+### Quadray Gauge
 
-**Always maintain:** `a + b + c + d = constant`
+Raw labels `q` and `q + t*(1,1,1,1)` represent the same spatial vector. Normalization selects the minimum-zero representative; component sums need not be constant.
 
 When modifying `Quadray.h`:
 
 - Call `normalized()` after arithmetic operations
-- Preserve the constraint in all conversions
-- Test round-trip: Quadray → Cartesian → Quadray
+- Preserve physical equivalence in conversions, not raw four-component equality
+- Test physical round trips up to common offset and floating roundoff
 
 ### Coordinate Precision
 
 - Use `float` for performance, not `double`
 - The `ROOT2` constant (√2) is critical for conversions
-- Grid alignment depends on exact coordinate math
+- Verify grid alignment over the supported floating coordinate range
 
 ## Modification Guidelines
 

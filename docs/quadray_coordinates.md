@@ -148,16 +148,17 @@ public:
 
 ## Advantages of Quadray Coordinates in QuadCraft
 
-Quadray coordinates give QuadCraft a natural fit to its tetrahedral grid —
-direct mapping to tetrahedral vertices, a simple distance formula for
-zero-sum normalized coordinates, and elegant integer coordinates for many
-polyhedra. See [Quadray Coordinates (Mathematics)](mathematics/quadray_coordinates.md#advantages-of-quadray-coordinates)
-for the full list with derivations.
+Quadrays give a tetrahedral basis and compact integer models of many polyhedra.
+Minimum-zero canonicalization and a sum-zero representative are different
+gauges of the same physical vector; canonical coordinates are not generally
+sum-zero. Use the gauge-correct metric rather than dropping its component-sum
+term. See [Quadray Coordinates (Mathematics)](mathematics/quadray_coordinates.md#advantages-of-quadray-coordinates).
 
 ## The S3 Constant
 
-The S3 constant (√(9/8) ≈ 1.06066) converts between XYZ (cubic) and
-Synergetics/IVM (tetrahedral) volume units:
+For QuadCraft's native `(X,Z,Y)/sqrt(2)` coordinates, S3 (√(9/8) ≈ 1.06066)
+converts Euclidean volume to native IVM tetra-units. QuadMath and symergetics
+default to unscaled XYZ, where the factor is 3/8 instead:
 
 ```cpp
 constexpr float S3 = 1.0606601717798212f; // sqrt(9/8)

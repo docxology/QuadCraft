@@ -2,7 +2,7 @@
  * SimAnt Combat System — Enhanced
  *
  * Features:
- * - Soldiers attack enemy ants within Quadray distance 1.5
+ * - Ants attack within raw Manhattan distance 1.5 (same/adjacent raw cell)
  * - Morale bonus: +3 damage when 3+ allies nearby
  * - Home bonus: +5 damage when attacking within distance 3 of your own nest
  * - Tunnel defense: -3 damage taken when the defender is inside their tunnel network
@@ -34,39 +34,38 @@ class CombatSystem {
     }
 
     /**
-     * Count allies of a faction within Quadray distance of a position.
+     * Count allies within raw graph distance, excluding an ant by identity.
      * @param {Array} ants — All alive ants
-     * @param {Quadray} pos — Center position
+     * @param {Ant} pos — Center ant (also identity excluded)
      * @param {number} faction — Faction to count
-     * @param {number} radius — Max Quadray distance
+     * @param {number} radius — Max raw Manhattan distance
      * @returns {number}
      */
     static countAlliesNear(ants, pos, faction, radius) {
         let count = 0;
         for (const a of ants) {
-            if (!a.alive || a.faction !== faction) continue;
-            const d = Quadray.distance(pos, a.toQuadray());
-            if (d <= radius && d > 0) count++; // Exclude self (d > 0)
+            if (!a.alive || a.faction !== faction || a === pos) continue;
+            if (GridUtils.manhattan(pos, a) <= radius) count++;
         }
         return count;
     }
 
     static resolveCombat(board) {
+        if (board.gameOver) return;
         const ants = board.ants.filter(a => a.alive);
         for (const ant of ants) {
             if (!ant.alive) continue; // May have died during this pass
 
-            // Find enemies within Quadray distance 1.5
-            const antQ = ant.toQuadray();
+            // Raw graph proximity: projected aliases are not gameplay neighbors.
             const enemies = ants.filter(e =>
                 e.alive && e.faction !== ant.faction &&
-                Quadray.distance(antQ, e.toQuadray()) <= 1.5
+                GridUtils.manhattan(ant, e) <= 1.5
             );
 
             if (enemies.length === 0) continue;
 
             // Calculate morale bonus: +3 if 3+ allies within distance 3
-            const allyCount = CombatSystem.countAlliesNear(ants, antQ, ant.faction, 3.0);
+            const allyCount = CombatSystem.countAlliesNear(ants, ant, ant.faction, 3.0);
             const moraleBonus = allyCount >= 3 ? 3 : (allyCount === 0 ? -2 : 0);
 
             // Base damage by caste
@@ -77,8 +76,7 @@ class CombatSystem {
 
                 // Home territory bonus: attacker gets +5 if within distance 3 of own nest
                 const nestCoords = board.nests[ant.faction];
-                const nestQ = new Quadray(nestCoords.a, nestCoords.b, nestCoords.c, nestCoords.d);
-                const distToNest = Quadray.distance(antQ, nestQ);
+                const distToNest = GridUtils.manhattan(ant, nestCoords);
                 const homeBonus = distToNest < 3 ? 5 : 0;
 
                 // Tunnel defense: defender takes -3 (reduced damage) if in own tunnel network
@@ -137,10 +135,9 @@ class CombatSystem {
         for (let f = 0; f < 2; f++) {
             const queen = board.queens[f];
             if (!queen || !queen.alive) continue;
-            const queenQ = queen.toQuadray();
             const nearbyEnemies = ants.filter(a =>
                 a.alive && a.faction !== f &&
-                Quadray.distance(a.toQuadray(), queenQ) <= 1.5
+                GridUtils.manhattan(a, queen) <= 1.5
             );
             for (const enemy of nearbyEnemies) {
                 enemy.hp -= 50; // Queen deals 50 damage

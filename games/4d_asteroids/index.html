@@ -114,7 +114,7 @@
                 if (asteroids.length > 0) {
                     let nearest = Infinity;
                     for (const a of asteroids) {
-                        nearest = Math.min(nearest, Quadray.distance(sq, a.toQuadray()));
+                        nearest = Math.min(nearest, b.distanceBetween(ship.pos, a.pos));
                     }
                     document.getElementById('syNearest').textContent = nearest.toFixed(2);
                 }
@@ -127,7 +127,7 @@
                 let total = 0, count = 0;
                 for (let i = 0; i < Math.min(asteroids.length, 20); i++) {
                     for (let j = i + 1; j < Math.min(asteroids.length, 20); j++) {
-                        total += Quadray.distance(asteroids[i].toQuadray(), asteroids[j].toQuadray());
+                        total += b.distanceBetween(asteroids[i].pos, asteroids[j].pos);
                         count++;
                     }
                 }
