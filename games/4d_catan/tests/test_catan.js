@@ -169,12 +169,31 @@ p4_0.resources = { wood: 2, brick: 2, wheat: 2, sheep: 2, ore: 0 }; // 8 total
 handleRobberRoll(gameMock);
 assert('Robber roll halves resources > 7', totalResources(p4_0) === 4);
 
-// Test Robber Steal
-p4_1.settlements.push({ a: 0, b: 0, c: 0, d: 0 }); // Next to tile 0
+// Robber theft is independent of the shuffled desert and prior discard draws.
+const robberTarget = b4.tiles.findIndex(tile => tile !== b4.robber);
+const targetTile = b4.tiles[robberTarget];
+p4_0.resources = { wood: 0, brick: 0, wheat: 0, sheep: 0, ore: 0 };
 p4_1.resources = { wood: 1, brick: 0, wheat: 0, sheep: 0, ore: 0 };
-b4.tiles[0].pos = { a: 0, b: 0, c: 0, d: 0 }; // align
-moveRobber(gameMock, 0);
-assert('Robber stole resource', p4_0.resources.wood > 0 || p4_1.resources.wood === 0);
+p4_1.settlements = [{ ...targetTile.pos }];
+assert('Robber moves to a different tile', moveRobber(gameMock, robberTarget));
+assert('Robber occupies selected tile', b4.robber === targetTile);
+assert('Robber transfers exactly one wood',
+    p4_0.resources.wood === 1 && p4_1.resources.wood === 0);
+assert('Robber conserves the resource total',
+    totalResources(p4_0) + totalResources(p4_1) === 1);
+assert('Robber leaves other resource types unchanged',
+    [p4_0, p4_1].every(player => Object.entries(player.resources)
+        .every(([resource, amount]) => resource === 'wood' || amount === 0)));
+
+p4_1.resources.wood = 1;
+const theftLedger = JSON.stringify([p4_0.resources, p4_1.resources]);
+assert('Robber rejects staying on its current tile',
+    !moveRobber(gameMock, robberTarget) && b4.robber === targetTile);
+assert('Rejected same-tile move preserves both inventories',
+    JSON.stringify([p4_0.resources, p4_1.resources]) === theftLedger);
+assert('Invalid robber target preserves occupancy and inventories',
+    !moveRobber(gameMock, -1) && b4.robber === targetTile &&
+    JSON.stringify([p4_0.resources, p4_1.resources]) === theftLedger);
 
 // Test Dev Cards
 p4_0.devCards.push(DevCardType.KNIGHT);

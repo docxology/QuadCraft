@@ -14,6 +14,10 @@ The registered launcher route is `python3.13 games/run_games.py --test --game ca
 
 Resource layout/player state, building and city upgrades, road/metadata/reset helpers, shared math, and trading/robber/development-card functions evaluated with test helper objects. This does not establish real browser turn-flow coverage.
 
+Robber fixtures choose a tile different from the current robber without rewriting
+tile positions. They isolate inventories from random discard draws and verify
+exact transfer, conservation and unchanged state after rejected moves.
+
 Tests exercise [game modules](../js/README.md) and only the shared dependencies they actually import. Their presence is not a blanket correctness, performance or coverage guarantee.
 
 ## Browser boundary
