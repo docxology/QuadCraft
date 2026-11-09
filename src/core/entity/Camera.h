@@ -1,6 +1,7 @@
 #pragma once
 
 #include <iostream>
+#include <array>
 #include "../coordinate/Vector3.h"
 #include "../coordinate/Quadray.h"
 
@@ -184,6 +185,7 @@ public:
         isDroneMode(false)
     {
         updateCameraVectors();
+        updatePositionQuadray();
         std::cout << "Camera initialized at position: " << position.x << ", " << position.y << ", " << position.z << std::endl;
         
         // Print initial quadray coordinates
@@ -196,7 +198,7 @@ public:
     }
     
     // Returns the view matrix calculated using Euler angles and the LookAt matrix
-    std::vector<float> getViewMatrix() {
+    std::array<float, 16> getViewMatrix() const {
         // Create the standard view matrix
         Vector3 target = position + front;
         Vector3 f = (target - position).normalized();
@@ -204,7 +206,7 @@ public:
         Vector3 u = r.cross(f);
         
         // Create view matrix (column-major, matching OpenGL/glUniform convention)
-        std::vector<float> view = {
+        std::array<float, 16> view = {
             r.x, u.x, -f.x, 0.0f,
             r.y, u.y, -f.y, 0.0f,
             r.z, u.z, -f.z, 0.0f,
@@ -333,6 +335,7 @@ public:
             zoom = 1.0f;
         if (zoom > 45.0f)
             zoom = 45.0f;
+        updateFrustum();
     }
     
     
@@ -387,7 +390,7 @@ public:
      */
     void updateFrustum() {
         // Build the frustum using the current camera parameters
-        frustum.update(position, front, up, right, fov, aspectRatio, zNear, zFar);
+        frustum.update(position, front, up, right, zoom, aspectRatio, zNear, zFar);
     }
     
     /**
@@ -397,15 +400,21 @@ public:
         return frustum;
     }
     
-    // Returns the projection matrix
-    std::vector<float> getProjectionMatrix(float aspect, float nearPlane, float farPlane) const {
-        // Calculate projection matrix values
-        float tanHalfFov = std::tan(radians(fov / 2.0f));
+    // Configure the shared terrain/overlay/frustum projection and return its
+    // column-major matrix without allocating. Scroll uses zoom as the sole FOV.
+    std::array<float, 16> getProjectionMatrix(float aspect, float nearPlane, float farPlane) {
+        if (aspectRatio != aspect || zNear != nearPlane || zFar != farPlane) {
+            aspectRatio = aspect;
+            zNear = nearPlane;
+            zFar = farPlane;
+            updateFrustum();
+        }
+        float tanHalfFov = std::tan(radians(zoom / 2.0f));
         float f = 1.0f / tanHalfFov;
         float nf = 1.0f / (nearPlane - farPlane);
         
         // Create perspective projection matrix (column-major)
-        std::vector<float> matrix = {
+        std::array<float, 16> matrix = {
             f / aspect, 0.0f, 0.0f, 0.0f,
             0.0f, f, 0.0f, 0.0f,
             0.0f, 0.0f, (farPlane + nearPlane) * nf, -1.0f,
@@ -417,7 +426,6 @@ public:
     
 private:
     // Camera parameters for frustum calculations
-    float fov = 45.0f;
     float aspectRatio = 16.0f / 9.0f;
     float zNear = 0.1f;
     float zFar = 500.0f;

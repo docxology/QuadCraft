@@ -4,8 +4,10 @@
 #include <cmath>
 #include <array>
 #include <string>
+#include <stdexcept>
 #include <algorithm>  // For std::sort and other algorithms
 #include "../core/coordinate/Quadray.h"
+#include "../render/FramebufferCapture.h"
 
 namespace QuadCraft {
 
@@ -120,16 +122,20 @@ bool Game::initialize() {
         return false;
     }
     
+    glfwInitialized = true;
     // Set OpenGL version
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+#ifdef __APPLE__
+    glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
+#endif
     
     // Create window
     window = glfwCreateWindow(width, height, title.c_str(), nullptr, nullptr);
     if (!window) {
         std::cerr << "Failed to create GLFW window" << std::endl;
-        glfwTerminate();
+        cleanup();
         return false;
     }
     
@@ -163,6 +169,12 @@ bool Game::initializeGL() {
     glewExperimental = GL_TRUE;
     if (glewInit() != GLEW_OK) {
         std::cerr << "Failed to initialize GLEW" << std::endl;
+        return false;
+    }
+    // GLEW can leave GL_INVALID_ENUM after extension discovery in a core context.
+    const GLenum loaderError = glGetError();
+    if (loaderError != GL_NO_ERROR && loaderError != GL_INVALID_ENUM) {
+        std::cerr << "OpenGL error during GLEW initialization: " << loaderError << std::endl;
         return false;
     }
     
@@ -200,7 +212,10 @@ void Game::initializeWorld() {
     updateChunkMeshes();
 }
 
-void Game::run() {
+void Game::run(unsigned int maxFrames, const std::string& capturePath) {
+    if (!capturePath.empty() && maxFrames == 0) {
+        throw std::invalid_argument("Framebuffer capture requires a bounded frame count");
+    }
     // Reset timer
     lastFrame = static_cast<float>(glfwGetTime());
     
@@ -209,8 +224,9 @@ void Game::run() {
     const float maxDelta = 0.05f;  // Maximum delta time (20 FPS minimum)
     const float targetDelta = 0.016f;  // Target 60 FPS
     
+    unsigned int frames = 0;
     // Main game loop
-    while (!glfwWindowShouldClose(window)) {
+    while (!glfwWindowShouldClose(window) && (maxFrames == 0 || frames < maxFrames)) {
         // Record frame start time
         frameStart = static_cast<float>(glfwGetTime());
         
@@ -229,6 +245,10 @@ void Game::run() {
         
         // Render frame
         render();
+        ++frames;
+        if (!capturePath.empty() && maxFrames != 0 && frames == maxFrames) {
+            captureFramebuffer(capturePath, width, height);
+        }
         
         // Swap buffers and poll events
         glfwSwapBuffers(window);
@@ -253,12 +273,14 @@ void Game::run() {
             }
         }
         
-        // Additional safety check - break out if something's taking too long
-        if (static_cast<float>(glfwGetTime()) - frameStart > 1.0f) {
-            // If a single frame takes more than a second, something is very wrong
-            // Try to prevent the application from appearing to freeze
+        // Interactive pacing may stop after a slow frame. Bounded runs must
+        // finish their requested work even when synchronous chunk loading is slow.
+        if (maxFrames == 0 && static_cast<float>(glfwGetTime()) - frameStart > 1.0f) {
             break;
         }
+    }
+    if (maxFrames != 0 && frames != maxFrames) {
+        throw std::runtime_error("Window closed before completing requested frames");
     }
 }
 
@@ -266,32 +288,18 @@ void Game::update() {
     // Process input
     input->processInput(deltaTime, *camera, *world);
     
-    // Check for camera movement and mark chunks as dirty if the camera has moved
-    static Vector3 lastCameraPos = camera->position;
-    float movementDistance = (camera->position - lastCameraPos).length();
-    
-    // More aggressive chunk updates based on movement magnitude
-    if (movementDistance > 0.05f) {  // Reduced threshold from 0.1f to 0.05f
-        // Camera has moved, force redraw with intensity based on movement distance
-        world->markAllChunksDirty();
-        
-        // Also trigger chunk unloading/loading more frequently with larger movements
-        if (movementDistance > 1.0f) {
-            // For larger movements, update chunks more aggressively
-            Quadray cameraQuadray = camera->getPositionQuadray();
-            world->updateChunks(cameraQuadray);
+    // Meshes are world-space: camera motion changes visibility, not geometry.
+    // Loading marks new chunks dirty; block edits retain their own invalidation.
+    const Quadray cameraQuadray = camera->getPositionQuadray();
+    world->updateChunks(cameraQuadray);
+    for (auto it = chunkMeshes.begin(); it != chunkMeshes.end();) {
+        if (world->getChunks().find(it->first) == world->getChunks().end()) {
+            it = chunkMeshes.erase(it);
+        } else {
+            ++it;
         }
-        
-        // Update the last camera position
-        lastCameraPos = camera->position;
     }
-
-    // Always update chunks around the player to ensure we have geometry
-    Quadray cameraQuadray = camera->getPositionQuadray();
-    world->generateChunksAround(cameraQuadray, 3);
-    
-    // Update chunk mesh generation with higher priority for closer chunks
-    updateChunkMeshes(15);  // Increased from 10 to 15 to process more chunks per frame
+    updateChunkMeshes(15);
 }
 
 void Game::updateChunkMeshes(int maxChunksToProcess) {
@@ -335,6 +343,10 @@ void Game::updateChunkMeshes(int maxChunksToProcess) {
 }
 
 void Game::render() {
+    // GLFW window size is not framebuffer size on HiDPI displays.
+    glfwGetFramebufferSize(window, &width, &height);
+    if (width <= 0 || height <= 0) return;
+    glViewport(0, 0, width, height);
     // Clear the color and depth buffer
     glClearColor(0.2f, 0.6f, 0.9f, 1.0f);  // Sky blue color
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -387,20 +399,7 @@ void Game::render() {
                   return a.second < b.second;
               });
     
-    // Trigger chunk generation around the player's current position
-    // This ensures we always have chunks to render around the player
-    Quadray cameraQuadray = camera->getPositionQuadray();
-    world->generateChunksAround(cameraQuadray, TetraChunk::CHUNK_GENERATION_RADIUS);
-    
-    // Calculate camera movement since last frame
-    static Vector3 lastCameraPos = cameraPos;
-    float cameraMoveDistance = (cameraPos - lastCameraPos).length();
-    
-    // If the camera has moved significantly, update chunks
-    if (cameraMoveDistance > 0.05f) {  // Reduced threshold for more responsive updates
-        world->updateChunks(cameraQuadray);
-        lastCameraPos = cameraPos;
-    }
+    // World loading/unloading belongs to update(), never to rendering.
     
     // Reset all chunk visibility flags
     for (auto& [key, chunk] : world->getChunks()) {
@@ -440,7 +439,7 @@ void Game::render() {
         chunk->isVisible = true;
         
         // Calculate model matrix for the chunk (identity matrix, as the vertices are already in world space)
-        std::vector<float> model = {
+        constexpr std::array<float, 16> model = {
             1.0f, 0.0f, 0.0f, 0.0f,
             0.0f, 1.0f, 0.0f, 0.0f,
             0.0f, 0.0f, 1.0f, 0.0f,
@@ -530,12 +529,12 @@ void Game::drawCoordinateOverlay() {
     auto view = camera->getViewMatrix();
     chunkShader->setMat4("view", view.data());
     
-    float aspect = static_cast<float>(width) / static_cast<float>(height);
-    auto projection = createProjectionMatrix(camera->zoom, aspect, 0.1f, 100.0f);
+    auto projection = camera->getProjectionMatrix(
+        static_cast<float>(width) / static_cast<float>(height), 0.1f, 500.0f);
     chunkShader->setMat4("projection", projection.data());
     
     // Identity model matrix
-    std::vector<float> model = {
+    constexpr std::array<float, 16> model = {
         1.0f, 0.0f, 0.0f, 0.0f,
         0.0f, 1.0f, 0.0f, 0.0f,
         0.0f, 0.0f, 1.0f, 0.0f,
@@ -557,34 +556,23 @@ void Game::drawCoordinateOverlay() {
 }
 
 void Game::cleanup() {
-    // Clean up resources
+    // GL owners must die before the context, including partial initialization.
+    if (window) glfwMakeContextCurrent(window);
+    input.reset();
+    chunkMeshes.clear();
+    if (chunkShader) glUseProgram(0);
+    chunkShader.reset();
+    chunkMesher.reset();
+    camera.reset();
+    world.reset();
     if (window) {
         glfwDestroyWindow(window);
         window = nullptr;
     }
-    
-    // Terminate GLFW
-    glfwTerminate();
-}
-
-std::vector<float> Game::createProjectionMatrix(float fov, float aspect, float nearPlane, float farPlane) const {
-    // Convert FOV from degrees to radians
-    float radFov = fov * 0.01745329251f; // pi/180
-    
-    // Calculate matrix values
-    float tanHalfFov = std::tan(radFov / 2.0f);
-    float f = 1.0f / tanHalfFov;
-    float nf = 1.0f / (nearPlane - farPlane);
-    
-    // Create perspective projection matrix (column-major)
-    std::vector<float> matrix = {
-        f / aspect, 0.0f, 0.0f, 0.0f,
-        0.0f, f, 0.0f, 0.0f,
-        0.0f, 0.0f, (farPlane + nearPlane) * nf, -1.0f,
-        0.0f, 0.0f, 2.0f * farPlane * nearPlane * nf, 0.0f
-    };
-    
-    return matrix;
+    if (glfwInitialized) {
+        glfwTerminate();
+        glfwInitialized = false;
+    }
 }
 
 bool Game::isChunkInFrustum(const Vector3& chunkCenter, float radius) {

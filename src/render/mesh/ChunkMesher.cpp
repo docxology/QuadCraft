@@ -119,9 +119,10 @@ std::shared_ptr<Mesh> ChunkMesher::createMeshForChunk(const TetraChunk& chunk) {
                 Vector3 edge2 = tetraVerts[faceIndices[2]] - tetraVerts[faceIndices[0]];
                 Vector3 normal = edge1.cross(edge2).normalized();
                 
-                // If normal points toward the opposite vertex, flip it
+                // CCW winding and the lighting normal must both point outward.
                 Vector3 toOpposite = tetraVerts[i] - tetraVerts[faceIndices[0]];
                 if (normal.dot(toOpposite) > 0) {
+                    std::swap(faceIndices[1], faceIndices[2]);
                     normal = normal * -1.0f;
                 }
                 

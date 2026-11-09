@@ -18,14 +18,16 @@ The JavaScript portfolio does not call the native engine or use its `World` obje
 
 `Game::run()` measures GLFW elapsed time in **seconds**, clamps each update to 0.05 seconds, calls `update()` and `render()`, then swaps/polls. Its frame limiter uses a busy wait, not a fixed-step simulation. A long stall therefore loses simulation time; this is not deterministic replay.
 
-`update()` processes input, marks chunks dirty after camera movement, requests generation and rebuilds a bounded number of meshes. Despite a source comment about distance priority, `updateChunkMeshes()` iterates the dirty-chunk collection without sorting it. Generation and meshing run synchronously; there is no worker pool or job system.
+`update()` processes input, loads/unloads chunks, evicts unloaded world-space meshes with the live GL context and rebuilds up to fifteen dirty chunks. Camera movement changes visibility but does not itself dirty geometry. Newly generated chunks and block edits retain their dirty state; edits invalidate only the edited chunk, leaving neighboring boundary faces potentially stale. `updateChunkMeshes()` iterates the dirty collection without sorting it. Generation and meshing run synchronously; there is no worker pool or job system.
+
+`run(unsigned int maxFrames=0,const std::string& capturePath="")` retains interactive defaults. A positive bound completes that many renders or throws on early closure; final-frame capture requires a bound. The interactive one-second slow-frame exit does not truncate bounded runs. `cleanup()` restores its context and releases input, mesh and shader owners before destroying the window/terminating GLFW; repeated cleanup is safe. This ownership contract is not an observed driver pass: see [real-GL verification](testing_guide.md#real-opengl-rendering-and-framebuffer-artifacts).
 
 ## World-to-render data flow
 
 1. `World` converts physical quadrays to Cartesian positions and floors them into three-dimensional chunk keys.
 2. `TetraChunk` stores non-air elements under chunk-local quadray keys.
 3. `TerrainGenerator` samples deterministic sums of sine waves at multiple octaves. It has no public seed parameter and is not a Perlin/simplex library despite its helper's name.
-4. `ChunkMesher::createMeshForChunk()` emits individual triangular tetrahedron faces, checking neighbor blocks for air/transparency and adding the Cartesian chunk origin.
+4. `ChunkMesher::createMeshForChunk()` emits outward CCW triangular faces with aligned normals, checks reflected-neighbor blocks for air/transparency and adds the Cartesian chunk origin.
 5. `Game` stores meshes by chunk key and renders with view/projection matrices and an identity model transform.
 
 This is not marching tetrahedra over a scalar isosurface. UV fields exist but generated texture coordinates are zero and the fragment shader uses vertex colors. Distance/frustum decisions and draw budgets are present; a multi-resolution terrain LOD mesh pipeline is not.

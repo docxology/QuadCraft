@@ -515,6 +515,9 @@ class SimAntBoard extends BaseBoard {
             if (ant.hp <= 0) {
                 ant.alive = false;
                 ant.deathTick = this.tick;
+                const deaths = ant.faction === FACTION_YELLOW ? 'yellowDeaths' : 'redDeaths';
+                this.stats[deaths]++;
+                return;
             }
         }
 

@@ -113,12 +113,16 @@ class AsteroidsGame extends BaseGame {
         if (this.loop.paused || this.board.gameOver) return;
         // Original tuning: 0.3 velocity units per 16 ms tick.
         const acceleration = 0.3 / 0.016;
-        if (this.input.isDown('w')) this.board.thrust([0, 0, 1, 0], acceleration * dt);
-        if (this.input.isDown('s')) this.board.thrust([0, 0, -1, 0], acceleration * dt);
-        if (this.input.isDown('a')) this.board.thrust([-1, 0, 0, 0], acceleration * dt);
-        if (this.input.isDown('d')) this.board.thrust([1, 0, 0, 0], acceleration * dt);
-        if (this.input.isDown('q')) this.board.thrust([0, 1, 0, 0], acceleration * dt);
-        if (this.input.isDown('e')) this.board.thrust([0, 0, 0, 1], acceleration * dt);
+        // Combine held raw-axis acceleration before applying the board's speed cap.
+        const thrust = [
+            Number(this.input.isDown('d')) - Number(this.input.isDown('a')),
+            Number(this.input.isDown('q')),
+            Number(this.input.isDown('w')) - Number(this.input.isDown('s')),
+            Number(this.input.isDown('e')),
+        ];
+        if (thrust.some(component => component !== 0)) {
+            this.board.thrust(thrust, acceleration * dt);
+        }
 
         this.board.update(dt);
 

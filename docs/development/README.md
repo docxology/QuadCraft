@@ -5,9 +5,10 @@
 ## Start and verify
 
 - [Setup: native build or portfolio HTTP serving](setup_guide.md)
-- [Tests: native, Node/Python, structure, and real Chromium](testing_guide.md)
+- [Tests: CPU native, real OpenGL/framebuffer artifacts, Node/Python, structure and Chromium](testing_guide.md)
 - [Runtime ownership and data flow](architecture.md)
 - [Actual C++ interfaces and JavaScript differences](api_reference.md)
+- [Bounded native capture](setup_guide.md#bounded-framebuffer-capture) and [Mesa/Xvfb checks](testing_guide.md#real-opengl-rendering-and-framebuffer-artifacts)
 
 These pages describe the development checkout. Commands are instructions, not saved passing results. Historical HTML/JSP experiments are separate from the thirty-game portfolio and from the C++17 executable.
 

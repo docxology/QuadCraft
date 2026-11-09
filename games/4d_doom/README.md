@@ -20,7 +20,7 @@ Serve the parent `games/` tree, not this game directory alone: [index.html](inde
 
 ### Clock and lifecycle
 
-Doom has its own fixed 60 Hz accumulator, not BaseGame/GameLoop. `advanceFrame(elapsedMs)` takes milliseconds, caps each interval at 250 ms and retains fractional ticks. `settleTime(now)` consumes old-input time before live input changes. Movement, weapon cooldowns and enemy logic are per simulation tick; FX receive milliseconds.
+Doom has its own fixed 60 Hz accumulator, not BaseGame/GameLoop. `advanceFrame(elapsedMs)` takes milliseconds, caps each interval at 250 ms and retains fractional ticks. Before mutating live input, `settleTime(now)` consumes complete old-input ticks and keeps the fractional remainder; subsequent ticks use then-current input. Held-input transitions therefore have up to one tick of quantization, not sub-tick old/new integration. Primary weapon press remains immediate after settlement, rather than all commands waiting for the next tick. Movement, cooldowns and enemy logic are per simulation tick; FX receive milliseconds.
 
 ## Key Controls
 

@@ -46,7 +46,7 @@ These offsets have mean zero, but **are not regular**, despite the source commen
 
 ### Tetrahedral Mesh Generation
 
-[ChunkMesher](../../src/render/mesh/ChunkMesher.cpp) obtains the four native vertices, insets them slightly toward their vertex mean and adds the Cartesian chunk origin. For each candidate exposed face it emits a triangle, calculates an outward normal and applies block/face colors. Current texture coordinates are unused zeros. Its neighbor query renders a face when the candidate neighbor is air or transparent; that lookup is not proof of exact face-sharing topology.
+[ChunkMesher](../../src/render/mesh/ChunkMesher.cpp) obtains the four native vertices, insets them slightly toward their vertex mean and adds the Cartesian chunk origin. For each candidate exposed face it emits an outward counter-clockwise triangle with a matching outward normal, swapping the second/third vertex order when the initial cross product points inward. Block/face colors are applied and texture coordinates remain unused zeros. Its neighbor query renders a face when the reflected candidate neighbor is air or transparent; correct emitted winding does not prove exact face-sharing topology. Edits invalidate only their own chunk, so neighbor boundary faces can remain stale until explicit invalidation or reload; see [chunk limits](../development/chunk_system.md#dirty-meshes-and-boundaries).
 
 ### Vertex Positions
 

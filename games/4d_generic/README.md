@@ -43,7 +43,15 @@ It is rank three, with basis radius `sqrt(3/2)` and distance 2 between distinct 
 
 The loop accumulates browser milliseconds, caps a frame interval at 250 ms and calls `update(tickRate/1000)` for each due tick. Logical-step games may ignore that dt; continuous games must not multiply twice. Stopping the loop does not detach input or cancel game-owned timeouts/intervals. Check each controller before claiming pause freezes commands or reset cancels external work. Doom owns a separate ES-module/fixed-tick controller; its `js/quadray.js` is an adapter, not a second math implementation.
 
-`ScoreManager` accepts `storageKey`, not a generic `key` option; it tracks increasing high scores, not an implemented `highScoreMode: 'low'`. `TurnManager` records `{player,move,turnNumber}` wrappers, not arbitrary flat game records. Graph-field updates exchange equal/opposite edge flux; they are conservative transport, not symmetric-normalized heat. Inactive masks disable edges without deleting stored values.
+`ScoreManager` accepts `storageKey`, not a generic `key` option; it tracks increasing high scores, not an implemented `highScoreMode: 'low'`. `TurnManager` records `{player,move,turnNumber}` wrappers, not arbitrary flat game records.
+
+## Finite conservative graph transport
+
+`ConservativeGraphField(size,edges).step(values,alpha,out=null,active=null)` validates finite fields/alpha and matching lengths before writing output. Alpha is a dimensionless `[0,1]` mixing fraction. Output cannot alias the input, including overlapping typed-array views. Masks disable edges without deleting stored values or recomputing the full graph's maximum degree; isolated values remain unchanged.
+
+The ordinary edge-flux path reuses a Float64 workspace. Larger-than-`Number.MAX_VALUE/4` fields and underflow-risk coefficients/products use exact binary-rational convex accumulation with one final ties-to-even binary64 rounding per value. The guard accounts for incident absolute flux `<=2*M` plus old state `<=3*M`, not just safe edge subtraction. Ordinary updates are not globally correctly rounded, strictly range-exact or bit-identical across languages. Sum conservation is subject to floating-point rounding. This is not symmetric-normalized heat or a calibrated physical diffusion clock.
+
+The [API reference](../doc/shared_modules_reference.md#conservativegraphfield) owns detailed validation and allocation rules; [portfolio contracts](../../docs/games.md#conservative-transport-is-not-symmetric-normalized-heat) distinguish SimAnt's raw graph and explicit sources/decay/Float32 storage. The [authoritative suite guide](https://github.com/docxology/symergetics/blob/main/docs/synergetics-suite.md) links observed interoperability outcomes, including extreme high-degree stars, masks, isolated values and signed-zero identity; no timeless outcome count or universal bit-exactness is implied.
 
 ## Tests and navigation
 

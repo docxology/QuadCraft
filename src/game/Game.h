@@ -19,8 +19,9 @@ public:
     // Initialize game systems
     bool initialize();
     
-    // Run the game loop
-    void run();
+    // Bounded runs complete maxFrames and capture the final real framebuffer,
+    // or throw on early window closure/read/write failure. Capture needs a bound.
+    void run(unsigned int maxFrames = 0, const std::string& capturePath = "");
     
     // Clean up resources
     void cleanup();
@@ -39,6 +40,7 @@ public:
     bool isChunkInFrustum(const Vector3& center, float size);
     
 private:
+    friend struct NativeGameplayProbe;
     // Window dimensions and title
     int width;
     int height;
@@ -46,6 +48,7 @@ private:
     
     // GLFW window
     GLFWwindow* window;
+    bool glfwInitialized = false;
     
     // Game systems
     std::unique_ptr<World> world;
@@ -90,10 +93,6 @@ private:
     
     // Draw coordinate overlay
     void drawCoordinateOverlay();
-    
-    // Create a perspective projection matrix
-    std::vector<float> createProjectionMatrix(float fov, float aspect, float nearPlane, float farPlane) const;
-    
     
     // Performance reporting
     void reportFrameTime(float deltaTime);

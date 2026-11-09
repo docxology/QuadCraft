@@ -119,6 +119,63 @@ assert(b.tick === 50, `50 ticks completed`);
 const aliveAnts = b.ants.filter(a => a.alive);
 assert(aliveAnts.length > 0, `Some ants still alive at tick 50 (${aliveAnts.length})`);
 
+// Starvation must settle before pickup, delivery, deposits or movement.
+for (const faction of [FACTION_YELLOW, FACTION_RED]) {
+    for (const carrying of [0, 7]) {
+        const starving = new SimAntBoard(8, { seed: 31415 });
+        starving.ants = [...starving.queens];
+        starving.grid.fill(TYPE_BEDROCK);
+        const queen = starving.queens[faction];
+        starving.spawnAnt(queen.a, queen.b, queen.c, queen.d, faction, CASTE_WORKER);
+        const worker = starving.ants[starving.ants.length - 1];
+        starving.setCell(worker, TYPE_FOOD);
+        starving.setCell({ a: worker.a + 1, b: worker.b, c: worker.c, d: worker.d }, TYPE_EMPTY);
+        worker.energy = 0;
+        worker.hp = carrying ? 0.1 : 0.05;
+        worker.carrying = carrying;
+        starving.tick = 17;
+        const stored = starving.foodStored[faction];
+        const deaths = faction === FACTION_YELLOW ? 'yellowDeaths' : 'redDeaths';
+        const collected = faction === FACTION_YELLOW ? 'yellowFoodCollected' : 'redFoodCollected';
+        starving.updateAnt(worker);
+        assert(!worker.alive && worker.hp <= 0 && worker.deathTick === 17,
+            `Faction ${faction} starvation records the terminal tick`);
+        assert(worker.energy === -0.05 && worker.carrying === carrying &&
+            starving.getCell(queen) === TYPE_FOOD && starving.foodStored[faction] === stored &&
+            starving.stats[collected] === 0,
+            'A starving corpse cannot pick up, deliver food or refill energy');
+        assert(GridUtils.manhattan(worker, queen) === 0 && worker.explored.size === 0 &&
+            starving.pheromones.every(value => value === 0),
+            'A starving corpse cannot move, explore or deposit pheromones');
+        assert(starving.stats[deaths] === 1 && starving.antCount(faction) === 1,
+            'Starvation records one colony loss and releases population capacity');
+        starving.updateAnt(worker);
+        assert(worker.energy === -0.05 && worker.deathTick === 17 && starving.stats[deaths] === 1,
+            'Repeated dead-ant decisions cannot change state or double-count death');
+        starving.update();
+        assert(!starving.ants.includes(worker) && starving.stats[deaths] === 1 &&
+            starving.stats.yellowKills === 0 && starving.stats.redKills === 0,
+            'Subsequent combat settlement removes the corpse without awarding a kill');
+    }
+}
+{
+    const hungry = new SimAntBoard(8, { seed: 31415 });
+    hungry.ants = [...hungry.queens];
+    hungry.grid.fill(TYPE_BEDROCK);
+    const queen = hungry.queens[FACTION_YELLOW];
+    hungry.spawnAnt(queen.a, queen.b, queen.c, queen.d, FACTION_YELLOW, CASTE_WORKER);
+    const worker = hungry.ants[hungry.ants.length - 1];
+    hungry.setCell(worker, TYPE_FOOD);
+    worker.energy = 0;
+    worker.hp = 0.2;
+    const stored = hungry.foodStored[FACTION_YELLOW];
+    hungry.updateAnt(worker);
+    assert(worker.alive && worker.hp === 0.1 && worker.energy === 100 && worker.deathTick === -1 &&
+        hungry.foodStored[FACTION_YELLOW] === stored + 10 && hungry.stats.yellowFoodCollected === 10 &&
+        hungry.stats.yellowDeaths === 0,
+        'A worker surviving hunger damage can still collect and deliver food normally');
+}
+
 // ─── Group 6: Combat System ───
 console.log('\n── Combat System ──');
 const cb = new SimAntBoard(6);

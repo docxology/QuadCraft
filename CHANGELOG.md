@@ -1,6 +1,30 @@
 # Changelog
 
-## Unreleased
+## v0.6.0 — 2026-11-09
+
+### Finite fields and gameplay decisions
+
+- Reject nonfinite shared graph inputs before writing caller-owned output; preserve non-aliasing synchronous updates, isolated values and full-graph maximum-degree mask semantics.
+- Keep the ordinary edge-flux fast path; use exact binary-rational convex accumulation with one final ties-to-even rounding for overflow/underflow-risk fields. The overflow guard reserves accumulated-flux and old-state headroom at `MAX_VALUE/4`, fixing high-degree stars that overflowed at or below the former `MAX_VALUE/2` guard. Ordinary arithmetic is not globally correctly rounded or bit-exact across languages.
+- Sum Asteroids' held raw-axis acceleration once per update before the existing coefficient-space speed cap. Opposing W/S and A/D inputs cancel before clamping, without changing collision units or tuning.
+- Stop a SimAnt ant's decision immediately after fatal hunger, record one faction death and the death tick, and prevent posthumous deposits, pickup, delivery or movement. Existing corpse retention/removal remains unchanged.
+- Clarify Doom's existing 60 Hz input quantization: settle complete old-input ticks, retain the fractional remainder, then use current input on subsequent ticks. Immediate weapon presses still execute immediately after settlement.
+
+### Native geometry, camera and capture ownership
+
+- Emit outward counter-clockwise tetrahedron face order and matching lighting normals, rather than correcting only normals. Reflected-neighbor visibility, nonregular element geometry, sampled picking and floating-key limitations remain.
+- Return camera matrices as fixed `std::array<float,16>` values; use zoom as the authoritative field of view for terrain, overlay and frustum. Projection aspect/near/far configuration updates the same frustum, and construction initializes the cached quadray position.
+- Stop camera-only remeshing of world-space vertices. Update owns loading/unloading, evicts unloaded mesh owners with a live context and rebuilds up to fifteen dirty chunks per update. Block edits dirty only the edited chunk; cross-chunk neighbor faces can remain stale until explicit invalidation or reload.
+- Release mesh/shader owners in their current live GL context before window destruction; cleanup is idempotent, including partially populated ownership.
+- Add `--frames N --capture output.ppm`: bounded runs finish the requested frames or fail, including early window closure; synchronous loading exceeding one second does not truncate them. Capture writes and checks the final real back buffer as a top-down binary PPM.
+- Add graphics-free camera coverage and real-GL geometry/framebuffer, gameplay/lifetime and application consumers. The application gate removes its stale capture and independently checks that exact PPM's complete payload and visible variation; CI uploads `native-mesa-application` separately from `native-mesa-framebuffers`. Real populated partial cleanup is covered, not every injected initialization failure.
+
+### Coordinated source and artifact evidence
+
+- Align CMake and the private browser-gate package at 0.6.0, retaining locked Playwright dependencies. Chess game/save/state versions are independent.
+- Link the authoritative [suite guide](https://github.com/docxology/symergetics/blob/main/docs/synergetics-suite.md) for QuadMath 0.7.0 / symergetics 1.4.0 / QuadCraft v0.6.0 coordinate conversion, observed interoperability outcomes and exact-ref source/package evidence boundaries. Source receipts do not establish wheel/sdist contents, universal byte reproducibility or binary deployment.
+
+Verification status: these notes describe source changes, not a passing receipt for this release. Native real-GL builds, framebuffer artifacts, full project gates and coordinated artifact checks require actual execution. See the [workflow index](https://github.com/docxology/QuadCraft/actions) and [testing commands](docs/development/testing_guide.md); older dated results below remain historical.
 
 ### Captured gameplay and paused-world rendering
 

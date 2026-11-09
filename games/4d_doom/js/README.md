@@ -26,7 +26,7 @@ doom_game.js (ES-module import; dependencies import explicitly)
 
 ## Data and update boundary
 
-Doom has its own fixed 60 Hz accumulator, not BaseGame/GameLoop. `advanceFrame(elapsedMs)` takes milliseconds, caps each interval at 250 ms and retains fractional ticks. `settleTime(now)` consumes old-input time before live input changes. Movement, weapon cooldowns and enemy logic are per simulation tick; FX receive milliseconds.
+Doom owns its fixed 60 Hz accumulator, not BaseGame/GameLoop. `advanceFrame(elapsedMs)` takes milliseconds, caps intervals at 250 ms and retains fractional ticks. `settleTime(now)` consumes complete old-input ticks before live input mutation; retained fractional time contributes to later ticks using then-current input. This is up-to-one-tick held-input quantization, not sub-tick splitting. Primary weapon press executes immediately after settlement. Movement/cooldowns/enemy logic are per tick; FX receive milliseconds. See [the game timing contract](../README.md#clock-and-lifecycle).
 
 Keep raw occupancy distinct from physical distance and AB-slice view distance. Preserve closed-boundary/tie semantics in firstObstruction/traceShot and consume elapsed input time exactly once. The ESM Quadray adapter must reuse the canonical shared class.
 

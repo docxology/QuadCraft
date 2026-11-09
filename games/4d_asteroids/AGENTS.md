@@ -12,7 +12,7 @@ Read the [game guide](README.md), [repository instructions](../../AGENTS.md) and
 
 Keep raw periodic state separate from physical nearest-image distance. Preserve the independent seeded RNG and event-time ordering, including residual fragment flight and pending respawn cancellation on reset.
 
-`GameLoop` calls `update(dt)` with fixed seconds at a 16 ms tick. Thrust is integrated with that dt; UFO fire, projectile expiry, shields and the 1.5-second respawn are simulation-time events. The shared loop caps catch-up at 250 ms. Pause rejects gameplay commands as well as updates.
+`GameLoop` calls `update(dt)` with fixed seconds at a 16 ms tick. Sum held raw-axis acceleration before one thrust call and the existing coefficient-space speed cap; opposing W/S and A/D cancel before clamping. UFO fire, projectile expiry, shields and the 1.5-second respawn are simulation-time events. The shared loop caps catch-up at 250 ms. Pause rejects gameplay commands as well as updates.
 
 ## Supported scope
 
