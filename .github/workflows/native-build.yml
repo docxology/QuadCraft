@@ -36,7 +36,7 @@ jobs:
 
       - name: Preserve real native framebuffer captures
         if: always()
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # actions/upload-artifact@v6
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # actions/upload-artifact@v7.0.2
         with:
           name: native-mesa-framebuffers
           path: ${{ runner.temp }}/quadcraft-native/native-artifacts/
@@ -44,7 +44,7 @@ jobs:
 
       - name: Preserve requested application framebuffer
         if: always()
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # actions/upload-artifact@v6
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # actions/upload-artifact@v7.0.2
         with:
           name: native-mesa-application
           path: ${{ runner.temp }}/quadcraft-native/native-artifacts/application.ppm
