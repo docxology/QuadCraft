@@ -48,6 +48,10 @@ This uses actual storage methods, not terrain containment or exact face picking.
 
 [`ChunkMesher.cpp`](../../src/render/mesh/ChunkMesher.cpp) implements `createMeshForChunk(const TetraChunk&)` and returns `shared_ptr<Mesh>`. It needs an OpenGL context for mesh upload. [`Camera.h`](../../src/core/entity/Camera.h) uses Cartesian position and Euler-angle camera state; it is not the browser experiment's quaternion-array camera.
 
+`Camera::getViewMatrix() const` returns `std::array<float,16>` in column-major order. Non-const `getProjectionMatrix(float aspect,float nearPlane,float farPlane)` returns the same fixed-size type and configures the shared frustum. `zoom` is the sole vertical FOV (degrees); scroll updates projection/frustum consistently, and terrain/overlay use the same aspect/near/far. The constructor initializes the cached quadray position; `getQuadrayPosition()` converts current position, while `getPositionQuadray()` returns that cache.
+
+[`Game.h`](../../src/game/Game.h) exposes `run(unsigned int maxFrames=0,const std::string& capturePath="")`. A positive frame bound completes or throws; capture requires a bound and writes the final actual back buffer. [`main.cpp`](../../src/main.cpp) exposes `--frames N --capture output.ppm` and converts failures to nonzero exit. `cleanup()` releases GL owners in their live current context before destroying the window and is safe to repeat. See [native capture commands and limits](testing_guide.md#real-opengl-rendering-and-framebuffer-artifacts).
+
 [`Input.h`](../../src/game/Input.h) takes a GLFW window, camera, world and `GameInputDelegate&`; `processInput(float deltaTime, Camera&, World&)` receives seconds. The delegate exposes `toggleWireframe()` and `toggleOverlay()`.
 
 ## JavaScript is not a C++ binding

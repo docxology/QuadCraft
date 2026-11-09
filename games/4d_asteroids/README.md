@@ -20,7 +20,7 @@ Entity positions wrap independently in `[0,size)^4`. Physical sphere collisions 
 
 ### Clock and lifecycle
 
-`GameLoop` calls `update(dt)` with fixed seconds at a 16 ms tick. Thrust is integrated with that dt; UFO fire, projectile expiry, shields and the 1.5-second respawn are simulation-time events. The shared loop caps catch-up at 250 ms. Pause rejects gameplay commands as well as updates.
+`GameLoop` calls `update(dt)` with fixed seconds at a 16 ms tick. The controller sums held raw-axis acceleration once (`0.3 / 0.016` coefficient-velocity units per second) and applies `acceleration * dt` before the existing raw coefficient-space speed cap. W/S and A/D cancel before clamping; simultaneous nonopposing axes combine without sequential cap bias. UFO fire, projectile expiry, shields and the 1.5-second respawn are simulation-time events. The shared loop caps catch-up at 250 ms. Pause rejects gameplay commands as well as updates.
 
 ## Key Controls
 

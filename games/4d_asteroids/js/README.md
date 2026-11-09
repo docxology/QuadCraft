@@ -20,7 +20,7 @@ asteroids_game.js
 
 ## Data and update boundary
 
-`GameLoop` calls `update(dt)` with fixed seconds at a 16 ms tick. Thrust is integrated with that dt; UFO fire, projectile expiry, shields and the 1.5-second respawn are simulation-time events. The shared loop caps catch-up at 250 ms. Pause rejects gameplay commands as well as updates.
+`GameLoop` calls `update(dt)` with fixed seconds at a 16 ms tick. The controller sums held raw-axis acceleration, cancelling opposing keys, then calls thrust once with `acceleration * dt` before the existing coefficient-space speed cap. See [the game timing contract](../README.md#clock-and-lifecycle) for units. UFO fire, projectile expiry, shields and the 1.5-second respawn are simulation-time events. The shared loop caps catch-up at 250 ms. Pause rejects gameplay commands as well as updates.
 
 Keep raw periodic state separate from physical nearest-image distance. Preserve the independent seeded RNG and event-time ordering, including residual fragment flight and pending respawn cancellation on reset.
 

@@ -27,6 +27,10 @@ Workers and scouts remember the raw sites they have visited. Revisiting a site c
 
 Any food-carrying worker, scout or soldier plans a shortest traversable raw route to within Manhattan distance **less than three** of its living queen. Route search may initially move farther from the nest to go around obstacles. Each ant consumes its own route one step at a time, validates the next step against live terrain and replans if blocked or if the queen moves. There is no cached world-distance field. An unreachable carrier waits and retries after eight further decisions rather than searching the whole world every tick. Successful delivery adds the carried amount to colony storage and collection statistics, restores energy, and clears the route. Home and food pheromone deposits continue during the return.
 
+### Hunger and death settlement
+
+Each ant decision consumes 0.05 energy; nonpositive energy costs 0.1 HP. Fatal hunger immediately marks the ant dead, records its death tick and increments its faction's death total once, then returns before deposits, food pickup/delivery or movement. Repeated decisions on that dead ant do nothing. This does not change corpse settlement: direct `updateAnt()` retains the object, while the normal later combat-resolution pass filters dead ants when the combat module is loaded.
+
 ### Pheromone System (6 channels)
 
 | Channel | Purpose |
@@ -42,7 +46,7 @@ Synchronous conservative transport uses each undirected raw graph edge once ever
 Evaporation is separate: multiply by 0.98 every five logical ticks, without a cutoff sink. Ant deposits and combat danger are explicit sources, capped at 100 per channel/site; excess is recorded as saturation loss. The HUD reports food/home/danger totals and cumulative evaporated mass. Metadata also exposes sources, saturation loss, Float32 rounding delta and the most recent before/after totals per channel. The trail overlay has a display-only threshold and divides each channel group's color intensity by its current peak, floored at one.
 
 `new SimAntBoard(size, {seed})` and `new SimAntGame(canvas, hud, {seed})` replay the same simulation stream; omitted seeds are sampled once. Reset replays that seed. Ant decisions, food generation, AI and Fisher–Yates update order share this board-owned stream, independent of rendering particles.
-The shared [`ConservativeGraphField`](../4d_generic/graph_field.js) owns the operator interface. It accumulates equal/opposite edge flux in Float64 without RNG, cutoff or hidden decay; SimAnt separately applies evaporation and stores Float32. Inactive terrain disables incident edges without deleting its stored field.
+The shared [`ConservativeGraphField`](../4d_generic/graph_field.js) owns the operator interface. Ordinary fields accumulate equal/opposite Float64 edge flux without RNG, cutoff or hidden decay; overflow/underflow-risk fields use exact binary-rational accumulation and final binary64 rounding. [Shared transport contracts](../../docs/games.md#conservative-transport-is-not-symmetric-normalized-heat) document finite-input/alias rules, accumulated-flux headroom and full-degree masks; ordinary updates are not globally bit-exact. SimAnt separately applies evaporation and stores Float32. Inactive terrain disables incident edges without deleting its stored field.
 
 
 ### Combat

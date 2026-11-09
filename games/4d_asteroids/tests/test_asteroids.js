@@ -83,6 +83,34 @@ if (typeof require !== 'undefined') {
         for (let i = 0; i < 20; i++) game.update(0.016);
         near(game.board.ship.vel.a, 2);
     });
+    check('opposing held inputs preserve saturated raw velocity and coasting displacement', () => {
+        for (const [axis, keys] of [['c', ['w', 's']], ['a', ['a', 'd']]]) {
+            const coast = kernelGame(), held = kernelGame();
+            coast.board.ship.vel[axis] = held.board.ship.vel[axis] = 2;
+            keys.forEach(key => held.input.activeKeys.add(key));
+            frames(coast, [16]); frames(held, [16]);
+            for (const component of ['a', 'b', 'c', 'd']) {
+                near(held.board.ship.vel[component], coast.board.ship.vel[component]);
+                near(held.board.ship.pos[component], coast.board.ship.pos[component]);
+            }
+            near(held.board.ship.vel[axis], 2);
+        }
+    });
+    check('simultaneous raw-axis thrust is capped once after vector addition', () => {
+        const game = kernelGame();
+        game.board.ship.vel.c = 2;
+        for (const key of ['w', 's', 'a', 'd', 'q', 'e']) game.input.activeKeys.add(key);
+        frames(game, [16]);
+        const scale = 2 / Math.hypot(0.3, 2, 0.3);
+        near(game.board.ship.vel.a, 0);
+        near(game.board.ship.vel.b, 0.3 * scale);
+        near(game.board.ship.vel.c, 2 * scale);
+        near(game.board.ship.vel.d, 0.3 * scale);
+        near(Math.hypot(...Object.values(game.board.ship.vel)), 2);
+        for (const component of ['a', 'b', 'c', 'd']) {
+            near(game.board.ship.pos[component], 4 + game.board.ship.vel[component] * 0.016);
+        }
+    });
     check('real fixed-loop partition and lag equivalence', () => {
         const regular = kernelGame(), lagged = kernelGame();
         regular.input.activeKeys.add('d'); lagged.input.activeKeys.add('d');

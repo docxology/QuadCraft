@@ -46,7 +46,53 @@ async function asteroids(page) {
     await advance(page, 320);
     assert.deepEqual(await state(page, () => game.board.ship.pos), frozen, 'Pause must stop physics');
     await key(page, 'p');
-    return { controls: 'D thrust, Space fire, V shield, P pause/resume', projectile: rendered };
+    const waveBase = await state(page, () => game.board.waveBaseAsteroids);
+    const thrustSamples = [];
+    for (const sample of [
+        { axis: 'c', keys: [] },
+        { axis: 'c', keys: ['w', 's'] },
+        { axis: 'a', keys: ['a', 'd'] },
+        { axis: 'c', keys: ['w', 's', 'a', 'd', 'q', 'e'] },
+    ]) {
+        await state(page, axis => {
+            game.board.waveBaseAsteroids = 0;
+            game.reset();
+            game.board.entities = [game.board.ship];
+            game.board.ship.vel[axis] = 2;
+        }, sample.axis);
+        for (const name of sample.keys) await page.keyboard.down(name);
+        await advance(page, 32);
+        for (const name of sample.keys) await page.keyboard.up(name);
+        const actual = await state(page, () => ({
+            vel: { ...game.board.ship.vel }, pos: { ...game.board.ship.pos }, age: game.board.ship.age,
+        }));
+        const ticks = Math.round(actual.age / 0.016);
+        assert(ticks > 0 && Math.abs(actual.age - ticks * 0.016) < 1e-12,
+            'Held-input samples must advance real fixed controller ticks');
+        const expectedVel = { a: 0, b: 0, c: 0, d: 0 };
+        const expectedPos = { a: 4, b: 4, c: 4, d: 4 };
+        expectedVel[sample.axis] = 2;
+        for (let tick = 0; tick < ticks; tick++) {
+            if (sample.keys.includes('q')) {
+                expectedVel.b += 0.3;
+                expectedVel.d += 0.3;
+            }
+            const speed = Math.hypot(...Object.values(expectedVel));
+            for (const axis of ['a', 'b', 'c', 'd']) {
+                if (speed > 2) expectedVel[axis] *= 2 / speed;
+                expectedPos[axis] += expectedVel[axis] * 0.016;
+            }
+        }
+        for (const axis of ['a', 'b', 'c', 'd']) {
+            assert(Math.abs(actual.vel[axis] - expectedVel[axis]) < 1e-11,
+                `Held ${sample.keys.join('+') || 'coast'} must add raw acceleration before the speed cap`);
+            assert(Math.abs(actual.pos[axis] - expectedPos[axis]) < 1e-11,
+                'Real-loop displacement must follow the settled raw velocity');
+        }
+        thrustSamples.push({ ...sample, ticks, velocity: actual.vel });
+    }
+    await state(page, value => { game.board.waveBaseAsteroids = value; game.reset(); }, waveBase);
+    return { controls: 'D thrust, Space fire, V shield, P pause/resume, saturated W+S/A+D and combined thrust', projectile: rendered, thrustSamples };
 }
 
 async function bomberman(page) {

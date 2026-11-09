@@ -3,7 +3,10 @@ set -e
 
 # Flags:
 #   --no-run   build (and optionally test) but do not launch the game (used by CI)
-#   --test     enable native tests and run a nonempty CTest inventory after building
+#   --test     run all configured CTests, including real-gl when the game is ON
+#              Graphical Linux: xvfb-run -a ./build.sh --no-run --test
+#              CPU only: configure build with -DQUADCRAFT_BUILD_GAME=OFF first,
+#              or run ctest --test-dir build -LE real-gl after building.
 
 NO_RUN=0
 RUN_TESTS=0

@@ -8,7 +8,7 @@ npx --no-install playwright install --with-deps chromium
 PYTHON=python3.13 npm test
 ```
 
-The lock pins Playwright **1.65.0**, resolved from the [primary npm registry](https://registry.npmjs.org/@playwright/test/1.65.0). Chromium and its system prerequisites must be installed; missing packages, browsers or Python cause failure, not a skip. Set `PYTHON` to a Python executable if `python3` is not the intended interpreter.
+The private gate package is version **0.6.0**; its root lock entries track that package version while dependency/integrity pins remain independent. The lock pins Playwright **1.65.0**, resolved from the [primary npm registry](https://registry.npmjs.org/@playwright/test/1.65.0). Chromium and its system prerequisites must be installed; missing packages, browsers or Python cause failure, not a skip. Set `PYTHON` to a Python executable if `python3` is not the intended interpreter.
 
 `smoke.mjs` owns a Python standard-library HTTP subprocess with an ephemeral loopback port and an explicit `games/` document root; it never changes the working directory. All **30 catalog games** run in isolated Chromium contexts, with no skip path. Only time and randomness are controlled: Playwright's virtual clock drives application timers/animation frames without sleeps. No DOM, canvas, renderer, input, board methods or browser-runtime mocks are used. Deterministic real-board fixtures cover specific legal positions, including Rogue FOV, Connect Four terminal undo, 2048 merging and Life birth/death. Actual screenshots are captured; input, state/rendering transitions, mathematical verification and browser/resource errors are checked.
 
@@ -36,6 +36,8 @@ Initial/final screenshots, console logs, server logs, JSON outcomes and failure 
 This package is directory-local and deliberately has no root `type: module` change. The `.mjs` entry point is not named `test_*.js` or `test_*.py`; ordinary portfolio Node/Python QA discovery does not invoke the browser gate.
 
 These are selected real-runtime scenarios, not exhaustive rule coverage or a current green receipt. Browser clocks and helper `advance(page, ms)` durations are milliseconds; application updates retain the seconds/logical-tick contracts documented in the [canonical portfolio contracts](../../../docs/games.md). Shared-helper signatures are documented in the [browser API reference](../../doc/shared_modules_reference.md).
+
+The [v0.6.0 source notes](../../../CHANGELOG.md#v060--2026-11-09) and [current workflows](https://github.com/docxology/QuadCraft/actions) distinguish prepared scenarios from executed receipts. Coordinated exact-ref/source-integrity and independently built package evidence belong to the [authoritative suite guide](https://github.com/docxology/symergetics/blob/main/docs/synergetics-suite.md), not an inferred all-green result from a local version or lockfile.
 
 ## Selected gameplay capture and composition
 

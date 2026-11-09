@@ -18,10 +18,37 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # actions/checkout@v7.0.1
 
       - name: Install dependencies
-        run: sudo apt-get update && sudo apt-get install -y libglew-dev libglfw3-dev
+        run: sudo apt-get update && sudo apt-get install -y libglew-dev libglfw3-dev libgl1-mesa-dri mesa-utils xvfb xauth
 
-      - name: Build and test native engine
-        run: ./build.sh --no-run --test
+      - name: Configure real graphical runtime
+        run: cmake -S . -B "${{ runner.temp }}/quadcraft-native" -DQUADCRAFT_BUILD_GAME=ON -DBUILD_TESTING=ON -DCMAKE_BUILD_TYPE=Debug
+
+      - name: Build native application and probes
+        run: cmake --build "${{ runner.temp }}/quadcraft-native" --parallel 2
+
+      - name: Exercise real Mesa framebuffer and gameplay
+        env:
+          LIBGL_ALWAYS_SOFTWARE: "1"
+          GALLIUM_DRIVER: llvmpipe
+        run: |
+          xvfb-run -a -s "-screen 0 1024x768x24" glxinfo -B
+          xvfb-run -a -s "-screen 0 1024x768x24" ctest --test-dir "${{ runner.temp }}/quadcraft-native" --output-on-failure --no-tests=error
+
+      - name: Preserve real native framebuffer captures
+        if: always()
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # actions/upload-artifact@v6
+        with:
+          name: native-mesa-framebuffers
+          path: ${{ runner.temp }}/quadcraft-native/native-artifacts/
+          if-no-files-found: error
+
+      - name: Preserve requested application framebuffer
+        if: always()
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # actions/upload-artifact@v6
+        with:
+          name: native-mesa-application
+          path: ${{ runner.temp }}/quadcraft-native/native-artifacts/application.ppm
+          if-no-files-found: error
 
   headless:
     runs-on: ubuntu-latest
@@ -32,9 +59,8 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # actions/checkout@v7.0.1
       - name: Configure without graphics dependencies
-        run: cmake -S . -B build-headless -DQUADCRAFT_BUILD_GAME=OFF -DBUILD_TESTING=ON -DCMAKE_BUILD_TYPE=${{ matrix.configuration }}
+        run: cmake -S . -B "${{ runner.temp }}/quadcraft-headless" -DQUADCRAFT_BUILD_GAME=OFF -DBUILD_TESTING=ON -DCMAKE_BUILD_TYPE=${{ matrix.configuration }}
       - name: Build native tests
-        run: cmake --build build-headless --parallel 2
+        run: cmake --build "${{ runner.temp }}/quadcraft-headless" --parallel 2
       - name: Exercise native assertions
-        working-directory: build-headless
-        run: ctest --output-on-failure --no-tests=error
+        run: ctest --test-dir "${{ runner.temp }}/quadcraft-headless" --output-on-failure --no-tests=error

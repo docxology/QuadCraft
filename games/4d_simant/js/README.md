@@ -15,6 +15,8 @@ Plain scripts loaded by [the browser entrypoint](../index.html); shared dependen
 
 `simant_ai.js` supplies `RedColonyAI` and `YellowAssistAI`; `simant_combat.js` supplies `CombatSystem`; `simant_pheromone_viz.js` supplies the browser `PheromoneVisualizer`. Board `idx/coords` address dense raw terrain, `_homeMove` owns private BFS routes and `diffusePheromones` separates transport from decay. Follow the actual HTML auxiliary-module order rather than loading every shared helper by convention.
 
+`updateAnt()` returns immediately after fatal hunger, recording the death tick and one faction loss before any further decision effects. It does not remove the dead object itself; the existing later `CombatSystem.resolveCombat()` pass filters dead ants. See [hunger and settlement](../README.md#hunger-and-death-settlement) and [shared finite transport](../../4d_generic/README.md#finite-conservative-graph-transport) for the model boundaries.
+
 ## Projection and interaction
 
 `SimAntRenderer` projects raw terrain/ants and overlays tunnel edges and trails. Hover chooses the nearest entity center within 30 pixels; it is informational, not a movement command. The minimap collapses C/D onto raw A/B.

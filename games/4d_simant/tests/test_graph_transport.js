@@ -50,6 +50,103 @@ assert.ok(rounded instanceof Float32Array);
 near(sum(rounded), 12, 1e-6);
 });
 
+scenario('Extreme finite transport and signed binary64 midpoint rounding', () => {
+const pair = new ConservativeGraphField(2, [[0, 1]]);
+const initial = new Float64Array([1e308, -1e308]);
+assert.deepEqual([...pair.step(initial, 0)], [...initial]);
+assert.deepEqual([...pair.step(initial, 1)], [-1e308, 1e308]);
+assert.deepEqual([...pair.step(initial, 0.5)], [0, 0]);
+assert.deepEqual([...initial], [1e308, -1e308]);
+assert.deepEqual([...pair.step([Number.MAX_VALUE, -Number.MAX_VALUE], 1)],
+    [-Number.MAX_VALUE, Number.MAX_VALUE]);
+// Round exact midpoints to the even significand, including signed zero,
+// the subnormal/normal transition, and the largest finite values.
+const tiny = Number.MIN_VALUE;
+for (const sign of [1, -1]) {
+    for (const [units, rounded] of [[1, 0], [3, 2], [5, 2]]) {
+        assert.deepEqual([...pair.step([sign * units * tiny, 0], 0.5)],
+            [sign * rounded * tiny, sign * rounded * tiny]);
+    }
+    const normal = 2 ** -1022;
+    assert.deepEqual([...pair.step([sign * (normal - tiny), sign * normal], 0.5)],
+        [sign * normal, sign * normal]);
+    const belowMaximum = Number.MAX_VALUE - 2 ** 971;
+    assert.deepEqual([...pair.step([sign * Number.MAX_VALUE, sign * belowMaximum], 0.5)],
+        [sign * belowMaximum, sign * belowMaximum]);
+}
+assert.deepEqual([...pair.step([-0, tiny], 0)], [-0, tiny]);
+const supplied = new Float64Array(2);
+assert.equal(pair.step(initial, 1, supplied), supplied);
+assert.deepEqual([...supplied], [-1e308, 1e308]);
+assert.throws(() => pair.step(initial, 0, initial), TypeError);
+for (const invalid of [NaN, Infinity, -Infinity]) {
+    supplied.set([11, 12]);
+    assert.throws(() => pair.step([1e308, invalid], 0.5, supplied), RangeError);
+    assert.deepEqual([...supplied], [11, 12]);
+}
+assert.deepEqual([...pair.step([2, 4], 0.5)], [3, 3]);
+});
+
+scenario('High-degree convex transport survives accumulated extreme flux', () => {
+// Each leaf is roundEven(magnitude * (degree - 2) / degree). These
+// binary64 fixtures come from that exact rational, not an edge-flux sum.
+const cases = [
+    [11, Number.MAX_VALUE / 2, 7.35419918807311e307],
+    [11, Number.MAX_VALUE / 2 - 2 ** 970, 7.354199188073109e307],
+    [18, Number.MAX_VALUE / 2, 7.989747266054737e307],
+    [18, Number.MAX_VALUE / 2 - 2 ** 970, 7.989747266054736e307],
+];
+for (const [degree, magnitude, leaf] of cases) {
+    const edges = Array.from({length: degree}, (_, i) => [0, i + 1]);
+    const star = new ConservativeGraphField(degree + 1, edges);
+    for (const sign of [1, -1]) {
+        const values = new Float64Array(degree + 1).fill(sign * magnitude);
+        values[0] = -sign * magnitude;
+        const expected = [sign * magnitude, ...Array(degree).fill(sign * leaf)];
+        const supplied = new Float64Array(degree + 1);
+        assert.equal(star.step(values, 1, supplied), supplied);
+        assert.deepEqual([...supplied], expected);
+        const reversed = new ConservativeGraphField(degree + 1,
+            edges.slice().reverse().map(([a, b]) => [b, a]));
+        assert.deepEqual([...reversed.step(values, 1)], expected);
+        // Only one incident edge remains. Keep the full-degree coefficient:
+        // the center becomes -leaf, not a full exchange with its neighbor.
+        const active = new Uint8Array(degree + 1);
+        active[0] = active[1] = 1;
+        assert.deepEqual([...star.step(values, 1, null, active)],
+            [-sign * leaf, sign * leaf, ...Array(degree - 1).fill(sign * magnitude)]);
+        active.fill(0);
+        assert.deepEqual([...star.step(values, 1, null, active)], [...values]);
+        assert.deepEqual([...values],
+            [-sign * magnitude, ...Array(degree).fill(sign * magnitude)]);
+    }
+}
+});
+
+scenario('Underflowing degree-12 coupling retains masked transported values', () => {
+const tiny = Number.MIN_VALUE;
+const edges = Array.from({length: 12}, (_, i) => [0, i + 1]);
+const star = new ConservativeGraphField(14, edges); // site 13 is isolated
+// Power-of-two scaling is exact here; only the final division rounds.
+const transferred = (1e308 * tiny) / 12;
+for (const sign of [1, -1]) {
+    const values = new Float64Array(14);
+    values[0] = sign * 1e308;
+    values[13] = -7;
+    const expected = [sign * 1e308, ...Array(12).fill(sign * transferred), -7];
+    assert.deepEqual([...star.step(values, tiny)], expected);
+    const reversed = new ConservativeGraphField(14, edges.slice().reverse().map(([a, b]) => [b, a]));
+    assert.deepEqual([...reversed.step(values, tiny)], expected);
+    const active = new Uint8Array(14);
+    active[0] = active[1] = 1;
+    assert.deepEqual([...star.step(values, tiny, null, active)],
+        [sign * 1e308, sign * transferred, ...Array(11).fill(0), -7]);
+    // Retain stored values and the full degree, not an active-degree divisor.
+    active.fill(0);
+    assert.deepEqual([...star.step(values, 1, null, active)], [...values]);
+}
+});
+
 // Every bounded raw label is reachable, with inverse unit moves at the boundary too.
 scenario('Reversible raw reachability and distinct nest geometry at bounded sizes', () => {
 const board = new S.SimAntBoard(6, {seed: 2026});

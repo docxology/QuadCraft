@@ -6,7 +6,7 @@ Use the [module map](README.md) and actual [HTML entrypoint](../index.html), not
 
 Keep raw periodic state separate from physical nearest-image distance. Preserve the independent seeded RNG and event-time ordering, including residual fragment flight and pending respawn cancellation on reset.
 
-`GameLoop` calls `update(dt)` with fixed seconds at a 16 ms tick. Thrust is integrated with that dt; UFO fire, projectile expiry, shields and the 1.5-second respawn are simulation-time events. The shared loop caps catch-up at 250 ms. Pause rejects gameplay commands as well as updates.
+`GameLoop` supplies fixed seconds at a 16 ms tick. Sum held raw-axis acceleration with opposing keys cancelling, then apply thrust once before the coefficient-space speed cap; preserve `acceleration * dt`. UFO fire, projectile expiry, shields and respawn use simulation time. Follow [the canonical game timing contract](../README.md#clock-and-lifecycle); pause rejects gameplay commands as well as updates.
 
 ## Rendering and input
 

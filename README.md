@@ -14,7 +14,7 @@ This development checkout contains three distinct runtime families:
 
 These are not one production engine. Native ECS/rigid-body physics, plugin/mod loading, imported asset packs and authenticated authoritative multiplayer are not shipped systems. Historical design prose is not a usable SDK. [Architecture](docs/architecture.md) identifies actual ownership and boundaries.
 
-Verification commands are documented in the [testing guide](docs/development/testing_guide.md). No frozen test/assertion total is a current status receipt. [TODO.md](TODO.md) retains dated maintenance history; [CHANGELOG.md](CHANGELOG.md) records changes. This README describes the checkout, not a change to an immutable published release.
+Verification commands are documented in the [testing guide](docs/development/testing_guide.md); current runs are listed in the [workflow index](https://github.com/docxology/QuadCraft/actions). No frozen test/assertion total is a current status receipt. [TODO.md](TODO.md) retains dated maintenance history; [CHANGELOG.md](CHANGELOG.md#v060--2026-11-09) describes v0.6.0 source changes, not a passing CI or publication receipt. Immutable older release assets remain unchanged.
 
 ## Synergetics suite
 
@@ -22,7 +22,7 @@ QuadCraft is the interactive application member alongside
 [QuadMath](https://github.com/docxology/QuadMath) (specification, exact mathematics and lattice algorithms) and
 [symergetics](https://github.com/docxology/symergetics) (rational geometry, transformations and research workflows).
 The [suite guide](https://github.com/docxology/symergetics/blob/main/docs/synergetics-suite.md)
-documents the Y/Z exchange and scale difference between their Cartesian embeddings and an interoperability example. The projects share mathematical contracts, not a production cross-language game runtime.
+documents the Y/Z exchange and scale difference between their Cartesian embeddings, observed interoperability outcomes and source-versus-package evidence. The coordinated source versions are QuadMath 0.7.0, symergetics 1.4.0 and QuadCraft v0.6.0; version metadata is not proof of publication or binary deployment. The projects share mathematical contracts, not a production cross-language game runtime.
 
 ## Overview
 
@@ -50,16 +50,24 @@ cmake --build build
 ./build/bin/QuadCraft
 ```
 
-Multi-configuration generators require the matching configuration option/path. `./build.sh` wraps the default build and launches; `./build.sh --no-run --test` builds and runs a nonempty native CTest inventory without launching. The wrapper preserves cached CMake options. See [platform/dependency details](docs/development/setup_guide.md).
+Multi-configuration generators require the matching configuration option/path. `./build.sh` wraps the default build and launches; `./build.sh --no-run --test` runs **all configured** CTests, including real-GL tests when the game is ON. Linux without a display needs `xvfb-run -a ./build.sh --no-run --test`. The wrapper preserves cached CMake options. See [platform/dependency and CPU-only wrapper details](docs/development/setup_guide.md).
+
+For a bounded real-frame capture:
+
+```sh
+./build/bin/QuadCraft --frames 24 --capture /tmp/quadcraft-application.ppm
+```
+
+`N` must be positive and capture requires `--frames`. A bounded run completes the requested frames or exits nonzero; early window closure and capture-write failures are errors. Slow synchronous loading may exceed one second but cannot silently shorten a bounded run. The top-down P6 PPM contains the final actual back buffer, not a synthetic scene. [Real-GL checks and artifacts](docs/development/testing_guide.md#real-opengl-rendering-and-framebuffer-artifacts) still require execution; no native graphical pass is asserted here.
 
 ### Headless core build
 
-Coordinate/world tests do not require OpenGL libraries or a display:
+Coordinate/world/camera tests do not require OpenGL libraries or a display:
 
 ```sh
 cmake -S . -B build-core -DQUADCRAFT_BUILD_GAME=OFF -DBUILD_TESTING=ON
 cmake --build build-core
-(cd build-core && ctest --output-on-failure)
+ctest --test-dir build-core --output-on-failure --no-tests=error
 ```
 
 `QUADCRAFT_BUILD_GAME` defaults ON; `BUILD_TESTING` is independently controlled. A graphics-free pass does not establish native render/input correctness.

@@ -8,12 +8,14 @@ QuadCraft contains a C++17 tetrahedral prototype, historical browser/server geom
 |---|---|
 | Build native or serve browser games | [Setup guide](development/setup_guide.md) |
 | Run/check a game | [Portfolio and runtime contracts](games.md), [catalog](../games/GAMES_INDEX.md) |
-| Work on native world/meshes | [Chunk lifecycle](development/chunk_system.md), [C++ API](development/api_reference.md) |
+| Work on native world/meshes | [Chunk lifecycle](development/chunk_system.md), [C++ API](development/api_reference.md), [real-GL captures and limits](development/testing_guide.md#real-opengl-rendering-and-framebuffer-artifacts) |
 | Understand browser geometry snapshots | [JavaScript map](development/javascript_implementation.md) |
 | Verify changes | [Testing commands and coverage limits](development/testing_guide.md) |
 | Find specialized implementation topics | [Development guide index](development/README.md) |
 
 The implementation guides replace hypothetical SDK/class recipes with actual source interfaces. Conceptual sections remain explicitly design context. In particular there is no shipped native ECS, general rigid-body physics engine, mod loader, asset importer or production multiplayer service.
+
+The [v0.6.0 source notes](../CHANGELOG.md#v060--2026-11-09) align with QuadMath 0.7.0 and symergetics 1.4.0. The authoritative [suite guide](https://github.com/docxology/symergetics/blob/main/docs/synergetics-suite.md) owns coordinated coordinate conversion, observed interoperability and exact-ref source/package evidence; this index is not a release publication or passing CI receipt. Consult [current workflows](https://github.com/docxology/QuadCraft/actions) for executed evidence.
 
 ## Core documentation
 
