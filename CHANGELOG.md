@@ -23,6 +23,7 @@
 
 - Align CMake and the private browser-gate package at 0.6.0, retaining locked Playwright dependencies. Chess game/save/state versions are independent.
 - Link the authoritative [suite guide](https://github.com/docxology/symergetics/blob/main/docs/synergetics-suite.md) for QuadMath 0.7.0 / symergetics 1.4.0 / QuadCraft v0.6.0 coordinate conversion, observed interoperability outcomes and exact-ref source/package evidence boundaries. Source receipts do not establish wheel/sdist contents, universal byte reproducibility or binary deployment.
+- Make the Catan robber fixture independent of the shuffled desert and prior random discards. Use real tile positions and verify exact resource transfer, conservation and rejection without changing game rules or retrying a flaky test.
 
 Verification status: these notes describe source changes, not a passing receipt for this release. Native real-GL builds, framebuffer artifacts, full project gates and coordinated artifact checks require actual execution. See the [workflow index](https://github.com/docxology/QuadCraft/actions) and [testing commands](docs/development/testing_guide.md); older dated results below remain historical.
 
