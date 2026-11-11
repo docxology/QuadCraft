@@ -19,3 +19,6 @@
 - [x] 2026-08-31 Medium — `.vscode/settings.json` now committed (exactly the JSON block docs/development/setup_guide.md prescribes; JSON-validated; not gitignored). Doc now matches disk.
 - [x] 2026-08-31 Major — doc-accuracy CI: `.github/workflows/doc-links.yml` fails CI on any broken relative markdown link (script pattern from REVIEW_LOG_2026-08-31; verified: 0 broken repo-wide at time of writing).
 
+## Workflowz review — 2026-11-10
+
+Coverage note: reviewed the supplied guidance, README, existing TODO, runtime pins, browser-test manifest, native entry/fallback excerpts, launcher/QA/scaffolding utilities, and selected historical and portfolio source excerpts. No concrete, behaviorally grounded improvement survived the evidence threshold; intentional test/scaffold/historical code and documented fallbacks were not treated as defects. This was a bounded packet review, not an exhaustive review of all 776 files or an execution of the native, Node, Python, browser, or graphics suites. Re-review on a concrete failure or source change.
