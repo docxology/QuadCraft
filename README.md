@@ -1,5 +1,10 @@
 # QuadCraft
 
+<p align="center">
+  <a href="https://github.com/docxology/QuadCraft/actions/workflows/browser-tests.yml"><img alt="browser-tests.yml workflow status on main" src="https://github.com/docxology/QuadCraft/actions/workflows/browser-tests.yml/badge.svg?branch=main"></a>
+  <a href="LICENSE"><img alt="License: Apache-2.0" src="https://img.shields.io/badge/license-Apache--2.0-blue"></a>
+</p>
+
 Tetrahedral voxel and geometry experiments plus thirty browser games using quadray ideas.
 
 ## Status & Verification (agents: start here)
