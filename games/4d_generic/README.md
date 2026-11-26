@@ -35,7 +35,7 @@ It is rank three, with basis radius `sqrt(3/2)` and distance 2 between distinct 
 
 `generateGrid(size)` keeps `size^4` raw labels. `generateCanonicalGrid(size)` keeps each zero-minimum representative once, including all four component-sum-mod-4 FCC sublattices. `neighbors` adds the twelve `(0,1,1,2)` permutations then normalizes; `boundedNeighbors` filters canonical component bounds. Eight signed basis steps are a different graph. Parity cell names and `cellVolume()` metadata do not certify a physical tetrahedral tessellation.
 
-[Portfolio contracts](../../docs/games.md) own the full math/units/graph distinctions; [shared API reference](../doc/shared_modules_reference.md) provides signatures. Raw occupancy remains authoritative for games that intentionally distinguish physical aliases.
+[Portfolio contracts](../../docs/games.md) own the full math/units/graph distinctions; [shared API reference](../../docs/portfolio/tooling/shared_modules_reference.md) provides signatures. Raw occupancy remains authoritative for games that intentionally distinguish physical aliases.
 
 ## Lifecycle and limitations
 
@@ -51,7 +51,7 @@ The loop accumulates browser milliseconds, caps a frame interval at 250 ms and c
 
 The ordinary edge-flux path reuses a Float64 workspace. Larger-than-`Number.MAX_VALUE/4` fields and underflow-risk coefficients/products use exact binary-rational convex accumulation with one final ties-to-even binary64 rounding per value. The guard accounts for incident absolute flux `<=2*M` plus old state `<=3*M`, not just safe edge subtraction. Ordinary updates are not globally correctly rounded, strictly range-exact or bit-identical across languages. Sum conservation is subject to floating-point rounding. This is not symmetric-normalized heat or a calibrated physical diffusion clock.
 
-The [API reference](../doc/shared_modules_reference.md#conservativegraphfield) owns detailed validation and allocation rules; [portfolio contracts](../../docs/games.md#conservative-transport-is-not-symmetric-normalized-heat) distinguish SimAnt's raw graph and explicit sources/decay/Float32 storage. The [authoritative suite guide](https://github.com/docxology/symergetics/blob/main/docs/synergetics-suite.md) links observed interoperability outcomes, including extreme high-degree stars, masks, isolated values and signed-zero identity; no timeless outcome count or universal bit-exactness is implied.
+The [API reference](../../docs/portfolio/tooling/shared_modules_reference.md#conservativegraphfield) owns detailed validation and allocation rules; [portfolio contracts](../../docs/games.md#conservative-transport-is-not-symmetric-normalized-heat) distinguish SimAnt's raw graph and explicit sources/decay/Float32 storage. The [authoritative suite guide](https://github.com/docxology/symergetics/blob/main/docs/synergetics-suite.md) links observed interoperability outcomes, including extreme high-degree stars, masks, isolated values and signed-zero identity; no timeless outcome count or universal bit-exactness is implied.
 
 ## Tests and navigation
 

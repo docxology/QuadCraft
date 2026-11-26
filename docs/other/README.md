@@ -29,5 +29,5 @@ The common mathematical model is three-dimensional: four coefficients modulo a s
 - [Tetrahedral Geometry](../mathematics/tetrahedral_geometry.md)
 - [IVM & Synergetics](../mathematics/ivm_synergetics.md)
 - [Architecture](../architecture.md)
-- [Manuscript Status](../manuscript/MANUSCRIPT_STATUS.md)
+- [Manuscript Status](../archive/manuscript-scope-audit.md)
 - [Documentation Index](../README.md)

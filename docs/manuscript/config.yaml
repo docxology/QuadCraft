@@ -1,0 +1,27 @@
+manuscript_dir: docs/manuscript
+
+paper:
+  title: "Physical Quadrays and Cartesian Chunk Routing in QuadCraft"
+
+authors:
+  - name: Daniel Ari Friedman
+    orcid: "0000-0001-6232-9096"
+
+publication:
+  github_repository: docxology/QuadCraft
+  repository_url: https://github.com/docxology/QuadCraft
+
+metadata:
+  language: en
+  license: Apache-2.0
+
+steganography:
+  enabled: false
+
+render:
+  formats:
+    pdf: true
+    html: true
+    slides: false
+    docx: false
+    epub: false
