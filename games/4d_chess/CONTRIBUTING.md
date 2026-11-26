@@ -1,6 +1,6 @@
 # Contributing to Quadray Chess — rule changes, real consumers and documentation
 
-Read [game maintenance instructions](AGENTS.md), [architecture](docs/architecture.md) and the [repository contribution/development guidance](../../AGENTS.md) first. The browser game, shared library and native runtime have different ownership and verification routes.
+Read [game maintenance instructions](AGENTS.md), [architecture](../../docs/portfolio/chess/architecture.md) and the [repository contribution/development guidance](../../AGENTS.md) first. The browser game, shared library and native runtime have different ownership and verification routes.
 
 ## Development Setup
 
@@ -15,11 +15,11 @@ Keep the parent `games/` directory as the HTTP root so `../4d_generic/` assets r
 
 ## Source boundaries
 
-- Change piece destinations in [chess_pieces.js](js/chess_pieces.js), maintaining explicit directed semantics and source-backed [movement documentation](docs/piece-movement.md).
+- Change piece destinations in [chess_pieces.js](js/chess_pieces.js), maintaining explicit directed semantics and source-backed [movement documentation](../../docs/portfolio/chess/piece-movement.md).
 - Change canonical occupancy/bounds in [chess_board.js](js/chess_board.js), auditing `position.toKey()` callers rather than normalizing unrelated raw-label games.
 - Change selection/turns/timers in [chess_game.js](js/chess_game.js); shared BaseGame calls the input hook during construction, before later subclass fields exist.
 - Keep Canvas/picking in the overview/FPV renderers, and page controls/script order in `index.html`.
-- Storage/history changes must use real TurnManager-wrapped records and getter-only controller state. The current legacy helper mismatch is described in [API/notation](docs/notation.md); tests with writable flat helper objects do not prove a browser round-trip.
+- Storage/history changes must use real TurnManager-wrapped records and getter-only controller state. The current legacy helper mismatch is described in [API/notation](../../docs/portfolio/chess/notation.md); tests with writable flat helper objects do not prove a browser round-trip.
 
 ## Testing
 
@@ -29,4 +29,4 @@ Before a behavioral change is accepted, run the affected Node/shared suites, por
 
 ## Documentation
 
-Use [the docs index](docs/README.md) and scoped instructions. Preserve filenames, repair relative/heading links and update source-backed examples. Separate pseudo-legal generated moves from full chess legality, position heuristics from validated strategy, exposed legacy UI from reliable behavior, and physical rank-three geometry from raw label counts. Do not maintain saved green badges or measured-quality claims without current evidence.
+Use [the docs index](../../docs/portfolio/chess/README.md) and scoped instructions. Preserve filenames, repair relative/heading links and update source-backed examples. Separate pseudo-legal generated moves from full chess legality, position heuristics from validated strategy, exposed legacy UI from reliable behavior, and physical rank-three geometry from raw label counts. Do not maintain saved green badges or measured-quality claims without current evidence.

@@ -50,6 +50,6 @@ python3.13 games/run_games.py --test --game chess
 - [Maintenance instructions](AGENTS.md)
 - [Shared modules](../4d_generic/README.md)
 - [Game index](../GAMES_INDEX.md)
-- [Rules and reference guides](docs/README.md)
+- [Rules and reference guides](../../docs/portfolio/chess/README.md)
 - [Contribution guide](CONTRIBUTING.md)
 - [QuadCraft](../../README.md)

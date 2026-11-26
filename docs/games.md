@@ -100,7 +100,7 @@ The unfiltered logic run includes nested shared JavaScript/Python tests; structu
 
 ## Adding a new game
 
-Use the existing [scaffold guide](../games/doc/scaffold_guide.md) and [game template](../games/doc/game_template.md). Implement actual board/render/input behavior, register metadata in `games/src/core/registry.py`, preserve shared script ordering, and add behavioral tests and real-browser coverage. A generated folder is not a completed game. Update the [portfolio index](../games/GAMES_INDEX.md) rather than duplicating per-game inventories throughout the docs.
+Use the existing [scaffold guide](portfolio/tooling/scaffold_guide.md) and [game template](portfolio/tooling/game_template.md). Implement actual board/render/input behavior, register metadata in `games/src/core/registry.py`, preserve shared script ordering, and add behavioral tests and real-browser coverage. A generated folder is not a completed game. Update the [portfolio index](../games/GAMES_INDEX.md) rather than duplicating per-game inventories throughout the docs.
 
 ## Relationship to core QuadCraft
 

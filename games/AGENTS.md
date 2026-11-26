@@ -24,6 +24,6 @@ python3.13 games/run_games.py --test --game chess
 python3.13 games/run_games.py --test
 ```
 
-Serve `games/` so sibling shared imports resolve. Structural validation is textual and cannot prove gameplay or canvas correctness. [Testing guidance](doc/testing_guide.md) separates Node/Python logic checks from the [Chromium gate](tests/browser/README.md). Record executed evidence rather than saved totals or completeness percentages. Follow task-specific restrictions on running checks.
+Serve `games/` so sibling shared imports resolve. Structural validation is textual and cannot prove gameplay or canvas correctness. [Testing guidance](../docs/portfolio/tooling/testing_guide.md) separates Node/Python logic checks from the [Chromium gate](tests/browser/README.md). Record executed evidence rather than saved totals or completeness percentages. Follow task-specific restrictions on running checks.
 
-For additions follow [contributing](doc/contributing.md): implement real rules, register a unique offset, maintain navigation and browser coverage. Do not regenerate documentation or test pages blindly; [maintenance scripts](doc/scripts_reference.md) include legacy templates.
+For additions follow [contributing](../docs/portfolio/tooling/contributing.md): implement real rules, register a unique offset, maintain navigation and browser coverage. Do not regenerate documentation or test pages blindly; [maintenance scripts](../docs/portfolio/tooling/scripts_reference.md) include legacy templates.

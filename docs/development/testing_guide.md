@@ -79,4 +79,22 @@ For shared JavaScript, `Quadray.fromCartesian(x,y,z)` takes three numbers; C++ t
 
 Use `GridUtils.createSeededRng(seed)` only with consumers that accept an injected stream/seed; not every game is seed-configurable. SimAnt and Asteroids own seeded streams, whereas Doom map generation still calls `Math.random`. Browser clock/random control does not establish a universal replay/save format.
 
-The [portfolio testing guide](../../games/doc/testing_guide.md) describes runner organization. Report the actual commands, environment and outputs from a run; do not convert source inspection or old dated receipts into a new green claim.
+The [portfolio testing guide](../portfolio/tooling/testing_guide.md) describes runner organization. Report the actual commands, environment and outputs from a run; do not convert source inspection or old dated receipts into a new green claim.
+
+## Native fixture without a graphics build
+
+The [manuscript probe](../manuscript/README.md) compiles a small executable
+directly against the same coordinate and world implementation. To exercise
+the existing graphics-free test programs on a system with a C++17 compiler
+and no CMake, run the following from the repository root.
+
+```bash
+set -e
+tests_build=$(mktemp -d)
+c++ -std=c++17 tests/quadray_test.cpp -o "$tests_build/quadray_test"
+c++ -std=c++17 tests/world_chunk_test.cpp src/core/world/TetraChunk.cpp -o "$tests_build/world_chunk_test"
+c++ -std=c++17 tests/camera_test.cpp -o "$tests_build/camera_test"
+"$tests_build/quadray_test"
+"$tests_build/world_chunk_test"
+"$tests_build/camera_test"
+```

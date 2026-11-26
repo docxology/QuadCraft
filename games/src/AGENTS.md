@@ -1,6 +1,6 @@
 # Maintaining Python portfolio infrastructure
 
-Read [repository rules](../../AGENTS.md), [package map](README.md) and [Python interfaces](../doc/python_infrastructure.md). Keep this tooling separate from browser rules and native APIs.
+Read [repository rules](../../AGENTS.md), [package map](README.md) and [Python interfaces](../../docs/portfolio/tooling/python_infrastructure.md). Keep this tooling separate from browser rules and native APIs.
 
 ## Source ownership
 
@@ -12,4 +12,4 @@ Read [repository rules](../../AGENTS.md), [package map](README.md) and [Python i
 
 Follow scoped package instructions. Read actual signatures and callers before editing templates or claiming parity. Board/analytics/module coverage reports are heuristics, not runtime correctness. Scaffold output has known path/projection/launcher integration issues; never label its basic checks complete gameplay. Migration scripts can write source and require separate authorization.
 
-`space/` uses floating point and declared units; link [canonical portfolio contracts](../../docs/games.md), retain raw occupancy distinctions and do not copy scientific-package APIs or snapping conventions. Do not maintain timeless export/test/line totals or regenerate handcrafted documentation blindly. Verification commands and separation are in [the QA guide](../doc/testing_guide.md); obey the current assignment's execution restrictions.
+`space/` uses floating point and declared units; link [canonical portfolio contracts](../../docs/games.md), retain raw occupancy distinctions and do not copy scientific-package APIs or snapping conventions. Do not maintain timeless export/test/line totals or regenerate handcrafted documentation blindly. Verification commands and separation are in [the QA guide](../../docs/portfolio/tooling/testing_guide.md); obey the current assignment's execution restrictions.

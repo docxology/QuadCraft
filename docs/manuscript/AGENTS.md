@@ -1,11 +1,15 @@
-# manuscript/ — Agent Notes
+# Manuscript maintenance
 
-This directory holds manuscript navigation and a [status record](MANUSCRIPT_STATUS.md), not a generated manuscript. Keep the [directory index](README.md) consistent with its actual contents.
+Use the [manuscript index](README.md) to find the ordered sections and
+render procedure. Update the fixture and figure together if the measured
+examples change.
 
-- Do not claim a completed paper, generated figures, publication build, or measured results without the corresponding artifact and evidence.
-- Treat [historical technical discussions](../other/README.md) as maintained discussions, not finished publication outputs.
-- Use the [canonical coordinate contract](../quadray_coordinates.md) and [mathematical reference](../mathematics/quadray_coordinates.md): physical quadrays have rank 3 modulo common offsets, not four independent Euclidean spatial axes or a fixed-sum constraint.
-- Ground software claims in source such as [native coordinates](../../src/core/coordinate/Quadray.h) and distinguish derived mathematics from exercised implementation behavior.
-- Update the status when actual manuscript artifacts or reproducible research results are introduced; do not manufacture content to make a status label true.
+- Ground native claims in the [coordinate implementation](../../src/core/coordinate/Quadray.h)
+  and [world storage](../../src/core/world/World.h).
+- Use the [canonical coordinate contract](../quadray_coordinates.md) for the
+  distinction between physical common-offset classes and raw labels.
+- Describe illustrated fixtures and tested cases independently of graphics
+  or browser evidence. Preserve the [historical scope audit](../archive/manuscript-scope-audit.md)
+  and [technical discussions](../other/README.md) as records of their own scope.
 
 Return to the [documentation index](../README.md).

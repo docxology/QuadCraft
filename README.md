@@ -19,7 +19,7 @@ This development checkout contains three distinct runtime families:
 
 These are not one production engine. Native ECS/rigid-body physics, plugin/mod loading, imported asset packs and authenticated authoritative multiplayer are not shipped systems. Historical design prose is not a usable SDK. [Architecture](docs/architecture.md) identifies actual ownership and boundaries.
 
-Verification commands are documented in the [testing guide](docs/development/testing_guide.md); current runs are listed in the [workflow index](https://github.com/docxology/QuadCraft/actions). No frozen test/assertion total is a current status receipt. [TODO.md](TODO.md) retains dated maintenance history; [CHANGELOG.md](CHANGELOG.md#v060--2026-11-09) describes v0.6.0 source changes, not a passing CI or publication receipt. Immutable older release assets remain unchanged.
+Verification commands are documented in the [testing guide](docs/development/testing_guide.md); current runs are listed in the [workflow index](https://github.com/docxology/QuadCraft/actions). No frozen test/assertion total is a current status receipt. [The maintenance backlog](docs/archive/maintenance-backlog.md) retains dated maintenance history; [CHANGELOG.md](CHANGELOG.md#v060--2026-11-09) describes v0.6.0 source changes, not a passing CI or publication receipt. Immutable older release assets remain unchanged.
 
 ## Synergetics suite
 
@@ -135,7 +135,7 @@ The native world uses Cartesian integer chunk keys, local quadray element keys a
 
 Use the [actual C++ API reference](docs/development/api_reference.md) instead of copying historical class diagrams. [Portfolio contracts](docs/games.md) cover raw versus physical cells, twelve-contact versus raw eight-neighbor graphs, fixed update seconds, seeded streams and conservative transport. Conservative graph mixing is not symmetric-normalized heat.
 
-The [documentation hub](docs/README.md) and [development index](docs/development/README.md) route to focused topics. [Source customization](docs/development/modding_guide.md) describes real extension points without inventing an installed mod SDK. [JSP synchronization](docs/development/multiplayer_system.md) describes its limited experiment, not a production service.
+The [manuscript](docs/manuscript/README.md) documents the native coordinate and chunk-routing fixture. The [documentation hub](docs/README.md) and [development index](docs/development/README.md) route to focused topics. [Source customization](docs/development/modding_guide.md) describes real extension points without inventing an installed mod SDK. [JSP synchronization](docs/development/multiplayer_system.md) describes its limited experiment, not a production service.
 
 ## License
 

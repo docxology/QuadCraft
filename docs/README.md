@@ -10,6 +10,7 @@ QuadCraft contains a C++17 tetrahedral prototype, historical browser/server geom
 | Run/check a game | [Portfolio and runtime contracts](games.md), [catalog](../games/GAMES_INDEX.md) |
 | Work on native world/meshes | [Chunk lifecycle](development/chunk_system.md), [C++ API](development/api_reference.md), [real-GL captures and limits](development/testing_guide.md#real-opengl-rendering-and-framebuffer-artifacts) |
 | Understand browser geometry snapshots | [JavaScript map](development/javascript_implementation.md) |
+| Read or reproduce the native coordinate study | [Manuscript](manuscript/README.md) |
 | Verify changes | [Testing commands and coverage limits](development/testing_guide.md) |
 | Find specialized implementation topics | [Development guide index](development/README.md) |
 
@@ -22,6 +23,8 @@ The [v0.6.0 source notes](../CHANGELOG.md#v060--2026-11-09) align with QuadMath 
 - [Architecture: runtime families and ownership](architecture.md)
 - [Quadray coordinates in the implementation](quadray_coordinates.md)
 - [Games: raw slots, physical graphs, time, RNG and transport](games.md)
+- [Portfolio tooling and shared references](portfolio/tooling/README.md)
+- [Quadray Chess rules and reference](portfolio/chess/README.md)
 
 Physical quadrays describe three dimensions modulo a common coefficient offset. Raw four-index game slots may intentionally remain independent. Never infer physical topology or metric from a game's “4D” title alone.
 
@@ -65,7 +68,7 @@ Research/design prose is not evidence that an API or gameplay subsystem exists. 
 
 ## Contributing to documentation
 
-Keep page titles specific, navigation modular and examples bound to actual signatures. Link shared contracts rather than copying inconsistent formulas or test totals. Label historical receipts by date/version; commands describe what to run, not a new passing result. Update indexes and inbound heading links when reorganizing a page. See [documentation maintenance rules](AGENTS.md).
+Keep page titles specific, navigation modular and examples bound to actual signatures. Link shared contracts rather than copying inconsistent formulas or test totals. Label historical receipts by date/version; commands describe what to run, not a new passing result. Update indexes and inbound heading links when reorganizing a page. See [documentation maintenance rules](AGENTS.md) and the [historical maintenance backlog](archive/maintenance-backlog.md).
 
 ## License
 

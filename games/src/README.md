@@ -13,4 +13,4 @@ This package provides the launcher/server, registry, QA, generators and source-a
 | [board](board/README.md) | Heuristic board catalog/audit and textual migration |
 | [space](space/README.md) | Floating-point quadray/projection/grid/reference math |
 
-Run the CLI from the QuadCraft repository root with `python3.13 games/run_games.py --list`. Library imports use `games.src.<package>` from that root. Read [Python interfaces](../doc/python_infrastructure.md), especially the [default-path limitation](../doc/configuration.md), before interpreting a library scan. The CLI derives its correct root independently.
+Run the CLI from the QuadCraft repository root with `python3.13 games/run_games.py --list`. Library imports use `games.src.<package>` from that root. Read [Python interfaces](../../docs/portfolio/tooling/python_infrastructure.md), especially the [default-path limitation](../../docs/portfolio/tooling/configuration.md), before interpreting a library scan. The CLI derives its correct root independently.

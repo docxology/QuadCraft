@@ -53,14 +53,14 @@ python3.13 games/run_games.py --game chess doom
 python3.13 games/run_games.py --all --no-browser
 ```
 
-The server document root is `games/`, with game URLs `/4d_<key>/index.html`. The Python CLI needs an explicit selection to launch; the shell wrapper with no arguments selects all games. [Launch operations](doc/launch_operations.md) and [configuration](doc/configuration.md) explain flags and JSON precedence.
+The server document root is `games/`, with game URLs `/4d_<key>/index.html`. The Python CLI needs an explicit selection to launch; the shell wrapper with no arguments selects all games. [Launch operations](../docs/portfolio/tooling/launch_operations.md) and [configuration](../docs/portfolio/tooling/configuration.md) explain flags and JSON precedence.
 
 ## Shared Foundation
 
-[`4d_generic/`](4d_generic/) contains coordinate/grid helpers, projection/camera/zoom, lifecycle/input/HUD/scoring, optional board/entity/turn/pathfinding helpers and a separate graph-field kernel. Tooling's core/optional lists are not the complete disk inventory. A script reference does not prove runtime adoption. Doom uses its own ES-module controller with a shared geometry bridge. See [actual shared APIs](doc/shared_modules_reference.md) before reusing a symbol.
+[`4d_generic/`](4d_generic/) contains coordinate/grid helpers, projection/camera/zoom, lifecycle/input/HUD/scoring, optional board/entity/turn/pathfinding helpers and a separate graph-field kernel. Tooling's core/optional lists are not the complete disk inventory. A script reference does not prove runtime adoption. Doom uses its own ES-module controller with a shared geometry bridge. See [actual shared APIs](../docs/portfolio/tooling/shared_modules_reference.md) before reusing a symbol.
 
 ## Verification and contribution
 
-The [test guide](doc/testing_guide.md) distinguishes structural file checks, recursive shared and per-game logic suites, and the independent [real Chromium gate](tests/browser/README.md). The browser harness has a scenario for each registered game, with screenshots/state/input evidence, not exhaustive rule coverage or a guarantee that every platform supports pointer lock.
+The [test guide](../docs/portfolio/tooling/testing_guide.md) distinguishes structural file checks, recursive shared and per-game logic suites, and the independent [real Chromium gate](tests/browser/README.md). The browser harness has a scenario for each registered game, with screenshots/state/input evidence, not exhaustive rule coverage or a guarantee that every platform supports pointer lock.
 
-[Documentation hub](doc/README.md) · [Architecture](doc/architecture.md) · [Python infrastructure](doc/python_infrastructure.md) · [Contributing a game](doc/contributing.md) · [Repository overview](../README.md)
+[Documentation hub](../docs/portfolio/tooling/README.md) · [Architecture](../docs/portfolio/tooling/architecture.md) · [Python infrastructure](../docs/portfolio/tooling/python_infrastructure.md) · [Contributing a game](../docs/portfolio/tooling/contributing.md) · [Repository overview](../README.md)

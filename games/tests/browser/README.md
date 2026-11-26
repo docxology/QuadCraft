@@ -35,7 +35,7 @@ Initial/final screenshots, console logs, server logs, JSON outcomes and failure 
 
 This package is directory-local and deliberately has no root `type: module` change. The `.mjs` entry point is not named `test_*.js` or `test_*.py`; ordinary portfolio Node/Python QA discovery does not invoke the browser gate.
 
-These are selected real-runtime scenarios, not exhaustive rule coverage or a current green receipt. Browser clocks and helper `advance(page, ms)` durations are milliseconds; application updates retain the seconds/logical-tick contracts documented in the [canonical portfolio contracts](../../../docs/games.md). Shared-helper signatures are documented in the [browser API reference](../../doc/shared_modules_reference.md).
+These are selected real-runtime scenarios, not exhaustive rule coverage or a current green receipt. Browser clocks and helper `advance(page, ms)` durations are milliseconds; application updates retain the seconds/logical-tick contracts documented in the [canonical portfolio contracts](../../../docs/games.md). Shared-helper signatures are documented in the [browser API reference](../../../docs/portfolio/tooling/shared_modules_reference.md).
 
 The [v0.6.0 source notes](../../../CHANGELOG.md#v060--2026-11-09) and [current workflows](https://github.com/docxology/QuadCraft/actions) distinguish prepared scenarios from executed receipts. Coordinated exact-ref/source-integrity and independently built package evidence belong to the [authoritative suite guide](https://github.com/docxology/symergetics/blob/main/docs/synergetics-suite.md), not an inferred all-green result from a local version or lockfile.
 

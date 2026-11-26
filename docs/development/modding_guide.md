@@ -32,7 +32,7 @@ The native shader strings are in [`Game.cpp`](../../src/game/Game.cpp). Mesh fac
 
 ## Extend a portfolio game
 
-The catalog lives in [`games/src/core/registry.py`](../../games/src/core/registry.py). Existing games use game-prefixed board/renderer/controller files and sibling shared helpers. Consult the [portfolio guide](../games.md) and [scaffold guide](../../games/doc/scaffold_guide.md) for the existing workflow; scaffolding is a starting structure, not an implemented game or proof of playability.
+The catalog lives in [`games/src/core/registry.py`](../../games/src/core/registry.py). Existing games use game-prefixed board/renderer/controller files and sibling shared helpers. Consult the [portfolio guide](../games.md) and [scaffold guide](../portfolio/tooling/scaffold_guide.md) for the existing workflow; scaffolding is a starting structure, not an implemented game or proof of playability.
 
 The historical browser's editable brush table is another local source extension point, not a portable mod API. Its [direct evaluation button](realtime_code_evaluation.md) runs trusted code with page privileges and is not a safe plugin sandbox.
 
