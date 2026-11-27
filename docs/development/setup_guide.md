@@ -46,19 +46,26 @@ For multi-configuration generators, select `--config Debug` and use the executab
 ./build.sh --no-run --test
 ```
 
-`--test` enables `BUILD_TESTING`, requires a nonempty inventory and runs **all configured tests**. With the game ON, this includes real-GL consumers: on Linux without a display use `xvfb-run -a ./build.sh --no-run --test` after installing the Mesa/Xvfb dependencies below. The wrapper uses `build/`; it does not choose an independent headless directory. To use it CPU-only, first configure `cmake -S . -B build -DQUADCRAFT_BUILD_GAME=OFF -DBUILD_TESTING=ON`, then invoke the wrapper. Alternatively build a graphical configuration and select `ctest --test-dir build -LE real-gl --output-on-failure --no-tests=error`; that excludes rendering evidence.
+`--test` enables `BUILD_TESTING`, requires a nonempty inventory and runs
+**all configured tests**. With the game ON, this includes real-GL consumers.
+On Linux without a display, use `xvfb-run -a ./build.sh --no-run --test` after
+installing the Mesa/Xvfb dependencies below. The Bash wrapper uses `build/`.
 
 ## Graphics-free native checks
 
 ```sh
-cmake -S . -B build-core -DQUADCRAFT_BUILD_GAME=OFF -DBUILD_TESTING=ON
-cmake --build build-core
-ctest --test-dir build-core --output-on-failure --no-tests=error
+cmake -S . -B build -DQUADCRAFT_BUILD_GAME=OFF -DBUILD_TESTING=ON
+./build.sh --no-run --test
 ```
+
+This recipe works with CMake 3.16. For a separate build directory or a filtered
+run, see the [native testing guide](testing_guide.md#native-coordinate-world-and-camera-tests).
 
 `QUADCRAFT_BUILD_GAME` defaults ON and `BUILD_TESTING` defaults ON through CTest. `BUILD_TESTING=OFF` is independent of the graphical executable option. No `BUILD_MULTIPLAYER`, mod SDK, asset build or documentation-generation option is declared.
 
 ## Linux software OpenGL checks
+
+The separate-build-directory recipe uses CTest 3.20 or newer.
 
 ```sh
 sudo apt-get install libglew-dev libglfw3-dev libgl1-mesa-dev libgl1-mesa-dri mesa-utils xvfb xauth

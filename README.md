@@ -67,13 +67,17 @@ For a bounded real-frame capture:
 
 ### Headless core build
 
-Coordinate/world/camera tests do not require OpenGL libraries or a display:
+Coordinate, world, and camera tests run without OpenGL libraries or a display.
+In a Bash shell at the repository root, configure the wrapper's `build/`
+directory for CPU-only testing.
 
 ```sh
-cmake -S . -B build-core -DQUADCRAFT_BUILD_GAME=OFF -DBUILD_TESTING=ON
-cmake --build build-core
-ctest --test-dir build-core --output-on-failure --no-tests=error
+cmake -S . -B build -DQUADCRAFT_BUILD_GAME=OFF -DBUILD_TESTING=ON
+./build.sh --no-run --test
 ```
+
+The wrapper checks that CTest discovers at least one test. For separate build
+directories and test filters, see the [native testing guide](docs/development/testing_guide.md#native-coordinate-world-and-camera-tests).
 
 `QUADCRAFT_BUILD_GAME` defaults ON; `BUILD_TESTING` is independently controlled. A graphics-free pass does not establish native render/input correctness.
 

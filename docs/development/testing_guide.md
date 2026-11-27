@@ -6,7 +6,16 @@ These are commands to run, not a saved passing receipt. Native compilation, logi
 
 ## Native coordinate, world and camera tests
 
-From the repository root:
+With Bash and CMake 3.16 or newer, configure the wrapper's `build/` directory
+for CPU-only tests from the repository root.
+
+```sh
+cmake -S . -B build -DQUADCRAFT_BUILD_GAME=OFF -DBUILD_TESTING=ON
+./build.sh --no-run --test
+```
+
+Use CTest 3.20 or newer for these examples with a separate build directory and
+a filtered run.
 
 ```sh
 cmake -S . -B build-core -DQUADCRAFT_BUILD_GAME=OFF -DBUILD_TESTING=ON
@@ -17,9 +26,15 @@ ctest --test-dir build-core -R quadray_test --output-on-failure --no-tests=error
 
 [`CMakeLists.txt`](../../CMakeLists.txt) registers `quadray_test`, `world_chunk_test` and `camera_test` without graphical dependencies. Names are lowercase and filters are case-sensitive. Coordinate tests cover embedding/normalization/distance; [`world_chunk_test.cpp`](../../tests/world_chunk_test.cpp) covers Cartesian chunk keys, negative floors and local/world conversion; [`camera_test.cpp`](../../tests/camera_test.cpp) covers actual view/projection, scroll/aspect/frustum behavior and initial cached position. None creates a GL context or proves render output, picking or driver lifetime.
 
-`./build.sh --no-run --test` uses cached options in `build/` and runs all configured tests, including real-GL tests if `QUADCRAFT_BUILD_GAME=ON`. A display-free Linux invocation therefore needs `xvfb-run -a ./build.sh --no-run --test`, or explicit CPU-only configuration as described in [setup](setup_guide.md). To exclude real-GL tests in an already-built graphical configuration use `ctest --test-dir build -LE real-gl --output-on-failure --no-tests=error`; that is not rendering verification.
+`./build.sh --no-run --test` uses cached options in `build/` and runs all
+configured tests. For a graphical build on Linux without a display, use
+`xvfb-run -a ./build.sh --no-run --test` after following the [setup guide](setup_guide.md).
+With CTest 3.20 or newer, use `ctest --test-dir build -LE real-gl --output-on-failure --no-tests=error`
+to run the non-GL tests in an existing graphical build.
 
 ## Real OpenGL rendering and framebuffer artifacts
+
+The separate-build-directory recipe uses CTest 3.20 or newer.
 
 ```sh
 cmake -S . -B build-gl -DQUADCRAFT_BUILD_GAME=ON -DBUILD_TESTING=ON -DCMAKE_BUILD_TYPE=Debug
