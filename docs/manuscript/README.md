@@ -65,6 +65,7 @@ lines.append("}")
 subprocess.run(["dot", "-Tpng", "-o", "output/figures/native-chunk-routing.png"],
                input="\n".join(lines), text=True, check=True)
 PYTHON
+cp docs/manuscript/figure_registry.json output/figures/figure_registry.json
 
 cd "$renderer"
 uv sync --locked
