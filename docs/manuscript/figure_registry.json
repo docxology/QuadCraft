@@ -1,0 +1,12 @@
+{
+  "schema_version": "2.0",
+  "figures": [
+    {
+      "label": "fig:native-chunk-routing",
+      "filename": "native-chunk-routing.png",
+      "caption": "Native Cartesian samples and their chunk keys.",
+      "alt_text": "Negative, central, and positive Cartesian samples and the native chunk keys returned for each.",
+      "source_markdown": "03_results.md"
+    }
+  ]
+}
